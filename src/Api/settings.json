@@ -1,0 +1,17 @@
+﻿{
+    "globalSettings": {
+        "siteName": "bitwarden",
+        "baseVaultUri": "http://localhost:4001",
+        "documentDB": {
+            "uri": "SECRET",
+            "key": "SECRET",
+            "databaseId": "SECRET",
+            "collectionIdPrefix": "SECRET",
+            "numberOfCollections": 1
+        },
+        "mail": {
+            "apiKey": "SECRET",
+            "replyToEmail": "do-not-reply@bitwarden.com"
+        }
+    }
+}

@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{458155D3-BCBC-481D-B37A-40D2ED10F0A4}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		global.json = global.json
+		NuGet.Config = NuGet.Config
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Core", "src\Core\Core.xproj", "{3973D21B-A692-4B60-9B70-3631C057423A}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Api", "src\Api\Api.xproj", "{E8548AD6-7FB0-439A-8EB5-549A10336D2D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3973D21B-A692-4B60-9B70-3631C057423A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3973D21B-A692-4B60-9B70-3631C057423A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3973D21B-A692-4B60-9B70-3631C057423A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3973D21B-A692-4B60-9B70-3631C057423A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8548AD6-7FB0-439A-8EB5-549A10336D2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8548AD6-7FB0-439A-8EB5-549A10336D2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8548AD6-7FB0-439A-8EB5-549A10336D2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8548AD6-7FB0-439A-8EB5-549A10336D2D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3973D21B-A692-4B60-9B70-3631C057423A} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
+		{E8548AD6-7FB0-439A-8EB5-549A10336D2D} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
+	EndGlobalSection
+EndGlobal

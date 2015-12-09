@@ -1,0 +1,23 @@
+{
+    "version": "0.0.1-*",
+    "description": "bitwarden Core Library",
+    "authors": [ "Kyle Spearrin" ],
+    "tags": [ "" ],
+    "projectUrl": "",
+    "licenseUrl": "",
+
+    "dependencies": {
+        "Microsoft.AspNet.Identity": "3.0.0-rc1-final",
+        "Microsoft.AspNet.Authentication.JwtBearer": "1.0.0-rc1-final",
+        "Microsoft.Azure.DocumentDB": "1.5.1",
+        "Newtonsoft.Json": "7.0.1",
+        "OtpSharp": "1.3.0.4",
+        "Microsoft.AspNet.Mvc.Abstractions": "6.0.0-rc1-final",
+        "Sendgrid": "6.3.0",
+        "Microsoft.AspNet.DataProtection.Extensions": "1.0.0-rc1-final"
+    },
+
+    "frameworks": {
+        "dnx451": { }
+    }
+}
