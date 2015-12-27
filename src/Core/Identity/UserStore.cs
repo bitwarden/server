@@ -18,10 +18,14 @@ namespace Bit.Core.Identity
         IUserSecurityStampStore<User>
     {
         private readonly IUserRepository _userRepository;
+        private readonly CurrentContext _currentContext;
 
-        public UserStore(IUserRepository userRepository)
+        public UserStore(
+            IUserRepository userRepository,
+            CurrentContext currentContext)
         {
             _userRepository = userRepository;
+            _currentContext = currentContext;
         }
 
         public void Dispose() { }
@@ -40,16 +44,31 @@ namespace Bit.Core.Identity
 
         public async Task<User> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if(_currentContext?.User != null && _currentContext.User.Email == normalizedEmail)
+            {
+                return _currentContext.User;
+            }
+
             return await _userRepository.GetByEmailAsync(normalizedEmail);
         }
 
         public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if(_currentContext?.User != null && _currentContext.User.Id == userId)
+            {
+                return _currentContext.User;
+            }
+
             return await _userRepository.GetByIdAsync(userId);
         }
 
         public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if(_currentContext?.User != null && _currentContext.User.Email == normalizedUserName)
+            {
+                return _currentContext.User;
+            }
+
             return await _userRepository.GetByEmailAsync(normalizedUserName);
         }
 

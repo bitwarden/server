@@ -28,15 +28,35 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task ReplaceAndDirtyCiphersAsync(Domains.User user)
         {
-            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
             {
-                await Client.ExecuteStoredProcedureAsync<Domains.User>(ResolveSprocIdLink(user, "replaceUserAndDirtyCiphers"), user);
+                await Client.ExecuteStoredProcedureAsync<Domains.User>(
+                    ResolveSprocIdLink(user, "replaceUserAndDirtyCiphers"),
+                    user);
             });
+        }
+
+        public override async Task DeleteAsync(Domains.User user)
+        {
+            await DeleteByIdAsync(user.Id);
         }
 
         public override async Task DeleteByIdAsync(string id)
         {
-            await DeleteByPartitionIdAsync(id);
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                while(true)
+                {
+                    StoredProcedureResponse<dynamic> sprocResponse = await Client.ExecuteStoredProcedureAsync<dynamic>(
+                        ResolveSprocIdLink(id, "bulkDelete"),
+                        string.Format("SELECT * FROM c WHERE c.id = '{0}' OR c.UserId = '{0}'", id));
+
+                    if(!(bool)sprocResponse.Response.continuation)
+                    {
+                        break;
+                    }
+                }
+            });
         }
     }
 }

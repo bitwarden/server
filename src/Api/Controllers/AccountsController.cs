@@ -218,5 +218,31 @@ namespace Bit.Api.Controllers
                 model.Sites.Select(s => s.ToSite(User.GetUserId())).ToList(),
                 model.SiteRelationships);
         }
+
+        [HttpPost("delete")]
+        public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
+        {
+            var user = _currentContext.User;
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                await Task.Delay(2000);
+            }
+            else
+            {
+                var result = await _userService.DeleteAsync(user);
+                if(result.Succeeded)
+                {
+                    return;
+                }
+
+                foreach(var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            throw new BadRequestException(ModelState);
+        }
     }
 }

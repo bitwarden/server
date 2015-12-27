@@ -18,5 +18,6 @@ namespace Bit.Core.Services
         Task<IdentityResult> ChangePasswordAsync(User user, string currentMasterPasswordHash, string newMasterPasswordHash, IEnumerable<dynamic> ciphers);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
         Task GetTwoFactorAsync(User user, Enums.TwoFactorProvider provider);
+        Task<IdentityResult> DeleteAsync(User user);
     }
 }

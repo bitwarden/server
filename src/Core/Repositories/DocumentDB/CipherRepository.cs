@@ -16,7 +16,7 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task UpdateDirtyCiphersAsync(IEnumerable<dynamic> ciphers)
         {
-            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
             {
                 // Make sure we are dealing with cipher types since we accept any via dynamic.
                 var cleanedCiphers = ciphers.Where(c => c is Cipher);
@@ -42,7 +42,7 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task CreateAsync(IEnumerable<dynamic> ciphers)
         {
-            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
             {
                 // Make sure we are dealing with cipher types since we accept any via dynamic.
                 var cleanedCiphers = ciphers.Where(c => c is Cipher);

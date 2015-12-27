@@ -31,15 +31,14 @@ namespace Bit.Core.Repositories.DocumentDB.Utilities
             return client;
         }
 
-        public static async Task QueryWithRetryAsync(Func<Task> func)
+        public static async Task ExecuteWithRetryAsync(Func<Task> func)
         {
-            var queryComplete = false;
-            while(!queryComplete)
+            while(true)
             {
                 try
                 {
                     await func();
-                    queryComplete = true;
+                    break;
                 }
                 catch(DocumentClientException e)
                 {
