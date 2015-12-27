@@ -14,7 +14,6 @@ namespace Bit.Api.Models
         [Required]
         [EncryptedString]
         public string Uri { get; set; }
-        [Required]
         [EncryptedString]
         public string Username { get; set; }
         [Required]
@@ -31,7 +30,7 @@ namespace Bit.Api.Models
                 FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : FolderId,
                 Name = Name,
                 Uri = Uri,
-                Username = Username,
+                Username = string.IsNullOrWhiteSpace(Username) ? null : Username,
                 Password = Password,
                 Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes
             };
@@ -42,7 +41,7 @@ namespace Bit.Api.Models
             existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : FolderId;
             existingSite.Name = Name;
             existingSite.Uri = Uri;
-            existingSite.Username = Username;
+            existingSite.Username = string.IsNullOrWhiteSpace(Username) ? null : Username;
             existingSite.Password = Password;
             existingSite.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes;
 

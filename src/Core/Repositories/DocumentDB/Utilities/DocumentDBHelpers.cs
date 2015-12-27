@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 
 namespace Bit.Core.Repositories.DocumentDB.Utilities
 {
-    public class DocumentClientHelpers
+    public class DocumentDBHelpers
     {
         public static DocumentClient InitClient(GlobalSettings.DocumentDBSettings settings)
         {
@@ -27,6 +29,43 @@ namespace Bit.Core.Repositories.DocumentDB.Utilities
             client.OpenAsync().Wait();
 
             return client;
+        }
+
+        public static async Task QueryWithRetryAsync(Func<Task> func)
+        {
+            var queryComplete = false;
+            while(!queryComplete)
+            {
+                try
+                {
+                    await func();
+                    queryComplete = true;
+                }
+                catch(DocumentClientException e)
+                {
+                    await HandleDocumentClientExceptionAsync(e);
+                }
+                catch(AggregateException e)
+                {
+                    var docEx = e.InnerException as DocumentClientException;
+                    if(docEx != null)
+                    {
+                        await HandleDocumentClientExceptionAsync(docEx);
+                    }
+                }
+            }
+        }
+
+        private static async Task HandleDocumentClientExceptionAsync(DocumentClientException e)
+        {
+            var statusCode = (int)e.StatusCode;
+            if(statusCode == 429 || statusCode == 503)
+            {
+                await Task.Delay(e.RetryAfter);
+            }
+            else {
+                throw e;
+            }
         }
 
         private static Func<object, string> GetPartitionKeyExtractor()

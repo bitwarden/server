@@ -144,5 +144,4 @@ namespace Bit.Api.Controllers
             }
         }
     }
-
 }

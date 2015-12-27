@@ -71,10 +71,6 @@ namespace Bit.Api.Models
                 {
                     yield return new ValidationResult("Uri is required for a site cypher.", new[] { "Uri" });
                 }
-                if(string.IsNullOrWhiteSpace(Username))
-                {
-                    yield return new ValidationResult("Username is required for a site cypher.", new[] { "Username" });
-                }
                 if(string.IsNullOrWhiteSpace(Password))
                 {
                     yield return new ValidationResult("Password is required for a site cypher.", new[] { "Password" });

@@ -10,7 +10,7 @@ function bulkUpdateDirtyCiphers(ciphers, userId) {
 
     // Validate input.
     if (!ciphers) {
-        throw new Error("The ciphers array is undefined or null.");
+        throw new Error('The ciphers array is undefined or null.');
     }
 
     var ciphersLength = ciphers.length;

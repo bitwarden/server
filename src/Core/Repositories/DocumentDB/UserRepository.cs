@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Repositories.DocumentDB.Utilities;
+using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 
 namespace Bit.Core.Repositories.DocumentDB
@@ -26,7 +28,10 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task ReplaceAndDirtyCiphersAsync(Domains.User user)
         {
-            await Client.ExecuteStoredProcedureAsync<Domains.User>(ResolveSprocIdLink(user, "replaceUserAndDirtyCiphers"), user);
+            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
+            {
+                await Client.ExecuteStoredProcedureAsync<Domains.User>(ResolveSprocIdLink(user, "replaceUserAndDirtyCiphers"), user);
+            });
         }
 
         public override async Task DeleteByIdAsync(string id)

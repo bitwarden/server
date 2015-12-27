@@ -11,6 +11,7 @@ using Bit.Core.Domains;
 using Bit.Core.Enums;
 using Bit.Core;
 using System.Security.Claims;
+using System.Linq;
 
 namespace Bit.Api.Controllers
 {
@@ -19,16 +20,18 @@ namespace Bit.Api.Controllers
     public class AccountsController : Controller
     {
         private readonly IUserService _userService;
+        private readonly ICipherService _cipherService;
         private readonly UserManager<User> _userManager;
         private readonly CurrentContext _currentContext;
 
         public AccountsController(
-            IDataProtectionProvider dataProtectionProvider,
             IUserService userService,
+            ICipherService cipherService,
             UserManager<User> userManager,
             CurrentContext currentContext)
         {
             _userService = userService;
+            _cipherService = cipherService;
             _userManager = userManager;
             _currentContext = currentContext;
         }
@@ -205,6 +208,15 @@ namespace Bit.Api.Controllers
 
             var response = new TwoFactorResponseModel(user);
             return response;
+        }
+
+        [HttpPost("import")]
+        public async Task PostImport([FromBody]ImportRequestModel model)
+        {
+            await _cipherService.ImportCiphersAsync(
+                model.Folders.Select(f => f.ToFolder(User.GetUserId())).ToList(),
+                model.Sites.Select(s => s.ToSite(User.GetUserId())).ToList(),
+                model.SiteRelationships);
         }
     }
 }

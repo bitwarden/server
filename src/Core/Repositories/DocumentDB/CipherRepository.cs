@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents.Client;
 using Bit.Core.Domains;
+using Bit.Core.Repositories.DocumentDB.Utilities;
 
 namespace Bit.Core.Repositories.DocumentDB
 {
@@ -15,26 +16,53 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task UpdateDirtyCiphersAsync(IEnumerable<dynamic> ciphers)
         {
-            // Make sure we are dealing with cipher types since we accept any via dynamic.
-            var cleanedCiphers = ciphers.Where(c => c is Cipher);
-            if(cleanedCiphers.Count() == 0)
+            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
             {
-                return;
-            }
+                // Make sure we are dealing with cipher types since we accept any via dynamic.
+                var cleanedCiphers = ciphers.Where(c => c is Cipher);
+                if(cleanedCiphers.Count() == 0)
+                {
+                    return;
+                }
 
-            var userId = ((Cipher)cleanedCiphers.First()).UserId;
-            StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
-                ResolveSprocIdLink(userId, "bulkUpdateDirtyCiphers"),
-                // Do sets of 50. Recursion will handle the rest below.
-                cleanedCiphers.Take(50),
-                userId,
-                Cipher.TypeValue);
+                var userId = ((Cipher)cleanedCiphers.First()).UserId;
+                StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
+                    ResolveSprocIdLink(userId, "bulkUpdateDirtyCiphers"),
+                    // Do sets of 50. Recursion will handle the rest below.
+                    cleanedCiphers.Take(50),
+                    userId);
 
-            var replacedCount = sprocResponse.Response;
-            if(replacedCount != cleanedCiphers.Count())
+                var replacedCount = sprocResponse.Response;
+                if(replacedCount != cleanedCiphers.Count())
+                {
+                    await UpdateDirtyCiphersAsync(cleanedCiphers.Skip(replacedCount));
+                }
+            });
+        }
+
+        public async Task CreateAsync(IEnumerable<dynamic> ciphers)
+        {
+            await DocumentDBHelpers.QueryWithRetryAsync(async () =>
             {
-                await UpdateDirtyCiphersAsync(cleanedCiphers.Skip(replacedCount));
-            }
+                // Make sure we are dealing with cipher types since we accept any via dynamic.
+                var cleanedCiphers = ciphers.Where(c => c is Cipher);
+                if(cleanedCiphers.Count() == 0)
+                {
+                    return;
+                }
+
+                var userId = ((Cipher)cleanedCiphers.First()).UserId;
+                StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
+                    ResolveSprocIdLink(userId, "bulkCreate"),
+                    // Do sets of 50. Recursion will handle the rest below.
+                    cleanedCiphers.Take(50));
+
+                var createdCount = sprocResponse.Response;
+                if(createdCount != cleanedCiphers.Count())
+                {
+                    await CreateAsync(cleanedCiphers.Skip(createdCount));
+                }
+            });
         }
     }
 }

@@ -53,7 +53,7 @@ namespace Bit.Api
             services.AddSingleton(s => globalSettings);
 
             // Repositories
-            var documentDBClient = DocumentClientHelpers.InitClient(globalSettings.DocumentDB);
+            var documentDBClient = DocumentDBHelpers.InitClient(globalSettings.DocumentDB);
             services.AddSingleton<IUserRepository>(s => new Repos.UserRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
             services.AddSingleton<ISiteRepository>(s => new Repos.SiteRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
             services.AddSingleton<IFolderRepository>(s => new Repos.FolderRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
@@ -116,6 +116,7 @@ namespace Bit.Api
 
             // Services
             services.AddSingleton<IMailService, MailService>();
+            services.AddSingleton<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
 
             // Cors
