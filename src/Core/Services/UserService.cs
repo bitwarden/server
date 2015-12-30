@@ -169,7 +169,8 @@ namespace Bit.Core.Services
             user.MasterPassword = _passwordHasher.HashPassword(user, newMasterPassword);
             user.SecurityStamp = Guid.NewGuid().ToString();
 
-            await _userRepository.ReplaceAndDirtyCiphersAsync(user);
+            await _cipherRepository.DirtyCiphersAsync(user.Id);
+            await _userRepository.ReplaceAsync(user);
             await _cipherRepository.UpdateDirtyCiphersAsync(ciphers);
 
             // TODO: what if something fails? rollback?
@@ -197,7 +198,8 @@ namespace Bit.Core.Services
                     return result;
                 }
 
-                await _userRepository.ReplaceAndDirtyCiphersAsync(user);
+                await _cipherRepository.DirtyCiphersAsync(user.Id);
+                await _userRepository.ReplaceAsync(user);
                 await _cipherRepository.UpdateDirtyCiphersAsync(ciphers);
 
                 // TODO: what if something fails? rollback?
@@ -224,7 +226,7 @@ namespace Bit.Core.Services
                     return result;
                 }
 
-                await _userRepository.ReplaceAndDirtyCiphersAsync(user);
+                await _userRepository.ReplaceAsync(user);
                 return IdentityResult.Success;
             }
 

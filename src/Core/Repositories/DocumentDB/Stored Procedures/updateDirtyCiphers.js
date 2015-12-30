@@ -1,6 +1,6 @@
 ﻿// Update an array of dirty ciphers for a user.
 
-function bulkUpdateDirtyCiphers(ciphers, userId) {
+function updateDirtyCiphers(ciphers, userId) {
     var context = getContext();
     var collection = context.getCollection();
     var collectionLink = collection.getSelfLink();

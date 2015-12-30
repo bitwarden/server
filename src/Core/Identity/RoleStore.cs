@@ -47,13 +47,13 @@ namespace Bit.Core.Identity
 
         public Task SetNormalizedRoleNameAsync(Role role, string normalizedName, CancellationToken cancellationToken)
         {
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetRoleNameAsync(Role role, string roleName, CancellationToken cancellationToken)
         {
             role.Name = roleName;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task<IdentityResult> UpdateAsync(Role role, CancellationToken cancellationToken)

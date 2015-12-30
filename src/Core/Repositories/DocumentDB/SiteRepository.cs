@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents.Client;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
+using Bit.Core.Repositories.DocumentDB.Utilities;
+using Microsoft.Azure.Documents;
 
 namespace Bit.Core.Repositories.DocumentDB
 {
@@ -16,7 +18,14 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task<Site> GetByIdAsync(string id, string userId)
         {
-            var doc = await Client.ReadDocumentAsync(ResolveDocumentIdLink(userId, id));
+            ResourceResponse<Document> doc = null;
+            var docLink = ResolveDocumentIdLink(userId, id);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                doc = await Client.ReadDocumentAsync(docLink);
+            });
+
             if(doc?.Resource == null)
             {
                 return null;
@@ -31,20 +40,32 @@ namespace Bit.Core.Repositories.DocumentDB
             return site;
         }
 
-        public Task<ICollection<Site>> GetManyByUserIdAsync(string userId)
+        public async Task<ICollection<Site>> GetManyByUserIdAsync(string userId)
         {
-            var docs = Client.CreateDocumentQuery<Site>(DatabaseUri, null, userId)
-                .Where(d => d.Type == Cipher.TypeValue && d.CipherType == CipherType.Site && d.UserId == userId).AsEnumerable();
+            IEnumerable<Site> docs = null;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(() =>
+            {
+                docs = Client.CreateDocumentQuery<Site>(DatabaseUri, null, userId)
+                    .Where(d => d.Type == Cipher.TypeValue && d.CipherType == CipherType.Site && d.UserId == userId).AsEnumerable();
 
-            return Task.FromResult<ICollection<Site>>(docs.ToList());
+                return Task.FromResult(0);
+            });
+
+            return docs.ToList();
         }
 
-        public Task<ICollection<Site>> GetManyByUserIdAsync(string userId, bool dirty)
+        public async Task<ICollection<Site>> GetManyByUserIdAsync(string userId, bool dirty)
         {
-            var docs = Client.CreateDocumentQuery<Site>(DatabaseUri, null, userId)
-                .Where(d => d.Type == Cipher.TypeValue && d.CipherType == CipherType.Site && d.UserId == userId && d.Dirty == dirty).AsEnumerable();
+            IEnumerable<Site> docs = null;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(() =>
+            {
+                docs = Client.CreateDocumentQuery<Site>(DatabaseUri, null, userId)
+                    .Where(d => d.Type == Cipher.TypeValue && d.CipherType == CipherType.Site && d.UserId == userId && d.Dirty == dirty).AsEnumerable();
 
-            return Task.FromResult<ICollection<Site>>(docs.ToList());
+                return Task.FromResult(0);
+            });
+
+            return docs.ToList();
         }
     }
 }

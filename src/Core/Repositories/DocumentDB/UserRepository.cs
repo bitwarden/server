@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Repositories.DocumentDB.Utilities;
-using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 
 namespace Bit.Core.Repositories.DocumentDB
@@ -18,22 +18,18 @@ namespace Bit.Core.Repositories.DocumentDB
             return await GetByPartitionIdAsync(id);
         }
 
-        public Task<Domains.User> GetByEmailAsync(string email)
+        public async Task<Domains.User> GetByEmailAsync(string email)
         {
-            var docs = Client.CreateDocumentQuery<Domains.User>(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
-                .Where(d => d.Type == Domains.User.TypeValue && d.Email == email).AsEnumerable();
-
-            return Task.FromResult(docs.FirstOrDefault());
-        }
-
-        public async Task ReplaceAndDirtyCiphersAsync(Domains.User user)
-        {
-            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            IEnumerable<Domains.User> docs = null;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(() =>
             {
-                await Client.ExecuteStoredProcedureAsync<Domains.User>(
-                    ResolveSprocIdLink(user, "replaceUserAndDirtyCiphers"),
-                    user);
+                docs = Client.CreateDocumentQuery<Domains.User>(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
+                    .Where(d => d.Type == Domains.User.TypeValue && d.Email == email).AsEnumerable();
+
+                return Task.FromResult(0);
             });
+
+            return docs.FirstOrDefault();
         }
 
         public override async Task DeleteAsync(Domains.User user)

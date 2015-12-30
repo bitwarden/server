@@ -115,37 +115,37 @@ namespace Bit.Core.Identity
         public Task SetEmailAsync(User user, string email, CancellationToken cancellationToken = default(CancellationToken))
         {
             user.Email = email;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetEmailConfirmedAsync(User user, bool confirmed, CancellationToken cancellationToken = default(CancellationToken))
         {
             // do nothing
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetNormalizedEmailAsync(User user, string normalizedEmail, CancellationToken cancellationToken = default(CancellationToken))
         {
             user.Email = normalizedEmail;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
         {
             user.Email = normalizedName;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetPasswordHashAsync(User user, string passwordHash, CancellationToken cancellationToken = default(CancellationToken))
         {
             user.MasterPassword = passwordHash;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task SetUserNameAsync(User user, string userName, CancellationToken cancellationToken = default(CancellationToken))
         {
             user.Email = userName;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
@@ -157,7 +157,7 @@ namespace Bit.Core.Identity
         public Task SetTwoFactorEnabledAsync(User user, bool enabled, CancellationToken cancellationToken)
         {
             user.TwoFactorEnabled = enabled;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task<bool> GetTwoFactorEnabledAsync(User user, CancellationToken cancellationToken)
@@ -168,7 +168,7 @@ namespace Bit.Core.Identity
         public Task SetSecurityStampAsync(User user, string stamp, CancellationToken cancellationToken)
         {
             user.SecurityStamp = stamp;
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
 
         public Task<string> GetSecurityStampAsync(User user, CancellationToken cancellationToken)

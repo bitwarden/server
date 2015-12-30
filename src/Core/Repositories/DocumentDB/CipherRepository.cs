@@ -14,6 +14,24 @@ namespace Bit.Core.Repositories.DocumentDB
             : base(client, databaseId, documentType)
         { }
 
+        public async Task DirtyCiphersAsync(string userId)
+        {
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                while(true)
+                {
+                    StoredProcedureResponse<dynamic> sprocResponse = await Client.ExecuteStoredProcedureAsync<dynamic>(
+                        ResolveSprocIdLink(userId, "dirtyCiphers"),
+                        userId);
+
+                    if(!(bool)sprocResponse.Response.continuation)
+                    {
+                        break;
+                    }
+                }
+            });
+        }
+
         public async Task UpdateDirtyCiphersAsync(IEnumerable<dynamic> ciphers)
         {
             await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
@@ -27,9 +45,8 @@ namespace Bit.Core.Repositories.DocumentDB
 
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
-                    ResolveSprocIdLink(userId, "bulkUpdateDirtyCiphers"),
-                    // Do sets of 50. Recursion will handle the rest below.
-                    cleanedCiphers.Take(50),
+                    ResolveSprocIdLink(userId, "updateDirtyCiphers"),
+                    cleanedCiphers,
                     userId);
 
                 var replacedCount = sprocResponse.Response;
@@ -54,8 +71,7 @@ namespace Bit.Core.Repositories.DocumentDB
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
                     ResolveSprocIdLink(userId, "bulkCreate"),
-                    // Do sets of 50. Recursion will handle the rest below.
-                    cleanedCiphers.Take(50));
+                    cleanedCiphers);
 
                 var createdCount = sprocResponse.Response;
                 if(createdCount != cleanedCiphers.Count())

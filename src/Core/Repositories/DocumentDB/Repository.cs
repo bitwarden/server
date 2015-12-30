@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Repositories.DocumentDB.Utilities;
+using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 
 namespace Bit.Core.Repositories.DocumentDB
@@ -11,36 +14,61 @@ namespace Bit.Core.Repositories.DocumentDB
             : base(client, databaseId, documentType)
         { }
 
-        public virtual Task<T> GetByIdAsync(string id)
+        public virtual async Task<T> GetByIdAsync(string id)
         {
             // NOTE: Not an ideal condition, scanning all collections.
             // Override this method if you can implement a direct partition lookup based on the id.
             // Use the inherited GetByPartitionIdAsync method to implement your override.
-            var docs = Client.CreateDocumentQuery<T>(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
-                .Where(d => d.Id == id).AsEnumerable();
 
-            return Task.FromResult(docs.FirstOrDefault());
+            IEnumerable<T> docs = null;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(() =>
+            {
+                docs = Client.CreateDocumentQuery<T>(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
+                    .Where(d => d.Id == id).AsEnumerable();
+
+                return Task.FromResult(0);
+            });
+
+            return docs.FirstOrDefault();
         }
 
         public virtual async Task CreateAsync(T obj)
         {
-            var result = await Client.CreateDocumentAsync(DatabaseUri, obj);
-            obj.Id = result.Resource.Id;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                var result = await Client.CreateDocumentAsync(DatabaseUri, obj);
+                obj.Id = result.Resource.Id;
+            });
         }
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            await Client.ReplaceDocumentAsync(ResolveDocumentIdLink(obj), obj);
+            var docLink = ResolveDocumentIdLink(obj);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                await Client.ReplaceDocumentAsync(docLink, obj);
+            });
         }
 
         public virtual async Task UpsertAsync(T obj)
         {
-            await Client.UpsertDocumentAsync(ResolveDocumentIdLink(obj), obj);
+            var docLink = ResolveDocumentIdLink(obj);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                await Client.UpsertDocumentAsync(docLink, obj);
+            });
         }
 
         public virtual async Task DeleteAsync(T obj)
         {
-            await Client.DeleteDocumentAsync(ResolveDocumentIdLink(obj));
+            var docLink = ResolveDocumentIdLink(obj);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                await Client.DeleteDocumentAsync(docLink);
+            });
         }
 
         public virtual async Task DeleteByIdAsync(string id)
@@ -48,18 +76,35 @@ namespace Bit.Core.Repositories.DocumentDB
             // NOTE: Not an ideal condition, scanning all collections.
             // Override this method if you can implement a direct partition lookup based on the id.
             // Use the inherited DeleteByPartitionIdAsync method to implement your override.
-            var docs = Client.CreateDocumentQuery(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
-                .Where(d => d.Id == id).AsEnumerable();
 
-            if(docs.Count() > 0)
+            IEnumerable<Document> docs = null;
+            await DocumentDBHelpers.ExecuteWithRetryAsync(() =>
             {
-                await Client.DeleteDocumentAsync(docs.First().SelfLink);
+                docs = Client.CreateDocumentQuery(DatabaseUri, new FeedOptions { MaxItemCount = 1 })
+                    .Where(d => d.Id == id).AsEnumerable();
+
+                return Task.FromResult(0);
+            });
+
+            if(docs != null && docs.Count() > 0)
+            {
+                await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+                {
+                    await Client.DeleteDocumentAsync(docs.First().SelfLink);
+                });
             }
         }
 
         protected async Task<T> GetByPartitionIdAsync(string id)
         {
-            var doc = await Client.ReadDocumentAsync(ResolveDocumentIdLink(id));
+            ResourceResponse<Document> doc = null;
+            var docLink = ResolveDocumentIdLink(id);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                doc = await Client.ReadDocumentAsync(docLink);
+            });
+
             if(doc?.Resource == null)
             {
                 return default(T);
@@ -70,7 +115,12 @@ namespace Bit.Core.Repositories.DocumentDB
 
         protected async Task DeleteByPartitionIdAsync(string id)
         {
-            await Client.DeleteDocumentAsync(ResolveDocumentIdLink(id));
+            var docLink = ResolveDocumentIdLink(id);
+
+            await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
+            {
+                await Client.DeleteDocumentAsync(docLink);
+            });
         }
     }
 }

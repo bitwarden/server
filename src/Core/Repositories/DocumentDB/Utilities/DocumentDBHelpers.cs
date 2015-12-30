@@ -31,32 +31,40 @@ namespace Bit.Core.Repositories.DocumentDB.Utilities
             return client;
         }
 
-        public static async Task ExecuteWithRetryAsync(Func<Task> func)
+        public static async Task ExecuteWithRetryAsync(Func<Task> func, int? retryMax = null)
         {
+            var executionAttempt = 1;
             while(true)
             {
                 try
                 {
                     await func();
-                    break;
+                    return;
                 }
                 catch(DocumentClientException e)
                 {
-                    await HandleDocumentClientExceptionAsync(e);
+                    await HandleDocumentClientExceptionAsync(e, executionAttempt, retryMax);
                 }
                 catch(AggregateException e)
                 {
                     var docEx = e.InnerException as DocumentClientException;
                     if(docEx != null)
                     {
-                        await HandleDocumentClientExceptionAsync(docEx);
+                        await HandleDocumentClientExceptionAsync(docEx, executionAttempt, retryMax);
                     }
                 }
+
+                executionAttempt++;
             }
         }
 
-        private static async Task HandleDocumentClientExceptionAsync(DocumentClientException e)
+        private static async Task HandleDocumentClientExceptionAsync(DocumentClientException e, int retryCount, int? retryMax)
         {
+            if(retryMax.HasValue && retryCount >= retryMax.Value)
+            {
+                throw e;
+            }
+
             var statusCode = (int)e.StatusCode;
             if(statusCode == 429 || statusCode == 503)
             {

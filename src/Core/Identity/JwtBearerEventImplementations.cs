@@ -44,7 +44,7 @@ namespace Bit.Core.Identity
                 context.AuthenticationTicket = new AuthenticationTicket(context.HttpContext.User, new AuthenticationProperties(), context.Options.AuthenticationScheme);
             }
 
-            return Task.FromResult<object>(null);
+            return Task.FromResult(0);
         }
     }
 }
