@@ -101,13 +101,13 @@ namespace Bit.Api
             .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             var jwtIdentityOptions = provider.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;
-            services.AddAuthorization(auth =>
+            services.AddAuthorization(config =>
             {
-                auth.AddPolicy("Application", new AuthorizationPolicyBuilder()
+                config.AddPolicy("Application", new AuthorizationPolicyBuilder()
                     .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme‌​)
                     .RequireAuthenticatedUser().RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.AuthenticationMethod).Build());
 
-                auth.AddPolicy("TwoFactor", new AuthorizationPolicyBuilder()
+                config.AddPolicy("TwoFactor", new AuthorizationPolicyBuilder()
                     .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
                     .RequireAuthenticatedUser().RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.TwoFactorAuthenticationMethod).Build());
             });
@@ -120,13 +120,16 @@ namespace Bit.Api
             services.AddScoped<IUserService, UserService>();
 
             // Cors
-            services.AddCors(o => o.AddPolicy("All", policy => policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
+            services.AddCors(config =>
+            {
+                config.AddPolicy("All", policy => policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
+            });
 
             // MVC
-            services.AddMvc(o =>
+            services.AddMvc(config =>
             {
-                o.Filters.Add(new ExceptionHandlerFilterAttribute());
-                o.Filters.Add(new ModelStateValidationFilterAttribute());
+                config.Filters.Add(new ExceptionHandlerFilterAttribute());
+                config.Filters.Add(new ModelStateValidationFilterAttribute());
             });
         }
 

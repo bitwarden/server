@@ -1,4 +1,6 @@
-﻿function dirtyCiphers(userId) {
+﻿// Update all ciphers for a user to be dirty
+
+function dirtyCiphers(userId) {
     var collection = getContext().getCollection();
     var collectionLink = collection.getSelfLink();
     var response = getContext().getResponse();
