@@ -46,7 +46,9 @@ namespace Bit.Core.Repositories.DocumentDB
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
                     ResolveSprocIdLink(userId, "updateDirtyCiphers"),
-                    cleanedCiphers,
+                    // TODO: Figure out how to better determine the max number of document to send without
+                    // going over 512kb limit for DocumentDB. 50 could still be too large in some cases.
+                    cleanedCiphers.Take(50),
                     userId);
 
                 var replacedCount = sprocResponse.Response;
@@ -71,7 +73,9 @@ namespace Bit.Core.Repositories.DocumentDB
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
                     ResolveSprocIdLink(userId, "bulkCreate"),
-                    cleanedCiphers);
+                    // TODO: Figure out how to better determine the max number of document to send without
+                    // going over 512kb limit for DocumentDB. 50 could still be too large in some cases.
+                    cleanedCiphers.Take(50));
 
                 var createdCount = sprocResponse.Response;
                 if(createdCount != cleanedCiphers.Count())
