@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.DocumentDB.Utilities
 {
@@ -56,6 +60,24 @@ namespace Bit.Core.Repositories.DocumentDB.Utilities
 
                 executionAttempt++;
             }
+        }
+
+        public static int GetTakeCount(IEnumerable<object> docs, int maxSizeKb = 500)
+        {
+            var takeCount = docs.Count();
+            while(takeCount > 1)
+            {
+                var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(docs.Take(takeCount)));
+                if((bytes.Length / 1000) <= maxSizeKb)
+                {
+                    // array is is small enough
+                    break;
+                }
+
+                takeCount = Convert.ToInt32(Math.Ceiling((double)takeCount / 2));
+            }
+
+            return takeCount;
         }
 
         private static async Task HandleDocumentClientExceptionAsync(DocumentClientException e, int retryCount, int? retryMax)

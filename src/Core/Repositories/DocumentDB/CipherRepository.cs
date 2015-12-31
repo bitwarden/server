@@ -34,21 +34,21 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task UpdateDirtyCiphersAsync(IEnumerable<dynamic> ciphers)
         {
+            // Make sure we are dealing with cipher types since we accept any via dynamic.
+            var cleanedCiphers = ciphers.Where(c => c is Cipher);
+            if(cleanedCiphers.Count() == 0)
+            {
+                return;
+            }
+
+            var takeCount = DocumentDBHelpers.GetTakeCount(ciphers, 500);
+
             await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
             {
-                // Make sure we are dealing with cipher types since we accept any via dynamic.
-                var cleanedCiphers = ciphers.Where(c => c is Cipher);
-                if(cleanedCiphers.Count() == 0)
-                {
-                    return;
-                }
-
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
                     ResolveSprocIdLink(userId, "updateDirtyCiphers"),
-                    // TODO: Figure out how to better determine the max number of document to send without
-                    // going over 512kb limit for DocumentDB. 50 could still be too large in some cases.
-                    cleanedCiphers.Take(50),
+                    cleanedCiphers.Take(takeCount),
                     userId);
 
                 var replacedCount = sprocResponse.Response;
@@ -61,21 +61,21 @@ namespace Bit.Core.Repositories.DocumentDB
 
         public async Task CreateAsync(IEnumerable<dynamic> ciphers)
         {
+            // Make sure we are dealing with cipher types since we accept any via dynamic.
+            var cleanedCiphers = ciphers.Where(c => c is Cipher);
+            if(cleanedCiphers.Count() == 0)
+            {
+                return;
+            }
+
+            var takeCount = DocumentDBHelpers.GetTakeCount(ciphers, 500);
+
             await DocumentDBHelpers.ExecuteWithRetryAsync(async () =>
             {
-                // Make sure we are dealing with cipher types since we accept any via dynamic.
-                var cleanedCiphers = ciphers.Where(c => c is Cipher);
-                if(cleanedCiphers.Count() == 0)
-                {
-                    return;
-                }
-
                 var userId = ((Cipher)cleanedCiphers.First()).UserId;
                 StoredProcedureResponse<int> sprocResponse = await Client.ExecuteStoredProcedureAsync<int>(
                     ResolveSprocIdLink(userId, "bulkCreate"),
-                    // TODO: Figure out how to better determine the max number of document to send without
-                    // going over 512kb limit for DocumentDB. 50 could still be too large in some cases.
-                    cleanedCiphers.Take(50));
+                    cleanedCiphers.Take(takeCount));
 
                 var createdCount = sprocResponse.Response;
                 if(createdCount != cleanedCiphers.Count())
