@@ -46,7 +46,7 @@ namespace Bit.Api.Controllers
         {
             var sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId(), dirty);
 
-            var responses = sites.Select(s => new SiteResponseModel(s));
+            var responses = sites.Select(s => new SiteResponseModel(s)).ToList();
             await ExpandManyAsync(sites, responses, expand, null);
             return new ListResponseModel<SiteResponseModel>(responses);
         }
@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
             }
         }
 
-        private async Task ExpandManyAsync(IEnumerable<Site> sites, IEnumerable<SiteResponseModel> responses, string[] expand, IEnumerable<Folder> folders)
+        private async Task ExpandManyAsync(IEnumerable<Site> sites, ICollection<SiteResponseModel> responses, string[] expand, IEnumerable<Folder> folders)
         {
             if(expand == null || expand.Count() == 0)
             {
