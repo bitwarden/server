@@ -13,18 +13,25 @@ namespace Bit.Api.Models
         public CipherType Type { get; set; }
 
         [Required]
+        [StringLength(36)]
         public string Id { get; set; }
+        [StringLength(36)]
         public string FolderId { get; set; }
         [Required]
         [EncryptedString]
+        [StringLength(300)]
         public string Name { get; set; }
         [EncryptedString]
+        [StringLength(5000)]
         public string Uri { get; set; }
         [EncryptedString]
+        [StringLength(200)]
         public string Username { get; set; }
         [EncryptedString]
+        [StringLength(300)]
         public string Password { get; set; }
         [EncryptedString]
+        [StringLength(5000)]
         public string Notes { get; set; }
 
         public virtual Site ToSite(string userId = null)

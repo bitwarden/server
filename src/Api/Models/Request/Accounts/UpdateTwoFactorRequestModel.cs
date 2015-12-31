@@ -9,6 +9,7 @@ namespace Bit.Api.Models
         public string MasterPasswordHash { get; set; }
         [Required]
         public bool? Enabled { get; set; }
+        [StringLength(50)]
         public string Token { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

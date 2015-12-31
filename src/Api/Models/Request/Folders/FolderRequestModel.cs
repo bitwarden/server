@@ -9,6 +9,7 @@ namespace Bit.Api.Models
     {
         [Required]
         [EncryptedString]
+        [StringLength(300)]
         public string Name { get; set; }
 
         public Folder ToFolder(string userId = null)
