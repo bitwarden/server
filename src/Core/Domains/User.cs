@@ -17,7 +17,7 @@ namespace Bit.Core.Domains
         public string Email { get; set; }
         public string MasterPassword { get; set; }
         public string MasterPasswordHint { get; set; }
-        public string Culture { get; set; }
+        public string Culture { get; set; } = "en-US";
         public string SecurityStamp { get; set; }
         public string OldEmail { get; set; }
         public string OldMasterPassword { get; set; }
