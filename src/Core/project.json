@@ -15,7 +15,8 @@
         "Microsoft.AspNet.DataProtection.Extensions": "1.0.0-rc1-final",
         "Microsoft.Azure.DocumentDB": "1.5.2",
         "Newtonsoft.Json": "8.0.1",
-        "Dapper": "1.42.0"
+        "Dapper": "1.42.0",
+        "DataTableProxy": "1.2.0"
     },
 
     "frameworks": {

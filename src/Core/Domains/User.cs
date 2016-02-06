@@ -9,7 +9,7 @@ namespace Bit.Core.Domains
         internal static string TypeValue = "user";
 
         [JsonProperty("id")]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set; }
         [JsonProperty("type")]
         public string Type { get; private set; } = TypeValue;
 
