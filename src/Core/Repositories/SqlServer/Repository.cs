@@ -117,7 +117,7 @@ namespace Bit.Core.Repositories.SqlServer
         /// <returns>A comb Guid.</returns>
         protected Guid GenerateComb()
         {
-            byte[] guidArray = Guid.NewGuid().ToByteArray();
+            var guidArray = Guid.NewGuid().ToByteArray();
 
             var now = DateTime.UtcNow;
 
