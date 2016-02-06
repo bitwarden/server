@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[FolderAndSite_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[Cipher_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN

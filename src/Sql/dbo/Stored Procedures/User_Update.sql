@@ -12,7 +12,8 @@
     @CreationDate DATETIME2(7)
 AS
 BEGIN
-    UPDATE [dbo].[User]
+    UPDATE
+        [dbo].[User]
     SET
         [Name] = @Name,
         [Email] = @Email,

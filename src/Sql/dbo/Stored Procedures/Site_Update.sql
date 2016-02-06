@@ -11,7 +11,8 @@
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    UPDATE [dbo].[Site]
+    UPDATE
+        [dbo].[Site]
     SET
         [UserId] = @UserId,
         [FolderId] = @FolderId,

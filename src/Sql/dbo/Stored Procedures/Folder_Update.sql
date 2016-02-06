@@ -6,7 +6,8 @@
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    UPDATE [dbo].[Folder]
+    UPDATE
+        [dbo].[Folder]
     SET
         [UserId] = @UserId,
         [Name] = @Name,
