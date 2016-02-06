@@ -9,6 +9,9 @@
             "collectionIdPrefix": "SECRET",
             "numberOfCollections": 1
         },
+        "sqlServer": {
+            "connectionString": "SECRET"
+        },
         "mail": {
             "apiKey": "SECRET",
             "replyToEmail": "do-not-reply@bitwarden.com"

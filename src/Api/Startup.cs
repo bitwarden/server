@@ -14,9 +14,8 @@ using Bit.Core;
 using Bit.Core.Domains;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;
-using Bit.Core.Repositories.DocumentDB.Utilities;
 using Bit.Core.Services;
-using Repos = Bit.Core.Repositories.DocumentDB;
+using Repos = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Api
 {
@@ -53,11 +52,10 @@ namespace Bit.Api
             services.AddSingleton(s => globalSettings);
 
             // Repositories
-            var documentDBClient = DocumentDBHelpers.InitClient(globalSettings.DocumentDB);
-            services.AddSingleton<IUserRepository>(s => new Repos.UserRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
-            services.AddSingleton<ISiteRepository>(s => new Repos.SiteRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
-            services.AddSingleton<IFolderRepository>(s => new Repos.FolderRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
-            services.AddSingleton<ICipherRepository>(s => new Repos.CipherRepository(documentDBClient, globalSettings.DocumentDB.DatabaseId));
+            services.AddSingleton<IUserRepository>(s => new Repos.UserRepository(globalSettings.SqlServer.ConnectionString));
+            services.AddSingleton<ISiteRepository>(s => new Repos.SiteRepository(globalSettings.SqlServer.ConnectionString));
+            services.AddSingleton<IFolderRepository>(s => new Repos.FolderRepository(globalSettings.SqlServer.ConnectionString));
+            services.AddSingleton<ICipherRepository>(s => new Repos.CipherRepository(globalSettings.SqlServer.ConnectionString));
 
             // Context
             services.AddScoped<CurrentContext>();

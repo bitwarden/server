@@ -5,9 +5,10 @@ namespace Bit.Core
 {
     public class GlobalSettings
     {
-        public string SiteName { get; set; }
-        public string BaseVaultUri { get; set; }
+        public virtual string SiteName { get; set; }
+        public virtual string BaseVaultUri { get; set; }
         public virtual DocumentDBSettings DocumentDB { get; set; } = new DocumentDBSettings();
+        public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
 
         public class DocumentDBSettings
@@ -17,6 +18,11 @@ namespace Bit.Core
             public string DatabaseId { get; set; }
             public string CollectionIdPrefix { get; set; }
             public int NumberOfCollections { get; set; }
+        }
+
+        public class SqlServerSettings
+        {
+            public string ConnectionString { get; set; }
         }
 
         public class MailSettings
