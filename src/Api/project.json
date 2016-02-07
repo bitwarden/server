@@ -21,7 +21,6 @@
         "Microsoft.Extensions.Logging.Debug": "1.0.0-rc1-final",
         "Microsoft.AspNet.Cors": "6.0.0-rc1-final",
         "Microsoft.AspNet.Diagnostics": "1.0.0-rc1-final",
-        "NewRelic.Azure.WebSites": "5.13.30",
         "Loggr.Extensions.Logging": "1.0.1-rc1-final"
     },
 
