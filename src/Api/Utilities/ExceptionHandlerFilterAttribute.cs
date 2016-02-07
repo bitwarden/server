@@ -6,6 +6,7 @@ using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Mvc;
 using Microsoft.AspNet.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Api.Utilities
 {
@@ -47,6 +48,9 @@ namespace Bit.Api.Utilities
             }
             else
             {
+                var logger = context.HttpContext.ApplicationServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+                logger.LogError(exception.Message, exception);
+
                 errorModel.Message = "An unhandled server error has occured.";
                 context.HttpContext.Response.StatusCode = 500;
             }

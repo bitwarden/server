@@ -15,6 +15,10 @@
         "mail": {
             "apiKey": "SECRET",
             "replyToEmail": "do-not-reply@bitwarden.com"
+        },
+        "loggr": {
+            "logKey":  "SECRET",
+            "apiKey": "SECRET"
         }
     }
 }

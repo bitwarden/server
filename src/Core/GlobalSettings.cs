@@ -10,6 +10,7 @@ namespace Bit.Core
         public virtual DocumentDBSettings DocumentDB { get; set; } = new DocumentDBSettings();
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
+        public virtual LoggrSettings Loggr { get; set; } = new LoggrSettings();
 
         public class DocumentDBSettings
         {
@@ -27,8 +28,14 @@ namespace Bit.Core
 
         public class MailSettings
         {
-            public string APIKey { get; set; }
+            public string ApiKey { get; set; }
             public string ReplyToEmail { get; set; }
+        }
+
+        public class LoggrSettings
+        {
+            public string LogKey { get; set; }
+            public string ApiKey { get; set; }
         }
     }
 }

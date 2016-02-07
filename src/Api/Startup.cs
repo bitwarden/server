@@ -16,6 +16,7 @@ using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Repos = Bit.Core.Repositories.SqlServer;
+using Loggr.Extensions.Logging;
 
 namespace Bit.Api
 {
@@ -131,11 +132,23 @@ namespace Bit.Api
             });
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(
+            IApplicationBuilder app,
+            IHostingEnvironment env,
+            ILoggerFactory loggerFactory,
+            GlobalSettings globalSettings)
         {
             loggerFactory.MinimumLevel = LogLevel.Information;
             loggerFactory.AddConsole();
             loggerFactory.AddDebug();
+
+            if(!env.IsDevelopment())
+            {
+                loggerFactory.AddLoggr(
+                    LogLevel.Error,
+                    globalSettings.Loggr.LogKey,
+                    globalSettings.Loggr.ApiKey);
+            }
 
             // Add the platform handler to the request pipeline.
             app.UseIISPlatformHandler();

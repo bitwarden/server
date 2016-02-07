@@ -26,7 +26,7 @@ namespace Bit.Core.Services
         public MailService(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
-            _web = new Web(_globalSettings.Mail.APIKey);
+            _web = new Web(_globalSettings.Mail.ApiKey);
         }
 
         public async Task SendAlreadyRegisteredEmailAsync(string registrantEmailAddress)
