@@ -96,7 +96,7 @@ namespace Bit.Core.Repositories.SqlServer
                             SET
                                 -- Do not update [UserId]
                                 [Name] = TF.[Name],
-                                -- Do not update TF.[CreationDate]
+                                -- Do not update [CreationDate]
                                 [RevisionDate] = TF.[RevisionDate]
                             FROM
                                 [dbo].[Folder] F
