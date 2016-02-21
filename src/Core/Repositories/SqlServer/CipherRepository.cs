@@ -41,6 +41,7 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.Parameters.Add("@Email", SqlDbType.NVarChar).Value = user.Email;
                             cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                            cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
                             cmd.ExecuteNonQuery();
                         }
 
@@ -92,9 +93,9 @@ namespace Bit.Core.Repositories.SqlServer
                             UPDATE
                                 [dbo].[Folder]
                             SET
-                                [UserId] = TF.[UserId],
+                                -- Do not update [UserId]
                                 [Name] = TF.[Name],
-                                [CreationDate] = TF.[CreationDate],
+                                -- Do not update TF.[CreationDate]
                                 [RevisionDate] = TF.[RevisionDate]
                             FROM
                                 [dbo].[Folder] F
@@ -106,14 +107,14 @@ namespace Bit.Core.Repositories.SqlServer
                             UPDATE
                                 [dbo].[Site]
                             SET
-                                [UserId] = TS.[UserId],
-                                [FolderId] = TS.[FolderId],
+                                -- Do not update [UserId]
+                                -- Do not update [FolderId]
                                 [Name] = TS.[Name],
                                 [Uri] = TS.[Uri],
                                 [Username] = TS.[Username],
                                 [Password] = TS.[Password],
                                 [Notes] = TS.[Notes],
-                                [CreationDate] = TS.[CreationDate],
+                                -- Do not update [CreationDate]
                                 [RevisionDate] = TS.[RevisionDate]
                             FROM
                                 [dbo].[Site] S

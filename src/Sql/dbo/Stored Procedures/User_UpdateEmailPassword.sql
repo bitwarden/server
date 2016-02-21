@@ -2,7 +2,8 @@
     @Id UNIQUEIDENTIFIER,
     @Email NVARCHAR(50),
     @MasterPassword NVARCHAR(300),
-    @SecurityStamp NVARCHAR(50)
+    @SecurityStamp NVARCHAR(50),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     UPDATE
@@ -10,7 +11,8 @@ BEGIN
     SET
         [Email] = @Email,
         [MasterPassword] = @MasterPassword,
-        [SecurityStamp] = @SecurityStamp
+        [SecurityStamp] = @SecurityStamp,
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
 END

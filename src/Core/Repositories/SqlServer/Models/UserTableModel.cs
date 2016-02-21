@@ -21,6 +21,7 @@ namespace Bit.Core.Repositories.SqlServer.Models
             TwoFactorProvider = user.TwoFactorProvider;
             AuthenticatorKey = user.AuthenticatorKey;
             CreationDate = user.CreationDate;
+            RevisionDate = user.RevisionDate;
         }
 
         public Guid Id { get; set; }
@@ -34,6 +35,7 @@ namespace Bit.Core.Repositories.SqlServer.Models
         public TwoFactorProvider? TwoFactorProvider { get; set; }
         public string AuthenticatorKey { get; set; }
         public DateTime CreationDate { get; set; }
+        public DateTime RevisionDate { get; set; }
 
         public User ToDomain()
         {
@@ -49,7 +51,8 @@ namespace Bit.Core.Repositories.SqlServer.Models
                 TwoFactorEnabled = TwoFactorEnabled,
                 TwoFactorProvider = TwoFactorProvider,
                 AuthenticatorKey = AuthenticatorKey,
-                CreationDate = CreationDate
+                CreationDate = CreationDate,
+                RevisionDate = RevisionDate
             };
         }
     }

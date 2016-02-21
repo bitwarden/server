@@ -9,7 +9,8 @@
     @TwoFactorEnabled BIT,
     @TwoFactorProvider TINYINT,
     @AuthenticatorKey NVARCHAR(50),
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     INSERT INTO [dbo].[User]
@@ -24,7 +25,8 @@ BEGIN
         [TwoFactorEnabled],
         [TwoFactorProvider],
         [AuthenticatorKey],
-        [CreationDate]
+        [CreationDate],
+        [RevisionDate]
     )
     VALUES
     (
@@ -38,6 +40,7 @@ BEGIN
         @TwoFactorEnabled,
         @TwoFactorProvider,
         @AuthenticatorKey,
-        @CreationDate
+        @CreationDate,
+        @RevisionDate
     )
 END

@@ -68,9 +68,9 @@
     <Build Include="dbo\Tables\Folder.sql" />
     <Build Include="dbo\Tables\Site.sql" />
     <Build Include="dbo\Tables\User.sql" />
-    <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
     <Build Include="dbo\Views\SiteView.sql" />
+    <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Site_ReadById.sql" />

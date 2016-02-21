@@ -9,7 +9,8 @@
     @TwoFactorEnabled BIT,
     @TwoFactorProvider TINYINT,
     @AuthenticatorKey NVARCHAR(50),
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     UPDATE
@@ -24,7 +25,8 @@ BEGIN
         [TwoFactorEnabled] = @TwoFactorEnabled,
         [TwoFactorProvider] = TwoFactorProvider,
         [AuthenticatorKey] = @AuthenticatorKey,
-        [CreationDate] = @CreationDate
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
 END
