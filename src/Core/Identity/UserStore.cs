@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
@@ -18,13 +19,16 @@ namespace Bit.Core.Identity
         IUserSecurityStampStore<User>
     {
         private readonly IUserRepository _userRepository;
+        private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public UserStore(
             IUserRepository userRepository,
+            IUserService userService,
             CurrentContext currentContext)
         {
             _userRepository = userRepository;
+            _userService = userService;
             _currentContext = currentContext;
         }
 
@@ -150,7 +154,7 @@ namespace Bit.Core.Identity
 
         public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _userRepository.ReplaceAsync(user);
+            await _userService.SaveUserAsync(user);
             return IdentityResult.Success;
         }
 

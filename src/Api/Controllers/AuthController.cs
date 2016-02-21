@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNet.Mvc;
 using Bit.Core.Identity;
-using Bit.Core.Repositories;
 using Bit.Api.Models;
 using Microsoft.AspNet.Authorization;
 using Bit.Core.Exceptions;
@@ -14,16 +13,13 @@ namespace Bit.Api.Controllers
     public class AuthController : Controller
     {
         private readonly JwtBearerSignInManager _signInManager;
-        private readonly IUserRepository _userRepository;
         private readonly CurrentContext _currentContext;
 
         public AuthController(
             JwtBearerSignInManager signInManager,
-            IUserRepository userRepository,
             CurrentContext currentContext)
         {
             _signInManager = signInManager;
-            _userRepository = userRepository;
             _currentContext = currentContext;
         }
 

@@ -70,6 +70,7 @@ namespace Bit.Core.Services
                 throw new ApplicationException("Use register method to create a new user.");
             }
 
+            user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
 
