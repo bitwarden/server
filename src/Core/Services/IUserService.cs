@@ -10,8 +10,7 @@ namespace Bit.Core.Services
     {
         Task<User> GetUserByIdAsync(string userId);
         Task SaveUserAsync(User user);
-        Task InitiateRegistrationAsync(string email);
-        Task<IdentityResult> RegisterUserAsync(string token, User user, string masterPassword);
+        Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
         Task SendMasterPasswordHintAsync(string email);
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword, string token, IEnumerable<dynamic> ciphers);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Core.Repositories.SqlServer.Models;
 using DataTableProxy;
 using Bit.Core.Domains;
+using System.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -27,6 +28,9 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 return Task.FromResult(0);
             }
+
+            // Get the id of the expected user
+            var userId = ((Cipher)ciphers.First()).UserId;
 
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -92,6 +96,8 @@ namespace Bit.Core.Repositories.SqlServer
                                 [dbo].[Folder] F
                             INNER JOIN
                                 #TempFolder TF ON F.Id = TF.Id
+                            WHERE
+                                F.[UserId] = @UserId
 
                             UPDATE
                                 [dbo].[Site]
@@ -109,12 +115,15 @@ namespace Bit.Core.Repositories.SqlServer
                                 [dbo].[Site] S
                             INNER JOIN
                                 #TempSite TS ON S.Id = TS.Id
+                            WHERE
+                                S.[UserId] = @UserId
 
                             DROP TABLE #TempFolder
                             DROP TABLE #TempSite";
 
                         using(var cmd = new SqlCommand(sqlUpdate, connection, transaction))
                         {
+                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = new Guid(userId);
                             cmd.ExecuteNonQuery();
                         }
 

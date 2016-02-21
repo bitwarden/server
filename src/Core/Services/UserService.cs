@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNet.DataProtection;
 using Microsoft.AspNet.Http;
 using Microsoft.AspNet.Identity;
 using Microsoft.Extensions.Logging;
@@ -19,7 +18,6 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IMailService _mailService;
-        private readonly ITimeLimitedDataProtector _registrationEmailDataProtector;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -29,7 +27,6 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IMailService mailService,
-            IDataProtectionProvider dataProtectionProvider,
             IUserStore<User> store,
             IOptions<IdentityOptions> optionsAccessor,
             IPasswordHasher<User> passwordHasher,
@@ -55,7 +52,6 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _mailService = mailService;
-            _registrationEmailDataProtector = dataProtectionProvider.CreateProtector("RegistrationEmail").ToTimeLimitedDataProtector();
             _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
             _identityErrorDescriber = errors;
             _passwordHasher = passwordHasher;
@@ -73,38 +69,12 @@ namespace Bit.Core.Services
             {
                 throw new ApplicationException("Use register method to create a new user.");
             }
-
+            
             await _userRepository.ReplaceAsync(user);
         }
 
-        public async Task InitiateRegistrationAsync(string email)
+        public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
         {
-            var existingUser = await _userRepository.GetByEmailAsync(email);
-            if(existingUser != null)
-            {
-                await _mailService.SendAlreadyRegisteredEmailAsync(email);
-                return;
-            }
-
-            var token = _registrationEmailDataProtector.Protect(email, TimeSpan.FromDays(5));
-            await _mailService.SendRegisterEmailAsync(email, token);
-        }
-
-        public async Task<IdentityResult> RegisterUserAsync(string token, User user, string masterPassword)
-        {
-            try
-            {
-                var tokenEmail = _registrationEmailDataProtector.Unprotect(token);
-                if(tokenEmail != user.Email)
-                {
-                    return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
-                }
-            }
-            catch
-            {
-                return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
-            }
-
             var result = await base.CreateAsync(user, masterPassword);
             if(result == IdentityResult.Success)
             {
@@ -163,8 +133,6 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
 
-            user.OldEmail = user.Email;
-            user.OldMasterPassword = user.MasterPassword;
             user.Email = newEmail;
             user.MasterPassword = _passwordHasher.HashPassword(user, newMasterPassword);
             user.SecurityStamp = Guid.NewGuid().ToString();
@@ -279,7 +247,6 @@ namespace Bit.Core.Services
                 }
             }
 
-            user.OldMasterPassword = user.MasterPassword;
             user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
             user.SecurityStamp = Guid.NewGuid().ToString();
 

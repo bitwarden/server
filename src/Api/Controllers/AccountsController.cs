@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Authorization;
-using Microsoft.AspNet.DataProtection;
 using Microsoft.AspNet.Mvc;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
@@ -36,18 +35,11 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
         }
 
-        [HttpPost("register-token")]
-        [AllowAnonymous]
-        public async Task PostRegisterToken([FromBody]RegisterTokenRequestModel model)
-        {
-            await _userService.InitiateRegistrationAsync(model.Email);
-        }
-
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task PostRegister([FromBody]RegisterRequestModel model)
         {
-            var result = await _userService.RegisterUserAsync(model.Token, model.ToUser(), model.MasterPasswordHash);
+            var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash);
             if(result.Succeeded)
             {
                 return;

@@ -9,8 +9,6 @@ namespace Bit.Core.Services
 {
     public class MailService : IMailService
     {
-        private const string AlreadyRegisteredTemplateId = "8af9cd2b-e4dd-497a-bcc6-1d5b317ff811";
-        private const string RegisterTemplateId = "7382e1f9-50c7-428d-aa06-bf584f03cd6a";
         private const string WelcomeTemplateId = "d24aa21e-5ead-45d8-a14e-f96ba7ec63ff";
         private const string ChangeEmailAlreadyExistsTemplateId = "b28bc69e-9592-4320-b274-bfb955667add";
         private const string ChangeEmailTemplateId = "b8d17dd7-c883-4b47-8170-5b845d487929";
@@ -27,32 +25,6 @@ namespace Bit.Core.Services
         {
             _globalSettings = globalSettings;
             _web = new Web(_globalSettings.Mail.ApiKey);
-        }
-
-        public async Task SendAlreadyRegisteredEmailAsync(string registrantEmailAddress)
-        {
-            var message = CreateDefaultMessage(AlreadyRegisteredTemplateId);
-
-            message.Subject = "Your Registration";
-            message.AddTo(registrantEmailAddress);
-            message.AddSubstitution("{{email}}", new List<string> { registrantEmailAddress });
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Already Registered" });
-
-            await _web.DeliverAsync(message);
-        }
-
-        public async Task SendRegisterEmailAsync(string registrantEmailAddress, string token)
-        {
-            var message = CreateDefaultMessage(RegisterTemplateId);
-
-            message.Subject = "Complete Your Registration";
-            message.AddTo(registrantEmailAddress);
-            message.AddSubstitution("{{token}}", new List<string> { Uri.EscapeDataString(token) });
-            message.AddSubstitution("{{email}}", new List<string> { Uri.EscapeDataString(registrantEmailAddress) });
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Register" });
-            message.DisableBypassListManagement();
-
-            await _web.DeliverAsync(message);
         }
 
         public async Task SendWelcomeEmailAsync(User user)

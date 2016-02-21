@@ -6,8 +6,6 @@ namespace Bit.Api.Models
     public class RegisterRequestModel
     {
         [Required]
-        public string Token { get; set; }
-        [Required]
         [StringLength(50)]
         public string Name { get; set; }
         [Required]
