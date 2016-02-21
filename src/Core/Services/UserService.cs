@@ -69,7 +69,7 @@ namespace Bit.Core.Services
             {
                 throw new ApplicationException("Use register method to create a new user.");
             }
-            
+
             await _userRepository.ReplaceAsync(user);
         }
 
@@ -128,50 +128,43 @@ namespace Bit.Core.Services
             }
 
             var existingUser = await _userRepository.GetByEmailAsync(newEmail);
-            if(existingUser != null)
+            if(existingUser != null && existingUser.Id != user.Id)
             {
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
 
+            var result = await UpdatePasswordHash(user, newMasterPassword);
+            if(!result.Succeeded)
+            {
+                return result;
+            }
+
             user.Email = newEmail;
-            user.MasterPassword = _passwordHasher.HashPassword(user, newMasterPassword);
-            user.SecurityStamp = Guid.NewGuid().ToString();
-
-            await _cipherRepository.DirtyCiphersAsync(user.Id);
-            await _userRepository.ReplaceAsync(user);
-            await _cipherRepository.UpdateDirtyCiphersAsync(ciphers);
-
-            // TODO: what if something fails? rollback?
-
+            await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
             return IdentityResult.Success;
         }
 
-        public override Task<IdentityResult> ChangePasswordAsync(User user, string currentMasterPasswordHash, string newMasterPasswordHash)
+        public override Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityResult> ChangePasswordAsync(User user, string currentMasterPasswordHash, string newMasterPasswordHash, IEnumerable<dynamic> ciphers)
+        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, IEnumerable<dynamic> ciphers)
         {
             if(user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await base.CheckPasswordAsync(user, currentMasterPasswordHash))
+            if(await base.CheckPasswordAsync(user, masterPassword))
             {
-                var result = await UpdatePasswordHash(user, newMasterPasswordHash);
+                var result = await UpdatePasswordHash(user, newMasterPassword);
                 if(!result.Succeeded)
                 {
                     return result;
                 }
-
-                await _cipherRepository.DirtyCiphersAsync(user.Id);
-                await _userRepository.ReplaceAsync(user);
-                await _cipherRepository.UpdateDirtyCiphersAsync(ciphers);
-
-                // TODO: what if something fails? rollback?
-
+                
+                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
                 return IdentityResult.Success;
             }
 
@@ -179,14 +172,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash)
+        public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPassword)
         {
             if(user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await base.CheckPasswordAsync(user, masterPasswordHash))
+            if(await base.CheckPasswordAsync(user, masterPassword))
             {
                 var result = await base.UpdateSecurityStampAsync(user);
                 if(!result.Succeeded)

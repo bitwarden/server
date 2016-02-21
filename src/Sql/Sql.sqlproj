@@ -87,5 +87,6 @@
     <Build Include="dbo\Stored Procedures\Site_Update.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Update.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
   </ItemGroup>
 </Project>

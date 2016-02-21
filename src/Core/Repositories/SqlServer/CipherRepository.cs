@@ -16,21 +16,13 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
-        public Task DirtyCiphersAsync(string userId)
-        {
-            return Task.FromResult(0);
-        }
-
-        public Task UpdateDirtyCiphersAsync(IEnumerable<dynamic> ciphers)
+        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<dynamic> ciphers)
         {
             var cleanedCiphers = ciphers.Where(c => c is Cipher);
             if(cleanedCiphers.Count() == 0)
             {
                 return Task.FromResult(0);
             }
-
-            // Get the id of the expected user
-            var userId = ((Cipher)ciphers.First()).UserId;
 
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -40,7 +32,19 @@ namespace Bit.Core.Repositories.SqlServer
                 {
                     try
                     {
-                        // 1. Create temp tables to bulk copy into.
+                        // 1. Update user.
+
+                        using(var cmd = new SqlCommand("[dbo].[User_UpdateEmailPassword]", connection, transaction))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = new Guid(user.Id);
+                            cmd.Parameters.Add("@Email", SqlDbType.NVarChar).Value = user.Email;
+                            cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
+                            cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Create temp tables to bulk copy into.
 
                         var sqlCreateTemp = @"
                             SELECT TOP 0 *
@@ -56,7 +60,7 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 2. Bulk bopy into temp tables.
+                        // 3. Bulk bopy into temp tables.
 
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
@@ -82,7 +86,7 @@ namespace Bit.Core.Repositories.SqlServer
                             bulkCopy.WriteToServer(dataTable);
                         }
 
-                        // 3. Insert into real tables from temp tables and clean up.
+                        // 4. Insert into real tables from temp tables and clean up.
 
                         var sqlUpdate = @"
                             UPDATE
@@ -123,7 +127,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                         using(var cmd = new SqlCommand(sqlUpdate, connection, transaction))
                         {
-                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = new Guid(userId);
+                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = new Guid(user.Id);
                             cmd.ExecuteNonQuery();
                         }
 
