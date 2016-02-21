@@ -2,6 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Email NVARCHAR(50),
+    @EmailVerified BIT,
     @MasterPassword NVARCHAR(300),
     @MasterPasswordHint NVARCHAR(50),
     @Culture NVARCHAR(10),
@@ -18,6 +19,7 @@ BEGIN
     SET
         [Name] = @Name,
         [Email] = @Email,
+        [EmailVerified] = @EmailVerified,
         [MasterPassword] = @MasterPassword,
         [MasterPasswordHint] = @MasterPasswordHint,
         [Culture] = @Culture,

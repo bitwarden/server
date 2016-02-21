@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[User_UpdateEmailPassword]
     @Id UNIQUEIDENTIFIER,
     @Email NVARCHAR(50),
+    @EmailVerified BIT,
     @MasterPassword NVARCHAR(300),
     @SecurityStamp NVARCHAR(50),
     @RevisionDate DATETIME2(7)
@@ -10,6 +11,7 @@ BEGIN
         [dbo].[User]
     SET
         [Email] = @Email,
+        [EmailVerified] = @EmailVerified,
         [MasterPassword] = @MasterPassword,
         [SecurityStamp] = @SecurityStamp,
         [RevisionDate] = @RevisionDate

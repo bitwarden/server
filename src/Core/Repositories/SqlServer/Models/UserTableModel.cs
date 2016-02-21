@@ -13,6 +13,7 @@ namespace Bit.Core.Repositories.SqlServer.Models
             Id = new Guid(user.Id);
             Name = user.Name;
             Email = user.Email;
+            EmailVerified = user.EmailVerified;
             MasterPassword = user.MasterPassword;
             MasterPasswordHint = user.MasterPasswordHint;
             Culture = user.Culture;
@@ -27,6 +28,7 @@ namespace Bit.Core.Repositories.SqlServer.Models
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
+        public bool EmailVerified { get; set; }
         public string MasterPassword { get; set; }
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; }
@@ -44,6 +46,7 @@ namespace Bit.Core.Repositories.SqlServer.Models
                 Id = Id.ToString(),
                 Name = Name,
                 Email = Email,
+                EmailVerified = EmailVerified,
                 MasterPassword = MasterPassword,
                 MasterPasswordHint = MasterPasswordHint,
                 Culture = Culture,

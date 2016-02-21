@@ -39,6 +39,7 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.CommandType = CommandType.StoredProcedure;
                             cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = new Guid(user.Id);
                             cmd.Parameters.Add("@Email", SqlDbType.NVarChar).Value = user.Email;
+                            cmd.Parameters.Add("@EmailVerified", SqlDbType.NVarChar).Value = user.EmailVerified;
                             cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
                             cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;

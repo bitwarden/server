@@ -8,6 +8,7 @@ namespace Bit.Core.Domains
         public string Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
+        public bool EmailVerified { get; set; }
         public string MasterPassword { get; set; }
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; } = "en-US";

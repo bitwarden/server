@@ -140,6 +140,7 @@ namespace Bit.Core.Services
             }
 
             user.Email = newEmail;
+            user.EmailVerified = true;
             await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
             return IdentityResult.Success;
         }
