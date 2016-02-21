@@ -19,16 +19,13 @@ namespace Bit.Core.Identity
         IUserSecurityStampStore<User>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public UserStore(
             IUserRepository userRepository,
-            IUserService userService,
             CurrentContext currentContext)
         {
             _userRepository = userRepository;
-            _userService = userService;
             _currentContext = currentContext;
         }
 
@@ -154,7 +151,8 @@ namespace Bit.Core.Identity
 
         public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _userService.SaveUserAsync(user);
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
             return IdentityResult.Success;
         }
 
