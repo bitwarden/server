@@ -75,7 +75,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(string.IsNullOrWhiteSpace(obj.Id))
+            if(string.IsNullOrWhiteSpace(obj.Id) || obj.Id == "0" || obj.Id == Guid.Empty.ToString())
             {
                 await CreateAsync(obj);
             }

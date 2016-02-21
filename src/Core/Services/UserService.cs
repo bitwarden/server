@@ -142,6 +142,7 @@ namespace Bit.Core.Services
 
             user.Email = newEmail;
             user.EmailVerified = true;
+            user.RevisionDate = DateTime.UtcNow;
             await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
             return IdentityResult.Success;
         }
@@ -165,7 +166,8 @@ namespace Bit.Core.Services
                 {
                     return result;
                 }
-                
+
+                user.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
                 return IdentityResult.Success;
             }
@@ -189,7 +191,7 @@ namespace Bit.Core.Services
                     return result;
                 }
 
-                await _userRepository.ReplaceAsync(user);
+                await SaveUserAsync(user);
                 return IdentityResult.Success;
             }
 
@@ -228,7 +230,7 @@ namespace Bit.Core.Services
                     throw new ArgumentException(nameof(provider));
             }
 
-            await _userRepository.ReplaceAsync(user);
+            await SaveUserAsync(user);
         }
 
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)
