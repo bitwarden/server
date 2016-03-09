@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -32,16 +33,11 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<SiteTableModel>(
                     $"[{Schema}].[{Table}_ReadByUserId]",
-                    new { UserId = userId },
+                    new { UserId = new Guid(userId) },
                     commandType: CommandType.StoredProcedure);
 
                 return results.Select(s => s.ToDomain()).ToList();
             }
-        }
-
-        public async Task<ICollection<Site>> GetManyByUserIdAsync(string userId, bool dirty)
-        {
-            return await GetManyByUserIdAsync(userId);
         }
     }
 }

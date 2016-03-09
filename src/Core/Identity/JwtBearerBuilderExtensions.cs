@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.OptionsModel;
-using Bit.Core.Domains;
 using Microsoft.AspNet.Authentication.JwtBearer;
 
 namespace Bit.Core.Identity

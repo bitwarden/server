@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<TModel>(
                     $"[{Schema}].[{Table}_ReadById]",
-                    new { Id = id },
+                    new { Id = new Guid(id) },
                     commandType: CommandType.StoredProcedure);
 
                 var model = results.FirstOrDefault();
@@ -96,7 +96,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_DeleteById]",
-                    new { Id = id },
+                    new { Id = new Guid(id) },
                     commandType: CommandType.StoredProcedure);
             }
         }

@@ -9,6 +9,5 @@ namespace Bit.Core.Repositories
     {
         Task<Site> GetByIdAsync(string id, string userId);
         Task<ICollection<Site>> GetManyByUserIdAsync(string userId);
-        Task<ICollection<Site>> GetManyByUserIdAsync(string userId, bool dirty);
     }
 }

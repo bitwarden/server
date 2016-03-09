@@ -42,9 +42,9 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<SiteResponseModel>> Get(bool dirty = false, string[] expand = null)
+        public async Task<ListResponseModel<SiteResponseModel>> Get(string[] expand = null)
         {
-            var sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId(), dirty);
+            var sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId());
 
             var responses = sites.Select(s => new SiteResponseModel(s)).ToList();
             await ExpandManyAsync(sites, responses, expand, null);

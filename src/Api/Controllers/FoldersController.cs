@@ -36,7 +36,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<FolderResponseModel>> Get(bool dirty = false)
+        public async Task<ListResponseModel<FolderResponseModel>> Get()
         {
             var folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
             return new ListResponseModel<FolderResponseModel>(folders.Select(f => new FolderResponseModel(f)));
