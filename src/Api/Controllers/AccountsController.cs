@@ -45,7 +45,7 @@ namespace Bit.Api.Controllers
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach(var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
