@@ -39,5 +39,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.Select(s => s.ToDomain()).ToList();
             }
         }
+
+        public async Task<ICollection<Site>> GetManyByRevisionDateAsync(string userId, DateTime sinceRevisionDate)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SiteTableModel>(
+                    $"[{Schema}].[{Table}_ReadByRevisionDate]",
+                    new { UserId = new Guid(userId), SinceRevisionDate = sinceRevisionDate },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.Select(f => f.ToDomain()).ToList();
+            }
+        }
     }
 }

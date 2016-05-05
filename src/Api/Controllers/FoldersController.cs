@@ -8,6 +8,7 @@ using System.Security.Claims;
 using Microsoft.AspNet.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
+using Bit.Core.Domains;
 
 namespace Bit.Api.Controllers
 {
@@ -36,9 +37,18 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<FolderResponseModel>> Get()
+        public async Task<ListResponseModel<FolderResponseModel>> Get(DateTime? since = null)
         {
-            var folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
+            ICollection<Folder> folders = null;
+            if(since.HasValue)
+            {
+                folders = await _folderRepository.GetManyByRevisionDateAsync(User.GetUserId(), since.Value);
+            }
+            else
+            {
+                folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
+            }
+
             return new ListResponseModel<FolderResponseModel>(folders.Select(f => new FolderResponseModel(f)));
         }
 
