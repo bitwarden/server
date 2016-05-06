@@ -20,6 +20,7 @@ namespace Bit.Api.Models
             Username = site.Username;
             Password = site.Password;
             Notes = site.Notes;
+            RevisionDate = site.RevisionDate;
         }
 
         public string Id { get; set; }
@@ -29,6 +30,7 @@ namespace Bit.Api.Models
         public string Username { get; set; }
         public string Password { get; set; }
         public string Notes { get; set; }
+        public DateTime RevisionDate { get; set; }
 
         // Expandables
         public FolderResponseModel Folder { get; set; }

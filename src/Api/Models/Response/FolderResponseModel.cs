@@ -15,9 +15,11 @@ namespace Bit.Api.Models
 
             Id = folder.Id;
             Name = folder.Name;
+            RevisionDate = folder.RevisionDate;
         }
 
         public string Id { get; set; }
         public string Name { get; set; }
+        public DateTime RevisionDate { get; set; }
     }
 }
