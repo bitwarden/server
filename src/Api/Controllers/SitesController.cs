@@ -42,18 +42,9 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<SiteResponseModel>> Get(DateTime? since = null, string[] expand = null)
+        public async Task<ListResponseModel<SiteResponseModel>> Get(string[] expand = null)
         {
-            ICollection<Site> sites = null;
-            if(since.HasValue)
-            {
-                sites = await _siteRepository.GetManyByRevisionDateAsync(User.GetUserId(), since.Value);
-            }
-            else
-            {
-                sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId());
-            }
-
+            ICollection<Site> sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId());
             var responses = sites.Select(s => new SiteResponseModel(s)).ToList();
             await ExpandManyAsync(sites, responses, expand, null);
             return new ListResponseModel<SiteResponseModel>(responses);

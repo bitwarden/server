@@ -37,19 +37,11 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<FolderResponseModel>> Get(DateTime? since = null)
+        public async Task<ListResponseModel<FolderResponseModel>> Get()
         {
-            ICollection<Folder> folders = null;
-            if(since.HasValue)
-            {
-                folders = await _folderRepository.GetManyByRevisionDateAsync(User.GetUserId(), since.Value);
-            }
-            else
-            {
-                folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
-            }
-
-            return new ListResponseModel<FolderResponseModel>(folders.Select(f => new FolderResponseModel(f)));
+            ICollection<Folder> folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
+            var responses = folders.Select(f => new FolderResponseModel(f));
+            return new ListResponseModel<FolderResponseModel>(responses);
         }
 
         [HttpPost("")]
