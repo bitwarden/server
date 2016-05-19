@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Identity;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.OptionsModel;
+using Microsoft.Extensions.Options;
 using Bit.Core.Domains;
 using Bit.Core.Repositories;
 using OtpSharp;
 using Base32;
 using System.Linq;
+using Microsoft.AspNetCore.Builder;
 
 namespace Bit.Core.Services
 {
@@ -35,8 +36,7 @@ namespace Bit.Core.Services
             ILookupNormalizer keyNormalizer,
             IdentityErrorDescriber errors,
             IServiceProvider services,
-            ILogger<UserManager<User>> logger,
-            IHttpContextAccessor contextAccessor)
+            ILogger<UserManager<User>> logger)
             : base(
                   store,
                   optionsAccessor,
@@ -46,8 +46,7 @@ namespace Bit.Core.Services
                   keyNormalizer,
                   errors,
                   services,
-                  logger,
-                  contextAccessor)
+                  logger)
         {
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;

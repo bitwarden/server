@@ -2,12 +2,13 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Authentication.JwtBearer;
-using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Identity;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.OptionsModel;
+using Microsoft.Extensions.Options;
 using Bit.Core.Domains;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Identity
 {
@@ -123,12 +124,16 @@ namespace Bit.Core.Identity
                 }
             }
 
-            var securityToken = handler.CreateToken(
-                issuer: JwtIdentityOptions.Issuer,
-                audience: JwtIdentityOptions.Audience,
-                signingCredentials: JwtIdentityOptions.SigningCredentials,
-                subject: userPrincipal.Identities.First(),
-                expires: tokenExpiration);
+            var descriptor = new SecurityTokenDescriptor
+            {
+                Issuer = JwtIdentityOptions.Issuer,
+                SigningCredentials = JwtIdentityOptions.SigningCredentials,
+                Audience = JwtIdentityOptions.Audience,
+                Subject = userPrincipal.Identities.First(),
+                Expires = tokenExpiration
+            };
+
+            var securityToken = handler.CreateToken(descriptor);
 
             return handler.WriteToken(securityToken);
         }

@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
-using System.IdentityModel.Tokens;
 using Bit.Core.Repositories;
-using Microsoft.AspNet.Authentication;
-using Microsoft.AspNet.Http.Authentication;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http.Authentication;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Identity;
+using Bit.Core.Domains;
 
 namespace Bit.Core.Identity
 {
     public static class JwtBearerEventImplementations
     {
-        public async static Task ValidatedTokenAsync(ValidatedTokenContext context)
+        public async static Task ValidatedTokenAsync(TokenValidatedContext context)
         {
             if(context.HttpContext.RequestServices == null)
             {
@@ -20,13 +22,14 @@ namespace Bit.Core.Identity
             }
 
             var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
-            var manager = context.HttpContext.RequestServices.GetRequiredService<JwtBearerSignInManager>();
+            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+            var signInManager = context.HttpContext.RequestServices.GetRequiredService<JwtBearerSignInManager>();
 
-            var userId = context.AuthenticationTicket.Principal.GetUserId();
+            var userId = userManager.GetUserId(context.Ticket.Principal);
             var user = await userRepository.GetByIdAsync(userId);
 
             // validate security token
-            if(!await manager.ValidateSecurityStampAsync(user, context.AuthenticationTicket.Principal))
+            if(!await signInManager.ValidateSecurityStampAsync(user, context.Ticket.Principal))
             {
                 throw new SecurityTokenValidationException("Bad security stamp.");
             }
@@ -41,7 +44,7 @@ namespace Bit.Core.Identity
             if(!context.HttpContext.User.Identity.IsAuthenticated)
             {
                 context.State = EventResultState.HandledResponse;
-                context.AuthenticationTicket = new AuthenticationTicket(context.HttpContext.User, new AuthenticationProperties(), context.Options.AuthenticationScheme);
+                context.Ticket = new AuthenticationTicket(context.HttpContext.User, new AuthenticationProperties(), context.Options.AuthenticationScheme);
             }
 
             return Task.FromResult(0);

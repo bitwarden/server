@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.AspNet.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Exceptions
 {

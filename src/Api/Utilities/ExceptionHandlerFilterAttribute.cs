@@ -2,9 +2,9 @@
 using System.IdentityModel.Tokens;
 using Bit.Api.Models.Response;
 using Bit.Core.Exceptions;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Mvc;
-using Microsoft.AspNet.Mvc.Filters;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -48,14 +48,14 @@ namespace Bit.Api.Utilities
             }
             else
             {
-                var logger = context.HttpContext.ApplicationServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
                 logger.LogError(exception.Message, exception);
 
                 errorModel.Message = "An unhandled server error has occured.";
                 context.HttpContext.Response.StatusCode = 500;
             }
 
-            var env = context.HttpContext.ApplicationServices.GetRequiredService<IHostingEnvironment>();
+            var env = context.HttpContext.RequestServices.GetRequiredService<IHostingEnvironment>();
             if(env.IsDevelopment())
             {
                 errorModel.ExceptionMessage = exception.Message;

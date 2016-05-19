@@ -1,14 +1,16 @@
 ﻿using System;
-using Microsoft.AspNet.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Domains;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Identity
 {
     public static class JwtBearerIdentityServiceCollectionExtensions
     {
-        public static IdentityBuilder AddJwtBearerIdentit(
+        public static IdentityBuilder AddJwtBearerIdentity(
             this IServiceCollection services)
         {
             return services.AddJwtBearerIdentity(setupAction: null, jwtBearerSetupAction: null);
@@ -23,6 +25,8 @@ namespace Bit.Core.Identity
             services.AddOptions();
             services.AddAuthentication();
 
+            // Hosting doesn't add IHttpContextAccessor by default
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             // Identity services
             services.TryAddSingleton<IdentityMarkerService>();
             services.TryAddScoped<IUserValidator<User>, UserValidator<User>>();

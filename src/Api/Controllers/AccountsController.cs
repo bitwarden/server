@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Authorization;
-using Microsoft.AspNet.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Microsoft.AspNet.Identity;
+using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
 using Bit.Core;
@@ -78,7 +78,7 @@ namespace Bit.Api.Controllers
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, User.GetUserId());
+            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, _userManager.GetUserId(User));
 
             var result = await _userService.ChangeEmailAsync(
                 _currentContext.User,
@@ -107,7 +107,7 @@ namespace Bit.Api.Controllers
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, User.GetUserId());
+            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, _userManager.GetUserId(User));
 
             var result = await _userService.ChangePasswordAsync(
                 _currentContext.User,
@@ -206,8 +206,8 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportRequestModel model)
         {
             await _cipherService.ImportCiphersAsync(
-                model.Folders.Select(f => f.ToFolder(User.GetUserId())).ToList(),
-                model.Sites.Select(s => s.ToSite(User.GetUserId())).ToList(),
+                model.Folders.Select(f => f.ToFolder(_userManager.GetUserId(User))).ToList(),
+                model.Sites.Select(s => s.ToSite(_userManager.GetUserId(User))).ToList(),
                 model.SiteRelationships);
         }
 

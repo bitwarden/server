@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Base32;
-using Microsoft.AspNet.Identity;
+using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
 using OtpSharp;
 
 namespace Bit.Core.Identity
 {
-    public class AuthenticatorTokenProvider : IUserTokenProvider<User>
+    public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
     {
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {

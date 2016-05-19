@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
-using System.Security.Claims;
-using Microsoft.AspNet.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Api.Controllers
 {
@@ -17,17 +17,20 @@ namespace Bit.Api.Controllers
     public class FoldersController : Controller
     {
         private readonly IFolderRepository _folderRepository;
+        private readonly UserManager<User> _userManager;
 
         public FoldersController(
-            IFolderRepository folderRepository)
+            IFolderRepository folderRepository,
+            UserManager<User> userManager)
         {
             _folderRepository = folderRepository;
+            _userManager = userManager;
         }
 
         [HttpGet("{id}")]
         public async Task<FolderResponseModel> Get(string id)
         {
-            var folder = await _folderRepository.GetByIdAsync(id, User.GetUserId());
+            var folder = await _folderRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(folder == null)
             {
                 throw new NotFoundException();
@@ -39,7 +42,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<FolderResponseModel>> Get()
         {
-            ICollection<Folder> folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
+            ICollection<Folder> folders = await _folderRepository.GetManyByUserIdAsync(_userManager.GetUserId(User));
             var responses = folders.Select(f => new FolderResponseModel(f));
             return new ListResponseModel<FolderResponseModel>(responses);
         }
@@ -47,7 +50,7 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<FolderResponseModel> Post([FromBody]FolderRequestModel model)
         {
-            var folder = model.ToFolder(User.GetUserId());
+            var folder = model.ToFolder(_userManager.GetUserId(User));
             await _folderRepository.CreateAsync(folder);
             return new FolderResponseModel(folder);
         }
@@ -55,7 +58,7 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}")]
         public async Task<FolderResponseModel> Put(string id, [FromBody]FolderRequestModel model)
         {
-            var folder = await _folderRepository.GetByIdAsync(id, User.GetUserId());
+            var folder = await _folderRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(folder == null)
             {
                 throw new NotFoundException();
@@ -68,7 +71,7 @@ namespace Bit.Api.Controllers
         [HttpDelete("{id}")]
         public async Task Delete(string id)
         {
-            var folder = await _folderRepository.GetByIdAsync(id, User.GetUserId());
+            var folder = await _folderRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(folder == null)
             {
                 throw new NotFoundException();

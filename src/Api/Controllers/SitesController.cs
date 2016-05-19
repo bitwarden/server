@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
-using System.Security.Claims;
-using Microsoft.AspNet.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Api.Controllers
 {
@@ -18,19 +18,22 @@ namespace Bit.Api.Controllers
     {
         private readonly ISiteRepository _siteRepository;
         private readonly IFolderRepository _folderRepository;
+        private readonly UserManager<User> _userManager;
 
         public SitesController(
             ISiteRepository siteRepository,
-            IFolderRepository folderRepository)
+            IFolderRepository folderRepository,
+            UserManager<User> userManager)
         {
             _siteRepository = siteRepository;
             _folderRepository = folderRepository;
+            _userManager = userManager;
         }
 
         [HttpGet("{id}")]
         public async Task<SiteResponseModel> Get(string id, string[] expand = null)
         {
-            var site = await _siteRepository.GetByIdAsync(id, User.GetUserId());
+            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(site == null)
             {
                 throw new NotFoundException();
@@ -44,7 +47,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<SiteResponseModel>> Get(string[] expand = null)
         {
-            ICollection<Site> sites = await _siteRepository.GetManyByUserIdAsync(User.GetUserId());
+            ICollection<Site> sites = await _siteRepository.GetManyByUserIdAsync(_userManager.GetUserId(User));
             var responses = sites.Select(s => new SiteResponseModel(s)).ToList();
             await ExpandManyAsync(sites, responses, expand, null);
             return new ListResponseModel<SiteResponseModel>(responses);
@@ -53,7 +56,7 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<SiteResponseModel> Post([FromBody]SiteRequestModel model, string[] expand = null)
         {
-            var site = model.ToSite(User.GetUserId());
+            var site = model.ToSite(_userManager.GetUserId(User));
             await _siteRepository.CreateAsync(site);
 
             var response = new SiteResponseModel(site);
@@ -64,7 +67,7 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}")]
         public async Task<SiteResponseModel> Put(string id, [FromBody]SiteRequestModel model, string[] expand = null)
         {
-            var site = await _siteRepository.GetByIdAsync(id, User.GetUserId());
+            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(site == null)
             {
                 throw new NotFoundException();
@@ -80,7 +83,7 @@ namespace Bit.Api.Controllers
         [HttpDelete("{id}")]
         public async Task Delete(string id)
         {
-            var site = await _siteRepository.GetByIdAsync(id, User.GetUserId());
+            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
             if(site == null)
             {
                 throw new NotFoundException();
@@ -118,7 +121,7 @@ namespace Bit.Api.Controllers
             {
                 if(folders == null)
                 {
-                    folders = await _folderRepository.GetManyByUserIdAsync(User.GetUserId());
+                    folders = await _folderRepository.GetManyByUserIdAsync(_userManager.GetUserId(User));
                 }
 
                 if(folders != null && folders.Count() > 0)
