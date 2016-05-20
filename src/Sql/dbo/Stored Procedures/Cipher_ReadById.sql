@@ -1,11 +1,11 @@
-﻿CREATE PROCEDURE [dbo].[Folder_ReadById]
+﻿CREATE PROCEDURE [dbo].[Cipher_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SELECT
         *
     FROM
-        [dbo].[FolderView]
+        [dbo].[CipherView]
     WHERE
         [Id] = @Id
 END

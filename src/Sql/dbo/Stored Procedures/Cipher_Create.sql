@@ -1,26 +1,20 @@
-﻿CREATE PROCEDURE [dbo].[Site_Create]
+﻿CREATE PROCEDURE [dbo].[Cipher_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @FolderId UNIQUEIDENTIFIER,
-    @Name NVARCHAR(MAX),
-    @Uri NVARCHAR(MAX),
-    @Username NVARCHAR(MAX),
-    @Password NVARCHAR(MAX),
-    @Notes NVARCHAR(MAX),
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[Site]
+    INSERT INTO [dbo].[Cipher]
     (
         [Id],
         [UserId],
         [FolderId],
-        [Name],
-        [Uri],
-        [Username],
-        [Password],
-        [Notes],
+        [Type],
+        [Data],
         [CreationDate],
         [RevisionDate]
     )
@@ -29,11 +23,8 @@ BEGIN
         @Id,
         @UserId,
         @FolderId,
-        @Name,
-        @Uri,
-        @Username,
-        @Password,
-        @Notes,
+        @Type,
+        @Data,
         @CreationDate,
         @RevisionDate
     )

@@ -1,16 +1,20 @@
-﻿CREATE PROCEDURE [dbo].[Folder_Update]
+﻿CREATE PROCEDURE [dbo].[Cipher_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @Name NVARCHAR(MAX),
+    @FolderId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
     UPDATE
-        [dbo].[Folder]
+        [dbo].[Cipher]
     SET
         [UserId] = @UserId,
-        [Name] = @Name,
+        [FolderId] = @FolderId,
+        [Type] = @Type,
+        [Data] = @Data,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

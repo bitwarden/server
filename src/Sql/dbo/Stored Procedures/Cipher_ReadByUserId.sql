@@ -5,14 +5,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[FolderView]
-    WHERE
-        [UserId] = @UserId
-
-    SELECT
-        *
-    FROM
-        [dbo].[SiteView]
+        [dbo].[CipherView]
     WHERE
         [UserId] = @UserId
 END

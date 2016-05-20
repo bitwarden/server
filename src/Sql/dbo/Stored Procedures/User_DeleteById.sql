@@ -6,13 +6,7 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[Site]
-    WHERE
-        [UserId] = @Id
-
-    DELETE
-    FROM
-        [dbo].[Folder]
+        [dbo].[Cipher]
     WHERE
         [UserId] = @Id
 
