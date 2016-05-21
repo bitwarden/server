@@ -1,7 +1,10 @@
-﻿namespace Bit.Core
+﻿using System;
+
+namespace Bit.Core
 {
-    public interface IDataObject
+    public interface IDataObject<T> where T : IEquatable<T>
     {
-        string Id { get; set; }
+        T Id { get; set; }
+        void SetNewId();
     }
 }

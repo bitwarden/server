@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,14 +56,14 @@ namespace Bit.Core.Services
             _passwordValidators = passwordValidators;
         }
 
-        public async Task<User> GetUserByIdAsync(string userId)
+        public async Task<User> GetUserByIdAsync(Guid userId)
         {
             return await _userRepository.GetByIdAsync(userId);
         }
 
         public async Task SaveUserAsync(User user)
         {
-            if(string.IsNullOrWhiteSpace(user.Id))
+            if(user.Id == default(Guid))
             {
                 throw new ApplicationException("Use register method to create a new user.");
             }
@@ -114,7 +113,7 @@ namespace Bit.Core.Services
             await _mailService.SendChangeEmailEmailAsync(newEmail, token);
         }
 
-        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword, string token, IEnumerable<dynamic> ciphers)
+        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword, string token, IEnumerable<Cipher> ciphers)
         {
             var verifyPasswordResult = _passwordHasher.VerifyHashedPassword(user, user.MasterPassword, masterPassword);
             if(verifyPasswordResult == PasswordVerificationResult.Failed)
@@ -151,7 +150,7 @@ namespace Bit.Core.Services
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, IEnumerable<dynamic> ciphers)
+        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, IEnumerable<Cipher> ciphers)
         {
             if(user == null)
             {

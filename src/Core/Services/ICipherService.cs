@@ -6,6 +6,6 @@ namespace Bit.Core.Services
 {
     public interface ICipherService
     {
-        Task ImportCiphersAsync(List<Folder> folders, List<Site> sites, IEnumerable<KeyValuePair<int, int>> siteRelationships);
+        Task ImportCiphersAsync(List<Cipher> folders, List<Cipher> ciphers, IEnumerable<KeyValuePair<int, int>> folderRelationships);
     }
 }

@@ -22,40 +22,75 @@ CREATE TRIGGER [dbo].[Cipher_Inserted]
 ON [dbo].[Cipher] AFTER INSERT
 AS
 BEGIN
-    SET NOCOUNT ON
- 
-    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT [UserId] FROM INSERTED)
-    DECLARE @CipherId UNIQUEIDENTIFIER = (SELECT [Id] FROM INSERTED)
-    DECLARE @Date DATETIME2(7) = (SELECT [CreationDate] FROM INSERTED)
- 
-    EXEC [dbo].[History_Create] @UserId, @CipherId, 0 /* Insert */, @Date
-END
+    DECLARE @Count INT = (SELECT COUNT(1) FROM INSERTED)
+    IF @Count = 0 RETURN
 
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[History]
+    (
+        [UserId],
+        [CipherId],
+        [Event],
+        [Date]
+    )
+    SELECT
+        [UserId],
+        [Id],
+        0, --Insert
+        [CreationDate]
+    FROM
+        INSERTED
+END
 
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
 ON [dbo].[Cipher] AFTER UPDATE
 AS
 BEGIN
-    SET NOCOUNT ON
- 
-    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT [UserId] FROM INSERTED)
-    DECLARE @CipherId UNIQUEIDENTIFIER = (SELECT [Id] FROM INSERTED)
-    DECLARE @Date DATETIME2(7) = (SELECT [RevisionDate] FROM INSERTED)
- 
-    EXEC [dbo].[History_Create] @UserId, @CipherId, 1 /* Update */, @Date
-END
+    DECLARE @Count INT = (SELECT COUNT(1) FROM INSERTED)
+    IF @Count = 0 RETURN
 
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[History]
+    (
+        [UserId],
+        [CipherId],
+        [Event],
+        [Date]
+    )
+    SELECT
+        [UserId],
+        [Id],
+        1, --Update
+        [RevisionDate]
+    FROM
+        INSERTED
+END
 
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
 ON [dbo].[Cipher] AFTER DELETE
 AS
 BEGIN
+    DECLARE @Count INT = (SELECT COUNT(1) FROM DELETED)
+    IF @Count = 0 RETURN
+
     SET NOCOUNT ON
- 
-    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT [UserId] FROM DELETED)
-    DECLARE @CipherId UNIQUEIDENTIFIER = (SELECT [Id] FROM DELETED)
- 
-    EXEC [dbo].[History_Create] @UserId, @CipherId, 2 /* Delete */, GETUTCDATE
+
+    INSERT INTO [dbo].[History]
+    (
+        [UserId],
+        [CipherId],
+        [Event],
+        [Date]
+    )
+    SELECT
+        [UserId],
+        [Id],
+        2, --Delete
+        GETUTCDATE()
+    FROM
+        DELETED
 END

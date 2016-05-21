@@ -9,46 +9,43 @@ namespace Bit.Core.Services
 {
     public class CipherService : ICipherService
     {
-        private readonly IFolderRepository _folderRepository;
         private readonly ICipherRepository _cipherRepository;
 
         public CipherService(
-            IFolderRepository folderRepository,
             ICipherRepository cipherRepository)
         {
-            _folderRepository = folderRepository;
             _cipherRepository = cipherRepository;
         }
 
         public async Task ImportCiphersAsync(
-            List<Folder> folders,
-            List<Site> sites,
-            IEnumerable<KeyValuePair<int, int>> siteRelationships)
+            List<Cipher> folders,
+            List<Cipher> ciphers,
+            IEnumerable<KeyValuePair<int, int>> folderRelationships)
         {
             // create all the folders
             var folderTasks = new List<Task>();
             foreach(var folder in folders)
             {
-                folderTasks.Add(_folderRepository.CreateAsync(folder));
+                folderTasks.Add(_cipherRepository.CreateAsync(folder));
             }
             await Task.WhenAll(folderTasks);
 
-            // associate the newly created folders to the sites
-            foreach(var relationship in siteRelationships)
+            // associate the newly created folders to the ciphers
+            foreach(var relationship in folderRelationships)
             {
-                var site = sites.ElementAtOrDefault(relationship.Key);
+                var cipher = ciphers.ElementAtOrDefault(relationship.Key);
                 var folder = folders.ElementAtOrDefault(relationship.Value);
 
-                if(site == null || folder == null)
+                if(cipher == null || folder == null)
                 {
                     continue;
                 }
 
-                site.FolderId = folder.Id;
+                cipher.FolderId = folder.Id;
             }
 
-            // create all the sites
-            await _cipherRepository.CreateAsync(sites);
+            // create all the ciphers
+            await _cipherRepository.CreateAsync(ciphers);
         }
     }
 }

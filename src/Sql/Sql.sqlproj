@@ -76,7 +76,7 @@
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Update.sql" />
     <Build Include="dbo\Stored Procedures\History_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\History_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_ReadByTypeUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadByEmail.sql" />
     <Build Include="dbo\Stored Procedures\User_DeleteById.sql" />

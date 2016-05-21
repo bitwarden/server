@@ -16,25 +16,22 @@ namespace Bit.Api.Controllers
     [Authorize("Application")]
     public class SitesController : Controller
     {
-        private readonly ISiteRepository _siteRepository;
-        private readonly IFolderRepository _folderRepository;
+        private readonly ICipherRepository _cipherRepository;
         private readonly UserManager<User> _userManager;
 
         public SitesController(
-            ISiteRepository siteRepository,
-            IFolderRepository folderRepository,
+            ICipherRepository cipherRepository,
             UserManager<User> userManager)
         {
-            _siteRepository = siteRepository;
-            _folderRepository = folderRepository;
+            _cipherRepository = cipherRepository;
             _userManager = userManager;
         }
 
         [HttpGet("{id}")]
         public async Task<SiteResponseModel> Get(string id, string[] expand = null)
         {
-            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
-            if(site == null)
+            var site = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            if(site == null || site.Type != Core.Enums.CipherType.Site)
             {
                 throw new NotFoundException();
             }
@@ -47,7 +44,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<SiteResponseModel>> Get(string[] expand = null)
         {
-            ICollection<Site> sites = await _siteRepository.GetManyByUserIdAsync(_userManager.GetUserId(User));
+            ICollection<Cipher> sites = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Site, new Guid(_userManager.GetUserId(User)));
             var responses = sites.Select(s => new SiteResponseModel(s)).ToList();
             await ExpandManyAsync(sites, responses, expand, null);
             return new ListResponseModel<SiteResponseModel>(responses);
@@ -56,8 +53,8 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<SiteResponseModel> Post([FromBody]SiteRequestModel model, string[] expand = null)
         {
-            var site = model.ToSite(_userManager.GetUserId(User));
-            await _siteRepository.CreateAsync(site);
+            var site = model.ToCipher(_userManager.GetUserId(User));
+            await _cipherRepository.CreateAsync(site);
 
             var response = new SiteResponseModel(site);
             await ExpandAsync(site, response, expand, null);
@@ -67,13 +64,13 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}")]
         public async Task<SiteResponseModel> Put(string id, [FromBody]SiteRequestModel model, string[] expand = null)
         {
-            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
-            if(site == null)
+            var site = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            if(site == null || site.Type != Core.Enums.CipherType.Site)
             {
                 throw new NotFoundException();
             }
 
-            await _siteRepository.ReplaceAsync(model.ToSite(site));
+            await _cipherRepository.ReplaceAsync(model.ToCipher(site));
 
             var response = new SiteResponseModel(site);
             await ExpandAsync(site, response, expand, null);
@@ -83,34 +80,34 @@ namespace Bit.Api.Controllers
         [HttpDelete("{id}")]
         public async Task Delete(string id)
         {
-            var site = await _siteRepository.GetByIdAsync(id, _userManager.GetUserId(User));
-            if(site == null)
+            var site = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            if(site == null || site.Type != Core.Enums.CipherType.Site)
             {
                 throw new NotFoundException();
             }
 
-            await _siteRepository.DeleteAsync(site);
+            await _cipherRepository.DeleteAsync(site);
         }
 
-        private async Task ExpandAsync(Site site, SiteResponseModel response, string[] expand, Folder folder)
+        private async Task ExpandAsync(Cipher site, SiteResponseModel response, string[] expand, Cipher folder)
         {
             if(expand == null || expand.Count() == 0)
             {
                 return;
             }
 
-            if(expand.Any(e => e.ToLower() == "folder"))
+            if(expand.Any(e => e.ToLower() == "folder") && site.FolderId.HasValue)
             {
                 if(folder == null)
                 {
-                    folder = await _folderRepository.GetByIdAsync(site.FolderId);
+                    folder = await _cipherRepository.GetByIdAsync(site.FolderId.Value);
                 }
 
                 response.Folder = new FolderResponseModel(folder);
             }
         }
 
-        private async Task ExpandManyAsync(IEnumerable<Site> sites, ICollection<SiteResponseModel> responses, string[] expand, IEnumerable<Folder> folders)
+        private async Task ExpandManyAsync(IEnumerable<Cipher> sites, ICollection<SiteResponseModel> responses, string[] expand, IEnumerable<Cipher> folders)
         {
             if(expand == null || expand.Count() == 0)
             {
@@ -121,14 +118,14 @@ namespace Bit.Api.Controllers
             {
                 if(folders == null)
                 {
-                    folders = await _folderRepository.GetManyByUserIdAsync(_userManager.GetUserId(User));
+                    folders = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Folder, new Guid(_userManager.GetUserId(User)));
                 }
 
                 if(folders != null && folders.Count() > 0)
                 {
                     foreach(var response in responses)
                     {
-                        var site = sites.SingleOrDefault(s => s.Id == response.Id);
+                        var site = sites.SingleOrDefault(s => s.Id.ToString() == response.Id);
                         if(site == null)
                         {
                             continue;

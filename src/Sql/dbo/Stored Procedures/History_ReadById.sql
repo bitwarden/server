@@ -2,6 +2,8 @@
     @Id BIGINT
 AS
 BEGIN
+    SET NOCOUNT ON
+
     SELECT
         *
     FROM

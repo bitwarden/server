@@ -78,7 +78,7 @@ namespace Bit.Api.Controllers
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, _userManager.GetUserId(User));
+            var ciphers = model.Ciphers.Select(c => c.ToCipher(_userManager.GetUserId(User)));
 
             var result = await _userService.ChangeEmailAsync(
                 _currentContext.User,
@@ -107,7 +107,7 @@ namespace Bit.Api.Controllers
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = CipherRequestModel.ToDynamicCiphers(model.Ciphers, _userManager.GetUserId(User));
+            var ciphers = model.Ciphers.Select(c => c.ToCipher(_userManager.GetUserId(User)));
 
             var result = await _userService.ChangePasswordAsync(
                 _currentContext.User,
@@ -206,8 +206,8 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportRequestModel model)
         {
             await _cipherService.ImportCiphersAsync(
-                model.Folders.Select(f => f.ToFolder(_userManager.GetUserId(User))).ToList(),
-                model.Sites.Select(s => s.ToSite(_userManager.GetUserId(User))).ToList(),
+                model.Folders.Select(f => f.ToCipher(_userManager.GetUserId(User))).ToList(),
+                model.Sites.Select(s => s.ToCipher(_userManager.GetUserId(User))).ToList(),
                 model.SiteRelationships);
         }
 

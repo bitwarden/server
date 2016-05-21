@@ -26,7 +26,7 @@ namespace Bit.Core.Identity
             var signInManager = context.HttpContext.RequestServices.GetRequiredService<JwtBearerSignInManager>();
 
             var userId = userManager.GetUserId(context.Ticket.Principal);
-            var user = await userRepository.GetByIdAsync(userId);
+            var user = await userRepository.GetByIdAsync(new Guid(userId));
 
             // validate security token
             if(!await signInManager.ValidateSecurityStampAsync(user, context.Ticket.Principal))

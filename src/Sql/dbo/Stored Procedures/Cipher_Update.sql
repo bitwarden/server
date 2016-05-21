@@ -8,6 +8,8 @@
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
+    SET NOCOUNT ON
+
     UPDATE
         [dbo].[Cipher]
     SET

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
 using Bit.Core.Domains;
-using System.Linq;
 using Bit.Core.Enums;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -34,40 +34,16 @@ namespace Bit.Api.Models
         [StringLength(5000)]
         public string Notes { get; set; }
 
-        public virtual Site ToSite(string userId = null)
+        public virtual Cipher ToCipher(string userId = null)
         {
-            return new Site
+            return new Cipher
             {
-                Id = Id,
-                UserId = userId,
-                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : FolderId,
-                Name = Name,
-                Uri = Uri,
-                Username = Username,
-                Password = Password,
-                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes
+                Id = new Guid(Id),
+                UserId = new Guid(userId),
+                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
+                Type = Type,
+                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })
             };
-        }
-
-        public Folder ToFolder(string userId = null)
-        {
-            return new Folder
-            {
-                Id = Id,
-                UserId = userId,
-                Name = Name
-            };
-        }
-
-        public static IEnumerable<dynamic> ToDynamicCiphers(CipherRequestModel[] models, string userId)
-        {
-            var sites = models.Where(m => m.Type == CipherType.Site).Select(m => m.ToSite(userId)).ToList();
-            var folders = models.Where(m => m.Type == CipherType.Folder).Select(m => m.ToFolder(userId)).ToList();
-
-            var ciphers = new List<dynamic>();
-            ciphers.AddRange(sites);
-            ciphers.AddRange(folders);
-            return ciphers;
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -3,12 +3,11 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Repositories.SqlServer.Models;
 using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public abstract class Repository<T, TModel> : BaseRepository, IRepository<T> where T : IDataObject where TModel : ITableModel<T>
+    public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId> where TId : IEquatable<TId> where T : class, IDataObject<TId>
     {
         public Repository(string connectionString, string schema = null, string table = null)
             : base(connectionString)
@@ -27,55 +26,45 @@ namespace Bit.Core.Repositories.SqlServer
         protected string Schema { get; private set; } = "dbo";
         protected string Table { get; private set; } = typeof(T).Name;
 
-        public virtual async Task<T> GetByIdAsync(string id)
+        public virtual async Task<T> GetByIdAsync(TId id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<TModel>(
+                var results = await connection.QueryAsync<T>(
                     $"[{Schema}].[{Table}_ReadById]",
-                    new { Id = new Guid(id) },
+                    new { Id = id },
                     commandType: CommandType.StoredProcedure);
 
-                var model = results.FirstOrDefault();
-                if(model == null)
-                {
-                    return default(T);
-                }
-
-                return model.ToDomain();
+                return results.SingleOrDefault();
             }
         }
 
         public virtual async Task CreateAsync(T obj)
         {
-            obj.Id = GenerateComb().ToString();
-            var tableModel = (TModel)Activator.CreateInstance(typeof(TModel), obj);
-
+            obj.SetNewId();
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_Create]",
-                    tableModel,
+                    obj,
                     commandType: CommandType.StoredProcedure);
             }
         }
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            var tableModel = (TModel)Activator.CreateInstance(typeof(TModel), obj);
-
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_Update]",
-                    tableModel,
+                    obj,
                     commandType: CommandType.StoredProcedure);
             }
         }
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(string.IsNullOrWhiteSpace(obj.Id) || obj.Id == "0" || obj.Id == Guid.Empty.ToString())
+            if(obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
@@ -90,13 +79,13 @@ namespace Bit.Core.Repositories.SqlServer
             await DeleteByIdAsync(obj.Id);
         }
 
-        public virtual async Task DeleteByIdAsync(string id)
+        public virtual async Task DeleteByIdAsync(TId id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_DeleteById]",
-                    new { Id = new Guid(id) },
+                    new { Id = id },
                     commandType: CommandType.StoredProcedure);
             }
         }

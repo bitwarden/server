@@ -1,14 +1,14 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Domains;
-using Bit.Core.Repositories.SqlServer.Models;
 using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class UserRepository : Repository<User, UserTableModel>, IUserRepository
+    public class UserRepository : Repository<User, Guid>, IUserRepository
     {
         public UserRepository(string connectionString)
             : base(connectionString)
@@ -18,18 +18,12 @@ namespace Bit.Core.Repositories.SqlServer
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<UserTableModel>(
+                var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_ReadByEmail]",
                     new { Email = email },
                     commandType: CommandType.StoredProcedure);
 
-                var model = results.FirstOrDefault();
-                if(model == null)
-                {
-                    return null;
-                }
-
-                return model.ToDomain();
+                return results.SingleOrDefault();
             }
         }
     }

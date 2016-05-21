@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
 using Bit.Core.Domains;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -12,18 +13,20 @@ namespace Bit.Api.Models
         [StringLength(300)]
         public string Name { get; set; }
 
-        public Folder ToFolder(string userId = null)
+        public Cipher ToCipher(string userId = null)
         {
-            return new Folder
+            return new Cipher
             {
-                UserId = userId,
-                Name = Name
+                UserId = new Guid(userId),
+                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                Type = Core.Enums.CipherType.Folder
             };
         }
 
-        public Folder ToFolder(Folder existingFolder)
+        public Cipher ToCipher(Cipher existingFolder)
         {
-            existingFolder.Name = Name;
+            existingFolder.Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingFolder.Type = Core.Enums.CipherType.Folder;
 
             return existingFolder;
         }

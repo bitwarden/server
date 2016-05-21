@@ -57,8 +57,6 @@ namespace Bit.Api
 
             // Repositories
             services.AddSingleton<IUserRepository>(s => new Repos.UserRepository(globalSettings.SqlServer.ConnectionString));
-            services.AddSingleton<ISiteRepository>(s => new Repos.SiteRepository(globalSettings.SqlServer.ConnectionString));
-            services.AddSingleton<IFolderRepository>(s => new Repos.FolderRepository(globalSettings.SqlServer.ConnectionString));
             services.AddSingleton<ICipherRepository>(s => new Repos.CipherRepository(globalSettings.SqlServer.ConnectionString));
 
             // Context

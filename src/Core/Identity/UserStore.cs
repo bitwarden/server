@@ -55,12 +55,14 @@ namespace Bit.Core.Identity
 
         public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(_currentContext?.User != null && _currentContext.User.Id == userId)
+            var id = new Guid(userId);
+
+            if(_currentContext?.User != null && _currentContext.User.Id == id)
             {
                 return _currentContext.User;
             }
 
-            return await _userRepository.GetByIdAsync(userId);
+            return await _userRepository.GetByIdAsync(id);
         }
 
         public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default(CancellationToken))
@@ -100,7 +102,7 @@ namespace Bit.Core.Identity
 
         public Task<string> GetUserIdAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(user.Id);
+            return Task.FromResult(user.Id.ToString());
         }
 
         public Task<string> GetUserNameAsync(User user, CancellationToken cancellationToken = default(CancellationToken))

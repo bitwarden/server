@@ -1,26 +1,34 @@
 ﻿using System;
 using Bit.Core.Domains;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
     public class SiteResponseModel : ResponseModel
     {
-        public SiteResponseModel(Site site)
+        public SiteResponseModel(Cipher cipher)
             : base("site")
         {
-            if(site == null)
+            if(cipher == null)
             {
-                throw new ArgumentNullException(nameof(site));
+                throw new ArgumentNullException(nameof(cipher));
             }
 
-            Id = site.Id;
-            FolderId = string.IsNullOrWhiteSpace(site.FolderId) ? null : site.FolderId;
-            Name = site.Name;
-            Uri = site.Uri;
-            Username = site.Username;
-            Password = site.Password;
-            Notes = site.Notes;
-            RevisionDate = site.RevisionDate;
+            if(cipher.Type != Core.Enums.CipherType.Site)
+            {
+                throw new ArgumentException(nameof(cipher.Type));
+            }
+
+            var data = JsonConvert.DeserializeObject<CipherDataModel>(cipher.Data);
+
+            Id = cipher.Id.ToString();
+            FolderId = cipher.FolderId?.ToString();
+            Name = data.Name;
+            Uri = data.Uri;
+            Username = data.Username;
+            Password = data.Password;
+            Notes = data.Notes;
+            RevisionDate = cipher.RevisionDate;
         }
 
         public string Id { get; set; }

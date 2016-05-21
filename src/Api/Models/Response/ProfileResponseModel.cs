@@ -13,7 +13,7 @@ namespace Bit.Api.Models
                 throw new ArgumentNullException(nameof(user));
             }
 
-            Id = user.Id;
+            Id = user.Id.ToString();
             Name = user.Name;
             Email = user.Email;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;

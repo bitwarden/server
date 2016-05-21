@@ -3,23 +3,63 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using Bit.Core.Repositories.SqlServer.Models;
 using DataTableProxy;
 using Bit.Core.Domains;
 using System.Data;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class CipherRepository : BaseRepository, ICipherRepository
+    public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     {
         public CipherRepository(string connectionString)
             : base(connectionString)
         { }
 
-        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<dynamic> ciphers)
+        public async Task<Cipher> GetByIdAsync(Guid id, Guid userId)
         {
-            var cleanedCiphers = ciphers.Where(c => c is Cipher);
-            if(cleanedCiphers.Count() == 0)
+            var cipher = await GetByIdAsync(id);
+            if(cipher == null || cipher.UserId != userId)
+            {
+                return null;
+            }
+
+            return cipher;
+        }
+
+        public async Task<ICollection<Cipher>> GetManyByUserIdAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Cipher>(
+                    $"[{Schema}].[{Table}_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<Cipher>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Cipher>(
+                    $"[{Schema}].[{Table}_ReadByTypeUserId]",
+                    new
+                    {
+                        Type = type,
+                        UserId = userId
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
+        {
+            if(ciphers.Count() == 0)
             {
                 return Task.FromResult(0);
             }
@@ -37,7 +77,7 @@ namespace Bit.Core.Repositories.SqlServer
                         using(var cmd = new SqlCommand("[dbo].[User_UpdateEmailPassword]", connection, transaction))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
-                            cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = new Guid(user.Id);
+                            cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
                             cmd.Parameters.Add("@Email", SqlDbType.NVarChar).Value = user.Email;
                             cmd.Parameters.Add("@EmailVerified", SqlDbType.NVarChar).Value = user.EmailVerified;
                             cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
@@ -50,12 +90,8 @@ namespace Bit.Core.Repositories.SqlServer
 
                         var sqlCreateTemp = @"
                             SELECT TOP 0 *
-                            INTO #TempFolder
-                            FROM [dbo].[Folder]
-
-                            SELECT TOP 0 *
-                            INTO #TempSite
-                            FROM [dbo].[Site]";
+                            INTO #TempCipher
+                            FROM [dbo].[Cipher]";
 
                         using(var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
                         {
@@ -66,25 +102,9 @@ namespace Bit.Core.Repositories.SqlServer
 
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
-                            bulkCopy.DestinationTableName = "#TempFolder";
+                            bulkCopy.DestinationTableName = "#TempCipher";
 
-                            var dataTable = cleanedCiphers
-                                .Where(c => c is Folder)
-                                .Select(c => new FolderTableModel(c as Folder))
-                                .ToTable(new ClassMapping<FolderTableModel>().AddAllPropertiesAsColumns());
-
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempSite";
-
-                            var dataTable = cleanedCiphers
-                                .Where(c => c is Site)
-                                .Select(c => new SiteTableModel(c as Site))
-                                .ToTable(new ClassMapping<SiteTableModel>().AddAllPropertiesAsColumns());
-
+                            var dataTable = ciphers.ToTable(new ClassMapping<Cipher>().AddAllPropertiesAsColumns());
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -92,44 +112,26 @@ namespace Bit.Core.Repositories.SqlServer
 
                         var sqlUpdate = @"
                             UPDATE
-                                [dbo].[Folder]
-                            SET
-                                -- Do not update [UserId]
-                                [Name] = TF.[Name],
-                                -- Do not update [CreationDate]
-                                [RevisionDate] = TF.[RevisionDate]
-                            FROM
-                                [dbo].[Folder] F
-                            INNER JOIN
-                                #TempFolder TF ON F.Id = TF.Id
-                            WHERE
-                                F.[UserId] = @UserId
-
-                            UPDATE
-                                [dbo].[Site]
+                                [dbo].[Cipher]
                             SET
                                 -- Do not update [UserId]
                                 -- Do not update [FolderId]
-                                [Name] = TS.[Name],
-                                [Uri] = TS.[Uri],
-                                [Username] = TS.[Username],
-                                [Password] = TS.[Password],
-                                [Notes] = TS.[Notes],
+                                -- Do not update [Type]
+                                [Data] = TC.[Data],
                                 -- Do not update [CreationDate]
-                                [RevisionDate] = TS.[RevisionDate]
+                                [RevisionDate] = TC.[RevisionDate]
                             FROM
-                                [dbo].[Site] S
+                                [dbo].[Cipher] C
                             INNER JOIN
-                                #TempSite TS ON S.Id = TS.Id
+                                #TempCipher TC ON C.Id = TC.Id
                             WHERE
-                                S.[UserId] = @UserId
+                                C.[UserId] = @UserId
 
-                            DROP TABLE #TempFolder
-                            DROP TABLE #TempSite";
+                            DROP TABLE #TempCipher";
 
                         using(var cmd = new SqlCommand(sqlUpdate, connection, transaction))
                         {
-                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = new Guid(user.Id);
+                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = user.Id;
                             cmd.ExecuteNonQuery();
                         }
 
@@ -146,18 +148,17 @@ namespace Bit.Core.Repositories.SqlServer
             return Task.FromResult(0);
         }
 
-        public Task CreateAsync(IEnumerable<dynamic> ciphers)
+        public Task CreateAsync(IEnumerable<Cipher> ciphers)
         {
-            var cleanedCiphers = ciphers.Where(c => c is Cipher);
-            if(cleanedCiphers.Count() == 0)
+            if(ciphers.Count() == 0)
             {
                 return Task.FromResult(0);
             }
 
             // Generate new Ids for these new ciphers
-            foreach(var cipher in cleanedCiphers)
+            foreach(var cipher in ciphers)
             {
-                cipher.Id = GenerateComb().ToString();
+                cipher.SetNewId();
             }
 
             using(var connection = new SqlConnection(ConnectionString))
@@ -168,27 +169,10 @@ namespace Bit.Core.Repositories.SqlServer
                 {
                     try
                     {
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
                         {
-                            bulkCopy.DestinationTableName = "[dbo].[Folder]";
-
-                            var dataTable = cleanedCiphers
-                                .Where(c => c is Folder)
-                                .Select(c => new FolderTableModel(c as Folder))
-                                .ToTable(new ClassMapping<FolderTableModel>().AddAllPropertiesAsColumns());
-
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "[dbo].[Site]";
-
-                            var dataTable = cleanedCiphers
-                                .Where(c => c is Site)
-                                .Select(c => new SiteTableModel(c as Site))
-                                .ToTable(new ClassMapping<SiteTableModel>().AddAllPropertiesAsColumns());
-
+                            bulkCopy.DestinationTableName = "[dbo].[Cipher]";
+                            var dataTable = ciphers.ToTable(new ClassMapping<Cipher>().AddAllPropertiesAsColumns());
                             bulkCopy.WriteToServer(dataTable);
                         }
 

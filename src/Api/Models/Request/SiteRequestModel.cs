@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
 using Bit.Core.Domains;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -28,28 +29,22 @@ namespace Bit.Api.Models
         [StringLength(5000)]
         public string Notes { get; set; }
 
-        public Site ToSite(string userId = null)
+        public Cipher ToCipher(string userId = null)
         {
-            return new Site
+            return new Cipher
             {
-                UserId = userId,
-                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : FolderId,
-                Name = Name,
-                Uri = Uri,
-                Username = string.IsNullOrWhiteSpace(Username) ? null : Username,
-                Password = Password,
-                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes
+                UserId = new Guid(userId),
+                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
+                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                Type = Core.Enums.CipherType.Site
             };
         }
 
-        public Site ToSite(Site existingSite)
+        public Cipher ToCipher(Cipher existingSite)
         {
-            existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : FolderId;
-            existingSite.Name = Name;
-            existingSite.Uri = Uri;
-            existingSite.Username = string.IsNullOrWhiteSpace(Username) ? null : Username;
-            existingSite.Password = Password;
-            existingSite.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes;
+            existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
+            existingSite.Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingSite.Type = Core.Enums.CipherType.Site;
 
             return existingSite;
         }
