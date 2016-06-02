@@ -28,7 +28,7 @@ namespace Bit.Api.Utilities
             {
                 context.HttpContext.Response.StatusCode = 400;
 
-                if(badRequestException != null)
+                if(badRequestException.ModelState != null)
                 {
                     errorModel = new ErrorResponseModel(badRequestException.ModelState);
                 }
