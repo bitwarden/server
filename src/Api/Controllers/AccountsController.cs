@@ -202,15 +202,6 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpPost("import")]
-        public async Task PostImport([FromBody]ImportRequestModel model)
-        {
-            await _cipherService.ImportCiphersAsync(
-                model.Folders.Select(f => f.ToCipher(_userManager.GetUserId(User))).ToList(),
-                model.Sites.Select(s => s.ToCipher(_userManager.GetUserId(User))).ToList(),
-                model.SiteRelationships);
-        }
-
         [HttpPost("delete")]
         public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
         {

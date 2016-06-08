@@ -7,6 +7,6 @@ namespace Bit.Api.Models
     {
         public FolderRequestModel[] Folders { get; set; }
         public SiteRequestModel[] Sites { get; set; }
-        public KeyValuePair<int, int>[] SiteRelationships { get; set; }
+        public KeyValuePair<int, int>[] FolderRelationships { get; set; }
     }
 }
