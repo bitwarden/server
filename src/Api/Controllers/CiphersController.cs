@@ -50,6 +50,14 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
+        [HttpGet("history")]
+        public async Task<CipherHistoryResponseModel> Get(DateTime since)
+        {
+            var history = await _cipherRepository.GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(
+                since, new Guid(_userManager.GetUserId(User)));
+            return new CipherHistoryResponseModel(history.Item1, history.Item2);
+        }
+
         [HttpPost("import")]
         public async Task PostImport([FromBody]ImportRequestModel model)
         {

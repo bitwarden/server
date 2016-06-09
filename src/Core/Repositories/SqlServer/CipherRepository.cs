@@ -57,6 +57,27 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<Tuple<ICollection<Cipher>, ICollection<Guid>>> 
+            GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(DateTime sinceRevisionDate, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryMultipleAsync(
+                    $"[{Schema}].[{Table}_ReadByRevisionDateUserWithDeleteHistory]",
+                    new
+                    {
+                        SinceRevisionDate = sinceRevisionDate,
+                        UserId = userId
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                var ciphers = await results.ReadAsync<Cipher>();
+                var deletes = await results.ReadAsync<Guid>();
+
+                return new Tuple<ICollection<Cipher>, ICollection<Guid>>(ciphers.ToList(), deletes.ToList());
+            }
+        }
+
         public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
         {
             if(ciphers.Count() == 0)
