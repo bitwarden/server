@@ -3,6 +3,7 @@
     @UserId UNIQUEIDENTIFIER,
     @FolderId UNIQUEIDENTIFIER,
     @Type TINYINT,
+    @Favorite BIT,
     @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -16,6 +17,7 @@ BEGIN
         [UserId] = @UserId,
         [FolderId] = @FolderId,
         [Type] = @Type,
+        [Favorite] = @Favorite,
         [Data] = @Data,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
