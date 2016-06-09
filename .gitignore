@@ -133,6 +133,7 @@ publish/
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
+PublishProfiles/
 
 # NuGet Packages
 *.nupkg
