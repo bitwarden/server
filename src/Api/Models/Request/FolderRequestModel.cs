@@ -15,17 +15,15 @@ namespace Bit.Api.Models
 
         public Cipher ToCipher(string userId = null)
         {
-            return new Cipher
+            return ToCipher(new Cipher
             {
-                UserId = new Guid(userId),
-                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
-                Type = Core.Enums.CipherType.Folder
-            };
+                UserId = new Guid(userId)
+            });
         }
 
         public Cipher ToCipher(Cipher existingFolder)
         {
-            existingFolder.Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingFolder.Data = JsonConvert.SerializeObject(new FolderDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             existingFolder.Type = Core.Enums.CipherType.Folder;
 
             return existingFolder;

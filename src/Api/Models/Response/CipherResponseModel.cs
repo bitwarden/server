@@ -18,12 +18,24 @@ namespace Bit.Api.Models
             Type = cipher.Type;
             Data = cipher.Data;
             RevisionDate = cipher.RevisionDate;
+
+            switch(cipher.Type)
+            {
+                case Core.Enums.CipherType.Folder:
+                    Data = new FolderDataModel(cipher);
+                    break;
+                case Core.Enums.CipherType.Site:
+                    Data = new SiteDataModel(cipher);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported " + nameof(Type) + ".");
+            }
         }
 
         public string Id { get; set; }
         public string FolderId { get; set; }
         public Core.Enums.CipherType Type { get; set; }
-        public string Data { get; set; }
-        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public dynamic Data { get; set; }
+        public DateTime RevisionDate { get; set; }
     }
 }

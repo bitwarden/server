@@ -19,7 +19,7 @@ namespace Bit.Api.Models
                 throw new ArgumentException(nameof(cipher.Type));
             }
 
-            var data = JsonConvert.DeserializeObject<CipherDataModel>(cipher.Data);
+            var data = new SiteDataModel(cipher);
 
             Id = cipher.Id.ToString();
             FolderId = cipher.FolderId?.ToString();

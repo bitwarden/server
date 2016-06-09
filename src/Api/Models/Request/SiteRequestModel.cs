@@ -31,19 +31,16 @@ namespace Bit.Api.Models
 
         public Cipher ToCipher(string userId = null)
         {
-            return new Cipher
+            return ToCipher(new Cipher
             {
-                UserId = new Guid(userId),
-                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
-                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
-                Type = Core.Enums.CipherType.Site
-            };
+                UserId = new Guid(userId)
+            });
         }
 
         public Cipher ToCipher(Cipher existingSite)
         {
             existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
-            existingSite.Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingSite.Data = JsonConvert.SerializeObject(new SiteDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             existingSite.Type = Core.Enums.CipherType.Site;
 
             return existingSite;

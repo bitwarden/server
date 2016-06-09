@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
 using Bit.Core.Domains;
@@ -8,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
-    public class CipherRequestModel : IValidatableObject
+    public class CipherRequestModel
     {
         public CipherType Type { get; set; }
 
@@ -36,29 +35,27 @@ namespace Bit.Api.Models
 
         public virtual Cipher ToCipher(string userId = null)
         {
-            return new Cipher
+            var cipher = new Cipher
             {
                 Id = new Guid(Id),
                 UserId = new Guid(userId),
                 FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
-                Type = Type,
-                Data = JsonConvert.SerializeObject(new CipherDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })
+                Type = Type
             };
-        }
 
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            if(Type == CipherType.Site)
+            switch(Type)
             {
-                if(string.IsNullOrWhiteSpace(Uri))
-                {
-                    yield return new ValidationResult("Uri is required for a site cypher.", new[] { "Uri" });
-                }
-                if(string.IsNullOrWhiteSpace(Password))
-                {
-                    yield return new ValidationResult("Password is required for a site cypher.", new[] { "Password" });
-                }
+                case CipherType.Folder:
+                    cipher.Data = JsonConvert.SerializeObject(new FolderDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    break;
+                case CipherType.Site:
+                    cipher.Data = JsonConvert.SerializeObject(new SiteDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
+
+            return cipher;
         }
     }
 }

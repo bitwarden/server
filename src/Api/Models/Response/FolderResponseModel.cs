@@ -1,6 +1,5 @@
 ﻿using System;
 using Bit.Core.Domains;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -19,7 +18,7 @@ namespace Bit.Api.Models
                 throw new ArgumentException(nameof(cipher.Type));
             }
 
-            var data = JsonConvert.DeserializeObject<CipherDataModel>(cipher.Data);
+            var data = new FolderDataModel(cipher);
 
             Id = cipher.Id.ToString();
             Name = data.Name;
