@@ -138,6 +138,7 @@ namespace Bit.Core.Repositories.SqlServer
                                 -- Do not update [UserId]
                                 -- Do not update [FolderId]
                                 -- Do not update [Type]
+                                -- Do not update [Favorite]
                                 [Data] = TC.[Data],
                                 -- Do not update [CreationDate]
                                 [RevisionDate] = TC.[RevisionDate]

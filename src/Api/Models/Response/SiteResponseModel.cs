@@ -1,6 +1,5 @@
 ﻿using System;
 using Bit.Core.Domains;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -23,6 +22,7 @@ namespace Bit.Api.Models
 
             Id = cipher.Id.ToString();
             FolderId = cipher.FolderId?.ToString();
+            Favorite = cipher.Favorite;
             Name = data.Name;
             Uri = data.Uri;
             Username = data.Username;
@@ -33,6 +33,7 @@ namespace Bit.Api.Models
 
         public string Id { get; set; }
         public string FolderId { get; set; }
+        public bool Favorite { get; set; }
         public string Name { get; set; }
         public string Uri { get; set; }
         public string Username { get; set; }

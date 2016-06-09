@@ -16,6 +16,7 @@ namespace Bit.Api.Models
             Id = cipher.Id.ToString();
             FolderId = cipher.FolderId?.ToString();
             Type = cipher.Type;
+            Favorite = cipher.Favorite;
             Data = cipher.Data;
             RevisionDate = cipher.RevisionDate;
 
@@ -35,6 +36,7 @@ namespace Bit.Api.Models
         public string Id { get; set; }
         public string FolderId { get; set; }
         public Core.Enums.CipherType Type { get; set; }
+        public bool Favorite { get; set; }
         public dynamic Data { get; set; }
         public DateTime RevisionDate { get; set; }
     }

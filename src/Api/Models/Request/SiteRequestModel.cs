@@ -10,6 +10,7 @@ namespace Bit.Api.Models
     {
         [StringLength(36)]
         public string FolderId { get; set; }
+        public bool Favorite { get; set; }
         [Required]
         [EncryptedString]
         [StringLength(300)]
@@ -40,6 +41,7 @@ namespace Bit.Api.Models
         public Cipher ToCipher(Cipher existingSite)
         {
             existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
+            existingSite.Favorite = Favorite;
             existingSite.Data = JsonConvert.SerializeObject(new SiteDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             existingSite.Type = Core.Enums.CipherType.Site;
 

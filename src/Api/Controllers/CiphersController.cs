@@ -70,6 +70,20 @@ namespace Bit.Api.Controllers
                 model.FolderRelationships);
         }
 
+        [HttpPut("{id}/favorite")]
+        public async Task Favorite(string id)
+        {
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            cipher.Favorite = !cipher.Favorite;
+
+            await _cipherRepository.ReplaceAsync(cipher);
+        }
+
         [HttpDelete("{id}")]
         public async Task Delete(string id)
         {
