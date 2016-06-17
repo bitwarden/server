@@ -10,7 +10,9 @@
         "Microsoft.AspNetCore.Mvc.Abstractions": "1.0.0-rc2-final",
         "Dapper": "1.42.0",
         "DataTableProxy": "1.2.0",
-        "Sendgrid": "6.3.4"
+        "Sendgrid": "6.3.4",
+        "StackExchange.Redis": "1.0.488",
+        "StackExchange.Redis.Extensions.Protobuf": "1.3.5"
     },
 
     "frameworks": {

@@ -18,6 +18,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Repos = Bit.Core.Repositories.SqlServer;
 using System.Text;
+using StackExchange.Redis.Extensions.Core;
+using StackExchange.Redis.Extensions.Protobuf;
 //using Loggr.Extensions.Logging;
 
 namespace Bit.Api
@@ -55,9 +57,16 @@ namespace Bit.Api
             ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
 
+            // Caching
+            ISerializer serializer = new ProtobufSerializer();
+            services.AddSingleton(s => serializer);
+            ICacheClient cacheClient = new StackExchangeRedisCacheClient(serializer,
+                globalSettings.Cache.ConnectionString, globalSettings.Cache.Database);
+            services.AddSingleton(s => cacheClient);
+
             // Repositories
-            services.AddSingleton<IUserRepository>(s => new Repos.UserRepository(globalSettings.SqlServer.ConnectionString));
-            services.AddSingleton<ICipherRepository>(s => new Repos.CipherRepository(globalSettings.SqlServer.ConnectionString));
+            services.AddSingleton<IUserRepository, Repos.UserRepository>();
+            services.AddSingleton<ICipherRepository, Repos.CipherRepository>();
 
             // Context
             services.AddScoped<CurrentContext>();

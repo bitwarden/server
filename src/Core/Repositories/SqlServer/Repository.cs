@@ -76,16 +76,11 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task DeleteAsync(T obj)
         {
-            await DeleteByIdAsync(obj.Id);
-        }
-
-        public virtual async Task DeleteByIdAsync(TId id)
-        {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_DeleteById]",
-                    new { Id = id },
+                    new { Id = obj.Id },
                     commandType: CommandType.StoredProcedure);
             }
         }

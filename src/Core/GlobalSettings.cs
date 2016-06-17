@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StackExchange.Redis.Extensions.Core.Configuration;
+using System;
 using System.Collections.Generic;
 
 namespace Bit.Core
@@ -11,6 +12,7 @@ namespace Bit.Core
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual LoggrSettings Loggr { get; set; } = new LoggrSettings();
+        public virtual CacheSettings Cache { get; set; } = new CacheSettings();
 
         public class SqlServerSettings
         {
@@ -27,6 +29,12 @@ namespace Bit.Core
         {
             public string LogKey { get; set; }
             public string ApiKey { get; set; }
+        }
+
+        public class CacheSettings
+        {
+            public string ConnectionString { get; set; }
+            public int Database { get; set; }
         }
     }
 }
