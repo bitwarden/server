@@ -67,9 +67,11 @@
   <ItemGroup>
     <Build Include="dbo\Tables\History.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
+    <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
+    <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
@@ -83,6 +85,11 @@
     <Build Include="dbo\Stored Procedures\User_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\User_Create.sql" />
     <Build Include="dbo\Stored Procedures\User_Update.sql" />
+    <Build Include="dbo\Stored Procedures\Device_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Device_Update.sql" />
+    <Build Include="dbo\Stored Procedures\Device_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Device_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Device_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
   </ItemGroup>
