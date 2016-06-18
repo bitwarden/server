@@ -2,7 +2,7 @@
 {
     public enum DeviceType : short
     {
-        iOS = 0,
-        Android = 1
+        Android = 0,
+        iOS = 1
     }
 }
