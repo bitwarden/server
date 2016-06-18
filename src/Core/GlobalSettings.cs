@@ -1,8 +1,4 @@
-﻿using StackExchange.Redis.Extensions.Core.Configuration;
-using System;
-using System.Collections.Generic;
-
-namespace Bit.Core
+﻿namespace Bit.Core
 {
     public class GlobalSettings
     {
@@ -13,6 +9,7 @@ namespace Bit.Core
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual LoggrSettings Loggr { get; set; } = new LoggrSettings();
         public virtual CacheSettings Cache { get; set; } = new CacheSettings();
+        public virtual PushSettings Push { get; set; } = new PushSettings();
 
         public class SqlServerSettings
         {
@@ -35,6 +32,15 @@ namespace Bit.Core
         {
             public string ConnectionString { get; set; }
             public int Database { get; set; }
+        }
+
+        public class PushSettings
+        {
+            public string ApnsCertificateThumbprint { get; set; }
+            public string ApnsCertificatePassword { get; set; }
+            public string GcmSenderId { get; set; }
+            public string GcmApiKey { get; set; }
+            public string GcmAppPackageName { get; set; }
         }
     }
 }

@@ -127,6 +127,7 @@ namespace Bit.Api
             services.AddSingleton<IMailService, MailService>();
             services.AddSingleton<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IPushService, PushService>();
 
             // Cors
             services.AddCors(config =>

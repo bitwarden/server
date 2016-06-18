@@ -1,22 +1,29 @@
 ﻿{
-  "globalSettings": {
-    "siteName": "bitwarden",
-    "baseVaultUri": "http://localhost:4001",
-    "jwtSigningKey": "THIS IS A SECRET. IT KEEPS YOUR TOKEN SAFE. :)",
-    "sqlServer": {
-      "connectionString": "SECRET"
-    },
-    "mail": {
-      "apiKey": "SECRET",
-      "replyToEmail": "do-not-reply@bitwarden.com"
-    },
-    "loggr": {
-      "logKey": "SECRET",
-      "apiKey": "SECRET"
-    },
-    "cache": {
-      "connectionString": "SECRET.COM:6380,password=SECRET,ssl=True,abortConnect=False",
-      "database": 0
+    "globalSettings": {
+        "siteName": "bitwarden",
+        "baseVaultUri": "http://localhost:4001",
+        "jwtSigningKey": "THIS IS A SECRET. IT KEEPS YOUR TOKEN SAFE. :)",
+        "sqlServer": {
+            "connectionString": "SECRET"
+        },
+        "mail": {
+            "apiKey": "SECRET",
+            "replyToEmail": "do-not-reply@bitwarden.com"
+        },
+        "loggr": {
+            "logKey": "SECRET",
+            "apiKey": "SECRET"
+        },
+        "cache": {
+            "connectionString": "SECRET.COM:6380,password=SECRET,ssl=True,abortConnect=False",
+            "database": 0
+        },
+        "push": {
+            "ApnsCertificateThumbprint": "SECRET",
+            "ApnsCertificatePassword": "SECRET",
+            "GcmSenderId": "SECRET",
+            "GcmApiKey": "SECRET",
+            "GcmAppPackageName": "com.bitwarden.vault"
+        }
     }
-  }
 }
