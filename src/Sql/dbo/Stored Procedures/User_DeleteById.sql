@@ -14,6 +14,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[Device]
+    WHERE
+        [UserId] = @Id
+
+    DELETE
+    FROM
         [dbo].[User]
     WHERE
         [Id] = @Id
