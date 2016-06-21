@@ -19,8 +19,9 @@ using Bit.Core.Services;
 using Repos = Bit.Core.Repositories.SqlServer;
 using System.Text;
 using StackExchange.Redis.Extensions.Core;
-using StackExchange.Redis.Extensions.Protobuf;
+using StackExchange.Redis.Extensions.Newtonsoft;
 using Loggr.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Api
 {
@@ -58,7 +59,10 @@ namespace Bit.Api
             services.AddSingleton(s => globalSettings);
 
             // Caching
-            ISerializer serializer = new ProtobufSerializer();
+            ISerializer serializer = new NewtonsoftSerializer(new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
             services.AddSingleton(s => serializer);
             ICacheClient cacheClient = new StackExchangeRedisCacheClient(serializer,
                 globalSettings.Cache.ConnectionString, globalSettings.Cache.Database);
