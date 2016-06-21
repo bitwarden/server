@@ -27,7 +27,7 @@ namespace Bit.Api.Controllers
         [AllowAnonymous]
         public async Task<AuthTokenResponseModel> PostToken([FromBody]AuthTokenRequestModel model)
         {
-            var result = await _signInManager.PasswordSignInAsync(model.Email.ToLower(), model.MasterPasswordHash);
+            var result = await _signInManager.PasswordSignInAsync(model.Email.ToLower(), model.MasterPasswordHash, model.Device?.ToDevice());
             if(result == JwtBearerSignInResult.Success)
             {
                 return new AuthTokenResponseModel(result.Token, result.User);

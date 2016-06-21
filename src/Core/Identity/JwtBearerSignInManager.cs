@@ -9,11 +9,14 @@ using Microsoft.Extensions.Options;
 using Bit.Core.Domains;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.IdentityModel.Tokens;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Identity
 {
     public class JwtBearerSignInManager
     {
+        private readonly IDeviceRepository _deviceRepository;
+
         public JwtBearerSignInManager(
             UserManager<User> userManager,
             IHttpContextAccessor contextAccessor,
@@ -21,7 +24,8 @@ namespace Bit.Core.Identity
             IOptions<IdentityOptions> optionsAccessor,
             IOptions<JwtBearerIdentityOptions> jwtIdentityOptionsAccessor,
             IOptions<JwtBearerOptions> jwtOptionsAccessor,
-            ILogger<JwtBearerSignInManager> logger)
+            ILogger<JwtBearerSignInManager> logger,
+            IDeviceRepository deviceRepository)
         {
             UserManager = userManager;
             Context = contextAccessor.HttpContext;
@@ -29,6 +33,7 @@ namespace Bit.Core.Identity
             IdentityOptions = optionsAccessor?.Value ?? new IdentityOptions();
             JwtIdentityOptions = jwtIdentityOptionsAccessor?.Value ?? new JwtBearerIdentityOptions();
             JwtBearerOptions = jwtOptionsAccessor?.Value ?? new JwtBearerOptions();
+            _deviceRepository = deviceRepository;
         }
 
         internal UserManager<User> UserManager { get; set; }
@@ -54,7 +59,7 @@ namespace Bit.Core.Identity
             return Task.FromResult(false);
         }
 
-        public async Task<JwtBearerSignInResult> PasswordSignInAsync(User user, string password)
+        public async Task<JwtBearerSignInResult> PasswordSignInAsync(User user, string password, Device device = null)
         {
             if(user == null)
             {
@@ -63,13 +68,23 @@ namespace Bit.Core.Identity
 
             if(await UserManager.CheckPasswordAsync(user, password))
             {
-                return await SignInOrTwoFactorAsync(user);
+                var result = await SignInOrTwoFactorAsync(user);
+                if(result.Succeeded && device != null)
+                {
+                    var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
+                    if(existingDevice == null)
+                    {
+                        await _deviceRepository.CreateAsync(device);
+                    }
+                }
+
+                return result;
             }
 
             return JwtBearerSignInResult.Failed;
         }
 
-        public async Task<JwtBearerSignInResult> PasswordSignInAsync(string userName, string password)
+        public async Task<JwtBearerSignInResult> PasswordSignInAsync(string userName, string password, Device device = null)
         {
             var user = await UserManager.FindByNameAsync(userName);
             if(user == null)
@@ -77,7 +92,7 @@ namespace Bit.Core.Identity
                 return JwtBearerSignInResult.Failed;
             }
 
-            return await PasswordSignInAsync(user, password);
+            return await PasswordSignInAsync(user, password, device);
         }
 
         public async Task<JwtBearerSignInResult> TwoFactorSignInAsync(User user, string provider, string code)

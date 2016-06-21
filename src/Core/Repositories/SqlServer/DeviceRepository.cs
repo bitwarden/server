@@ -30,6 +30,23 @@ namespace Bit.Core.Repositories.SqlServer
             return device;
         }
 
+        public async Task<Device> GetByIdentifierAsync(string identifier, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Device>(
+                    $"[{Schema}].[{Table}_ReadByIdentifierUserId]",
+                    new
+                    {
+                        UserId = userId,
+                        Identifier = identifier
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.FirstOrDefault();
+            }
+        }
+
         public async Task<ICollection<Device>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))

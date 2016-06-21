@@ -40,6 +40,19 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpGet("identifier/{identifier}")]
+        public async Task<DeviceResponseModel> GetByIdentifier(string identifier)
+        {
+            var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
+            if(device == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var response = new DeviceResponseModel(device);
+            return response;
+        }
+
         [HttpGet("")]
         public async Task<ListResponseModel<DeviceResponseModel>> Get()
         {
@@ -62,6 +75,21 @@ namespace Bit.Api.Controllers
         public async Task<DeviceResponseModel> Put(string id, [FromBody]DeviceRequestModel model)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            if(device == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _deviceRepository.ReplaceAsync(model.ToDevice(device));
+
+            var response = new DeviceResponseModel(device);
+            return response;
+        }
+
+        [HttpPut("identifier/{identifier}/token")]
+        public async Task<DeviceResponseModel> PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
+        {
+            var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
             if(device == null)
             {
                 throw new NotFoundException();

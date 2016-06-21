@@ -10,5 +10,6 @@ namespace Bit.Api.Models
         public string Email { get; set; }
         [Required]
         public string MasterPasswordHash { get; set; }
+        public DeviceRequestModel Device { get; set; }
     }
 }

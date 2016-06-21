@@ -90,6 +90,7 @@
     <Build Include="dbo\Stored Procedures\Device_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Device_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Device_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Device_ReadByIdentifierUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
   </ItemGroup>

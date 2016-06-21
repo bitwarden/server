@@ -9,6 +9,7 @@ namespace Bit.Core.Domains
         public Guid UserId { get; set; }
         public string Name { get; set; }
         public Enums.DeviceType Type { get; set; }
+        public string Identifier { get; set; }
         public string PushToken { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;

@@ -13,6 +13,9 @@ namespace Bit.Api.Models
         [Required]
         [StringLength(50)]
         public string Name { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Identifier { get; set; }
         [StringLength(255)]
         public string PushToken { get; set; }
 
@@ -27,9 +30,22 @@ namespace Bit.Api.Models
         public Device ToDevice(Device existingDevice)
         {
             existingDevice.Name = Name;
+            existingDevice.Identifier = Identifier;
             existingDevice.PushToken = PushToken;
             existingDevice.Type = Type.Value;
 
+            return existingDevice;
+        }
+    }
+
+    public class DeviceTokenRequestModel
+    {
+        [StringLength(255)]
+        public string PushToken { get; set; }
+
+        public Device ToDevice(Device existingDevice)
+        {
+            existingDevice.PushToken = PushToken;
             return existingDevice;
         }
     }
