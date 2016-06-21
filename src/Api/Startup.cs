@@ -20,7 +20,7 @@ using Repos = Bit.Core.Repositories.SqlServer;
 using System.Text;
 using StackExchange.Redis.Extensions.Core;
 using StackExchange.Redis.Extensions.Protobuf;
-//using Loggr.Extensions.Logging;
+using Loggr.Extensions.Logging;
 
 namespace Bit.Api
 {
@@ -154,10 +154,10 @@ namespace Bit.Api
 
             if(!env.IsDevelopment())
             {
-                //loggerFactory.AddLoggr(
-                //    LogLevel.Error,
-                //    globalSettings.Loggr.LogKey,
-                //    globalSettings.Loggr.ApiKey);
+                loggerFactory.AddLoggr(
+                    LogLevel.Error,
+                    globalSettings.Loggr.LogKey,
+                    globalSettings.Loggr.ApiKey);
             }
 
             // Add static files to the request pipeline.

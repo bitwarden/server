@@ -18,7 +18,8 @@
         "Microsoft.AspNetCore.Cors": "1.0.0-rc2-final",
         "Microsoft.AspNetCore.Diagnostics": "1.0.0-rc2-final",
         "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Configuration.Binder": "1.0.0-rc2-final"
+        "Microsoft.Extensions.Configuration.Binder": "1.0.0-rc2-final",
+        "Loggr.Extensions.Logging": "1.0.0-rc2-final"
     },
 
     "tools": {
