@@ -74,6 +74,7 @@ namespace Bit.Core.Identity
                     var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
                     if(existingDevice == null)
                     {
+                        device.UserId = user.Id;
                         await _deviceRepository.CreateAsync(device);
                     }
                 }

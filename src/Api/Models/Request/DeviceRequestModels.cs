@@ -23,7 +23,7 @@ namespace Bit.Api.Models
         {
             return ToDevice(new Device
             {
-                UserId = new Guid(userId)
+                UserId = userId == null ? default(Guid) : new Guid(userId)
             });
         }
 

@@ -3,6 +3,7 @@
     @UserId UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Type TINYINT,
+    @Identifier NVARCHAR(50),
     @PushToken NVARCHAR(255),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -16,6 +17,7 @@ BEGIN
         [UserId],
         [Name],
         [Type],
+        [Identifier],
         [PushToken],
         [CreationDate],
         [RevisionDate]
@@ -26,6 +28,7 @@ BEGIN
         @UserId,
         @Name,
         @Type,
+        @Identifier,
         @PushToken,
         @CreationDate,
         @RevisionDate
