@@ -252,12 +252,12 @@ namespace Bit.Core.Services
             }
 
             // Android can send to many devices at once
-            if(_gcmBroker != null && devices.Any(d => d.Type == DeviceType.Android))
+            var androidDevices = devices.Where(d => d.Type == DeviceType.Android);
+            if(_gcmBroker != null && androidDevices.Count() > 0)
             {
                 _gcmBroker.QueueNotification(new GcmNotification
                 {
-                    RegistrationIds = devices.Where(d => d.Type == DeviceType.Android)
-                        .Select(d => d.PushToken).ToList(),
+                    RegistrationIds = androidDevices.Select(d => d.PushToken).ToList(),
                     Data = message
                 });
             }
