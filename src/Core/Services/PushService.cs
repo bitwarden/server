@@ -9,6 +9,8 @@ using PushSharp.Apple;
 using Microsoft.AspNetCore.Hosting;
 using PushSharp.Core;
 using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Domains;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -27,6 +29,44 @@ namespace Bit.Core.Services
 
             InitGcmBroker(globalSettings);
             InitApnsBroker(globalSettings, hostingEnvironment);
+        }
+
+        public async Task PushSyncCipherCreateAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncCipherCreate);
+        }
+
+        public async Task PushSyncCipherUpdateAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncCipherUpdate);
+        }
+
+        public async Task PushSyncCipherDeleteAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncCipherDelete);
+        }
+
+        private async Task PushCipherAsync(Cipher cipher, PushType type)
+        {
+            var message = new
+            {
+                Type = type,
+                Id = cipher.Id,
+                UserId = cipher.UserId
+            };
+
+            await PushToAllUserDevicesAsync(cipher.UserId, new JObject(message));
+        }
+
+        public async Task PushSyncCiphersAsync(Guid userId)
+        {
+            var message = new
+            {
+                Type = PushType.SyncCiphers,
+                UserId = userId
+            };
+
+            await PushToAllUserDevicesAsync(userId, new JObject(message));
         }
 
         private void InitGcmBroker(GlobalSettings globalSettings)
@@ -115,7 +155,7 @@ namespace Bit.Core.Services
 
         private void InitApnsBroker(GlobalSettings globalSettings, IHostingEnvironment hostingEnvironment)
         {
-            if(string.IsNullOrWhiteSpace(globalSettings.Push.ApnsCertificatePassword) 
+            if(string.IsNullOrWhiteSpace(globalSettings.Push.ApnsCertificatePassword)
                 || string.IsNullOrWhiteSpace(globalSettings.Push.ApnsCertificateThumbprint))
             {
                 return;
@@ -192,7 +232,7 @@ namespace Bit.Core.Services
 
         private async Task PushToAllUserDevicesAsync(Guid userId, JObject message)
         {
-            var devices = (await _deviceRepository.GetManyByUserIdAsync(userId)).Where(d => d.PushToken != null);
+            var devices = (await _deviceRepository.GetManyByUserIdAsync(userId)).Where(d => !string.IsNullOrWhiteSpace(d.PushToken));
             if(devices.Count() == 0)
             {
                 return;
@@ -201,7 +241,7 @@ namespace Bit.Core.Services
             if(_apnsBroker != null)
             {
                 // Send to each iOS device
-                foreach(var device in devices.Where(d => d.Type == Enums.DeviceType.iOS && d.PushToken != null))
+                foreach(var device in devices.Where(d => d.Type == DeviceType.iOS))
                 {
                     _apnsBroker.QueueNotification(new ApnsNotification
                     {
@@ -212,11 +252,11 @@ namespace Bit.Core.Services
             }
 
             // Android can send to many devices at once
-            if(_gcmBroker != null && devices.Any(d => d.Type == Enums.DeviceType.Android))
+            if(_gcmBroker != null && devices.Any(d => d.Type == DeviceType.Android))
             {
                 _gcmBroker.QueueNotification(new GcmNotification
                 {
-                    RegistrationIds = devices.Where(d => d.Type == Enums.DeviceType.Android && d.PushToken != null)
+                    RegistrationIds = devices.Where(d => d.Type == DeviceType.Android)
                         .Select(d => d.PushToken).ToList(),
                     Data = message
                 });

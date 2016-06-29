@@ -10,11 +10,40 @@ namespace Bit.Core.Services
     public class CipherService : ICipherService
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly IPushService _pushService;
 
         public CipherService(
-            ICipherRepository cipherRepository)
+            ICipherRepository cipherRepository,
+            IPushService pushService)
         {
             _cipherRepository = cipherRepository;
+            _pushService = pushService;
+        }
+
+        public async Task SaveAsync(Cipher cipher)
+        {
+            if(cipher.Id == default(Guid))
+            {
+                await _cipherRepository.CreateAsync(cipher);
+
+                // push
+                await _pushService.PushSyncCipherCreateAsync(cipher);
+            }
+            else
+            {
+                await _cipherRepository.ReplaceAsync(cipher);
+
+                // push
+                await _pushService.PushSyncCipherUpdateAsync(cipher);
+            }
+        }
+
+        public async Task DeleteAsync(Cipher cipher)
+        {
+            await _cipherRepository.DeleteAsync(cipher);
+
+            // push
+            await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
         public async Task ImportCiphersAsync(
@@ -46,6 +75,13 @@ namespace Bit.Core.Services
 
             // create all the ciphers
             await _cipherRepository.CreateAsync(ciphers);
+
+            // push
+            var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
+            if(userId.HasValue)
+            {
+                await _pushService.PushSyncCiphersAsync(userId.Value);
+            }
         }
     }
 }

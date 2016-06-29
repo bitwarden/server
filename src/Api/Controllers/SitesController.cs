@@ -9,6 +9,7 @@ using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
 using Microsoft.AspNetCore.Identity;
+using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
@@ -17,13 +18,16 @@ namespace Bit.Api.Controllers
     public class SitesController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly ICipherService _cipherService;
         private readonly UserManager<User> _userManager;
 
         public SitesController(
             ICipherRepository cipherRepository,
+            ICipherService cipherService,
             UserManager<User> userManager)
         {
             _cipherRepository = cipherRepository;
+            _cipherService = cipherService;
             _userManager = userManager;
         }
 
@@ -54,7 +58,7 @@ namespace Bit.Api.Controllers
         public async Task<SiteResponseModel> Post([FromBody]SiteRequestModel model, string[] expand = null)
         {
             var site = model.ToCipher(_userManager.GetUserId(User));
-            await _cipherRepository.CreateAsync(site);
+            await _cipherService.SaveAsync(site);
 
             var response = new SiteResponseModel(site);
             await ExpandAsync(site, response, expand, null);
@@ -70,7 +74,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherRepository.ReplaceAsync(model.ToCipher(site));
+            await _cipherService.SaveAsync(model.ToCipher(site));
 
             var response = new SiteResponseModel(site);
             await ExpandAsync(site, response, expand, null);
@@ -86,7 +90,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherRepository.DeleteAsync(site);
+            await _cipherService.DeleteAsync(site);
         }
 
         private async Task ExpandAsync(Cipher site, SiteResponseModel response, string[] expand, Cipher folder)

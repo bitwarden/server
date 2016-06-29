@@ -9,6 +9,7 @@ using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
 using Microsoft.AspNetCore.Identity;
+using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
@@ -17,13 +18,16 @@ namespace Bit.Api.Controllers
     public class FoldersController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly ICipherService _cipherService;
         private readonly UserManager<User> _userManager;
 
         public FoldersController(
             ICipherRepository cipherRepository,
+            ICipherService cipherService,
             UserManager<User> userManager)
         {
             _cipherRepository = cipherRepository;
+            _cipherService = cipherService;
             _userManager = userManager;
         }
 
@@ -51,7 +55,7 @@ namespace Bit.Api.Controllers
         public async Task<FolderResponseModel> Post([FromBody]FolderRequestModel model)
         {
             var folder = model.ToCipher(_userManager.GetUserId(User));
-            await _cipherRepository.CreateAsync(folder);
+            await _cipherService.SaveAsync(folder);
             return new FolderResponseModel(folder);
         }
 
@@ -63,8 +67,8 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-
-            await _cipherRepository.ReplaceAsync(model.ToCipher(folder));
+            
+            await _cipherService.SaveAsync(model.ToCipher(folder));
             return new FolderResponseModel(folder);
         }
 
@@ -77,7 +81,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherRepository.DeleteAsync(folder);
+            await _cipherService.DeleteAsync(folder);
         }
     }
 }

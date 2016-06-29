@@ -81,7 +81,7 @@ namespace Bit.Api.Controllers
 
             cipher.Favorite = !cipher.Favorite;
 
-            await _cipherRepository.ReplaceAsync(cipher);
+            await _cipherService.SaveAsync(cipher);
         }
 
         [HttpDelete("{id}")]
@@ -93,7 +93,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherRepository.DeleteAsync(cipher);
+            await _cipherService.DeleteAsync(cipher);
         }
     }
 }
