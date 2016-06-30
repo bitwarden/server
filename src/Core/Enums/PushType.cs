@@ -4,7 +4,8 @@
     {
         SyncCipherUpdate = 0,
         SyncCipherCreate = 1,
-        SyncCipherDelete = 2,
-        SyncCiphers = 3
+        SyncSiteDelete = 2,
+        SyncFolderDelete = 3,
+        SyncCiphers = 4
     }
 }

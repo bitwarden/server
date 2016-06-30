@@ -11,6 +11,7 @@ using PushSharp.Core;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
+using System.Text.RegularExpressions;
 
 namespace Bit.Core.Services
 {
@@ -43,7 +44,17 @@ namespace Bit.Core.Services
 
         public async Task PushSyncCipherDeleteAsync(Cipher cipher)
         {
-            await PushCipherAsync(cipher, PushType.SyncCipherDelete);
+            switch(cipher.Type)
+            {
+                case CipherType.Folder:
+                    await PushCipherAsync(cipher, PushType.SyncFolderDelete);
+                    break;
+                case CipherType.Site:
+                    await PushCipherAsync(cipher, PushType.SyncSiteDelete);
+                    break;
+                default:
+                    break;
+            }
         }
 
         private async Task PushCipherAsync(Cipher cipher, PushType type)
@@ -55,7 +66,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId
             };
 
-            await PushToAllUserDevicesAsync(cipher.UserId, new JObject(message));
+            await PushToAllUserDevicesAsync(cipher.UserId, JObject.FromObject(message));
         }
 
         public async Task PushSyncCiphersAsync(Guid userId)
@@ -212,6 +223,10 @@ namespace Bit.Core.Services
 
         private X509Certificate2 GetCertificate(string thumbprint)
         {
+            // Clean possible garbage characters from thumbprint copy/paste
+            // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
+            thumbprint = Regex.Replace(thumbprint, @"[^\da-zA-z]", string.Empty).ToUpper();
+
             X509Certificate2 cert = null;
             var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             certStore.Open(OpenFlags.ReadOnly);
