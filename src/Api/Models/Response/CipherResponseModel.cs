@@ -17,7 +17,6 @@ namespace Bit.Api.Models
             FolderId = cipher.FolderId?.ToString();
             Type = cipher.Type;
             Favorite = cipher.Favorite;
-            Data = cipher.Data;
             RevisionDate = cipher.RevisionDate;
 
             switch(cipher.Type)

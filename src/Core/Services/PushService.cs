@@ -12,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -59,11 +60,13 @@ namespace Bit.Core.Services
 
         private async Task PushCipherAsync(Cipher cipher, PushType type)
         {
-            var message = new
+            var message = new SyncCipherPushNotification
             {
                 Type = type,
                 Id = cipher.Id,
-                UserId = cipher.UserId
+                UserId = cipher.UserId,
+                RevisionDate = cipher.RevisionDate,
+                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
 
             await PushToAllUserDevicesAsync(cipher.UserId, JObject.FromObject(message));
@@ -71,10 +74,12 @@ namespace Bit.Core.Services
 
         public async Task PushSyncCiphersAsync(Guid userId)
         {
-            var message = new
+            var message = new SyncCiphersPushNotification
             {
                 Type = PushType.SyncCiphers,
-                UserId = userId
+                UserId = userId,
+                Date = DateTime.UtcNow,
+                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
 
             await PushToAllUserDevicesAsync(userId, new JObject(message));
@@ -276,6 +281,39 @@ namespace Bit.Core.Services
                     Data = message
                 });
             }
+        }
+
+        private class PushNotification
+        {
+            public PushType Type { get; set; }
+            [JsonProperty(PropertyName = "aps")]
+            public AppleData Aps { get; set; }
+
+            public class AppleData
+            {
+                [JsonProperty(PropertyName = "badge")]
+                public dynamic Badge { get; set; } = null;
+                [JsonProperty(PropertyName = "alert")]
+                public string Alert { get; set; }
+                [JsonProperty(PropertyName = "content-available")]
+                public int ContentAvailable { get; set; }
+            }
+        }
+
+        private abstract class SyncPushNotification : PushNotification
+        {
+            public Guid UserId { get; set; }
+        }
+
+        private class SyncCipherPushNotification : SyncPushNotification
+        {
+            public Guid Id { get; set; }
+            public DateTime RevisionDate { get; set; }
+        }
+
+        private class SyncCiphersPushNotification : SyncPushNotification
+        {
+            public DateTime Date { get; set; }
         }
     }
 }
