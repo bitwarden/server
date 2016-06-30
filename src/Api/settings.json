@@ -19,11 +19,11 @@
             "database": 0
         },
         "push": {
-            "ApnsCertificateThumbprint": "SECRET",
-            "ApnsCertificatePassword": "SECRET",
-            "GcmSenderId": "SECRET",
-            "GcmApiKey": "SECRET",
-            "GcmAppPackageName": "com.bitwarden.vault"
+            "apnsCertificateThumbprint": "SECRET",
+            "apnsCertificatePassword": "SECRET",
+            "gcmSenderId": "SECRET",
+            "gcmApiKey": "SECRET",
+            "gcmAppPackageName": "com.bitwarden.vault"
         }
     }
 }
