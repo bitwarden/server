@@ -31,6 +31,7 @@ namespace Bit.Core.Services
             }
             else
             {
+                cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
 
                 // push

@@ -13,21 +13,25 @@ using Bit.Core.Domains;
 using Bit.Core.Enums;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
     public class PushService : IPushService
     {
         private readonly IDeviceRepository _deviceRepository;
+        private readonly ILogger<IPushService> _logger;
         private GcmServiceBroker _gcmBroker;
         private ApnsServiceBroker _apnsBroker;
 
         public PushService(
             IDeviceRepository deviceRepository,
+            ILogger<IPushService> logger,
             IHostingEnvironment hostingEnvironment,
             GlobalSettings globalSettings)
         {
             _deviceRepository = deviceRepository;
+            _logger = logger;
 
             InitGcmBroker(globalSettings);
             InitApnsBroker(globalSettings, hostingEnvironment);

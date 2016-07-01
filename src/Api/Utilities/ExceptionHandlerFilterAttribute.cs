@@ -49,8 +49,8 @@ namespace Bit.Api.Utilities
             else
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
-                logger.LogError(null, exception, exception.Message);
-                logger.LogError(null, exception, exception.Message);
+                logger.LogError(0, exception, exception.Message);
+                logger.LogError(0, exception, exception.Message);
 
                 errorModel.Message = "An unhandled server error has occured.";
                 context.HttpContext.Response.StatusCode = 500;
