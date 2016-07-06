@@ -9,11 +9,11 @@ namespace Bit.Core.Services
 {
     public class MailService : IMailService
     {
-        private const string WelcomeTemplateId = "d24aa21e-5ead-45d8-a14e-f96ba7ec63ff";
-        private const string ChangeEmailAlreadyExistsTemplateId = "b28bc69e-9592-4320-b274-bfb955667add";
-        private const string ChangeEmailTemplateId = "b8d17dd7-c883-4b47-8170-5b845d487929";
-        private const string NoMasterPasswordHint = "d5d13bba-3f67-4899-9995-514c1bd6dae7";
-        private const string MasterPasswordHint = "804a9897-1284-42e8-8aed-ab318c378b71";
+        private const string WelcomeTemplateId = "045f8ad5-5547-4fa2-8d3d-6d46e401164d";
+        private const string ChangeEmailAlreadyExistsTemplateId = "b69d2038-6ad9-4cf6-8f7f-7880921cba43";
+        private const string ChangeEmailTemplateId = "ec2c1471-8292-4f17-b6b6-8223d514f86e";
+        private const string NoMasterPasswordHintTemplateId = "136eb299-e102-495a-88bd-f96736eea159";
+        private const string MasterPasswordHintTemplateId = "be77cfde-95dd-4cb9-b5e0-8286b53885f1";
 
         private const string AdministrativeCategoryName = "Administrative";
         private const string MarketingCategoryName = "Marketing";
@@ -66,7 +66,7 @@ namespace Bit.Core.Services
 
         public async Task SendNoMasterPasswordHintEmailAsync(string email)
         {
-            var message = CreateDefaultMessage(NoMasterPasswordHint);
+            var message = CreateDefaultMessage(NoMasterPasswordHintTemplateId);
 
             message.Subject = "Your Master Password Hint";
             message.AddTo(email);
@@ -77,7 +77,7 @@ namespace Bit.Core.Services
 
         public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
         {
-            var message = CreateDefaultMessage(MasterPasswordHint);
+            var message = CreateDefaultMessage(MasterPasswordHintTemplateId);
 
             message.Subject = "Your Master Password Hint";
             message.AddTo(email);
