@@ -86,7 +86,7 @@ namespace Bit.Core.Services
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
 
-            await PushToAllUserDevicesAsync(userId, new JObject(message));
+            await PushToAllUserDevicesAsync(userId, JObject.FromObject(message));
         }
 
         private void InitGcmBroker(GlobalSettings globalSettings)
