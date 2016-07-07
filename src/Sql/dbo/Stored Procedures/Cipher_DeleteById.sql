@@ -9,7 +9,8 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [FolderId] = NULL
+        [FolderId] = NULL,
+        [RevisionDate] = GETUTCDATE()
     WHERE
         [FolderId] = @Id
 
