@@ -7,30 +7,30 @@
             "version": "0.0.1",
             "target": "project"
         },
-        "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.Mvc": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.StaticFiles": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Configuration.UserSecrets": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Logging": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Logging.Console": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Logging.Debug": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.Cors": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.Diagnostics": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0-rc2-final",
-        "Microsoft.Extensions.Configuration.Binder": "1.0.0-rc2-final",
-        "Loggr.Extensions.Logging": "1.0.0-rc2-final"
+        "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
+        "Microsoft.AspNetCore.Mvc": "1.0.0",
+        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
+        "Microsoft.AspNetCore.StaticFiles": "1.0.0",
+        "Microsoft.Extensions.Configuration.UserSecrets": "1.0.0",
+        "Microsoft.Extensions.Logging": "1.0.0",
+        "Microsoft.Extensions.Logging.Console": "1.0.0",
+        "Microsoft.Extensions.Logging.Debug": "1.0.0",
+        "Microsoft.AspNetCore.Cors": "1.0.0",
+        "Microsoft.AspNetCore.Diagnostics": "1.0.0",
+        "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
+        "Microsoft.Extensions.Configuration.Binder": "1.0.0",
+        "Loggr.Extensions.Logging": "1.0.0"
     },
 
     "tools": {
         "Microsoft.AspNetCore.Server.IISIntegration.Tools": {
-            "version": "1.0.0-preview1-final",
+            "version": "1.0.0-preview2-final",
             "imports": "portable-net45+win8+dnxcore50"
         }
     },
 
     "frameworks": {
-        "net46": { }
+        "net461": { }
     },
 
     "buildOptions": {
