@@ -148,9 +148,13 @@ namespace Bit.Api
             {
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
+
                 // Allow JSON of content type "text/plain" to avoid cors preflight
-                config.InputFormatters.OfType<JsonInputFormatter>().SingleOrDefault()?
-                    .SupportedMediaTypes.Add(MediaTypeHeaderValue.Parse("text/plain"));
+                var textPlainMediaType = MediaTypeHeaderValue.Parse("text/plain");
+                foreach(var jsonFormatter in config.InputFormatters.OfType<JsonInputFormatter>())
+                {
+                    jsonFormatter.SupportedMediaTypes.Add(textPlainMediaType);
+                }
             });
         }
 
