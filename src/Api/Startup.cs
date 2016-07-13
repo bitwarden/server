@@ -25,6 +25,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
+using Newtonsoft.Json.Serialization;
 
 namespace Bit.Api
 {
@@ -155,7 +156,7 @@ namespace Bit.Api
                 {
                     jsonFormatter.SupportedMediaTypes.Add(textPlainMediaType);
                 }
-            });
+            }).AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver()); ;
         }
 
         public void Configure(
