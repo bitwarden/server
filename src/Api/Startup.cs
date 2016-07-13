@@ -22,6 +22,9 @@ using StackExchange.Redis.Extensions.Core;
 using StackExchange.Redis.Extensions.Newtonsoft;
 using Loggr.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Net.Http.Headers;
 
 namespace Bit.Api
 {
@@ -136,7 +139,8 @@ namespace Bit.Api
             // Cors
             services.AddCors(config =>
             {
-                config.AddPolicy("All", policy => policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
+                config.AddPolicy("All", policy =>
+                    policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().SetPreflightMaxAge(TimeSpan.FromDays(1)));
             });
 
             // MVC
@@ -144,6 +148,9 @@ namespace Bit.Api
             {
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
+                // Allow JSON of content type "text/plain" to avoid cors preflight
+                config.InputFormatters.OfType<JsonInputFormatter>().SingleOrDefault()?
+                    .SupportedMediaTypes.Add(MediaTypeHeaderValue.Parse("text/plain"));
             });
         }
 

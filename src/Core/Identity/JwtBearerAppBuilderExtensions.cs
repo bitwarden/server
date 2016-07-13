@@ -49,7 +49,8 @@ namespace Bit.Core.Identity
             options.Events = new JwtBearerEvents
             {
                 OnTokenValidated = JwtBearerEventImplementations.ValidatedTokenAsync,
-                OnAuthenticationFailed = JwtBearerEventImplementations.AuthenticationFailedAsync
+                OnAuthenticationFailed = JwtBearerEventImplementations.AuthenticationFailedAsync,
+                OnMessageReceived = JwtBearerEventImplementations.MessageReceivedAsync
             };
 
             app.UseJwtBearerAuthentication(options);

@@ -49,5 +49,15 @@ namespace Bit.Core.Identity
 
             return Task.FromResult(0);
         }
+
+        public static Task MessageReceivedAsync(MessageReceivedContext context)
+        {
+            if(!context.Request.Headers.ContainsKey("Authorization"))
+            {
+                context.Token = context.Request.Query["access_token"];
+            }
+
+            return Task.FromResult(0);
+        }
     }
 }
