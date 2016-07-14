@@ -71,6 +71,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}/favorite")]
+        [HttpPost("{id}/favorite")]
         public async Task Favorite(string id)
         {
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
@@ -85,6 +86,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));

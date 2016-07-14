@@ -66,6 +66,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [HttpPost("{id}")]
         public async Task<SiteResponseModel> Put(string id, [FromBody]SiteRequestModel model, string[] expand = null)
         {
             var site = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
@@ -82,6 +83,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
             var site = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));

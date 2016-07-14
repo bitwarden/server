@@ -72,6 +72,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [HttpPost("{id}")]
         public async Task<DeviceResponseModel> Put(string id, [FromBody]DeviceRequestModel model)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
@@ -87,6 +88,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("identifier/{identifier}/token")]
+        [HttpPost("identifier/{identifier}/token")]
         public async Task<DeviceResponseModel> PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
@@ -102,6 +104,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));

@@ -74,6 +74,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("email")]
+        [HttpPost("email")]
         public async Task PutEmail([FromBody]EmailRequestModel model)
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
@@ -103,6 +104,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("password")]
+        [HttpPost("password")]
         public async Task PutPassword([FromBody]PasswordRequestModel model)
         {
             // NOTE: It is assumed that the eventual repository call will make sure the updated
@@ -130,6 +132,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("security-stamp")]
+        [HttpPost("security-stamp")]
         public async Task PutSecurityStamp([FromBody]SecurityStampRequestModel model)
         {
             var result = await _userService.RefreshSecurityStampAsync(_currentContext.User, model.MasterPasswordHash);
@@ -155,6 +158,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("profile")]
+        [HttpPost("profile")]
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
         {
             await _userService.SaveUserAsync(model.ToUser(_currentContext.User));
@@ -180,6 +184,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("two-factor")]
+        [HttpPost("two-factor")]
         public async Task<TwoFactorResponseModel> PutTwoFactor([FromBody]UpdateTwoFactorRequestModel model)
         {
             var user = _currentContext.User;
