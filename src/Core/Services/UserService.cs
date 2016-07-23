@@ -95,6 +95,7 @@ namespace Bit.Core.Services
             if(string.IsNullOrWhiteSpace(user.MasterPasswordHint))
             {
                 await _mailService.SendNoMasterPasswordHintEmailAsync(email);
+                return;
             }
 
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
