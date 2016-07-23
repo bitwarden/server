@@ -27,7 +27,7 @@ BEGIN
         [Culture] = @Culture,
         [SecurityStamp] = @SecurityStamp,
         [TwoFactorEnabled] = @TwoFactorEnabled,
-        [TwoFactorProvider] = TwoFactorProvider,
+        [TwoFactorProvider] = @TwoFactorProvider,
         [AuthenticatorKey] = @AuthenticatorKey,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

@@ -200,6 +200,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Token", "Invalid token.");
             }
 
+            user.TwoFactorProvider = TwoFactorProvider.Authenticator;
             user.TwoFactorEnabled = model.Enabled.Value;
             await _userService.SaveUserAsync(user);
 
