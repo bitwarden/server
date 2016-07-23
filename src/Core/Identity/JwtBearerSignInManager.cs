@@ -96,7 +96,7 @@ namespace Bit.Core.Identity
             return await PasswordSignInAsync(user, password, device);
         }
 
-        public async Task<JwtBearerSignInResult> TwoFactorSignInAsync(User user, string provider, string code)
+        public async Task<JwtBearerSignInResult> TwoFactorSignInAsync(User user, string provider, string code, Device device = null)
         {
             if(user == null)
             {
@@ -110,6 +110,13 @@ namespace Bit.Core.Identity
                 var success = JwtBearerSignInResult.Success;
                 success.Token = token;
                 success.User = user;
+
+                var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
+                if(existingDevice == null)
+                {
+                    device.UserId = user.Id;
+                    await _deviceRepository.CreateAsync(device);
+                }
 
                 return success;
             }

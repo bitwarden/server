@@ -45,7 +45,7 @@ namespace Bit.Api.Controllers
         [Authorize("TwoFactor")]
         public async Task<AuthTokenResponseModel> PostTokenTwoFactor([FromBody]AuthTokenTwoFactorRequestModel model)
         {
-            var result = await _signInManager.TwoFactorSignInAsync(_currentContext.User, model.Provider, model.Code);
+            var result = await _signInManager.TwoFactorSignInAsync(_currentContext.User, model.Provider, model.Code, model.Device?.ToDevice());
             if(result == JwtBearerSignInResult.Success)
             {
                 return new AuthTokenResponseModel(result.Token, result.User);

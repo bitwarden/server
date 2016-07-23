@@ -8,5 +8,6 @@ namespace Bit.Api.Models
         public string Code { get; set; }
         [Required]
         public string Provider { get; set; }
+        public DeviceRequestModel Device { get; set; }
     }
 }
