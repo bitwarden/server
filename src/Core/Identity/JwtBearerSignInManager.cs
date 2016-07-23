@@ -111,11 +111,14 @@ namespace Bit.Core.Identity
                 success.Token = token;
                 success.User = user;
 
-                var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
-                if(existingDevice == null)
+                if(device != null)
                 {
-                    device.UserId = user.Id;
-                    await _deviceRepository.CreateAsync(device);
+                    var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
+                    if(existingDevice == null)
+                    {
+                        device.UserId = user.Id;
+                        await _deviceRepository.CreateAsync(device);
+                    }
                 }
 
                 return success;

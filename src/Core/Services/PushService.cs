@@ -14,6 +14,7 @@ using Bit.Core.Enums;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Bit.Core.Services
 {
@@ -104,7 +105,7 @@ namespace Bit.Core.Services
             _gcmBroker.OnNotificationFailed += GcmBroker_OnNotificationFailed;
             _gcmBroker.OnNotificationSucceeded += (notification) =>
             {
-                Console.WriteLine("GCM Notification Sent!");
+                Debug.WriteLine("GCM Notification Sent!");
             };
             _gcmBroker.Start();
         }
@@ -122,7 +123,7 @@ namespace Bit.Core.Services
                     var gcmNotification = notificationException.Notification;
                     var description = notificationException.Description;
 
-                    Console.WriteLine($"GCM Notification Failed: ID={gcmNotification.MessageId}, Desc={description}");
+                    Debug.WriteLine($"GCM Notification Failed: ID={gcmNotification.MessageId}, Desc={description}");
                 }
                 else if(ex is GcmMulticastResultException)
                 {
@@ -130,7 +131,7 @@ namespace Bit.Core.Services
 
                     foreach(var succeededNotification in multicastException.Succeeded)
                     {
-                        Console.WriteLine($"GCM Notification Failed: ID={succeededNotification.MessageId}");
+                        Debug.WriteLine($"GCM Notification Failed: ID={succeededNotification.MessageId}");
                     }
 
                     foreach(var failedKvp in multicastException.Failed)
@@ -138,7 +139,7 @@ namespace Bit.Core.Services
                         var n = failedKvp.Key;
                         var e = failedKvp.Value;
 
-                        Console.WriteLine($"GCM Notification Failed: ID={n.MessageId}, Desc={e.Message}");
+                        Debug.WriteLine($"GCM Notification Failed: ID={n.MessageId}, Desc={e.Message}");
                     }
 
                 }
@@ -149,23 +150,23 @@ namespace Bit.Core.Services
                     var oldId = expiredException.OldSubscriptionId;
                     var newId = expiredException.NewSubscriptionId;
 
-                    Console.WriteLine($"Device RegistrationId Expired: {oldId}");
+                    Debug.WriteLine($"Device RegistrationId Expired: {oldId}");
 
                     if(!string.IsNullOrWhiteSpace(newId))
                     {
                         // If this value isn't null, our subscription changed and we should update our database
-                        Console.WriteLine($"Device RegistrationId Changed To: {newId}");
+                        Debug.WriteLine($"Device RegistrationId Changed To: {newId}");
                     }
                 }
                 else if(ex is RetryAfterException)
                 {
                     var retryException = (RetryAfterException)ex;
                     // If you get rate limited, you should stop sending messages until after the RetryAfterUtc date
-                    Console.WriteLine($"GCM Rate Limited, don't send more until after {retryException.RetryAfterUtc}");
+                    Debug.WriteLine($"GCM Rate Limited, don't send more until after {retryException.RetryAfterUtc}");
                 }
                 else
                 {
-                    Console.WriteLine("GCM Notification Failed for some unknown reason");
+                    Debug.WriteLine("GCM Notification Failed for some unknown reason");
                 }
 
                 // Mark it as handled
@@ -195,7 +196,7 @@ namespace Bit.Core.Services
             _apnsBroker.OnNotificationFailed += ApnsBroker_OnNotificationFailed;
             _apnsBroker.OnNotificationSucceeded += (notification) =>
             {
-                Console.WriteLine("Apple Notification Sent!");
+                Debug.WriteLine("Apple Notification Sent!");
             };
             _apnsBroker.Start();
 
@@ -217,12 +218,12 @@ namespace Bit.Core.Services
                     var apnsNotification = notificationException.Notification;
                     var statusCode = notificationException.ErrorStatusCode;
 
-                    Console.WriteLine($"Apple Notification Failed: ID={apnsNotification.Identifier}, Code={statusCode}");
+                    Debug.WriteLine($"Apple Notification Failed: ID={apnsNotification.Identifier}, Code={statusCode}");
                 }
                 else
                 {
                     // Inner exception might hold more useful information like an ApnsConnectionException
-                    Console.WriteLine($"Apple Notification Failed for some unknown reason : {ex.InnerException}");
+                    Debug.WriteLine($"Apple Notification Failed for some unknown reason : {ex.InnerException}");
                 }
 
                 // Mark it as handled
