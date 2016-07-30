@@ -18,10 +18,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Repos = Bit.Core.Repositories.SqlServer;
 using System.Text;
-using StackExchange.Redis.Extensions.Core;
-using StackExchange.Redis.Extensions.Newtonsoft;
 using Loggr.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
@@ -61,16 +58,6 @@ namespace Bit.Api
             var globalSettings = new GlobalSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
-
-            // Caching
-            ISerializer serializer = new NewtonsoftSerializer(new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore
-            });
-            services.AddSingleton(s => serializer);
-            ICacheClient cacheClient = new StackExchangeRedisCacheClient(serializer,
-                globalSettings.Cache.ConnectionString, globalSettings.Cache.Database);
-            services.AddSingleton(s => cacheClient);
 
             // Repositories
             services.AddSingleton<IUserRepository, Repos.UserRepository>();

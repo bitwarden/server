@@ -7,23 +7,18 @@ using DataTableProxy;
 using Bit.Core.Domains;
 using System.Data;
 using Dapper;
-using StackExchange.Redis.Extensions.Core;
 
 namespace Bit.Core.Repositories.SqlServer
 {
     public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     {
-        private readonly ICacheClient _cacheClient;
-
-        public CipherRepository(GlobalSettings globalSettings, ICacheClient cacheClient)
-            : this(globalSettings.SqlServer.ConnectionString, cacheClient)
+        public CipherRepository(GlobalSettings globalSettings)
+            : this(globalSettings.SqlServer.ConnectionString)
         { }
 
-        public CipherRepository(string connectionString, ICacheClient cacheClient)
+        public CipherRepository(string connectionString)
             : base(connectionString)
-        {
-            _cacheClient = cacheClient;
-        }
+        { }
 
         public async Task<Cipher> GetByIdAsync(Guid id, Guid userId)
         {
@@ -87,11 +82,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
+        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
         {
             if(ciphers.Count() == 0)
             {
-                return;
+                return Task.FromResult(0);
             }
 
             using(var connection = new SqlConnection(ConnectionString))
@@ -176,8 +171,7 @@ namespace Bit.Core.Repositories.SqlServer
                 }
             }
 
-            // Cleanup user cache
-            await _cacheClient.RemoveAllAsync(new string[] { string.Format(Constants.UserIdCacheKey, user.Id) });
+            return Task.FromResult(0);
         }
 
         public Task CreateAsync(IEnumerable<Cipher> ciphers)

@@ -14,10 +14,6 @@
             "logKey": "SECRET",
             "apiKey": "SECRET"
         },
-        "cache": {
-            "connectionString": "SECRET.COM:6380,password=SECRET,ssl=True,abortConnect=False",
-            "database": 0
-        },
         "push": {
             "apnsCertificateThumbprint": "SECRET",
             "apnsCertificatePassword": "SECRET",
