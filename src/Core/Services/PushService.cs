@@ -22,17 +22,20 @@ namespace Bit.Core.Services
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILogger<IPushService> _logger;
+        private readonly CurrentContext _currentContext;
         private GcmServiceBroker _gcmBroker;
         private ApnsServiceBroker _apnsBroker;
 
         public PushService(
             IDeviceRepository deviceRepository,
             ILogger<IPushService> logger,
+            CurrentContext currentContext,
             IHostingEnvironment hostingEnvironment,
             GlobalSettings globalSettings)
         {
             _deviceRepository = deviceRepository;
             _logger = logger;
+            _currentContext = currentContext;
 
             InitGcmBroker(globalSettings);
             InitApnsBroker(globalSettings, hostingEnvironment);
@@ -74,7 +77,13 @@ namespace Bit.Core.Services
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
 
-            await PushToAllUserDevicesAsync(cipher.UserId, JObject.FromObject(message));
+            var excludedTokens = new List<string>();
+            if(!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+            {
+                excludedTokens.Add(_currentContext.DeviceIdentifier);
+            }
+
+            await PushToAllUserDevicesAsync(cipher.UserId, JObject.FromObject(message), excludedTokens);
         }
 
         public async Task PushSyncCiphersAsync(Guid userId)
@@ -87,7 +96,7 @@ namespace Bit.Core.Services
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
 
-            await PushToAllUserDevicesAsync(userId, JObject.FromObject(message));
+            await PushToAllUserDevicesAsync(userId, JObject.FromObject(message), null);
         }
 
         private void InitGcmBroker(GlobalSettings globalSettings)
@@ -255,9 +264,10 @@ namespace Bit.Core.Services
             // timestamp is the time the token was reported as expired
         }
 
-        private async Task PushToAllUserDevicesAsync(Guid userId, JObject message)
+        private async Task PushToAllUserDevicesAsync(Guid userId, JObject message, IEnumerable<string> tokensToSkip)
         {
-            var devices = (await _deviceRepository.GetManyByUserIdAsync(userId)).Where(d => !string.IsNullOrWhiteSpace(d.PushToken));
+            var devices = (await _deviceRepository.GetManyByUserIdAsync(userId))
+                .Where(d => !string.IsNullOrWhiteSpace(d.PushToken) && (!tokensToSkip?.Contains(d.PushToken) ?? true));
             if(devices.Count() == 0)
             {
                 return;

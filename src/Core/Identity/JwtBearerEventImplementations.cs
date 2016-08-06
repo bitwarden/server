@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
+using System.Linq;
 
 namespace Bit.Core.Identity
 {
@@ -37,6 +38,11 @@ namespace Bit.Core.Identity
             // register the current context user
             var currentContext = context.HttpContext.RequestServices.GetRequiredService<CurrentContext>();
             currentContext.User = user;
+            var deviceIdentifierClaim = context.Ticket.Principal.Claims.SingleOrDefault(c => c.Type == "DeviceIdentifier");
+            if(deviceIdentifierClaim != null)
+            {
+                currentContext.DeviceIdentifier = deviceIdentifierClaim.Value;
+            }
         }
 
         public static Task AuthenticationFailedAsync(AuthenticationFailedContext context)

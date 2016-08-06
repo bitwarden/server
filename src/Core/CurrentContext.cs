@@ -9,5 +9,6 @@ namespace Bit.Core
     public class CurrentContext
     {
         public virtual User User { get; set; }
+        public virtual string DeviceIdentifier { get; set; }
     }
 }
