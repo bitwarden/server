@@ -107,7 +107,6 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [AllowAnonymous]
         [HttpPut("identifier/{identifier}/clear-token")]
         [HttpPost("identifier/{identifier}/clear-token")]
         public async Task<DeviceResponseModel> PutClearToken(string identifier)
