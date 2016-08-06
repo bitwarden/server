@@ -123,6 +123,7 @@ namespace Bit.Api
             services.AddSingleton<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPushService, PushService>();
+            services.AddScoped<IDeviceService, DeviceService>();
 
             // Cors
             services.AddCors(config =>

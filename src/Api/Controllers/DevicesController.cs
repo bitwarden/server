@@ -9,6 +9,7 @@ using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
 using Microsoft.AspNetCore.Identity;
+using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
@@ -17,13 +18,16 @@ namespace Bit.Api.Controllers
     public class DevicesController : Controller
     {
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IDeviceService _deviceService;
         private readonly UserManager<User> _userManager;
 
         public DevicesController(
             IDeviceRepository deviceRepository,
+            IDeviceService deviceService,
             UserManager<User> userManager)
         {
             _deviceRepository = deviceRepository;
+            _deviceService = deviceService;
             _userManager = userManager;
         }
 
@@ -65,7 +69,7 @@ namespace Bit.Api.Controllers
         public async Task<DeviceResponseModel> Post([FromBody]DeviceRequestModel model)
         {
             var device = model.ToDevice(_userManager.GetUserId(User));
-            await _deviceRepository.CreateAsync(device);
+            await _deviceService.SaveAsync(device);
 
             var response = new DeviceResponseModel(device);
             return response;
@@ -81,7 +85,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _deviceRepository.ReplaceAsync(model.ToDevice(device));
+            await _deviceService.SaveAsync(model.ToDevice(device));
 
             var response = new DeviceResponseModel(device);
             return response;
@@ -97,7 +101,26 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _deviceRepository.ReplaceAsync(model.ToDevice(device));
+            await _deviceService.SaveAsync(model.ToDevice(device));
+
+            var response = new DeviceResponseModel(device);
+            return response;
+        }
+
+        [AllowAnonymous]
+        [HttpPut("identifier/{identifier}/clear-token")]
+        [HttpPost("identifier/{identifier}/clear-token")]
+        public async Task<DeviceResponseModel> PutClearToken(string identifier)
+        {
+            var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
+            if(device == null)
+            {
+                await Task.Delay(2000);
+                throw new NotFoundException();
+            }
+
+            device.PushToken = null;
+            await _deviceService.SaveAsync(device);
 
             var response = new DeviceResponseModel(device);
             return response;
