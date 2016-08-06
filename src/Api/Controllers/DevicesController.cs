@@ -93,7 +93,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("identifier/{identifier}/token")]
         [HttpPost("identifier/{identifier}/token")]
-        public async Task<DeviceResponseModel> PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
+        public async Task PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
             if(device == null)
@@ -102,9 +102,6 @@ namespace Bit.Api.Controllers
             }
 
             await _deviceService.SaveAsync(model.ToDevice(device));
-
-            var response = new DeviceResponseModel(device);
-            return response;
         }
 
         [AllowAnonymous]
