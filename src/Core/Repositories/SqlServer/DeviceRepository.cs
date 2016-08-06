@@ -66,10 +66,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_ClearPushTokenByIdentifier]",
-                    new
-                    {
-                        Identifier = identifier
-                    },
+                    new { Identifier = identifier },
                     commandType: CommandType.StoredProcedure);
             }
         }

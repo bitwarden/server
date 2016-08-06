@@ -7,7 +7,7 @@ BEGIN
     UPDATE
         [dbo].[Device]
     SET
-        [Identifier] = NULL
+        [PushToken] = NULL
     WHERE
         [Identifier] = @Identifier
 END
