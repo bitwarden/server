@@ -68,7 +68,7 @@ namespace Bit.Core.Identity
 
             if(await UserManager.CheckPasswordAsync(user, password))
             {
-                var result = await SignInOrTwoFactorAsync(user, device);
+                var result = await SignInOrTwoFactorAsync(user);
                 if(result.Succeeded && device != null)
                 {
                     var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
@@ -105,7 +105,7 @@ namespace Bit.Core.Identity
 
             if(await UserManager.VerifyTwoFactorTokenAsync(user, provider, code))
             {
-                var token = await SignInAsync(user, false, device);
+                var token = await SignInAsync(user, false);
 
                 var success = JwtBearerSignInResult.Success;
                 success.Token = token;
@@ -127,7 +127,7 @@ namespace Bit.Core.Identity
             return JwtBearerSignInResult.Failed;
         }
 
-        private async Task<string> SignInAsync(User user, bool twoFactor, Device device)
+        private async Task<string> SignInAsync(User user, bool twoFactor)
         {
             var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
 
@@ -150,11 +150,6 @@ namespace Bit.Core.Identity
                 }
             }
 
-            if(device != null && !string.IsNullOrWhiteSpace(device.Identifier))
-            {
-                userPrincipal.Identities.First().AddClaim(new Claim("DeviceIdentifier", device.Identifier));
-            }
-
             var descriptor = new SecurityTokenDescriptor
             {
                 Issuer = JwtIdentityOptions.Issuer,
@@ -169,13 +164,13 @@ namespace Bit.Core.Identity
             return handler.WriteToken(securityToken);
         }
 
-        private async Task<JwtBearerSignInResult> SignInOrTwoFactorAsync(User user, Device device)
+        private async Task<JwtBearerSignInResult> SignInOrTwoFactorAsync(User user)
         {
             if(UserManager.SupportsUserTwoFactor &&
                 await UserManager.GetTwoFactorEnabledAsync(user) &&
                 (await UserManager.GetValidTwoFactorProvidersAsync(user)).Count > 0)
             {
-                var twoFactorToken = await SignInAsync(user, true, device);
+                var twoFactorToken = await SignInAsync(user, true);
 
                 var twoFactorResult = JwtBearerSignInResult.TwoFactorRequired;
                 twoFactorResult.Token = twoFactorToken;
@@ -184,7 +179,7 @@ namespace Bit.Core.Identity
                 return twoFactorResult;
             }
 
-            var token = await SignInAsync(user, false, device);
+            var token = await SignInAsync(user, false);
 
             var result = JwtBearerSignInResult.Success;
             result.Token = token;

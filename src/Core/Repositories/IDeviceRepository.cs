@@ -10,5 +10,6 @@ namespace Bit.Core.Repositories
         Task<Device> GetByIdAsync(Guid id, Guid userId);
         Task<Device> GetByIdentifierAsync(string identifier, Guid userId);
         Task<ICollection<Device>> GetManyByUserIdAsync(Guid userId);
+        Task ClearPushTokenByIdentifierAsync(string identifier);
     }
 }

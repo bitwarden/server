@@ -93,5 +93,6 @@
     <Build Include="dbo\Stored Procedures\Device_ReadByIdentifierUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
+    <Build Include="dbo\Stored Procedures\Device_ClearPushTokenByIdentifier.sql" />
   </ItemGroup>
 </Project>

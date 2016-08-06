@@ -107,22 +107,12 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [AllowAnonymous]
         [HttpPut("identifier/{identifier}/clear-token")]
         [HttpPost("identifier/{identifier}/clear-token")]
-        public async Task<DeviceResponseModel> PutClearToken(string identifier)
+        public async Task PutClearToken(string identifier)
         {
-            var device = await _deviceRepository.GetByIdentifierAsync(identifier, new Guid(_userManager.GetUserId(User)));
-            if(device == null)
-            {
-                await Task.Delay(2000);
-                throw new NotFoundException();
-            }
-
-            device.PushToken = null;
-            await _deviceService.SaveAsync(device);
-
-            var response = new DeviceResponseModel(device);
-            return response;
+            await _deviceRepository.ClearPushTokenByIdentifierAsync(identifier);
         }
 
         [HttpDelete("{id}")]

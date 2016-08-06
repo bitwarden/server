@@ -59,5 +59,19 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task ClearPushTokenByIdentifierAsync(string identifier)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_ClearPushTokenByIdentifier]",
+                    new
+                    {
+                        Identifier = identifier
+                    },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }
