@@ -19,7 +19,7 @@
             "apnsCertificatePassword": "SECRET",
             "gcmSenderId": "SECRET",
             "gcmApiKey": "SECRET",
-            "gcmAppPackageName": "com.bitwarden.vault"
+            "gcmAppPackageName": "com.x8bit.bitwarden"
         }
     }
 }
