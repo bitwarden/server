@@ -199,3 +199,4 @@ FakesAssemblies/
 # Other
 project.lock.json
 *.jfm
+mail_dist/
