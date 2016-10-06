@@ -198,3 +198,4 @@ FakesAssemblies/
 
 # Other
 project.lock.json
+*.jfm

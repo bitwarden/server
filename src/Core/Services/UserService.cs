@@ -142,7 +142,16 @@ namespace Bit.Core.Services
             user.Email = newEmail;
             user.EmailVerified = true;
             user.RevisionDate = DateTime.UtcNow;
-            await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+
+            if(ciphers.Any())
+            {
+                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+            }
+            else
+            {
+                await _userRepository.ReplaceAsync(user);
+            }
+
             return IdentityResult.Success;
         }
 
@@ -167,7 +176,15 @@ namespace Bit.Core.Services
                 }
 
                 user.RevisionDate = DateTime.UtcNow;
-                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+                if(ciphers.Any())
+                {
+                    await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+                }
+                else
+                {
+                    await _userRepository.ReplaceAsync(user);
+                }
+
                 return IdentityResult.Success;
             }
 
