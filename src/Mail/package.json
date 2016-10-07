@@ -1,6 +1,6 @@
 {
   "name": "bitwarden",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "devDependencies": {
     "gulp": "3.9.1",
     "rimraf": "2.5.4",

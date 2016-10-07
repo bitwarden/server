@@ -1,8 +1,4 @@
 {
-    "version": "0.0.1-*",
-    "description": "bitwarden Core Library",
-    "authors": [ "Kyle Spearrin" ],
-
     "dependencies": {
         "Microsoft.AspNetCore.Identity": "1.0.0",
         "Microsoft.AspNetCore.Authentication.JwtBearer": "1.0.0",

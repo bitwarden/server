@@ -1,10 +1,9 @@
 {
     "userSecretsId": "aspnet5-bitwarden-Api",
-    "version": "0.0.1-*",
+    "version": "1.0.0",
 
     "dependencies": {
         "Core": {
-            "version": "0.0.1",
             "target": "project"
         },
         "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
