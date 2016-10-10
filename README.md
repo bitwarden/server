@@ -1,5 +1,7 @@
 # bitwarden Core
 
+[![Join the chat at https://gitter.im/bitwarden/core](https://badges.gitter.im/bitwarden/core.svg)](https://gitter.im/bitwarden/core?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all other bitwarden projects.
 
 The core infrastructure is written in C# using .NET with ASP.NET Core. The database is SQL Server.
