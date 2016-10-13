@@ -21,16 +21,16 @@ namespace Bit.Api.Models
         [StringLength(300)]
         public string Name { get; set; }
         [EncryptedString]
-        [StringLength(5000)]
+        [StringLength(10000)]
         public string Uri { get; set; }
         [EncryptedString]
-        [StringLength(200)]
+        [StringLength(300)]
         public string Username { get; set; }
         [EncryptedString]
         [StringLength(300)]
         public string Password { get; set; }
         [EncryptedString]
-        [StringLength(5000)]
+        [StringLength(10000)]
         public string Notes { get; set; }
 
         public virtual Cipher ToCipher(string userId = null)
