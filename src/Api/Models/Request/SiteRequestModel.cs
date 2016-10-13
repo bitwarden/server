@@ -15,14 +15,12 @@ namespace Bit.Api.Models
         [EncryptedString]
         [StringLength(300)]
         public string Name { get; set; }
-        [Required]
         [EncryptedString]
         [StringLength(5000)]
         public string Uri { get; set; }
         [EncryptedString]
         [StringLength(200)]
         public string Username { get; set; }
-        [Required]
         [EncryptedString]
         [StringLength(300)]
         public string Password { get; set; }
