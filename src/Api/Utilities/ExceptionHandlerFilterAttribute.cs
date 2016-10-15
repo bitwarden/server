@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Api.Utilities
 {
@@ -46,10 +47,14 @@ namespace Bit.Api.Utilities
                 errorModel.Message = "Resource not found.";
                 context.HttpContext.Response.StatusCode = 404;
             }
+            else if(exception is SecurityTokenValidationException)
+            {
+                errorModel.Message = "Invalid token.";
+                context.HttpContext.Response.StatusCode = 403;
+            }
             else
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
-                logger.LogError(0, exception, exception.Message);
                 logger.LogError(0, exception, exception.Message);
 
                 errorModel.Message = "An unhandled server error has occured.";
