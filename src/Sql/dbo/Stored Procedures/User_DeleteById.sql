@@ -6,11 +6,17 @@ BEGIN
 
     BEGIN TRANSACTION User_DeleteById
 
-    DELETE
-    FROM
-        [dbo].[Cipher]
-    WHERE
-        [UserId] = @Id
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+    BEGIN
+        DELETE
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+    END
 
     DELETE
     FROM
