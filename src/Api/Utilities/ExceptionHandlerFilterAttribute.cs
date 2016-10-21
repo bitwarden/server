@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IdentityModel.Tokens;
 using Bit.Api.Models.Response;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
