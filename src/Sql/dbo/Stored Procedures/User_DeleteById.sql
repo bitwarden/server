@@ -9,7 +9,7 @@ BEGIN
     DECLARE @BatchSize INT = 100
     WHILE @BatchSize > 0
     BEGIN
-        DELETE
+        DELETE TOP(@BatchSize)
         FROM
             [dbo].[Cipher]
         WHERE
