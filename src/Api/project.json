@@ -1,6 +1,6 @@
 {
   "userSecretsId": "aspnet5-bitwarden-Api",
-  "version": "1.0.2",
+  "version": "1.0.3",
 
   "dependencies": {
     "Core": {
