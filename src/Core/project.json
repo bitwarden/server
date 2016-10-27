@@ -1,22 +1,22 @@
 {
-    "dependencies": {
-        "Microsoft.AspNetCore.Identity": "1.0.0",
-        "Microsoft.AspNetCore.Authentication.JwtBearer": "1.0.0",
-        "OtpSharp": "1.3.0.4",
-        "Microsoft.AspNetCore.Mvc.Abstractions": "1.0.0",
-        "Dapper": "1.42.0",
-        "DataTableProxy": "1.2.0",
-        "Sendgrid": "6.3.4",
-        "StackExchange.Redis": "1.0.488",
-        "PushSharp": "4.0.10"
-    },
+  "dependencies": {
+    "Microsoft.AspNetCore.Identity": "1.0.0",
+    "Microsoft.AspNetCore.Authentication.JwtBearer": "1.0.0",
+    "OtpSharp": "1.3.0.4",
+    "Microsoft.AspNetCore.Mvc.Abstractions": "1.0.0",
+    "Dapper": "1.42.0",
+    "DataTableProxy": "1.2.0",
+    "Sendgrid": "6.3.4",
+    "StackExchange.Redis": "1.0.488",
+    "PushSharp": "4.0.10"
+  },
 
-    "frameworks": {
-        "net461": {
-            "frameworkAssemblies": {
-                "System.ComponentModel.DataAnnotations": "4.0.0.0",
-                "System.Data": "4.0.0.0"
-            }
-        }
+  "frameworks": {
+    "net461": {
+      "frameworkAssemblies": {
+        "System.ComponentModel.DataAnnotations": "4.0.0.0",
+        "System.Data": "4.0.0.0"
+      }
     }
+  }
 }

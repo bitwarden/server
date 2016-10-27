@@ -1,59 +1,60 @@
 {
-    "userSecretsId": "aspnet5-bitwarden-Api",
-    "version": "1.0.2",
+  "userSecretsId": "aspnet5-bitwarden-Api",
+  "version": "1.0.2",
 
-    "dependencies": {
-        "Core": {
-            "target": "project"
-        },
-        "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
-        "Microsoft.AspNetCore.Mvc": "1.0.0",
-        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
-        "Microsoft.AspNetCore.StaticFiles": "1.0.0",
-        "Microsoft.Extensions.Configuration.UserSecrets": "1.0.0",
-        "Microsoft.Extensions.Logging": "1.0.0",
-        "Microsoft.Extensions.Logging.Console": "1.0.0",
-        "Microsoft.Extensions.Logging.Debug": "1.0.0",
-        "Microsoft.AspNetCore.Cors": "1.0.0",
-        "Microsoft.AspNetCore.Diagnostics": "1.0.0",
-        "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
-        "Microsoft.Extensions.Configuration.Binder": "1.0.0",
-        "Loggr.Extensions.Logging": "1.0.0"
+  "dependencies": {
+    "Core": {
+      "target": "project"
     },
+    "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
+    "Microsoft.AspNetCore.Mvc": "1.0.0",
+    "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
+    "Microsoft.AspNetCore.StaticFiles": "1.0.0",
+    "Microsoft.Extensions.Configuration.UserSecrets": "1.0.0",
+    "Microsoft.Extensions.Logging": "1.0.0",
+    "Microsoft.Extensions.Logging.Console": "1.0.0",
+    "Microsoft.Extensions.Logging.Debug": "1.0.0",
+    "Microsoft.AspNetCore.Cors": "1.0.0",
+    "Microsoft.AspNetCore.Diagnostics": "1.0.0",
+    "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
+    "Microsoft.Extensions.Configuration.Binder": "1.0.0",
+    "Loggr.Extensions.Logging": "1.0.0",
+    "Microsoft.ApplicationInsights.AspNetCore": "1.0.0"
+  },
 
-    "tools": {
-        "Microsoft.AspNetCore.Server.IISIntegration.Tools": {
-            "version": "1.0.0-preview2-final",
-            "imports": "portable-net45+win8+dnxcore50"
-        }
-    },
-
-    "frameworks": {
-        "net461": { }
-    },
-
-    "buildOptions": {
-        "emitEntryPoint": true,
-        "preserveCompilationContext": true
-    },
-
-    "runtimeOptions": {
-        "gcServer": false,
-        "gcConcurrent": true
-    },
-
-    "publishOptions": {
-        "include": [
-            "wwwroot",
-            "Views",
-            "settings.json",
-            "settings.Production.json",
-            "settings.Staging.json",
-            "web.config"
-        ]
-    },
-
-    "scripts": {
-        "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
+  "tools": {
+    "Microsoft.AspNetCore.Server.IISIntegration.Tools": {
+      "version": "1.0.0-preview2-final",
+      "imports": "portable-net45+win8+dnxcore50"
     }
+  },
+
+  "frameworks": {
+    "net461": {}
+  },
+
+  "buildOptions": {
+    "emitEntryPoint": true,
+    "preserveCompilationContext": true
+  },
+
+  "runtimeOptions": {
+    "gcServer": false,
+    "gcConcurrent": true
+  },
+
+  "publishOptions": {
+    "include": [
+      "wwwroot",
+      "Views",
+      "settings.json",
+      "settings.Production.json",
+      "settings.Staging.json",
+      "web.config"
+    ]
+  },
+
+  "scripts": {
+    "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
+  }
 }
