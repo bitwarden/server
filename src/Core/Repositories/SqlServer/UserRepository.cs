@@ -43,7 +43,14 @@ namespace Bit.Core.Repositories.SqlServer
 
         public override async Task DeleteAsync(User user)
         {
-            await base.DeleteAsync(user);
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_DeleteById]",
+                    new { Id = user.Id },
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 60);
+            }
         }
     }
 }

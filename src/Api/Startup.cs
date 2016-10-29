@@ -162,7 +162,16 @@ namespace Bit.Api
             if(!env.IsDevelopment())
             {
                 loggerFactory.AddLoggr(
-                    LogLevel.Error,
+                    (category, logLevel, eventId) =>
+                    {
+                        // Bad security stamp exception
+                        if(category == typeof(JwtBearerMiddleware).FullName && eventId.Id == 3 && logLevel == LogLevel.Error)
+                        {
+                            return false;
+                        }
+
+                        return logLevel >= LogLevel.Error;
+                    },
                     globalSettings.Loggr.LogKey,
                     globalSettings.Loggr.ApiKey);
             }
