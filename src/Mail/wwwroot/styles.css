@@ -98,6 +98,10 @@ body {
         font-size: 12px;
     }
 
+    .footer .social-icons a {
+        padding: 0 10px;
+    }
+
 /* -------------------------------------
     TYPOGRAPHY
 ------------------------------------- */
