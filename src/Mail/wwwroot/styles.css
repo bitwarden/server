@@ -211,7 +211,7 @@ a {
     }
 
     .content {
-        padding: 0 !important;
+        padding: 0 0 10px 0 !important;
     }
 
     .content-wrap {
@@ -229,6 +229,10 @@ a {
     }
 
     .logo {
-        padding-top: 10px;
+        padding-top: 10px !important;
+    }
+
+    .footer {
+        padding-top: 10px !important;
     }
 }
