@@ -56,12 +56,17 @@ body {
     max-width: 600px;
     margin: 0 auto;
     display: block;
-    padding: 20px;
+    padding: 0 20px 20px 20px;
 }
 
 /* -------------------------------------
-    HEADER, FOOTER, MAIN
+    LOGO, HEADER, FOOTER, MAIN
 ------------------------------------- */
+.logo {
+    padding: 20px 0 10px;
+    text-align: center;
+}
+
 .main {
     background-color: #fff;
     border: 1px solid #e9e9e9;
@@ -217,5 +222,9 @@ a {
         border-right: none !important;
         border-left: none !important;
         border-radius: 0 !important;
+    }
+
+    .logo {
+        padding-top: 10px;
     }
 }
