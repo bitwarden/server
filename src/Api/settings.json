@@ -24,5 +24,60 @@
       "gcmApiKey": "SECRET",
       "gcmAppPackageName": "com.x8bit.bitwarden"
     }
+  },
+  "IpRateLimitOptions": {
+    "EnableEndpointRateLimiting": true,
+    "StackBlockedRequests": false,
+    "RealIpHeader": "X-Forwarded-For",
+    "ClientIdHeader": "X-ClientId",
+    "HttpStatusCode": 429,
+    "IpWhitelist": [],
+    "EndpointWhitelist": [],
+    "ClientWhitelist": [],
+    "GeneralRules": [
+      {
+        "Endpoint": "post:/auth/token",
+        "Period": "1m",
+        "Limit": 10
+      },
+      {
+        "Endpoint": "post:/auth/token/two-factor",
+        "Period": "1m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "post:/accounts/register",
+        "Period": "1m",
+        "Limit": 2
+      },
+      {
+        "Endpoint": "post:/account/password-hint",
+        "Period": "1m",
+        "Limit": 2
+      },
+      {
+        "Endpoint": "post:/account/email-token",
+        "Period": "1m",
+        "Limit": 2
+      },
+      {
+        "Endpoint": "post:/account/email",
+        "Period": "1m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "put:/account/email",
+        "Period": "1m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "get:/alive",
+        "Period": "1m",
+        "Limit": 5
+      }
+    ]
+  },
+  "IpRateLimitPolicies": {
+    "IpRules": []
   }
 }

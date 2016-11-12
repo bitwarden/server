@@ -23,6 +23,8 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
+using AspNetCoreRateLimit;
+using Bit.Api.Middleware;
 
 namespace Bit.Api
 {
@@ -61,6 +63,8 @@ namespace Bit.Api
             var globalSettings = new GlobalSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
+            services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
+            services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
 
             // Repositories
             services.AddSingleton<IUserRepository, Repos.UserRepository>();
@@ -69,6 +73,13 @@ namespace Bit.Api
 
             // Context
             services.AddScoped<CurrentContext>();
+
+            // Caching
+            services.AddMemoryCache();
+
+            // Rate limiting
+            services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
             // Identity
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
@@ -176,6 +187,10 @@ namespace Bit.Api
                     globalSettings.Loggr.ApiKey);
             }
 
+            // Rate limiting
+            app.UseMiddleware<CustomIpRateLimitMiddleware>();
+
+            // Insights
             app.UseApplicationInsightsRequestTelemetry();
             app.UseApplicationInsightsExceptionTelemetry();
 
