@@ -209,30 +209,15 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpPut("two-factor-recover")]
         [HttpPost("two-factor-recover")]
-        public async Task<TwoFactorResponseModel> PutTwoFactorRecover([FromBody]RecoverTwoFactorRequestModel model)
+        [AllowAnonymous]
+        public async Task PostTwoFactorRecover([FromBody]RecoverTwoFactorRequestModel model)
         {
-            var user = _currentContext.User;
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "Invalid information. Try again.");
             }
-
-            if(string.Compare(user.TwoFactorRecoveryCode, model.RecoveryCode, true) != 0)
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("RecoveryCode", "Invalid recovery code.");
-            }
-
-            user.TwoFactorProvider = TwoFactorProvider.Authenticator;
-            user.TwoFactorEnabled = false;
-            user.TwoFactorRecoveryCode = null;
-            await _userService.SaveUserAsync(user);
-
-            var response = new TwoFactorResponseModel(user);
-            return response;
         }
 
         [HttpPut("two-factor-regenerate")]

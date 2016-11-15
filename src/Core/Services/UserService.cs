@@ -10,6 +10,7 @@ using OtpSharp;
 using Base32;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -247,6 +248,33 @@ namespace Bit.Core.Services
             }
 
             await SaveUserAsync(user);
+        }
+
+        public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if(user == null)
+            {
+                // No user exists. Do we want to send an email telling them this in the future?
+                return false;
+            }
+
+            if(!await base.CheckPasswordAsync(user, masterPassword))
+            {
+                return false;
+            }
+
+            if(string.Compare(user.TwoFactorRecoveryCode, recoveryCode, true) != 0)
+            {
+                return false;
+            }
+
+            user.TwoFactorProvider = TwoFactorProvider.Authenticator;
+            user.TwoFactorEnabled = false;
+            user.TwoFactorRecoveryCode = null;
+            await SaveUserAsync(user);
+
+            return true;
         }
 
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)
