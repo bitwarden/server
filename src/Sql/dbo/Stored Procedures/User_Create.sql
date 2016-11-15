@@ -10,6 +10,7 @@
     @TwoFactorEnabled BIT,
     @TwoFactorProvider TINYINT,
     @AuthenticatorKey NVARCHAR(50),
+    @TwoFactorRecoveryCode NVARCHAR(32),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -29,6 +30,7 @@ BEGIN
         [TwoFactorEnabled],
         [TwoFactorProvider],
         [AuthenticatorKey],
+        [TwoFactorRecoveryCode],
         [CreationDate],
         [RevisionDate]
     )
@@ -45,6 +47,7 @@ BEGIN
         @TwoFactorEnabled,
         @TwoFactorProvider,
         @AuthenticatorKey,
+        @TwoFactorRecoveryCode,
         @CreationDate,
         @RevisionDate
     )
