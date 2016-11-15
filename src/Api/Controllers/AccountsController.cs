@@ -194,7 +194,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(model.Enabled.Value && !await _userManager.VerifyTwoFactorTokenAsync(user, "Authenticator", model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, "Authenticator", model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -202,7 +202,61 @@ namespace Bit.Api.Controllers
 
             user.TwoFactorProvider = TwoFactorProvider.Authenticator;
             user.TwoFactorEnabled = model.Enabled.Value;
+            user.TwoFactorRecoveryCode = user.TwoFactorEnabled ? Guid.NewGuid().ToString("N") : null;
             await _userService.SaveUserAsync(user);
+
+            var response = new TwoFactorResponseModel(user);
+            return response;
+        }
+
+        [HttpPut("two-factor-recover")]
+        [HttpPost("two-factor-recover")]
+        public async Task<TwoFactorResponseModel> PutTwoFactorRecover([FromBody]RecoverTwoFactorRequestModel model)
+        {
+            var user = _currentContext.User;
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+
+            if(string.Compare(user.TwoFactorRecoveryCode, model.RecoveryCode, true) != 0)
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("RecoveryCode", "Invalid recovery code.");
+            }
+
+            user.TwoFactorProvider = TwoFactorProvider.Authenticator;
+            user.TwoFactorEnabled = false;
+            user.TwoFactorRecoveryCode = null;
+            await _userService.SaveUserAsync(user);
+
+            var response = new TwoFactorResponseModel(user);
+            return response;
+        }
+
+        [HttpPut("two-factor-regenerate")]
+        [HttpPost("two-factor-regenerate")]
+        public async Task<TwoFactorResponseModel> PutTwoFactorRegenerate([FromBody]RegenerateTwoFactorRequestModel model)
+        {
+            var user = _currentContext.User;
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, "Authenticator", model.Token))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Token", "Invalid token.");
+            }
+
+            if(user.TwoFactorEnabled)
+            {
+                user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
+                await _userService.SaveUserAsync(user);
+            }
 
             var response = new TwoFactorResponseModel(user);
             return response;

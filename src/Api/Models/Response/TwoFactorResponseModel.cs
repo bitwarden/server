@@ -17,10 +17,12 @@ namespace Bit.Api.Models
             TwoFactorEnabled = user.TwoFactorEnabled;
             AuthenticatorKey = user.AuthenticatorKey;
             TwoFactorProvider = user.TwoFactorProvider;
+            TwoFactorRecoveryCode = user.TwoFactorRecoveryCode;
         }
 
         public bool TwoFactorEnabled { get; set; }
         public TwoFactorProvider? TwoFactorProvider { get; set; }
         public string AuthenticatorKey { get; set; }
+        public string TwoFactorRecoveryCode { get; set; }
     }
 }
