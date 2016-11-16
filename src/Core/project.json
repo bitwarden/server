@@ -3,7 +3,7 @@
     "Microsoft.AspNetCore.Identity": "1.0.0",
     "Microsoft.AspNetCore.Authentication.JwtBearer": "1.0.0",
     "OtpSharp": "1.3.0.4",
-    "Microsoft.AspNetCore.Mvc.Abstractions": "1.0.0",
+    "Microsoft.AspNetCore.Mvc.Abstractions": "1.0.1",
     "Dapper": "1.42.0",
     "DataTableProxy": "1.2.0",
     "Sendgrid": "6.3.4",
