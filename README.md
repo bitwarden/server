@@ -1,3 +1,4 @@
+[![appveyor build](https://ci.appveyor.com/api/projects/status/github/bitwarden/core?branch=master&svg=true)] (https://ci.appveyor.com/project/bitwarden/core)
 [![Join the chat at https://gitter.im/bitwarden/Lobby](https://badges.gitter.im/bitwarden/Lobby.svg)](https://gitter.im/bitwarden/Lobby)
 
 # bitwarden Core
