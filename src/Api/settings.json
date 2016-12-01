@@ -23,6 +23,9 @@
       "gcmSenderId": "SECRET",
       "gcmApiKey": "SECRET",
       "gcmAppPackageName": "com.x8bit.bitwarden"
+    },
+    "storage": {
+      "connectionString": "SECRET"
     }
   },
   "IpRateLimitOptions": {
