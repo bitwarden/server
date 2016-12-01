@@ -7,8 +7,8 @@ namespace Bit.Core.Services
 {
     public class AzureBlockIpService : IBlockIpService
     {
-        private CloudQueue _blockIpQueue;
-        private CloudQueue _unblockIpQueue;
+        private readonly CloudQueue _blockIpQueue;
+        private readonly CloudQueue _unblockIpQueue;
 
         public AzureBlockIpService(
             GlobalSettings globalSettings)
