@@ -182,6 +182,12 @@ namespace Bit.Api
                             return false;
                         }
 
+                        // IP blocks
+                        if(category == typeof(IpRateLimitMiddleware).FullName && logLevel >= LogLevel.Information)
+                        {
+                            return true;
+                        }
+
                         return logLevel >= LogLevel.Error;
                     },
                     globalSettings.Loggr.LogKey,
