@@ -133,12 +133,12 @@ namespace Bit.Api
             services.AddScoped<AuthenticatorTokenProvider>();
 
             // Services
-            services.AddSingleton<IMailService, MailService>();
+            services.AddSingleton<IMailService, SendGridMailService>();
             services.AddSingleton<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IPushService, PushService>();
+            services.AddScoped<IPushService, PushSharpPushService>();
             services.AddScoped<IDeviceService, DeviceService>();
-            services.AddScoped<IBlockIpService, AzureBlockIpService>();
+            services.AddScoped<IBlockIpService, AzureQueueBlockIpService>();
 
             // Cors
             services.AddCors(config =>

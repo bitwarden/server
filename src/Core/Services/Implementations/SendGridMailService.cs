@@ -7,7 +7,7 @@ using SendGrid;
 
 namespace Bit.Core.Services
 {
-    public class MailService : IMailService
+    public class SendGridMailService : IMailService
     {
         private const string WelcomeTemplateId = "045f8ad5-5547-4fa2-8d3d-6d46e401164d";
         private const string ChangeEmailAlreadyExistsTemplateId = "b69d2038-6ad9-4cf6-8f7f-7880921cba43";
@@ -21,7 +21,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly Web _web;
 
-        public MailService(GlobalSettings globalSettings)
+        public SendGridMailService(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
             _web = new Web(_globalSettings.Mail.ApiKey);

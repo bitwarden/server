@@ -18,7 +18,7 @@ using System.Diagnostics;
 
 namespace Bit.Core.Services
 {
-    public class PushService : IPushService
+    public class PushSharpPushService : IPushService
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILogger<IPushService> _logger;
@@ -26,7 +26,7 @@ namespace Bit.Core.Services
         private GcmServiceBroker _gcmBroker;
         private ApnsServiceBroker _apnsBroker;
 
-        public PushService(
+        public PushSharpPushService(
             IDeviceRepository deviceRepository,
             ILogger<IPushService> logger,
             CurrentContext currentContext,

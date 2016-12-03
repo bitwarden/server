@@ -5,12 +5,12 @@ using System;
 
 namespace Bit.Core.Services
 {
-    public class AzureBlockIpService : IBlockIpService
+    public class AzureQueueBlockIpService : IBlockIpService
     {
         private readonly CloudQueue _blockIpQueue;
         private readonly CloudQueue _unblockIpQueue;
 
-        public AzureBlockIpService(
+        public AzureQueueBlockIpService(
             GlobalSettings globalSettings)
         {
             var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
