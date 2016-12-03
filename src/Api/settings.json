@@ -11,7 +11,7 @@
     },
     "mail": {
       "apiKey": "SECRET",
-      "replyToEmail": "do-not-reply@bitwarden.com"
+      "replyToEmail": "hello@bitwarden.com"
     },
     "loggr": {
       "logKey": "SECRET",
@@ -38,6 +38,16 @@
     "EndpointWhitelist": [],
     "ClientWhitelist": [],
     "GeneralRules": [
+      {
+        "Endpoint": "*",
+        "Period": "1m",
+        "Limit": 60
+      },
+      {
+        "Endpoint": "*",
+        "Period": "1s",
+        "Limit": 5
+      },
       {
         "Endpoint": "post:/auth/token",
         "Period": "1m",
