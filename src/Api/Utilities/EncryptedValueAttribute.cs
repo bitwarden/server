@@ -28,7 +28,7 @@ namespace Bit.Api.Utilities
                 }
 
                 var encStringPieces = encString.Split('|');
-                if(encStringPieces.Length != 2)
+                if(encStringPieces.Length != 2 && encStringPieces.Length != 3)
                 {
                     return false;
                 }
@@ -39,6 +39,15 @@ namespace Bit.Api.Utilities
                 if(iv.Length < 1 || ct.Length < 1)
                 {
                     return false;
+                }
+
+                if(encStringPieces.Length == 3)
+                {
+                    var mac = Convert.FromBase64String(encStringPieces[2]);
+                    if(mac.Length < 1)
+                    {
+                        return false;
+                    }
                 }
             }
             catch
