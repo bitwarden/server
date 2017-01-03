@@ -24,8 +24,8 @@ namespace Bit.Api.Models
                 case Core.Enums.CipherType.Folder:
                     Data = new FolderDataModel(cipher);
                     break;
-                case Core.Enums.CipherType.Site:
-                    Data = new SiteDataModel(cipher);
+                case Core.Enums.CipherType.Login:
+                    Data = new LoginDataModel(cipher);
                     break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");

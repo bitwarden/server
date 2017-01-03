@@ -58,8 +58,8 @@ namespace Bit.Core.Services
                 case CipherType.Folder:
                     await PushCipherAsync(cipher, PushType.SyncFolderDelete);
                     break;
-                case CipherType.Site:
-                    await PushCipherAsync(cipher, PushType.SyncSiteDelete);
+                case CipherType.Login:
+                    await PushCipherAsync(cipher, PushType.SyncLoginDelete);
                     break;
                 default:
                     break;

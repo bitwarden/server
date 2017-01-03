@@ -48,8 +48,8 @@ namespace Bit.Api.Models
                 case CipherType.Folder:
                     cipher.Data = JsonConvert.SerializeObject(new FolderDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
-                case CipherType.Site:
-                    cipher.Data = JsonConvert.SerializeObject(new SiteDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                case CipherType.Login:
+                    cipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");

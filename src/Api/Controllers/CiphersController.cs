@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportRequestModel model)
         {
             var folderCiphers = model.Folders.Select(f => f.ToCipher(_userManager.GetUserId(User))).ToList();
-            var otherCiphers = model.Sites.Select(s => s.ToCipher(_userManager.GetUserId(User))).ToList();
+            var otherCiphers = model.Logins.Select(s => s.ToCipher(_userManager.GetUserId(User))).ToList();
 
             await _cipherService.ImportCiphersAsync(
                 folderCiphers,

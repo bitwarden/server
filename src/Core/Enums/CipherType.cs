@@ -3,6 +3,6 @@
     public enum CipherType : short
     {
         Folder = 0,
-        Site = 1
+        Login = 1
     }
 }

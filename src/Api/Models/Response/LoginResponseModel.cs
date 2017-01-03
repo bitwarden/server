@@ -3,22 +3,22 @@ using Bit.Core.Domains;
 
 namespace Bit.Api.Models
 {
-    public class SiteResponseModel : ResponseModel
+    public class LoginResponseModel : ResponseModel
     {
-        public SiteResponseModel(Cipher cipher)
-            : base("site")
+        public LoginResponseModel(Cipher cipher)
+            : base("login")
         {
             if(cipher == null)
             {
                 throw new ArgumentNullException(nameof(cipher));
             }
 
-            if(cipher.Type != Core.Enums.CipherType.Site)
+            if(cipher.Type != Core.Enums.CipherType.Login)
             {
                 throw new ArgumentException(nameof(cipher.Type));
             }
 
-            var data = new SiteDataModel(cipher);
+            var data = new LoginDataModel(cipher);
 
             Id = cipher.Id.ToString();
             FolderId = cipher.FolderId?.ToString();

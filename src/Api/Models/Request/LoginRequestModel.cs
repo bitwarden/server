@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
-    public class SiteRequestModel
+    public class LoginRequestModel
     {
         [StringLength(36)]
         public string FolderId { get; set; }
@@ -36,14 +36,15 @@ namespace Bit.Api.Models
             });
         }
 
-        public Cipher ToCipher(Cipher existingSite)
+        public Cipher ToCipher(Cipher existingLogin)
         {
-            existingSite.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
-            existingSite.Favorite = Favorite;
-            existingSite.Data = JsonConvert.SerializeObject(new SiteDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            existingSite.Type = Core.Enums.CipherType.Site;
+            existingLogin.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
+            existingLogin.Favorite = Favorite;
+            existingLogin.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
+                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingLogin.Type = Core.Enums.CipherType.Login;
 
-            return existingSite;
+            return existingLogin;
         }
     }
 }

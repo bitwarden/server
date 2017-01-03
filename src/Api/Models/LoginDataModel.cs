@@ -4,20 +4,20 @@ using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
-    public class SiteDataModel
+    public class LoginDataModel
     {
-        public SiteDataModel() { }
+        public LoginDataModel() { }
 
-        public SiteDataModel(SiteRequestModel site)
+        public LoginDataModel(LoginRequestModel login)
         {
-            Name = site.Name;
-            Uri = site.Uri;
-            Username = site.Username;
-            Password = site.Password;
-            Notes = site.Notes;
+            Name = login.Name;
+            Uri = login.Uri;
+            Username = login.Username;
+            Password = login.Password;
+            Notes = login.Notes;
         }
 
-        public SiteDataModel(CipherRequestModel cipher)
+        public LoginDataModel(CipherRequestModel cipher)
         {
             Name = cipher.Name;
             Uri = cipher.Uri;
@@ -26,14 +26,14 @@ namespace Bit.Api.Models
             Notes = cipher.Notes;
         }
 
-        public SiteDataModel(Cipher cipher)
+        public LoginDataModel(Cipher cipher)
         {
-            if(cipher.Type != Core.Enums.CipherType.Site)
+            if(cipher.Type != Core.Enums.CipherType.Login)
             {
                 throw new ArgumentException("Cipher is not correct type.");
             }
 
-            var data = JsonConvert.DeserializeObject<SiteDataModel>(cipher.Data);
+            var data = JsonConvert.DeserializeObject<LoginDataModel>(cipher.Data);
 
             Name = data.Name;
             Uri = data.Uri;
