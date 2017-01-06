@@ -21,7 +21,7 @@
     "Microsoft.Extensions.Options.ConfigurationExtensions": "1.0.0",
     "Loggr.Extensions.Logging": "1.0.0",
     "Microsoft.ApplicationInsights.AspNetCore": "1.0.0",
-    "AspNetCoreRateLimit": "1.0.2"
+    "AspNetCoreRateLimit": "1.0.5"
   },
 
   "tools": {

@@ -31,7 +31,7 @@
   "IpRateLimitOptions": {
     "EnableEndpointRateLimiting": true,
     "StackBlockedRequests": false,
-    "RealIpHeader": "X-Forwarded-For",
+    "RealIpHeader": "CF-Connecting-IP",
     "ClientIdHeader": "X-ClientId",
     "HttpStatusCode": 429,
     "IpWhitelist": [],
