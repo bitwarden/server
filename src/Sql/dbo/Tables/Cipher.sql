@@ -14,8 +14,8 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Cipher_UserId]
-    ON [dbo].[Cipher]([UserId] ASC);
+CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_Type]
+    ON [dbo].[Cipher]([UserId] ASC, [Type] ASC);
 
 
 GO

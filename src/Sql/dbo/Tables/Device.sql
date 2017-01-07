@@ -13,11 +13,6 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Device_UserId]
-    ON [dbo].[Device]([UserId] ASC);
-
-
-GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_Device_UserId_Identifier]
     ON [dbo].[Device]([UserId] ASC, [Identifier] ASC);
 
