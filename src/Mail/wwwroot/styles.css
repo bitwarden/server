@@ -6,8 +6,11 @@ body, html, body * {
     margin: 0;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     box-sizing: border-box;
-    font-size: 14px;
+    font-size: 16px;
     color: #333;
+    line-height: 25px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: none;
 }
 
 img {
@@ -20,7 +23,7 @@ body {
     -webkit-text-size-adjust: none;
     width: 100% !important;
     height: 100%;
-    line-height: 22px;
+    line-height: 25px;
 }
 
 /* Let's make sure all tables have defaults */
@@ -44,19 +47,26 @@ body {
     width: 100%;
 }
 
-.container {
-    display: block !important;
+.container, .container-table {
+    width: 600px;
     max-width: 600px !important;
-    margin: 0 auto !important;
+    display: block !important;
     /* makes it centered */
     clear: both !important;
+    margin: 0 auto !important;
 }
 
 .content {
     max-width: 600px;
     margin: 0 auto;
     display: block;
-    padding: 0 20px 20px 20px;
+    font-size: 0;
+    line-height: 0;
+    padding-bottom: 20px;
+}
+
+.content-banner {
+    padding-top: 20px;
 }
 
 /* -------------------------------------
@@ -67,10 +77,21 @@ body {
     text-align: center;
 }
 
+.banner, .banner img {
+    font-size: 0;
+    line-height: 0;
+}
+
 .main {
-    background-color: #fff;
+    background-color: white;
     border: 1px solid #e9e9e9;
     border-radius: 3px;
+}
+
+.content-banner .main {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
 }
 
 .content-wrap {
@@ -78,29 +99,36 @@ body {
 }
 
 .content-block {
-    padding: 0 0 15px;
+    padding: 0 0 10px;
 }
 
-.header {
-    width: 100%;
-    margin-bottom: 20px;
+.indented {
+    padding-left: 20px;
+}
+
+.li {
+    padding-left: 10px;
 }
 
 .footer {
     width: 100%;
     clear: both;
-    color: #999;
-    padding-top: 15px;
+    margin-top: 15px;
 }
 
-    .footer p, .footer a, .footer td {
+    .footer, .footer p, .footer a, .footer td, .footer br {
         color: #999;
         font-size: 12px;
+        line-height: 20px;
     }
 
-    .footer .social-icons a {
-        padding: 0 10px;
-    }
+        .footer .social-icons table {
+            margin: 0 auto;
+        }
+
+        .footer .social-icons td {
+            padding: 0 10px;
+        }
 
 /* -------------------------------------
     TYPOGRAPHY
@@ -109,9 +137,12 @@ body {
 .h3 {
     font-size: 18px;
     line-height: 25px;
-    margin-bottom: 20px;
-    margin-top: 20px;
+    font-weight: bold;
 }
+
+    .biglink a {
+        font-size: 20px;
+    }
 
 /* -------------------------------------
     LINKS & BUTTONS
@@ -123,7 +154,7 @@ a {
 
 .btn-primary {
     text-decoration: none;
-    color: #FFF;
+    color: white;
     background-color: #3c8dbc;
     border: solid #3c8dbc;
     border-width: 10px 20px;
@@ -179,7 +210,7 @@ a {
 }
 
     .alert a {
-        color: #fff;
+        color: white;
         text-decoration: none;
         font-weight: 500;
         font-size: 16px;
@@ -200,12 +231,12 @@ a {
 /* -------------------------------------
     RESPONSIVE AND MOBILE FRIENDLY STYLES
 ------------------------------------- */
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 600px) {
     body {
         padding: 0 !important;
     }
 
-    .container {
+    .container, .container-table {
         padding: 0 !important;
         width: 100% !important;
     }
@@ -233,6 +264,10 @@ a {
     }
 
     .footer {
-        padding-top: 10px !important;
+        margin-top: 10px !important;
+    }
+
+    .indented {
+        padding-left: 10px;
     }
 }
