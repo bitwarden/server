@@ -15,9 +15,11 @@ namespace Bit.Core.Domains
         public string Culture { get; set; } = "en-US";
         public string SecurityStamp { get; set; }
         public bool TwoFactorEnabled { get; set; }
-        public TwoFactorProvider? TwoFactorProvider { get; set; }
+        public TwoFactorProviderType? TwoFactorProvider { get; set; }
         public string AuthenticatorKey { get; set; }
         public string TwoFactorRecoveryCode { get; set; }
+        public string EquivalentDomains { get; set; }
+        public string ExcludedGlobalEquivalentDomains { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

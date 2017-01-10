@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Enums
 {
-    public enum PushType : short
+    public enum PushType : byte
     {
         SyncCipherUpdate = 0,
         SyncCipherCreate = 1,

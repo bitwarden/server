@@ -157,6 +157,13 @@ namespace Bit.Api.Controllers
             return Task.FromResult(response);
         }
 
+        [HttpGet("domains")]
+        public Task<DomainsResponseModel> GetDomains()
+        {
+            var response = new DomainsResponseModel(_currentContext.User);
+            return Task.FromResult(response);
+        }
+
         [HttpPut("profile")]
         [HttpPost("profile")]
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
@@ -165,10 +172,20 @@ namespace Bit.Api.Controllers
 
             var response = new ProfileResponseModel(_currentContext.User);
             return response;
+        }                      
+
+        [HttpPut("domains")]
+        [HttpPost("domains")]
+        public async Task<DomainsResponseModel> PutDomains([FromBody]UpdateDomainsRequestModel model)
+        {
+            await _userService.SaveUserAsync(model.ToUser(_currentContext.User));
+
+            var response = new DomainsResponseModel(_currentContext.User);
+            return response;
         }
 
         [HttpGet("two-factor")]
-        public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProvider provider)
+        public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)
         {
             var user = _currentContext.User;
             if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
@@ -200,7 +217,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Token", "Invalid token.");
             }
 
-            user.TwoFactorProvider = TwoFactorProvider.Authenticator;
+            user.TwoFactorProvider = TwoFactorProviderType.Authenticator;
             user.TwoFactorEnabled = model.Enabled.Value;
             user.TwoFactorRecoveryCode = user.TwoFactorEnabled ? Guid.NewGuid().ToString("N") : null;
             await _userService.SaveUserAsync(user);

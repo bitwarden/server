@@ -11,6 +11,8 @@
     @TwoFactorProvider TINYINT,
     @AuthenticatorKey NVARCHAR(50),
     @TwoFactorRecoveryCode NVARCHAR(32),
+    @EquivalentDomains NVARCHAR(MAX),
+    @ExcludedGlobalEquivalentDomains NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -31,6 +33,8 @@ BEGIN
         [TwoFactorProvider] = @TwoFactorProvider,
         [AuthenticatorKey] = @AuthenticatorKey,
         [TwoFactorRecoveryCode] = @TwoFactorRecoveryCode,
+        [EquivalentDomains] = @EquivalentDomains,
+        [ExcludedGlobalEquivalentDomains] = @ExcludedGlobalEquivalentDomains,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

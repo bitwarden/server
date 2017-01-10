@@ -21,7 +21,7 @@ namespace Bit.Api.Models
         }
 
         public bool TwoFactorEnabled { get; set; }
-        public TwoFactorProvider? TwoFactorProvider { get; set; }
+        public TwoFactorProviderType? TwoFactorProvider { get; set; }
         public string AuthenticatorKey { get; set; }
         public string TwoFactorRecoveryCode { get; set; }
     }

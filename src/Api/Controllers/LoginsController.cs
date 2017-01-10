@@ -14,7 +14,7 @@ using Bit.Core.Services;
 namespace Bit.Api.Controllers
 {
     [Route("logins")]
-    // sites route is deprecated
+    // "sites" route is deprecated
     [Route("sites")]
     [Authorize("Application")]
     public class LoginsController : Controller

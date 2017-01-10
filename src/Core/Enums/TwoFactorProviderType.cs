@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Enums
 {
-    public enum TwoFactorProvider
+    public enum TwoFactorProviderType : byte
     {
         Authenticator = 0
     }
