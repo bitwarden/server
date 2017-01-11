@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using IdentityServer4.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using System.Security.Claims;
 
 namespace Bit.Core.Identity
 {
@@ -22,8 +21,7 @@ namespace Bit.Core.Identity
 
         public Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
-            // TODO: load proper claims for user
-            context.AddFilteredClaims(new Claim[] { new Claim(ClaimTypes.AuthenticationMethod, "Application") });
+            context.AddFilteredClaims(context.IssuedClaims);
             return Task.FromResult(0);
         }
 

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Domains;
-using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -10,27 +9,29 @@ namespace Bit.Core.Identity
 {
     public class ResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
-        private readonly IUserRepository _userRepository;
         private readonly UserManager<User> _userManager;
 
         public ResourceOwnerPasswordValidator(
-            IUserRepository userRepository,
             UserManager<User> userManager)
         {
-            _userRepository = userRepository;
             _userManager = userManager;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
-            var user = await _userRepository.GetByEmailAsync(context.UserName.ToLowerInvariant());
+            var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
             if(user != null)
             {
                 if(await _userManager.CheckPasswordAsync(user, context.Password))
                 {
-                    // TODO: proper claims and auth method
-                    context.Result = new GrantValidationResult(subject: user.Id.ToString(), authenticationMethod: "Application",
-                         identityProvider: "bitwarden", claims: new Claim[] { new Claim(ClaimTypes.AuthenticationMethod, "Application") });
+                    context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
+                        claims: new Claim[] {
+                            // Deprecated claims for backwards compatability
+                            new Claim("authmethod", "Application"),
+                            new Claim("nameid", user.Id.ToString()),
+                            new Claim("email", user.Email.ToString()),
+                            new Claim("securitystamp", user.SecurityStamp)
+                        });
                     return;
                 }
             }

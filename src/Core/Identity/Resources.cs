@@ -1,6 +1,5 @@
 ﻿using IdentityServer4.Models;
 using System.Collections.Generic;
-using System.Security.Claims;
 
 namespace Bit.Core.Identity
 {
@@ -10,7 +9,12 @@ namespace Bit.Core.Identity
         {
             return new List<ApiResource>
             {
-                new ApiResource("api", "Vault API", new string[] { ClaimTypes.AuthenticationMethod })
+                new ApiResource("api", "Vault API", new string[] {
+                    "authmethod",
+                    "nameid",
+                    "email",
+                    "securitystamp"
+                })
             };
         }
     }
