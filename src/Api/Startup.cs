@@ -25,6 +25,10 @@ using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Bit.Api.Middleware;
+using IdentityServer4.Validation;
+using IdentityServer4.Services;
+using IdentityModel.AspNetCore.OAuth2Introspection;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Bit.Api
 {
@@ -81,6 +85,15 @@ namespace Bit.Api
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
+            // IdentityServer
+            services.AddIdentityServer()
+                // TODO: Add proper signing creds
+                .AddTemporarySigningCredential()
+                .AddInMemoryApiResources(Resources.GetApiResources())
+                .AddInMemoryClients(Clients.GetClients());
+            services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
+            services.AddSingleton<IProfileService, ProfileService>();
+
             // Identity
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.AddJwtBearerIdentity(options =>
@@ -121,13 +134,19 @@ namespace Bit.Api
             var jwtIdentityOptions = provider.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;
             services.AddAuthorization(config =>
             {
-                config.AddPolicy("Application", new AuthorizationPolicyBuilder()
-                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme‌​)
-                    .RequireAuthenticatedUser().RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.AuthenticationMethod).Build());
+                config.AddPolicy("Application", policy =>
+                {
+                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2");
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.AuthenticationMethod);
+                });
 
-                config.AddPolicy("TwoFactor", new AuthorizationPolicyBuilder()
-                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                    .RequireAuthenticatedUser().RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.TwoFactorAuthenticationMethod).Build());
+                config.AddPolicy("TwoFactor", policy =>
+                {
+                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2");
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.TwoFactorAuthenticationMethod);
+                });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
@@ -206,6 +225,18 @@ namespace Bit.Api
 
             // Add Cors
             app.UseCors("All");
+
+            // Add IdentityServer to the request pipeline.
+            app.UseIdentityServer();
+            app.UseIdentityServerAuthentication(new IdentityServerAuthenticationOptions
+            {
+                AllowedScopes = new string[] { "api" },
+                Authority = env.IsProduction() ? "https://api.bitwarden.com" : "http://localhost:4000",
+                RequireHttpsMetadata = env.IsProduction(),
+                ApiName = "Vault API",
+                AuthenticationScheme = "Bearer2",
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeader("Bearer2")
+            });
 
             // Add Jwt authentication to the request pipeline.
             app.UseJwtBearerIdentity();
