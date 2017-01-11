@@ -24,9 +24,9 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("domains")]
-        public Task<DomainsResponseModel> GetDomains()
+        public Task<DomainsResponseModel> GetDomains(bool excluded = true)
         {
-            var response = new DomainsResponseModel(_currentContext.User);
+            var response = new DomainsResponseModel(_currentContext.User, excluded);
             return Task.FromResult(response);
         }
 
