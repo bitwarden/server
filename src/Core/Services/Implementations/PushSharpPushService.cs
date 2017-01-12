@@ -8,13 +8,12 @@ using PushSharp.Google;
 using PushSharp.Apple;
 using Microsoft.AspNetCore.Hosting;
 using PushSharp.Core;
-using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -191,7 +190,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var apnsCertificate = GetCertificate(globalSettings.Push.ApnsCertificateThumbprint);
+            var apnsCertificate = CoreHelpers.GetCertificate(globalSettings.Push.ApnsCertificateThumbprint);
             if(apnsCertificate == null)
             {
                 return;
@@ -238,24 +237,6 @@ namespace Bit.Core.Services
                 // Mark it as handled
                 return true;
             });
-        }
-
-        private X509Certificate2 GetCertificate(string thumbprint)
-        {
-            // Clean possible garbage characters from thumbprint copy/paste
-            // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
-            thumbprint = Regex.Replace(thumbprint, @"[^\da-zA-z]", string.Empty).ToUpper();
-
-            X509Certificate2 cert = null;
-            var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            certStore.Open(OpenFlags.ReadOnly);
-            var certCollection = certStore.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
-            if(certCollection.Count > 0)
-            {
-                cert = certCollection[0];
-            }
-            certStore.Close();
-            return cert;
         }
 
         private void FeedbackService_FeedbackReceived(string deviceToken, DateTime timestamp)

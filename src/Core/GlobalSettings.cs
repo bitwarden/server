@@ -10,6 +10,7 @@
         public virtual LoggrSettings Loggr { get; set; } = new LoggrSettings();
         public virtual PushSettings Push { get; set; } = new PushSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
+        public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
 
         public class SqlServerSettings
         {
@@ -40,6 +41,11 @@
             public string GcmSenderId { get; set; }
             public string GcmApiKey { get; set; }
             public string GcmAppPackageName { get; set; }
+        }
+
+        public class IdentityServerSettings
+        {
+            public string CertificateThumbprint { get; set; }
         }
     }
 }

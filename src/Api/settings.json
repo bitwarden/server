@@ -24,6 +24,9 @@
       "gcmApiKey": "SECRET",
       "gcmAppPackageName": "com.x8bit.bitwarden"
     },
+    "identityServer": {
+      "certificateThumbprint": "SECRET"
+    },
     "storage": {
       "connectionString": "SECRET"
     }

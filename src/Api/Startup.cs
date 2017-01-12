@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +28,7 @@ using IdentityServer4.Validation;
 using IdentityServer4.Services;
 using IdentityModel.AspNetCore.OAuth2Introspection;
 using IdentityServer4.Stores;
+using Bit.Core.Utilities;
 
 namespace Bit.Api
 {
@@ -87,9 +87,9 @@ namespace Bit.Api
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
             // IdentityServer
+            var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
             services.AddIdentityServer()
-                // TODO: Add proper signing creds
-                .AddTemporarySigningCredential()
+                .AddSigningCredential(identityServerCert)
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
             services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
