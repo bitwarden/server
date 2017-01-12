@@ -43,7 +43,6 @@ BEGIN
     FROM
         INSERTED
 END
-
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
 ON [dbo].[Cipher] AFTER UPDATE
@@ -69,7 +68,6 @@ BEGIN
     FROM
         INSERTED
 END
-
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
 ON [dbo].[Cipher] AFTER DELETE
