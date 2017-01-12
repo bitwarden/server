@@ -64,6 +64,7 @@ namespace Bit.Api.Controllers
         [HttpPost("email-token")]
         public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
         {
+            _currentContext.User = await _userService.GetUserByIdAsync(_userManager.GetUserId(User));
             if(!await _userManager.CheckPasswordAsync(_currentContext.User, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -151,10 +152,11 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("profile")]
-        public Task<ProfileResponseModel> GetProfile()
+        public async Task<ProfileResponseModel> GetProfile()
         {
+            _currentContext.User = await _userService.GetUserByIdAsync(_userManager.GetUserId(User));
             var response = new ProfileResponseModel(_currentContext.User);
-            return Task.FromResult(response);
+            return response;
         }
 
         [HttpPut("profile")]
@@ -165,7 +167,7 @@ namespace Bit.Api.Controllers
 
             var response = new ProfileResponseModel(_currentContext.User);
             return response;
-        }                      
+        }
 
         [HttpGet("two-factor")]
         public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)

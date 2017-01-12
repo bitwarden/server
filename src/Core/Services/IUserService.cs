@@ -8,6 +8,7 @@ namespace Bit.Core.Services
 {
     public interface IUserService
     {
+        Task<User> GetUserByIdAsync(string userId);
         Task<User> GetUserByIdAsync(Guid userId);
         Task SaveUserAsync(User user);
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);

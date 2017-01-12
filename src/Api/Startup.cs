@@ -28,7 +28,6 @@ using Bit.Api.Middleware;
 using IdentityServer4.Validation;
 using IdentityServer4.Services;
 using IdentityModel.AspNetCore.OAuth2Introspection;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Bit.Api
 {
@@ -89,7 +88,7 @@ namespace Bit.Api
             services.AddIdentityServer()
                 // TODO: Add proper signing creds
                 .AddTemporarySigningCredential()
-                .AddInMemoryApiResources(Resources.GetApiResources())
+                .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
             services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
             services.AddSingleton<IProfileService, ProfileService>();

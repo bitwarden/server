@@ -21,7 +21,7 @@ namespace Bit.Core.Identity
 
         public Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
-            context.AddFilteredClaims(context.IssuedClaims);
+            context.AddFilteredClaims(context.Subject.Claims);
             return Task.FromResult(0);
         }
 

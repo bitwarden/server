@@ -16,7 +16,7 @@ namespace Bit.Api.Controllers
         [HttpGet("claims")]
         public IActionResult Claims()
         {
-            return new JsonResult(User.Claims.Select(c => new { c.Type, c.Value }));
+            return new JsonResult(User?.Claims?.Select(c => new { c.Type, c.Value }));
         }
     }
 }

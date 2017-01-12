@@ -57,6 +57,17 @@ namespace Bit.Core.Services
             _passwordValidators = passwordValidators;
         }
 
+        public async Task<User> GetUserByIdAsync(string userId)
+        {
+            Guid userIdGuid;
+            if(!Guid.TryParse(userId, out userIdGuid))
+            {
+                return null;
+            }
+
+            return await _userRepository.GetByIdAsync(userIdGuid);
+        }
+
         public async Task<User> GetUserByIdAsync(Guid userId)
         {
             return await _userRepository.GetByIdAsync(userId);
