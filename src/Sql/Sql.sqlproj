@@ -74,6 +74,7 @@
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
@@ -99,7 +100,6 @@
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
-    <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
   </ItemGroup>
