@@ -16,7 +16,7 @@ using Bit.Core.Domains;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Repos = Bit.Core.Repositories.SqlServer;
+using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Text;
 using Loggr.Extensions.Logging;
 using System.Linq;
@@ -28,6 +28,7 @@ using Bit.Api.Middleware;
 using IdentityServer4.Validation;
 using IdentityServer4.Services;
 using IdentityModel.AspNetCore.OAuth2Introspection;
+using IdentityServer4.Stores;
 
 namespace Bit.Api
 {
@@ -70,9 +71,10 @@ namespace Bit.Api
             services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
 
             // Repositories
-            services.AddSingleton<IUserRepository, Repos.UserRepository>();
-            services.AddSingleton<ICipherRepository, Repos.CipherRepository>();
-            services.AddSingleton<IDeviceRepository, Repos.DeviceRepository>();
+            services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
+            services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
+            services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
+            services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
 
             // Context
             services.AddScoped<CurrentContext>();
@@ -92,6 +94,7 @@ namespace Bit.Api
                 .AddInMemoryClients(Clients.GetClients());
             services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
             services.AddSingleton<IProfileService, ProfileService>();
+            services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
 
             // Identity
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
