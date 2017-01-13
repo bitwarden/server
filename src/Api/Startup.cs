@@ -50,9 +50,11 @@ namespace Bit.Api
             builder.AddEnvironmentVariables();
 
             Configuration = builder.Build();
+            Environment = env;
         }
 
         public IConfigurationRoot Configuration { get; private set; }
+        public IHostingEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -87,11 +89,20 @@ namespace Bit.Api
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
             // IdentityServer
-            var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
-            services.AddIdentityServer()
-                .AddSigningCredential(identityServerCert)
+            var identityServerBuilder = services.AddIdentityServer()
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
+
+            if(Environment.IsProduction())
+            {
+                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else
+            {
+                identityServerBuilder.AddTemporarySigningCredential();
+            }
+
             services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
             services.AddSingleton<IProfileService, ProfileService>();
             services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
