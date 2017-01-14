@@ -42,6 +42,11 @@ BEGIN
         [CreationDate]
     FROM
         INSERTED
+
+    UPDATE
+        [User]
+    SET
+        [AccountRevisionDate] = GETUTCDATE()
 END
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
@@ -67,6 +72,11 @@ BEGIN
         [RevisionDate]
     FROM
         INSERTED
+
+    UPDATE
+        [User]
+    SET
+        [AccountRevisionDate] = GETUTCDATE()
 END
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
@@ -92,4 +102,9 @@ BEGIN
         GETUTCDATE()
     FROM
         DELETED
+
+    UPDATE
+        [User]
+    SET
+        [AccountRevisionDate] = GETUTCDATE()
 END

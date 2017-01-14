@@ -13,6 +13,7 @@
     @TwoFactorRecoveryCode NVARCHAR(32),
     @EquivalentDomains NVARCHAR(MAX),
     @ExcludedGlobalEquivalentDomains NVARCHAR(MAX),
+    @AccountRevisionDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -35,6 +36,7 @@ BEGIN
         [TwoFactorRecoveryCode] = @TwoFactorRecoveryCode,
         [EquivalentDomains] = @EquivalentDomains,
         [ExcludedGlobalEquivalentDomains] = @ExcludedGlobalEquivalentDomains,
+        [AccountRevisionDate] = @AccountRevisionDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
