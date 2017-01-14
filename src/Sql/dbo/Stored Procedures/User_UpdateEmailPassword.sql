@@ -16,7 +16,8 @@ BEGIN
         [EmailVerified] = @EmailVerified,
         [MasterPassword] = @MasterPassword,
         [SecurityStamp] = @SecurityStamp,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [AccountRevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
 END
