@@ -170,10 +170,17 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("revision-date")]
-        public async Task<DateTime?> GetAccountRevisionDate()
+        public async Task<long?> GetAccountRevisionDate()
         {
             var userId = _userService.GetProperUserId(User);
-            return userId.HasValue ? (await _userService.GetAccountRevisionDateByIdAsync(userId.Value)) : (DateTime?)null;
+            long? revisionDate = null;
+            if(userId.HasValue)
+            {
+                var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
+                revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
+            }
+
+            return revisionDate;
         }
 
         [HttpGet("two-factor")]

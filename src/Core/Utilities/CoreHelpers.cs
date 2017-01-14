@@ -7,6 +7,7 @@ namespace Bit.Core.Utilities
     public static class CoreHelpers
     {
         private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
+        private static readonly DateTime _epoc = new DateTime(1970, 1, 1);
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -56,6 +57,11 @@ namespace Bit.Core.Utilities
 
             certStore.Close();
             return cert;
+        }
+
+        public static long EpocMilliseconds(DateTime date)
+        {
+            return (long)Math.Round((date - _epoc).TotalMilliseconds, 0);
         }
     }
 }
