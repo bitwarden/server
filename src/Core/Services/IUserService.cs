@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
+using System.Security.Claims;
 
 namespace Bit.Core.Services
 {
     public interface IUserService
     {
+        Guid? GetProperUserId(ClaimsPrincipal principal);
         Task<User> GetUserByIdAsync(string userId);
         Task<User> GetUserByIdAsync(Guid userId);
+        Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
         Task SaveUserAsync(User user);
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
         Task SendMasterPasswordHintAsync(string email);

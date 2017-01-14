@@ -20,6 +20,7 @@ namespace Bit.Core.Domains
         public string TwoFactorRecoveryCode { get; set; }
         public string EquivalentDomains { get; set; }
         public string ExcludedGlobalEquivalentDomains { get; set; }
+        public DateTime AccountRevisionDate { get; internal set; } = DateTime.UtcNow;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

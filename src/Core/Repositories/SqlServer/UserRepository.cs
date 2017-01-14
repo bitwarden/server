@@ -36,6 +36,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<DateTime>(
+                    $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
         public override async Task ReplaceAsync(User user)
         {
             await base.ReplaceAsync(user);

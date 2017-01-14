@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Bit.Core.Enums;
 using OtpNet;
+using System.Security.Claims;
 
 namespace Bit.Core.Services
 {
@@ -56,6 +57,17 @@ namespace Bit.Core.Services
             _passwordValidators = passwordValidators;
         }
 
+        public Guid? GetProperUserId(ClaimsPrincipal principal)
+        {
+            Guid userIdGuid;
+            if(!Guid.TryParse(GetUserId(principal), out userIdGuid))
+            {
+                return null;
+            }
+
+            return userIdGuid;
+        }
+
         public async Task<User> GetUserByIdAsync(string userId)
         {
             Guid userIdGuid;
@@ -72,6 +84,11 @@ namespace Bit.Core.Services
             return await _userRepository.GetByIdAsync(userId);
         }
 
+        public async Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId)
+        {
+            return await _userRepository.GetAccountRevisionDateAsync(userId);
+        }
+
         public async Task SaveUserAsync(User user)
         {
             if(user.Id == default(Guid))
@@ -79,7 +96,7 @@ namespace Bit.Core.Services
                 throw new ApplicationException("Use register method to create a new user.");
             }
 
-            user.RevisionDate = DateTime.UtcNow;
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
 
@@ -152,7 +169,7 @@ namespace Bit.Core.Services
 
             user.Email = newEmail;
             user.EmailVerified = true;
-            user.RevisionDate = DateTime.UtcNow;
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
 
             if(ciphers.Any())
             {
@@ -186,7 +203,7 @@ namespace Bit.Core.Services
                     return result;
                 }
 
-                user.RevisionDate = DateTime.UtcNow;
+                user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 if(ciphers.Any())
                 {
                     await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);

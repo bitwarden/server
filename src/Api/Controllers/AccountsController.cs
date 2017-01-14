@@ -169,6 +169,13 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpGet("revision-date")]
+        public async Task<DateTime?> GetAccountRevisionDate()
+        {
+            var userId = _userService.GetProperUserId(User);
+            return userId.HasValue ? (await _userService.GetAccountRevisionDateByIdAsync(userId.Value)) : (DateTime?)null;
+        }
+
         [HttpGet("two-factor")]
         public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)
         {
