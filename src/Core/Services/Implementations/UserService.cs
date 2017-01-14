@@ -6,11 +6,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Bit.Core.Domains;
 using Bit.Core.Repositories;
-using OtpSharp;
-using Base32;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Bit.Core.Enums;
+using OtpNet;
 
 namespace Bit.Core.Services
 {
@@ -252,7 +251,7 @@ namespace Bit.Core.Services
             {
                 case Enums.TwoFactorProviderType.Authenticator:
                     var key = KeyGeneration.GenerateRandomKey(20);
-                    user.AuthenticatorKey = Base32Encoder.Encode(key);
+                    user.AuthenticatorKey = Base32Encoding.ToString(key);
                     break;
                 default:
                     throw new ArgumentException(nameof(provider));
