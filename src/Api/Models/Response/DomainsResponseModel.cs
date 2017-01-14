@@ -21,7 +21,8 @@ namespace Bit.Api.Models
                 JsonConvert.DeserializeObject<List<List<string>>>(user.EquivalentDomains) : null;
 
             var excludedGlobalEquivalentDomains = user.ExcludedGlobalEquivalentDomains != null ?
-                JsonConvert.DeserializeObject<List<GlobalEquivalentDomainsType>>(user.ExcludedGlobalEquivalentDomains) : null;
+                JsonConvert.DeserializeObject<List<GlobalEquivalentDomainsType>>(user.ExcludedGlobalEquivalentDomains) :
+                new List<GlobalEquivalentDomainsType>();
             var globalDomains = new List<GlobalDomains>();
             var domainsToInclude = excluded ? Core.Utilities.EquivalentDomains.Global :
                 Core.Utilities.EquivalentDomains.Global.Where(d => !excludedGlobalEquivalentDomains.Contains(d.Key));
