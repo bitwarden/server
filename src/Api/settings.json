@@ -29,6 +29,10 @@
     },
     "storage": {
       "connectionString": "SECRET"
+    },
+    "documentDb": {
+      "uri": "SECRET",
+      "key": "SECRET"
     }
   },
   "IpRateLimitOptions": {

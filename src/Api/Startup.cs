@@ -17,7 +17,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Text;
-using Loggr.Extensions.Logging;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
@@ -29,6 +28,8 @@ using IdentityServer4.Services;
 using IdentityModel.AspNetCore.OAuth2Introspection;
 using IdentityServer4.Stores;
 using Bit.Core.Utilities;
+using Serilog;
+using Serilog.Events;
 
 namespace Bit.Api
 {
@@ -198,33 +199,39 @@ namespace Bit.Api
             IApplicationBuilder app,
             IHostingEnvironment env,
             ILoggerFactory loggerFactory,
+            IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddConsole();
-            loggerFactory.AddDebug();
-
-            if(!env.IsDevelopment())
+            if(env.IsProduction())
             {
-                loggerFactory.AddLoggr(
-                    (category, logLevel, eventId) =>
+                Func<LogEvent, bool> serilogFilter = (e) =>
+                {
+                    var context = e.Properties["SourceContext"].ToString();
+                    if(context == typeof(JwtBearerMiddleware).FullName && e.Level == LogEventLevel.Error)
                     {
-                        // Bad security stamp exception
-                        if(category == typeof(JwtBearerMiddleware).FullName && eventId.Id == 3 && logLevel == LogLevel.Error)
-                        {
-                            return false;
-                        }
+                        return false;
+                    }
 
-                        // IP blocks
-                        if(category == typeof(IpRateLimitMiddleware).FullName && logLevel >= LogLevel.Information)
-                        {
-                            return true;
-                        }
+                    if(context == typeof(IpRateLimitMiddleware).FullName && e.Level == LogEventLevel.Information)
+                    {
+                        return true;
+                    }
 
-                        return logLevel >= LogLevel.Error;
-                    },
-                    globalSettings.Loggr.LogKey,
-                    globalSettings.Loggr.ApiKey);
+                    return e.Level >= LogEventLevel.Error;
+                };
+
+                var serilog = new LoggerConfiguration()
+                    .Enrich.FromLogContext()
+                    .Filter.ByIncludingOnly(serilogFilter)
+                    .WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
+                        timeToLive: TimeSpan.FromDays(7))
+                    .CreateLogger();
+
+                loggerFactory.AddSerilog(serilog);
+                appLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
             }
+
+            loggerFactory.AddDebug();
 
             // Rate limiting
             app.UseMiddleware<CustomIpRateLimitMiddleware>();
