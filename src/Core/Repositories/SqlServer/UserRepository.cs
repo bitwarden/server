@@ -62,7 +62,7 @@ namespace Bit.Core.Repositories.SqlServer
                     $"[{Schema}].[{Table}_DeleteById]",
                     new { Id = user.Id },
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 60);
+                    commandTimeout: 180);
             }
         }
     }
