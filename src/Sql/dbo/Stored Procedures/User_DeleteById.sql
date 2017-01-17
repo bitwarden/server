@@ -6,10 +6,10 @@ BEGIN
     SET NOCOUNT ON
     DECLARE @BatchSize INT = 100
 
-    BEGIN TRANSACTION User_DeleteById
-
     WHILE @BatchSize > 0
     BEGIN
+        BEGIN TRANSACTION User_DeleteById_Ciphers
+
         DELETE TOP(@BatchSize)
         FROM
             [dbo].[Cipher]
@@ -18,7 +18,11 @@ BEGIN
             AND [Type] > 0
 
         SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION User_DeleteById_Ciphers
     END
+
+    BEGIN TRANSACTION User_DeleteById
 
     DELETE
     FROM
