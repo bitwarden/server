@@ -47,7 +47,8 @@ namespace Bit.Core.Identity
             if(!context.HttpContext.User.Identity.IsAuthenticated)
             {
                 context.State = EventResultState.HandledResponse;
-                context.Ticket = new AuthenticationTicket(context.HttpContext.User, new AuthenticationProperties(), context.Options.AuthenticationScheme);
+                context.Ticket = new AuthenticationTicket(context.HttpContext.User, new AuthenticationProperties(), 
+                    context.Options.AuthenticationScheme);
             }
 
             return Task.FromResult(0);

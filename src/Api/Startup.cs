@@ -25,7 +25,6 @@ using AspNetCoreRateLimit;
 using Bit.Api.Middleware;
 using IdentityServer4.Validation;
 using IdentityServer4.Services;
-using IdentityModel.AspNetCore.OAuth2Introspection;
 using IdentityServer4.Stores;
 using Bit.Core.Utilities;
 using Serilog;
@@ -254,8 +253,15 @@ namespace Bit.Api
                 Authority = env.IsProduction() ? "https://api.bitwarden.com" : "http://localhost:4000",
                 RequireHttpsMetadata = env.IsProduction(),
                 ApiName = "Vault API",
+                NameClaimType = ClaimTypes.Email,
+                // Version "2" until we retire the old jwt scheme and replace it with this one.
                 AuthenticationScheme = "Bearer2",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeader("Bearer2")
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2"),
+                JwtBearerEvents = new JwtBearerEvents
+                {
+                    OnTokenValidated = JwtBearerEventImplementations.ValidatedTokenAsync,
+                    OnAuthenticationFailed = JwtBearerEventImplementations.AuthenticationFailedAsync
+                }
             });
 
             // Add Jwt authentication to the request pipeline.

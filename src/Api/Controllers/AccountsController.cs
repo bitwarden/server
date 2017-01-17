@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
 using Bit.Core;
-using System.Security.Claims;
 using System.Linq;
 
 namespace Bit.Api.Controllers
@@ -64,7 +63,6 @@ namespace Bit.Api.Controllers
         [HttpPost("email-token")]
         public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
         {
-            _currentContext.User = await _userService.GetUserByIdAsync(_userManager.GetUserId(User));
             if(!await _userManager.CheckPasswordAsync(_currentContext.User, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -152,9 +150,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("profile")]
-        public async Task<ProfileResponseModel> GetProfile()
+        public ProfileResponseModel GetProfile()
         {
-            _currentContext.User = await _userService.GetUserByIdAsync(_userManager.GetUserId(User));
             var response = new ProfileResponseModel(_currentContext.User);
             return response;
         }
@@ -170,17 +167,17 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("revision-date")]
-        public async Task<long?> GetAccountRevisionDate()
+        public long? GetAccountRevisionDate()
         {
-            var userId = _userService.GetProperUserId(User);
-            long? revisionDate = null;
-            if(userId.HasValue)
-            {
-                var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
-                revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
-            }
+            //var userId = _userService.GetProperUserId(User);
+            //long? revisionDate = null;
+            //if(userId.HasValue)
+            //{
+            //    var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
+            //    revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
+            //}
 
-            return revisionDate;
+            return Core.Utilities.CoreHelpers.EpocMilliseconds(_currentContext.User.AccountRevisionDate);
         }
 
         [HttpGet("two-factor")]
