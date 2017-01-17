@@ -206,7 +206,7 @@ namespace Bit.Api
                 Func<LogEvent, bool> serilogFilter = (e) =>
                 {
                     var context = e.Properties["SourceContext"].ToString();
-                    if(context == typeof(JwtBearerMiddleware).FullName && e.Level == LogEventLevel.Error)
+                    if(e.Exception != null && e.Exception.GetType() == typeof(SecurityTokenValidationException) || e.Exception.Message == "Bad security stamp.")
                     {
                         return false;
                     }
