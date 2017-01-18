@@ -40,7 +40,7 @@ namespace Bit.Core.Identity
             {
                 if(await _userManager.CheckPasswordAsync(user, context.Password))
                 {
-                    if(true || !twoFactorRequest && await TwoFactorRequiredAsync(user))
+                    if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                     {
                         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor code required.",
                             // TODO: return something better?
