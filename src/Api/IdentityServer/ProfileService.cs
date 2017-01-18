@@ -4,7 +4,7 @@ using IdentityServer4.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.Identity
+namespace Bit.Api.IdentityServer
 {
     public class ProfileService : IProfileService
     {

@@ -2,7 +2,7 @@
 using System;
 using System.Linq;
 
-namespace Bit.Core.Identity
+namespace Bit.Api.IdentityServer
 {
     public static class TokenRetrieval
     {

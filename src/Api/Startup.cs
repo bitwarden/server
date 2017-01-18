@@ -29,6 +29,7 @@ using IdentityServer4.Stores;
 using Bit.Core.Utilities;
 using Serilog;
 using Serilog.Events;
+using Bit.Api.IdentityServer;
 
 namespace Bit.Api
 {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 
-namespace Bit.Core.Identity
+namespace Bit.Api.IdentityServer
 {
     public class ApiResources
     {

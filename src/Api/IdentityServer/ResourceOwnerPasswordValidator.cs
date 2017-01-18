@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Domains;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
@@ -10,7 +11,7 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace Bit.Core.Identity
+namespace Bit.Api.IdentityServer
 {
     public class ResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
@@ -66,7 +67,8 @@ namespace Bit.Core.Identity
             }
 
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-               twoFactorRequest ? "Code is not correct. Try again." : "Username or password is incorrect. Try again.");
+               twoFactorRequest ? "Code is not correct. Try again." : "Username or password is incorrect. Try again.",
+               new System.Collections.Generic.Dictionary<string, object> { { "Error", true } });
         }
 
         private async Task<bool> TwoFactorRequiredAsync(User user)
