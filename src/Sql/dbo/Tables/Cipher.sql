@@ -43,10 +43,14 @@ BEGIN
     FROM
         INSERTED
 
+    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM INSERTED)
+
     UPDATE
         [User]
     SET
         [AccountRevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @UserId
 END
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
@@ -73,10 +77,14 @@ BEGIN
     FROM
         INSERTED
 
+    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM INSERTED)
+
     UPDATE
         [User]
     SET
         [AccountRevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @UserId
 END
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
@@ -103,8 +111,12 @@ BEGIN
     FROM
         DELETED
 
+    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM DELETED)
+
     UPDATE
         [User]
     SET
         [AccountRevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @UserId
 END
