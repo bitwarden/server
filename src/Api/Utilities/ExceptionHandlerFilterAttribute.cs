@@ -14,7 +14,7 @@ namespace Bit.Api.Utilities
     {
         public override void OnException(ExceptionContext context)
         {
-            var errorModel = new ErrorResponseModel { Message = "An error has occured." };
+            var errorModel = new ErrorResponseModel("An error has occured.");
 
             var exception = context.Exception;
             if(exception == null)

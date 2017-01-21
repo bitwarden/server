@@ -1,4 +1,5 @@
-﻿using Bit.Core.Domains;
+﻿using Bit.Api.Models.Response;
+using Bit.Core.Domains;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -44,7 +45,6 @@ namespace Bit.Api.IdentityServer
                     if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                     {
                         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor code required.",
-                            // TODO: return something better?
                             new System.Collections.Generic.Dictionary<string, object> { { "TwoFactorRequired", true } });
                         return;
                     }
@@ -66,9 +66,12 @@ namespace Bit.Api.IdentityServer
                 }
             }
 
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-               twoFactorRequest ? "Code is not correct. Try again." : "Username or password is incorrect. Try again.",
-               new System.Collections.Generic.Dictionary<string, object> { { "Error", true } });
+            await Task.Delay(2000);
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse:
+               new System.Collections.Generic.Dictionary<string, object> { {
+                       "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
+                       "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
+                   } });
         }
 
         private async Task<bool> TwoFactorRequiredAsync(User user)

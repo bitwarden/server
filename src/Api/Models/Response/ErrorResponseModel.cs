@@ -10,6 +10,12 @@ namespace Bit.Api.Models.Response
             : base("error")
         { }
 
+        public ErrorResponseModel(string message)
+            : this()
+        {
+            Message = message;
+        }
+
         public ErrorResponseModel(ModelStateDictionary modelState)
             : this()
         {
