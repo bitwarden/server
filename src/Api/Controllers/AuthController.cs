@@ -9,6 +9,7 @@ using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
+    [Obsolete]
     [Route("auth")]
     public class AuthController : Controller
     {
