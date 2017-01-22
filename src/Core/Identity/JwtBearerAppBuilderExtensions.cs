@@ -23,7 +23,14 @@ namespace Bit.Core.Identity
             }
 
             var jwtOptions = app.ApplicationServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;
+            var options = BuildJwtBearerOptions(jwtOptions);
+            app.UseJwtBearerAuthentication(options);
 
+            return app;
+        }
+
+        public static JwtBearerOptions BuildJwtBearerOptions(JwtBearerIdentityOptions jwtOptions)
+        {
             var options = new JwtBearerOptions();
 
             // Basic settings - signing key to validate with, audience and issuer.
@@ -53,9 +60,7 @@ namespace Bit.Core.Identity
                 OnMessageReceived = JwtBearerEventImplementations.MessageReceivedAsync
             };
 
-            app.UseJwtBearerAuthentication(options);
-
-            return app;
+            return options;
         }
     }
 }

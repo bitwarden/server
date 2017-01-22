@@ -104,8 +104,8 @@ namespace Bit.Api.IdentityServer
             var httpContext = _httpContextAccessor.HttpContext;
             _userManager = httpContext.RequestServices.GetRequiredService<UserManager<User>>();
             _identityOptions = httpContext.RequestServices.GetRequiredService<IOptions<IdentityOptions>>()?.Value ?? new IdentityOptions();
-            _jwtBearerOptions = httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerOptions>>()?.Value;
             _jwtBearerIdentityOptions = httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>()?.Value;
+            _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
         }
 
         private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context)
