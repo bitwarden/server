@@ -1,14 +1,21 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -16,62 +23,129 @@ namespace Bit.Api.IdentityServer
 {
     public class ResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
-        private readonly UserManager<User> _userManager;
-        private readonly IdentityOptions _identityOptions;
+        private UserManager<User> _userManager;
+        private IdentityOptions _identityOptions;
+        private JwtBearerOptions _jwtBearerOptions;
+        private JwtBearerIdentityOptions _jwtBearerIdentityOptions;
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public ResourceOwnerPasswordValidator(
-            UserManager<User> userManager,
-            IOptions<IdentityOptions> optionsAccessor,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            IHttpContextAccessor httpContextAccessor)
         {
-            _userManager = userManager;
-            _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
             _deviceRepository = deviceRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
+            Init();
+
+            var oldAuthBearer = context.Request.Raw["oldAuthBearer"]?.ToString();
             var twoFactorCode = context.Request.Raw["twoFactorCode"]?.ToString();
             var twoFactorProvider = context.Request.Raw["twoFactorProvider"]?.ToString();
             var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorCode) &&
                 !string.IsNullOrWhiteSpace(twoFactorProvider);
 
-            var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-            if(user != null)
+            if(!string.IsNullOrWhiteSpace(oldAuthBearer) && _jwtBearerOptions != null)
             {
-                if(await _userManager.CheckPasswordAsync(user, context.Password))
+                // support transferring the old auth bearer token
+                var ticket = ValidateOldAuthBearer(oldAuthBearer);
+                if(ticket != null && ticket.Principal != null)
                 {
-                    if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
+                    var idClaim = ticket.Principal.Claims.FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.UserIdClaimType);
+                    var securityTokenClaim = ticket.Principal.Claims.FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.SecurityStampClaimType);
+                    if(idClaim != null && securityTokenClaim != null)
                     {
-                        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor code required.",
-                            new System.Collections.Generic.Dictionary<string, object> { { "TwoFactorRequired", true } });
-                        return;
+                        var user = await _userManager.FindByIdAsync(idClaim.Value);
+                        if(user != null && user.SecurityStamp == securityTokenClaim.Value)
+                        {
+                            BuildSuccessResult(user, context);
+                            return;
+                        }
                     }
-
-                    if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorCode))
+                }
+            }
+            else if(!string.IsNullOrWhiteSpace(context.UserName))
+            {
+                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+                if(user != null)
+                {
+                    if(await _userManager.CheckPasswordAsync(user, context.Password))
                     {
-                        await SaveDeviceAsync(user, context);
+                        if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
+                        {
+                            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor code required.",
+                                new Dictionary<string, object> { { "TwoFactorRequired", true } });
+                            return;
+                        }
 
-                        context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
-                            claims: new Claim[] {
-                                // Deprecated claims for backwards compatability
-                                new Claim(ClaimTypes.AuthenticationMethod, "Application"),
-                                new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString()),
-                                new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email.ToString()),
-                                new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
-                            });
-                        return;
+                        if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorCode))
+                        {
+                            await SaveDeviceAsync(user, context);
+                            BuildSuccessResult(user, context);
+                            return;
+                        }
                     }
                 }
             }
 
             await Task.Delay(2000);
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse:
-               new System.Collections.Generic.Dictionary<string, object> { {
+               new Dictionary<string, object> { {
                        "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
                        "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
                    } });
+        }
+
+        private void Init()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            _userManager = httpContext.RequestServices.GetRequiredService<UserManager<User>>();
+            _identityOptions = httpContext.RequestServices.GetRequiredService<IOptions<IdentityOptions>>()?.Value ?? new IdentityOptions();
+            _jwtBearerOptions = httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerOptions>>()?.Value;
+            _jwtBearerIdentityOptions = httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>()?.Value;
+        }
+
+        private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context)
+        {
+            context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
+                claims: new Claim[] {
+                    // Deprecated claims for backwards compatability
+                    new Claim(ClaimTypes.AuthenticationMethod, "Application"),
+                    new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString()),
+                    new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email.ToString()),
+                    new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
+            });
+        }
+
+        private AuthenticationTicket ValidateOldAuthBearer(string token)
+        {
+            SecurityToken validatedToken;
+            foreach(var validator in _jwtBearerOptions.SecurityTokenValidators)
+            {
+                if(validator.CanReadToken(token))
+                {
+                    ClaimsPrincipal principal;
+                    try
+                    {
+                        principal = validator.ValidateToken(token,
+                            _jwtBearerOptions.TokenValidationParameters, out validatedToken);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(),
+                        _jwtBearerOptions.AuthenticationScheme);
+
+                    return ticket;
+                }
+            }
+
+            return null;
         }
 
         private async Task<bool> TwoFactorRequiredAsync(User user)
