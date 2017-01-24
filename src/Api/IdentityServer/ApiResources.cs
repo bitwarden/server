@@ -14,7 +14,14 @@ namespace Bit.Api.IdentityServer
                     ClaimTypes.AuthenticationMethod,
                     ClaimTypes.NameIdentifier,
                     ClaimTypes.Email,
-                    "securitystamp"
+                    "securitystamp",
+
+                    "nam", // name
+                    "eml", // email
+                    "sst", // security stamp
+                    "pln", // plan
+                    "tex", // trial expiration
+                    "dev" // device identifier
                 })
             };
         }

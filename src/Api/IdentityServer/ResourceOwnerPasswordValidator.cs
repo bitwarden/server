@@ -61,7 +61,7 @@ namespace Bit.Api.IdentityServer
                         var user = await _userManager.FindByIdAsync(idClaim.Value);
                         if(user != null && user.SecurityStamp == securityTokenClaim.Value)
                         {
-                            BuildSuccessResult(user, context);
+                            BuildSuccessResult(user, context, null);
                             return;
                         }
                     }
@@ -83,8 +83,8 @@ namespace Bit.Api.IdentityServer
 
                         if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorCode))
                         {
-                            await SaveDeviceAsync(user, context);
-                            BuildSuccessResult(user, context);
+                            var device = await SaveDeviceAsync(user, context);
+                            BuildSuccessResult(user, context, device);
                             return;
                         }
                     }
@@ -108,16 +108,32 @@ namespace Bit.Api.IdentityServer
             _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
         }
 
-        private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context)
+        private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
         {
-            context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
-                claims: new Claim[] {
+            var claims = new List<Claim> {
+                    new Claim("pln", "0"), // free plan
+                    new Claim("sst", user.SecurityStamp),
+                    new Claim("eml", user.Email),
+
                     // Deprecated claims for backwards compatability
                     new Claim(ClaimTypes.AuthenticationMethod, "Application"),
                     new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString()),
-                    new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email.ToString()),
+                    new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email),
                     new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
-            });
+            };
+
+            if(device != null)
+            {
+                claims.Add(new Claim("dev", device.Identifier));
+            }
+
+            if(!string.IsNullOrWhiteSpace(user.Name))
+            {
+                claims.Add(new Claim("nam", user.Name));
+            }
+
+            context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
+                claims: claims);
         }
 
         private AuthenticationTicket ValidateOldAuthBearer(string token)
@@ -178,7 +194,7 @@ namespace Bit.Api.IdentityServer
             };
         }
 
-        private async Task SaveDeviceAsync(User user, ResourceOwnerPasswordValidationContext context)
+        private async Task<Device> SaveDeviceAsync(User user, ResourceOwnerPasswordValidationContext context)
         {
             var device = GetDeviceFromRequest(context);
             if(device != null)
@@ -188,8 +204,11 @@ namespace Bit.Api.IdentityServer
                 {
                     device.UserId = user.Id;
                     await _deviceRepository.CreateAsync(device);
+                    return device;
                 }
             }
+
+            return null;
         }
     }
 }
