@@ -61,6 +61,7 @@ namespace Bit.Api.IdentityServer
                         var user = await _userManager.FindByIdAsync(idClaim.Value);
                         if(user != null && user.SecurityStamp == securityTokenClaim.Value)
                         {
+                            var device = await SaveDeviceAsync(user, context);
                             BuildSuccessResult(user, context, null);
                             return;
                         }
@@ -76,8 +77,10 @@ namespace Bit.Api.IdentityServer
                     {
                         if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                         {
-                            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor code required.",
-                                new Dictionary<string, object> { { "TwoFactorRequired", true } });
+                            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
+                                new Dictionary<string, object> {
+                                    { "TwoFactorRequired", true },
+                                    { "TwoFactorProvider", ((int?)user.TwoFactorProvider)?.ToString() } });
                             return;
                         }
 
