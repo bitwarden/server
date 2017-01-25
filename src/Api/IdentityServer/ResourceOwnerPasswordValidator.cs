@@ -53,8 +53,10 @@ namespace Bit.Api.IdentityServer
                 var ticket = ValidateOldAuthBearer(oldAuthBearer);
                 if(ticket != null && ticket.Principal != null)
                 {
-                    var idClaim = ticket.Principal.Claims.FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.UserIdClaimType);
-                    var securityTokenClaim = ticket.Principal.Claims.FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.SecurityStampClaimType);
+                    var idClaim = ticket.Principal.Claims
+                        .FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.UserIdClaimType);
+                    var securityTokenClaim = ticket.Principal.Claims
+                        .FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.SecurityStampClaimType);
                     if(idClaim != null && securityTokenClaim != null)
                     {
                         var user = await _userManager.FindByIdAsync(idClaim.Value);
@@ -76,10 +78,7 @@ namespace Bit.Api.IdentityServer
                     {
                         if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                         {
-                            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-                                new Dictionary<string, object> {
-                                    { "TwoFactorRequired", true },
-                                    { "TwoFactorProviders", new string[] { ((int?)user.TwoFactorProvider)?.ToString() } } });
+                            BuildTwoFactorResult(user, context);
                             return;
                         }
 
@@ -93,12 +92,8 @@ namespace Bit.Api.IdentityServer
                 }
             }
 
-            await Task.Delay(2000);
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse:
-               new Dictionary<string, object> { {
-                       "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
-                       "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
-                   } });
+            await Task.Delay(2000); // Delay for brute force.
+            BuildErrorResult(twoFactorRequest, context);
         }
 
         private void Init()
@@ -126,6 +121,32 @@ namespace Bit.Api.IdentityServer
 
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
                 claims: claims.Count > 0 ? claims : null);
+        }
+
+        private void BuildTwoFactorResult(User user, ResourceOwnerPasswordValidationContext context)
+        {
+            var providers = new List<byte>();
+            if(user.TwoFactorProvider.HasValue)
+            {
+                providers.Add((byte)user.TwoFactorProvider.Value);
+            }
+
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
+                new Dictionary<string, object>
+                {
+                    { "TwoFactorRequired", true },
+                    { "TwoFactorProviders", providers }
+                });
+        }
+
+        private void BuildErrorResult(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse:
+                new Dictionary<string, object>
+                {{
+                    "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
+                        "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
+                }});
         }
 
         private AuthenticationTicket ValidateOldAuthBearer(string token)
