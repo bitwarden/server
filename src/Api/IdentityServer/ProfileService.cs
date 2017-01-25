@@ -4,7 +4,6 @@ using IdentityServer4.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using System.Security.Claims;
-using Bit.Core.Domains;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using System.Linq;
