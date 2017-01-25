@@ -169,7 +169,8 @@ namespace Bit.Core.Services
             await _mailService.SendChangeEmailEmailAsync(newEmail, token);
         }
 
-        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword, string token, IEnumerable<Cipher> ciphers)
+        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, 
+            string newMasterPassword, string token, IEnumerable<Cipher> ciphers)
         {
             var verifyPasswordResult = _passwordHasher.VerifyHashedPassword(user, user.MasterPassword, masterPassword);
             if(verifyPasswordResult == PasswordVerificationResult.Failed)
@@ -177,7 +178,8 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
             }
 
-            if(!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider, GetChangeEmailTokenPurpose(newEmail), token))
+            if(!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider, 
+                GetChangeEmailTokenPurpose(newEmail), token))
             {
                 return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
             }
@@ -215,7 +217,8 @@ namespace Bit.Core.Services
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, IEnumerable<Cipher> ciphers)
+        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, 
+            IEnumerable<Cipher> ciphers)
         {
             if(user == null)
             {
@@ -362,7 +365,8 @@ namespace Bit.Core.Services
 
             if(errors.Count > 0)
             {
-                Logger.LogWarning("User {userId} password validation failed: {errors}.", await GetUserIdAsync(user), string.Join(";", errors.Select(e => e.Code)));
+                Logger.LogWarning("User {userId} password validation failed: {errors}.", await GetUserIdAsync(user), 
+                    string.Join(";", errors.Select(e => e.Code)));
                 return IdentityResult.Failed(errors.ToArray());
             }
 
