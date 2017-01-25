@@ -134,7 +134,6 @@ namespace Bit.Api.IdentityServer
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
                 new Dictionary<string, object>
                 {
-                    { "TwoFactorRequired", true },
                     { "TwoFactorProviders", providers }
                 });
         }
