@@ -32,7 +32,7 @@ namespace Bit.Api.IdentityServer
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
             var claims = context.Subject.Claims.ToList();
-            var user = await GetUserAsync(context.Subject);
+            var user = await _userService.GetUserByPrincipalAsync(context.Subject);
             if(user != null)
             {
                 claims.AddRange(new List<Claim>
@@ -62,7 +62,7 @@ namespace Bit.Api.IdentityServer
         {
             var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c =>
                 c.Type == _identityOptions.ClaimsIdentity.SecurityStampClaimType);
-            var user = await GetUserAsync(context.Subject);
+            var user = await _userService.GetUserByPrincipalAsync(context.Subject);
 
             if(user != null && securityTokenClaim != null)
             {
@@ -74,17 +74,6 @@ namespace Bit.Api.IdentityServer
             {
                 context.IsActive = true;
             }
-        }
-
-        private async Task<User> GetUserAsync(ClaimsPrincipal principal)
-        {
-            var userId = _userService.GetProperUserId(principal);
-            if(userId.HasValue)
-            {
-                return await _userService.GetUserByIdAsync(userId.Value);
-            }
-
-            return null;
         }
     }
 }
