@@ -82,7 +82,8 @@ namespace Bit.Api.IdentityServer
                             return;
                         }
 
-                        if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorToken))
+                        if(!twoFactorRequest ||
+                            await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorToken))
                         {
                             var device = await SaveDeviceAsync(user, context);
                             BuildSuccessResult(user, context, device);
@@ -100,8 +101,10 @@ namespace Bit.Api.IdentityServer
         {
             var httpContext = _httpContextAccessor.HttpContext;
             _userManager = httpContext.RequestServices.GetRequiredService<UserManager<User>>();
-            _identityOptions = httpContext.RequestServices.GetRequiredService<IOptions<IdentityOptions>>()?.Value ?? new IdentityOptions();
-            _jwtBearerIdentityOptions = httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>()?.Value;
+            _identityOptions = 
+                httpContext.RequestServices.GetRequiredService<IOptions<IdentityOptions>>()?.Value ?? new IdentityOptions();
+            _jwtBearerIdentityOptions = 
+                httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>()?.Value;
             _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
         }
 
