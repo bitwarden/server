@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Api.Models;
 using Bit.Core.Services;
-using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -13,30 +12,29 @@ namespace Bit.Api.Controllers
     public class SettingsController : Controller
     {
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
 
         public SettingsController(
-            IUserService userService,
-            CurrentContext currentContext)
+            IUserService userService)
         {
             _userService = userService;
-            _currentContext = currentContext;
         }
 
         [HttpGet("domains")]
-        public Task<DomainsResponseModel> GetDomains(bool excluded = true)
+        public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
         {
-            var response = new DomainsResponseModel(_currentContext.User, excluded);
-            return Task.FromResult(response);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var response = new DomainsResponseModel(user, excluded);
+            return response;
         }
 
         [HttpPut("domains")]
         [HttpPost("domains")]
         public async Task<DomainsResponseModel> PutDomains([FromBody]UpdateDomainsRequestModel model)
         {
-            await _userService.SaveUserAsync(model.ToUser(_currentContext.User));
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            await _userService.SaveUserAsync(model.ToUser(user));
 
-            var response = new DomainsResponseModel(_currentContext.User);
+            var response = new DomainsResponseModel(user);
             return response;
         }
     }

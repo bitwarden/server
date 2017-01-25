@@ -8,7 +8,6 @@ using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
-using Bit.Core;
 using System.Linq;
 
 namespace Bit.Api.Controllers
@@ -20,18 +19,15 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ICipherService _cipherService;
         private readonly UserManager<User> _userManager;
-        private readonly CurrentContext _currentContext;
 
         public AccountsController(
             IUserService userService,
             ICipherService cipherService,
-            UserManager<User> userManager,
-            CurrentContext currentContext)
+            UserManager<User> userManager)
         {
             _userService = userService;
             _cipherService = cipherService;
             _userManager = userManager;
-            _currentContext = currentContext;
         }
 
         [HttpPost("register")]
@@ -63,25 +59,28 @@ namespace Bit.Api.Controllers
         [HttpPost("email-token")]
         public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
         {
-            if(!await _userManager.CheckPasswordAsync(_currentContext.User, model.MasterPasswordHash))
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            await _userService.InitiateEmailChangeAsync(_currentContext.User, model.NewEmail);
+            await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
         }
 
         [HttpPut("email")]
         [HttpPost("email")]
         public async Task PutEmail([FromBody]EmailRequestModel model)
         {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = model.Ciphers.Select(c => c.ToCipher(_userManager.GetUserId(User)));
+            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
 
             var result = await _userService.ChangeEmailAsync(
-                _currentContext.User,
+                user,
                 model.MasterPasswordHash,
                 model.NewEmail,
                 model.NewMasterPasswordHash,
@@ -106,12 +105,14 @@ namespace Bit.Api.Controllers
         [HttpPost("password")]
         public async Task PutPassword([FromBody]PasswordRequestModel model)
         {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = model.Ciphers.Select(c => c.ToCipher(_userManager.GetUserId(User)));
+            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
 
             var result = await _userService.ChangePasswordAsync(
-                _currentContext.User,
+                user,
                 model.MasterPasswordHash,
                 model.NewMasterPasswordHash,
                 ciphers);
@@ -134,7 +135,8 @@ namespace Bit.Api.Controllers
         [HttpPost("security-stamp")]
         public async Task PutSecurityStamp([FromBody]SecurityStampRequestModel model)
         {
-            var result = await _userService.RefreshSecurityStampAsync(_currentContext.User, model.MasterPasswordHash);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var result = await _userService.RefreshSecurityStampAsync(user, model.MasterPasswordHash);
             if(result.Succeeded)
             {
                 return;
@@ -150,9 +152,10 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("profile")]
-        public ProfileResponseModel GetProfile()
+        public async Task<ProfileResponseModel> GetProfile()
         {
-            var response = new ProfileResponseModel(_currentContext.User);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var response = new ProfileResponseModel(user);
             return response;
         }
 
@@ -160,14 +163,16 @@ namespace Bit.Api.Controllers
         [HttpPost("profile")]
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
         {
-            await _userService.SaveUserAsync(model.ToUser(_currentContext.User));
+            var user = await _userService.GetUserByPrincipalAsync(User);
 
-            var response = new ProfileResponseModel(_currentContext.User);
+            await _userService.SaveUserAsync(model.ToUser(user));
+
+            var response = new ProfileResponseModel(user);
             return response;
         }
 
         [HttpGet("revision-date")]
-        public long? GetAccountRevisionDate()
+        public async Task<long?> GetAccountRevisionDate()
         {
             //var userId = _userService.GetProperUserId(User);
             //long? revisionDate = null;
@@ -177,13 +182,14 @@ namespace Bit.Api.Controllers
             //    revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
             //}
 
-            return Core.Utilities.CoreHelpers.EpocMilliseconds(_currentContext.User.AccountRevisionDate);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            return Core.Utilities.CoreHelpers.EpocMilliseconds(user.AccountRevisionDate);
         }
 
         [HttpGet("two-factor")]
         public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)
         {
-            var user = _currentContext.User;
+            var user = await _userService.GetUserByPrincipalAsync(User);
             if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -200,7 +206,7 @@ namespace Bit.Api.Controllers
         [HttpPost("two-factor")]
         public async Task<TwoFactorResponseModel> PutTwoFactor([FromBody]UpdateTwoFactorRequestModel model)
         {
-            var user = _currentContext.User;
+            var user = await _userService.GetUserByPrincipalAsync(User);
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -237,7 +243,7 @@ namespace Bit.Api.Controllers
         [HttpPost("two-factor-regenerate")]
         public async Task<TwoFactorResponseModel> PutTwoFactorRegenerate([FromBody]RegenerateTwoFactorRequestModel model)
         {
-            var user = _currentContext.User;
+            var user = await _userService.GetUserByPrincipalAsync(User);
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -263,7 +269,7 @@ namespace Bit.Api.Controllers
         [HttpPost("delete")]
         public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
         {
-            var user = _currentContext.User;
+            var user = await _userService.GetUserByPrincipalAsync(User);
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");

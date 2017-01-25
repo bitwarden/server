@@ -18,22 +18,22 @@ namespace Bit.Api.Controllers
     {
         private readonly ICipherRepository _cipherRepository;
         private readonly ICipherService _cipherService;
-        private readonly UserManager<User> _userManager;
+        private readonly IUserService _userService;
 
         public CiphersController(
             ICipherRepository cipherRepository,
             ICipherService cipherService,
-            UserManager<User> userManager)
+            IUserService userService)
         {
             _cipherRepository = cipherRepository;
             _cipherService = cipherService;
-            _userManager = userManager;
+            _userService = userService;
         }
 
         [HttpGet("{id}")]
         public async Task<CipherResponseModel> Get(string id)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(cipher == null)
             {
                 throw new NotFoundException();
@@ -45,7 +45,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<CipherResponseModel>> Get()
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(new Guid(_userManager.GetUserId(User)));
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
             var responses = ciphers.Select(c => new CipherResponseModel(c));
             return new ListResponseModel<CipherResponseModel>(responses);
         }
@@ -54,15 +54,16 @@ namespace Bit.Api.Controllers
         public async Task<CipherHistoryResponseModel> Get(DateTime since)
         {
             var history = await _cipherRepository.GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(
-                since, new Guid(_userManager.GetUserId(User)));
+                since, _userService.GetProperUserId(User).Value);
             return new CipherHistoryResponseModel(history.Item1, history.Item2);
         }
 
         [HttpPost("import")]
         public async Task PostImport([FromBody]ImportRequestModel model)
         {
-            var folderCiphers = model.Folders.Select(f => f.ToCipher(_userManager.GetUserId(User))).ToList();
-            var otherCiphers = model.Logins.Select(s => s.ToCipher(_userManager.GetUserId(User))).ToList();
+            var userId = _userService.GetProperUserId(User).Value;
+            var folderCiphers = model.Folders.Select(f => f.ToCipher(userId)).ToList();
+            var otherCiphers = model.Logins.Select(s => s.ToCipher(userId)).ToList();
 
             await _cipherService.ImportCiphersAsync(
                 folderCiphers,
@@ -74,7 +75,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/favorite")]
         public async Task Favorite(string id)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(cipher == null)
             {
                 throw new NotFoundException();
@@ -89,7 +90,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(cipher == null)
             {
                 throw new NotFoundException();

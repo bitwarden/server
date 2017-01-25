@@ -19,11 +19,11 @@ namespace Bit.Api.Models
         [StringLength(255)]
         public string PushToken { get; set; }
 
-        public Device ToDevice(string userId = null)
+        public Device ToDevice(Guid? userId = null)
         {
             return ToDevice(new Device
             {
-                UserId = userId == null ? default(Guid) : new Guid(userId)
+                UserId = userId == null ? default(Guid) : userId.Value
             });
         }
 

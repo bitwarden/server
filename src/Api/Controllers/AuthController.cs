@@ -5,7 +5,7 @@ using Bit.Core.Identity;
 using Bit.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
-using Bit.Core;
+using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
@@ -14,21 +14,22 @@ namespace Bit.Api.Controllers
     public class AuthController : Controller
     {
         private readonly JwtBearerSignInManager _signInManager;
-        private readonly CurrentContext _currentContext;
+        private readonly IUserService _userService;
 
         public AuthController(
             JwtBearerSignInManager signInManager,
-            CurrentContext currentContext)
+            IUserService userService)
         {
             _signInManager = signInManager;
-            _currentContext = currentContext;
+            _userService = userService;
         }
 
         [HttpPost("token")]
         [AllowAnonymous]
         public async Task<AuthTokenResponseModel> PostToken([FromBody]AuthTokenRequestModel model)
         {
-            var result = await _signInManager.PasswordSignInAsync(model.Email.ToLower(), model.MasterPasswordHash, model.Device?.ToDevice());
+            var result = await _signInManager.PasswordSignInAsync(model.Email.ToLower(), model.MasterPasswordHash, 
+                model.Device?.ToDevice());
             if(result == JwtBearerSignInResult.Success)
             {
                 return new AuthTokenResponseModel(result.Token, result.User);
@@ -46,7 +47,8 @@ namespace Bit.Api.Controllers
         [Authorize("TwoFactor")]
         public async Task<AuthTokenResponseModel> PostTokenTwoFactor([FromBody]AuthTokenTwoFactorRequestModel model)
         {
-            var result = await _signInManager.TwoFactorSignInAsync(_currentContext.User, model.Provider, model.Code, model.Device?.ToDevice());
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var result = await _signInManager.TwoFactorSignInAsync(user, model.Provider, model.Code, model.Device?.ToDevice());
             if(result == JwtBearerSignInResult.Success)
             {
                 return new AuthTokenResponseModel(result.Token, result.User);

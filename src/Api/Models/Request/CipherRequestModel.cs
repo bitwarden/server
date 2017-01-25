@@ -33,12 +33,12 @@ namespace Bit.Api.Models
         [StringLength(10000)]
         public string Notes { get; set; }
 
-        public virtual Cipher ToCipher(string userId = null)
+        public virtual Cipher ToCipher(Guid userId)
         {
             var cipher = new Cipher
             {
                 Id = new Guid(Id),
-                UserId = new Guid(userId),
+                UserId = userId,
                 FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
                 Type = Type
             };

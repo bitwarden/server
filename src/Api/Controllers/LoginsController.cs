@@ -21,22 +21,22 @@ namespace Bit.Api.Controllers
     {
         private readonly ICipherRepository _cipherRepository;
         private readonly ICipherService _cipherService;
-        private readonly UserManager<User> _userManager;
+        private readonly IUserService _userService;
 
         public LoginsController(
             ICipherRepository cipherRepository,
             ICipherService cipherService,
-            UserManager<User> userManager)
+            IUserService userService)
         {
             _cipherRepository = cipherRepository;
             _cipherService = cipherService;
-            _userManager = userManager;
+            _userService = userService;
         }
 
         [HttpGet("{id}")]
         public async Task<LoginResponseModel> Get(string id, string[] expand = null)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
@@ -51,7 +51,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
         {
             ICollection<Cipher> logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
-                new Guid(_userManager.GetUserId(User)));
+                _userService.GetProperUserId(User).Value);
             var responses = logins.Select(s => new LoginResponseModel(s)).ToList();
             await ExpandManyAsync(logins, responses, expand, null);
             return new ListResponseModel<LoginResponseModel>(responses);
@@ -60,7 +60,7 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<LoginResponseModel> Post([FromBody]LoginRequestModel model, string[] expand = null)
         {
-            var login = model.ToCipher(_userManager.GetUserId(User));
+            var login = model.ToCipher(_userService.GetProperUserId(User).Value);
             await _cipherService.SaveAsync(login);
 
             var response = new LoginResponseModel(login);
@@ -72,7 +72,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}")]
         public async Task<LoginResponseModel> Put(string id, [FromBody]LoginRequestModel model, string[] expand = null)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
@@ -89,7 +89,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), new Guid(_userManager.GetUserId(User)));
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
@@ -129,7 +129,7 @@ namespace Bit.Api.Controllers
                 if(folders == null)
                 {
                     folders = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Folder,
-                        new Guid(_userManager.GetUserId(User)));
+                        _userService.GetProperUserId(User).Value);
                 }
 
                 if(folders != null && folders.Count() > 0)

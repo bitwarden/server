@@ -73,7 +73,7 @@ namespace Bit.Core.Services
 
         public async Task<User> GetUserByIdAsync(string userId)
         {
-            if(_currentContext?.User != null && 
+            if(_currentContext?.User != null &&
                 string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
             {
                 return _currentContext.User;
@@ -98,6 +98,17 @@ namespace Bit.Core.Services
 
             _currentContext.User = await _userRepository.GetByIdAsync(userId);
             return _currentContext.User;
+        }
+
+        public async Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal)
+        {
+            var userId = GetProperUserId(principal);
+            if(!userId.HasValue)
+            {
+                return null;
+            }
+
+            return await GetUserByIdAsync(userId.Value);
         }
 
         public async Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId)

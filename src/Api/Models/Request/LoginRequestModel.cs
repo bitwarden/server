@@ -28,11 +28,11 @@ namespace Bit.Api.Models
         [StringLength(10000)]
         public string Notes { get; set; }
 
-        public Cipher ToCipher(string userId = null)
+        public Cipher ToCipher(Guid userId)
         {
             return ToCipher(new Cipher
             {
-                UserId = new Guid(userId)
+                UserId = userId
             });
         }
 
