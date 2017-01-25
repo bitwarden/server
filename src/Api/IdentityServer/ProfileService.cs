@@ -35,7 +35,8 @@ namespace Bit.Api.IdentityServer
             var user = await GetUserAsync(context.Subject);
             if(user != null)
             {
-                claims.AddRange(new List<Claim> {
+                claims.AddRange(new List<Claim>
+                {
                     new Claim("plan", "0"), // free plan hard coded for now
                     new Claim("sstamp", user.SecurityStamp),
                     new Claim("email", user.Email),

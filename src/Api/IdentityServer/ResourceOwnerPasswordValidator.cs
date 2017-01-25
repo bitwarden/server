@@ -112,7 +112,8 @@ namespace Bit.Api.IdentityServer
 
         private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
         {
-            var claims = new List<Claim> {
+            var claims = new List<Claim>
+            {
                 // Deprecated claims for backwards compatability
                 new Claim(ClaimTypes.AuthenticationMethod, "Application"),
                 new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString())
