@@ -268,6 +268,9 @@ namespace Bit.Api
             // Add Jwt authentication to the request pipeline.
             app.UseJwtBearerIdentity();
 
+            // Add current context
+            app.UseMiddleware<CurrentContextMiddleware>();
+
             // Add MVC to the request pipeline.
             app.UseMvc();
         }

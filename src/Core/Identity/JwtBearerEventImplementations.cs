@@ -2,12 +2,10 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
-using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Domains;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
@@ -20,25 +18,16 @@ namespace Bit.Core.Identity
                 throw new InvalidOperationException("RequestServices is null");
             }
 
-            var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
-            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+            var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
             var signInManager = context.HttpContext.RequestServices.GetRequiredService<JwtBearerSignInManager>();
 
-            var userId = userManager.GetUserId(context.Ticket.Principal);
-            var user = await userRepository.GetByIdAsync(new Guid(userId));
+            var userId = userService.GetProperUserId(context.Ticket.Principal);
+            var user = await userService.GetUserByIdAsync(userId.Value);
 
             // validate security token
             if(!await signInManager.ValidateSecurityStampAsync(user, context.Ticket.Principal))
             {
                 throw new SecurityTokenValidationException("Bad security stamp.");
-            }
-
-            // register the current context user
-            var currentContext = context.HttpContext.RequestServices.GetRequiredService<CurrentContext>();
-            currentContext.User = user;
-            if(context.HttpContext.Request.Headers.ContainsKey("Device-Identifier"))
-            {
-                currentContext.DeviceIdentifier = context.HttpContext.Request.Headers["Device-Identifier"];
             }
         }
 

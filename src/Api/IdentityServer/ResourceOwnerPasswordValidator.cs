@@ -42,11 +42,10 @@ namespace Bit.Api.IdentityServer
         {
             Init();
 
-            var oldAuthBearer = context.Request.Raw["oldAuthBearer"]?.ToString();
-            var twoFactorCode = context.Request.Raw["twoFactorCode"]?.ToString();
-            var twoFactorProvider = context.Request.Raw["twoFactorProvider"]?.ToString();
-            var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorCode) &&
-                !string.IsNullOrWhiteSpace(twoFactorProvider);
+            var oldAuthBearer = context.Request.Raw["OldAuthBearer"]?.ToString();
+            var twoFactorToken = context.Request.Raw["TwoFactorToken"]?.ToString();
+            var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
+            var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
 
             if(!string.IsNullOrWhiteSpace(oldAuthBearer) && _jwtBearerOptions != null)
             {
@@ -80,11 +79,11 @@ namespace Bit.Api.IdentityServer
                             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
                                 new Dictionary<string, object> {
                                     { "TwoFactorRequired", true },
-                                    { "TwoFactorProvider", ((int?)user.TwoFactorProvider)?.ToString() } });
+                                    { "TwoFactorProviders", new string[] { ((int?)user.TwoFactorProvider)?.ToString() } } });
                             return;
                         }
 
-                        if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorCode))
+                        if(!twoFactorRequest || await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorToken))
                         {
                             var device = await SaveDeviceAsync(user, context);
                             BuildSuccessResult(user, context, device);
@@ -114,29 +113,18 @@ namespace Bit.Api.IdentityServer
         private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
         {
             var claims = new List<Claim> {
-                    new Claim("pln", "0"), // free plan
-                    new Claim("sst", user.SecurityStamp),
-                    new Claim("eml", user.Email),
-
-                    // Deprecated claims for backwards compatability
-                    new Claim(ClaimTypes.AuthenticationMethod, "Application"),
-                    new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString()),
-                    new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email),
-                    new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
+                // Deprecated claims for backwards compatability
+                new Claim(ClaimTypes.AuthenticationMethod, "Application"),
+                new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString())
             };
 
             if(device != null)
             {
-                claims.Add(new Claim("dev", device.Identifier));
-            }
-
-            if(!string.IsNullOrWhiteSpace(user.Name))
-            {
-                claims.Add(new Claim("nam", user.Name));
+                claims.Add(new Claim("device", device.Identifier));
             }
 
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
-                claims: claims);
+                claims: claims.Count > 0 ? claims : null);
         }
 
         private AuthenticationTicket ValidateOldAuthBearer(string token)

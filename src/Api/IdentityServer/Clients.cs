@@ -23,6 +23,8 @@ namespace Bit.Api.IdentityServer
                 ClientId = id;
                 RequireClientSecret = false;
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword;
+                UpdateAccessTokenClaimsOnRefresh = true;
+                AccessTokenLifetime = 60 * 60; // 1 hour
                 AllowOfflineAccess = true;
                 AllowedScopes = new string[] { "api" };
             }

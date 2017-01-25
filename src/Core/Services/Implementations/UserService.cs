@@ -23,6 +23,7 @@ namespace Bit.Core.Services
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
+        private readonly CurrentContext _currentContext;
 
         public UserService(
             IUserRepository userRepository,
@@ -36,7 +37,8 @@ namespace Bit.Core.Services
             ILookupNormalizer keyNormalizer,
             IdentityErrorDescriber errors,
             IServiceProvider services,
-            ILogger<UserManager<User>> logger)
+            ILogger<UserManager<User>> logger,
+            CurrentContext currentContext)
             : base(
                   store,
                   optionsAccessor,
@@ -55,6 +57,7 @@ namespace Bit.Core.Services
             _identityErrorDescriber = errors;
             _passwordHasher = passwordHasher;
             _passwordValidators = passwordValidators;
+            _currentContext = currentContext;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -70,18 +73,31 @@ namespace Bit.Core.Services
 
         public async Task<User> GetUserByIdAsync(string userId)
         {
+            if(_currentContext?.User != null && 
+                string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return _currentContext.User;
+            }
+
             Guid userIdGuid;
             if(!Guid.TryParse(userId, out userIdGuid))
             {
                 return null;
             }
 
-            return await _userRepository.GetByIdAsync(userIdGuid);
+            _currentContext.User = await _userRepository.GetByIdAsync(userIdGuid);
+            return _currentContext.User;
         }
 
         public async Task<User> GetUserByIdAsync(Guid userId)
         {
-            return await _userRepository.GetByIdAsync(userId);
+            if(_currentContext?.User != null && _currentContext.User.Id == userId)
+            {
+                return _currentContext.User;
+            }
+
+            _currentContext.User = await _userRepository.GetByIdAsync(userId);
+            return _currentContext.User;
         }
 
         public async Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId)

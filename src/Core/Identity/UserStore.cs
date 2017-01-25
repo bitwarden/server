@@ -50,29 +50,31 @@ namespace Bit.Core.Identity
                 return _currentContext.User;
             }
 
-            return await _userRepository.GetByEmailAsync(normalizedEmail);
+            _currentContext.User = await _userRepository.GetByEmailAsync(normalizedEmail);
+            return _currentContext.User;
         }
 
         public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var id = new Guid(userId);
-
-            if(_currentContext?.User != null && _currentContext.User.Id == id)
+            if(_currentContext?.User != null &&
+                string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
             {
                 return _currentContext.User;
             }
 
-            return await _userRepository.GetByIdAsync(id);
+            Guid userIdGuid;
+            if(!Guid.TryParse(userId, out userIdGuid))
+            {
+                return null;
+            }
+
+            _currentContext.User = await _userRepository.GetByIdAsync(userIdGuid);
+            return _currentContext.User;
         }
 
         public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(_currentContext?.User != null && _currentContext.User.Email == normalizedUserName)
-            {
-                return _currentContext.User;
-            }
-
-            return await _userRepository.GetByEmailAsync(normalizedUserName);
+            return await FindByEmailAsync(normalizedUserName, cancellationToken);
         }
 
         public Task<string> GetEmailAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
