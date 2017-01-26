@@ -20,7 +20,6 @@ namespace Bit.Api.IdentityServer
                     "email",
                     "sstamp", // security stamp
                     "plan",
-                    "trial_exp",
                     "device"
                 })
             };
