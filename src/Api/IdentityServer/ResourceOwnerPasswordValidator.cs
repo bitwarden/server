@@ -63,7 +63,7 @@ namespace Bit.Api.IdentityServer
                         if(user != null && user.SecurityStamp == securityTokenClaim.Value)
                         {
                             var device = await SaveDeviceAsync(user, context);
-                            BuildSuccessResult(user, context, null);
+                            BuildSuccessResult(user, context, device);
                             return;
                         }
                     }
@@ -177,10 +177,10 @@ namespace Bit.Api.IdentityServer
 
         private Device GetDeviceFromRequest(ResourceOwnerPasswordValidationContext context)
         {
-            var deviceIdentifier = context.Request.Raw["deviceIdentifier"]?.ToString();
-            var deviceType = context.Request.Raw["deviceType"]?.ToString();
-            var deviceName = context.Request.Raw["deviceName"]?.ToString();
-            var devicePushToken = context.Request.Raw["devicePushToken"]?.ToString();
+            var deviceIdentifier = context.Request.Raw["DeviceIdentifier"]?.ToString();
+            var deviceType = context.Request.Raw["DeviceType"]?.ToString();
+            var deviceName = context.Request.Raw["DeviceName"]?.ToString();
+            var devicePushToken = context.Request.Raw["DevicePushToken"]?.ToString();
 
             DeviceType type;
             if(string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrWhiteSpace(deviceType) ||
@@ -194,7 +194,7 @@ namespace Bit.Api.IdentityServer
                 Identifier = deviceIdentifier,
                 Name = deviceName,
                 Type = type,
-                PushToken = devicePushToken
+                PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
             };
         }
 
