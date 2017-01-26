@@ -104,8 +104,8 @@ namespace Bit.Api
                 identityServerBuilder.AddTemporarySigningCredential();
             }
 
-            services.AddSingleton<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
-            services.AddSingleton<IProfileService, ProfileService>();
+            services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
+            services.AddScoped<IProfileService, ProfileService>();
             services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
 
             // Identity
@@ -257,12 +257,7 @@ namespace Bit.Api
                 NameClaimType = ClaimTypes.Email,
                 // Version "2" until we retire the old jwt scheme and replace it with this one.
                 AuthenticationScheme = "Bearer2",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2"),
-                JwtBearerEvents = new JwtBearerEvents
-                {
-                    OnTokenValidated = JwtBearerEventImplementations.ValidatedTokenAsync,
-                    OnAuthenticationFailed = JwtBearerEventImplementations.AuthenticationFailedAsync
-                }
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2")
             });
 
             // Add Jwt authentication to the request pipeline.

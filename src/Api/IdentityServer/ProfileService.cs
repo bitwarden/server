@@ -30,11 +30,13 @@ namespace Bit.Api.IdentityServer
 
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
-            var claims = context.Subject.Claims.ToList();
+            var existingClaims = context.Subject.Claims;
+            var newClaims = new List<Claim>();
+
             var user = await _userService.GetUserByPrincipalAsync(context.Subject);
             if(user != null)
             {
-                claims.AddRange(new List<Claim>
+                newClaims.AddRange(new List<Claim>
                 {
                     new Claim("plan", "0"), // free plan hard coded for now
                     new Claim("sstamp", user.SecurityStamp),
@@ -47,13 +49,18 @@ namespace Bit.Api.IdentityServer
 
                 if(!string.IsNullOrWhiteSpace(user.Name))
                 {
-                    claims.Add(new Claim("name", user.Name));
+                    newClaims.Add(new Claim("name", user.Name));
                 }
             }
 
-            if(claims.Count > 0)
+            // filter out any of the new claims
+            var existingClaimsToKeep = existingClaims
+                .Where(c => newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type)).ToList();
+
+            newClaims.AddRange(existingClaimsToKeep);
+            if(newClaims.Any())
             {
-                context.AddFilteredClaims(claims);
+                context.AddFilteredClaims(newClaims);
             }
         }
 

@@ -7,10 +7,8 @@ using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -28,20 +26,22 @@ namespace Bit.Api.IdentityServer
         private JwtBearerOptions _jwtBearerOptions;
         private JwtBearerIdentityOptions _jwtBearerIdentityOptions;
         private readonly IDeviceRepository _deviceRepository;
-        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public ResourceOwnerPasswordValidator(
-            IDeviceRepository deviceRepository,
-            IHttpContextAccessor httpContextAccessor)
+            UserManager<User> userManager,
+            IOptions<IdentityOptions> identityOptionsAccessor,
+            IOptions<JwtBearerIdentityOptions> jwtIdentityOptionsAccessor,
+            IDeviceRepository deviceRepository)
         {
+            _userManager = userManager;
+            _identityOptions = identityOptionsAccessor?.Value ?? new IdentityOptions();
+            _jwtBearerIdentityOptions = jwtIdentityOptionsAccessor?.Value;
+            _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
             _deviceRepository = deviceRepository;
-            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
-            Init();
-
             var oldAuthBearer = context.Request.Raw["OldAuthBearer"]?.ToString();
             var twoFactorToken = context.Request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
@@ -95,17 +95,6 @@ namespace Bit.Api.IdentityServer
 
             await Task.Delay(2000); // Delay for brute force.
             BuildErrorResult(twoFactorRequest, context);
-        }
-
-        private void Init()
-        {
-            var httpContext = _httpContextAccessor.HttpContext;
-            _userManager = httpContext.RequestServices.GetRequiredService<UserManager<User>>();
-            _identityOptions = 
-                httpContext.RequestServices.GetRequiredService<IOptions<IdentityOptions>>()?.Value ?? new IdentityOptions();
-            _jwtBearerIdentityOptions = 
-                httpContext.RequestServices.GetRequiredService<IOptions<JwtBearerIdentityOptions>>()?.Value;
-            _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
         }
 
         private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
