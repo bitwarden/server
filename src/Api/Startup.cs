@@ -90,7 +90,15 @@ namespace Bit.Api
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
             // IdentityServer
-            var identityServerBuilder = services.AddIdentityServer()
+            var identityServerBuilder = services.AddIdentityServer(options =>
+            {
+                options.Endpoints.EnableAuthorizeEndpoint = false;
+                options.Endpoints.EnableIntrospectionEndpoint = false;
+                options.Endpoints.EnableEndSessionEndpoint = false;
+                options.Endpoints.EnableUserInfoEndpoint = false;
+                options.Endpoints.EnableCheckSessionEndpoint = false;
+                options.Endpoints.EnableTokenRevocationEndpoint = false;
+            })
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
 
