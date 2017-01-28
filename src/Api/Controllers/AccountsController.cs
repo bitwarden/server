@@ -164,9 +164,7 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-
             await _userService.SaveUserAsync(model.ToUser(user));
-
             var response = new ProfileResponseModel(user);
             return response;
         }
@@ -174,16 +172,15 @@ namespace Bit.Api.Controllers
         [HttpGet("revision-date")]
         public async Task<long?> GetAccountRevisionDate()
         {
-            //var userId = _userService.GetProperUserId(User);
-            //long? revisionDate = null;
-            //if(userId.HasValue)
-            //{
-            //    var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
-            //    revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
-            //}
+            var userId = _userService.GetProperUserId(User);
+            long? revisionDate = null;
+            if(userId.HasValue)
+            {
+                var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
+                revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
+            }
 
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            return Core.Utilities.CoreHelpers.EpocMilliseconds(user.AccountRevisionDate);
+            return revisionDate;
         }
 
         [HttpGet("two-factor")]
