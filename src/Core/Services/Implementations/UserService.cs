@@ -273,13 +273,13 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task GetTwoFactorAsync(User user, Enums.TwoFactorProviderType provider)
+        public async Task GetTwoFactorAsync(User user, TwoFactorProviderType provider)
         {
             if(user.TwoFactorEnabled && user.TwoFactorProvider.HasValue && user.TwoFactorProvider.Value == provider)
             {
                 switch(provider)
                 {
-                    case Enums.TwoFactorProviderType.Authenticator:
+                    case TwoFactorProviderType.Authenticator:
                         if(!string.IsNullOrWhiteSpace(user.AuthenticatorKey))
                         {
                             return;
@@ -296,7 +296,7 @@ namespace Bit.Core.Services
 
             switch(provider)
             {
-                case Enums.TwoFactorProviderType.Authenticator:
+                case TwoFactorProviderType.Authenticator:
                     var key = KeyGeneration.GenerateRandomKey(20);
                     user.AuthenticatorKey = Base32Encoding.ToString(key);
                     break;

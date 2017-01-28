@@ -30,6 +30,7 @@ using Bit.Core.Utilities;
 using Serilog;
 using Serilog.Events;
 using Bit.Api.IdentityServer;
+using Bit.Core.Enums;
 
 namespace Bit.Api
 {
@@ -150,7 +151,7 @@ namespace Bit.Api
             })
             .AddUserStore<UserStore>()
             .AddRoleStore<RoleStore>()
-            .AddTokenProvider<AuthenticatorTokenProvider>("Authenticator")
+            .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
             .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             var jwtIdentityOptions = provider.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;

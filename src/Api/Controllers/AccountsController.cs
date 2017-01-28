@@ -210,7 +210,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, "Authenticator", model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -247,7 +247,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, "Authenticator", model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");

@@ -76,14 +76,21 @@ namespace Bit.Api.IdentityServer
                 {
                     if(await _userManager.CheckPasswordAsync(user, context.Password))
                     {
+                        TwoFactorProviderType twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
                         if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                         {
                             BuildTwoFactorResult(user, context);
                             return;
                         }
 
+                        if(twoFactorRequest && !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
+                        {
+                            BuildTwoFactorResult(user, context);
+                            return;
+                        }
+
                         if(!twoFactorRequest ||
-                            await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProvider, twoFactorToken))
+                            await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProviderType.ToString(), twoFactorToken))
                         {
                             var device = await SaveDeviceAsync(user, context);
                             BuildSuccessResult(user, context, device);
