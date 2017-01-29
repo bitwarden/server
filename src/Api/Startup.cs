@@ -201,7 +201,7 @@ namespace Bit.Api
                 {
                     jsonFormatter.SupportedMediaTypes.Add(textPlainMediaType);
                 }
-            }).AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver()); ;
+            }).AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
         }
 
         public void Configure(
