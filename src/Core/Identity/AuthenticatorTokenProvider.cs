@@ -34,7 +34,7 @@ namespace Bit.Core.Identity
             var otp = new Totp(Base32Encoding.ToBytes(user.AuthenticatorKey));
 
             long timeStepMatched;
-            var valid = otp.VerifyTotp(token, out timeStepMatched, new VerificationWindow(2, 2));
+            var valid = otp.VerifyTotp(token, out timeStepMatched, new VerificationWindow(1, 1));
 
             return Task.FromResult(valid);
         }

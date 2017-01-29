@@ -8,7 +8,7 @@
     "Sendgrid": "6.3.4",
     "PushSharp": "4.0.10",
     "WindowsAzure.Storage": "8.0.0",
-    "Otp.NET": "1.0.0"
+    "Otp.NET": "1.0.1"
   },
 
   "frameworks": {
