@@ -217,6 +217,8 @@ namespace Bit.Api.IdentityServer
                     await _deviceRepository.CreateAsync(device);
                     return device;
                 }
+
+                return existingDevice;
             }
 
             return null;
