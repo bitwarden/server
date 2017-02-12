@@ -263,6 +263,22 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpPut("keys")]
+        [HttpPost("keys")]
+        public async Task<KeysResponseModel> PutKeys([FromBody]KeysRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            await _userService.SaveUserAsync(model.ToUser(user));
+            return new KeysResponseModel(user);
+        }
+
+        [HttpGet("keys")]
+        public async Task<KeysResponseModel> GetKeys()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            return new KeysResponseModel(user);
+        }
+
         [HttpPost("delete")]
         public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
         {

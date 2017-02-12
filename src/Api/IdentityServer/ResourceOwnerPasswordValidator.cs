@@ -118,8 +118,13 @@ namespace Bit.Api.IdentityServer
                 claims.Add(new Claim("device", device.Identifier));
             }
 
-            context.Result = new GrantValidationResult(user.Id.ToString(), "Application", identityProvider: "bitwarden",
-                claims: claims.Count > 0 ? claims : null);
+            context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
+                identityProvider: "bitwarden",
+                claims: claims.Count > 0 ? claims : null,
+                customResponse: new Dictionary<string, object>
+                {
+                    { "PrivateKey", user.PrivateKey }
+                });
         }
 
         private void BuildTwoFactorResult(User user, ResourceOwnerPasswordValidationContext context)
@@ -139,8 +144,8 @@ namespace Bit.Api.IdentityServer
 
         private void BuildErrorResult(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)
         {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse:
-                new Dictionary<string, object>
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
+                customResponse: new Dictionary<string, object>
                 {{
                     "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
                         "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
