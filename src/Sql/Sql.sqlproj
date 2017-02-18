@@ -104,7 +104,4 @@
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
   </ItemGroup>
-  <ItemGroup>
-    <RefactorLog Include="Sql.refactorlog" />
-  </ItemGroup>
 </Project>
