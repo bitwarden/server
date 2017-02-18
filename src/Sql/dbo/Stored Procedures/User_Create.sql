@@ -14,6 +14,8 @@
     @EquivalentDomains NVARCHAR(MAX),
     @ExcludedGlobalEquivalentDomains NVARCHAR(MAX),
     @AccountRevisionDate DATETIME2(7),
+    @PublicKey NVARCHAR(MAX),
+    @PrivateKey NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -37,6 +39,8 @@ BEGIN
         [EquivalentDomains],
         [ExcludedGlobalEquivalentDomains],
         [AccountRevisionDate],
+        [PublicKey],
+        [PrivateKey],
         [CreationDate],
         [RevisionDate]
     )
@@ -57,6 +61,8 @@ BEGIN
         @EquivalentDomains,
         @ExcludedGlobalEquivalentDomains,
         @AccountRevisionDate,
+        @PublicKey,
+        @PrivateKey,
         @CreationDate,
         @RevisionDate
     )
