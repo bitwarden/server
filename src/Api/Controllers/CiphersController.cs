@@ -33,29 +33,32 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}")]
         public async Task<CipherResponseModel> Get(string id)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(cipher == null)
             {
                 throw new NotFoundException();
             }
 
-            return new CipherResponseModel(cipher);
+            return new CipherResponseModel(cipher, userId);
         }
 
         [HttpGet("")]
         public async Task<ListResponseModel<CipherResponseModel>> Get()
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-            var responses = ciphers.Select(c => new CipherResponseModel(c));
+            var userId = _userService.GetProperUserId(User).Value;
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+            var responses = ciphers.Select(c => new CipherResponseModel(c, userId));
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
         [HttpGet("history")]
         public async Task<CipherHistoryResponseModel> Get(DateTime since)
         {
+            var userId = _userService.GetProperUserId(User).Value;
             var history = await _cipherRepository.GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(
-                since, _userService.GetProperUserId(User).Value);
-            return new CipherHistoryResponseModel(history.Item1, history.Item2);
+                since, userId);
+            return new CipherHistoryResponseModel(history.Item1, history.Item2, userId);
         }
 
         [HttpPost("import")]

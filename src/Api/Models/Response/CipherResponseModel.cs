@@ -1,11 +1,14 @@
 ﻿using System;
 using Bit.Core.Domains;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using System.Linq;
 
 namespace Bit.Api.Models
 {
     public class CipherResponseModel : ResponseModel
     {
-        public CipherResponseModel(Cipher cipher)
+        public CipherResponseModel(Cipher cipher, Guid userId)
             : base("cipher")
         {
             if(cipher == null)
@@ -30,6 +33,16 @@ namespace Bit.Api.Models
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
+
+            if(!string.IsNullOrWhiteSpace(cipher.Shares))
+            {
+                var shares = JsonConvert.DeserializeObject<IEnumerable<Cipher.Share>>(cipher.Shares);
+                var userShare = shares.FirstOrDefault(s => s.UserId == userId);
+                if(userShare != null)
+                {
+                    Key = userShare.Key;
+                }
+            }
         }
 
         public string Id { get; set; }
@@ -37,6 +50,7 @@ namespace Bit.Api.Models
         public Core.Enums.CipherType Type { get; set; }
         public bool Favorite { get; set; }
         public dynamic Data { get; set; }
+        public string Key { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 }

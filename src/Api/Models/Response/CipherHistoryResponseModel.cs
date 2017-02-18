@@ -7,7 +7,7 @@ namespace Bit.Api.Models
 {
     public class CipherHistoryResponseModel : ResponseModel
     {
-        public CipherHistoryResponseModel(IEnumerable<Cipher> revisedCiphers, IEnumerable<Guid> deletedIds)
+        public CipherHistoryResponseModel(IEnumerable<Cipher> revisedCiphers, IEnumerable<Guid> deletedIds, Guid userId)
             : base("cipherHistory")
         {
             if(revisedCiphers == null)
@@ -20,7 +20,7 @@ namespace Bit.Api.Models
                 throw new ArgumentNullException(nameof(deletedIds));
             }
 
-            Revised = revisedCiphers.Select(c => new CipherResponseModel(c));
+            Revised = revisedCiphers.Select(c => new CipherResponseModel(c, userId));
             Deleted = deletedIds.Select(id => id.ToString());
         }
 

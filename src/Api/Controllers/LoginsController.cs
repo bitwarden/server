@@ -36,35 +36,38 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}")]
         public async Task<LoginResponseModel> Get(string id, string[] expand = null)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+            var userId = _userService.GetProperUserId(User).Value;
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login);
-            await ExpandAsync(login, response, expand, null);
+            var response = new LoginResponseModel(login, userId);
+            await ExpandAsync(login, response, expand, null, userId);
             return response;
         }
 
         [HttpGet("")]
         public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
         {
+            var userId = _userService.GetProperUserId(User).Value;
             ICollection<Cipher> logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
-                _userService.GetProperUserId(User).Value);
-            var responses = logins.Select(s => new LoginResponseModel(s)).ToList();
-            await ExpandManyAsync(logins, responses, expand, null);
+                userId);
+            var responses = logins.Select(s => new LoginResponseModel(s, userId)).ToList();
+            await ExpandManyAsync(logins, responses, expand, null, userId);
             return new ListResponseModel<LoginResponseModel>(responses);
         }
 
         [HttpPost("")]
         public async Task<LoginResponseModel> Post([FromBody]LoginRequestModel model, string[] expand = null)
         {
-            var login = model.ToCipher(_userService.GetProperUserId(User).Value);
+            var userId = _userService.GetProperUserId(User).Value;
+            var login = model.ToCipher(userId);
             await _cipherService.SaveAsync(login);
 
-            var response = new LoginResponseModel(login);
-            await ExpandAsync(login, response, expand, null);
+            var response = new LoginResponseModel(login, userId);
+            await ExpandAsync(login, response, expand, null, userId);
             return response;
         }
 
@@ -72,6 +75,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}")]
         public async Task<LoginResponseModel> Put(string id, [FromBody]LoginRequestModel model, string[] expand = null)
         {
+            var userId = _userService.GetProperUserId(User).Value;
             var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
@@ -80,8 +84,8 @@ namespace Bit.Api.Controllers
 
             await _cipherService.SaveAsync(model.ToCipher(login));
 
-            var response = new LoginResponseModel(login);
-            await ExpandAsync(login, response, expand, null);
+            var response = new LoginResponseModel(login, userId);
+            await ExpandAsync(login, response, expand, null, userId);
             return response;
         }
 
@@ -98,7 +102,7 @@ namespace Bit.Api.Controllers
             await _cipherService.DeleteAsync(login);
         }
 
-        private async Task ExpandAsync(Cipher login, LoginResponseModel response, string[] expand, Cipher folder)
+        private async Task ExpandAsync(Cipher login, LoginResponseModel response, string[] expand, Cipher folder, Guid userId)
         {
             if(expand == null || expand.Count() == 0)
             {
@@ -112,12 +116,12 @@ namespace Bit.Api.Controllers
                     folder = await _cipherRepository.GetByIdAsync(login.FolderId.Value);
                 }
 
-                response.Folder = new FolderResponseModel(folder);
+                response.Folder = new FolderResponseModel(folder, userId);
             }
         }
 
         private async Task ExpandManyAsync(IEnumerable<Cipher> logins, ICollection<LoginResponseModel> responses,
-            string[] expand, IEnumerable<Cipher> folders)
+            string[] expand, IEnumerable<Cipher> folders, Guid userId)
         {
             if(expand == null || expand.Count() == 0)
             {
@@ -148,7 +152,7 @@ namespace Bit.Api.Controllers
                             continue;
                         }
 
-                        response.Folder = new FolderResponseModel(folder);
+                        response.Folder = new FolderResponseModel(folder, userId);
                     }
                 }
             }

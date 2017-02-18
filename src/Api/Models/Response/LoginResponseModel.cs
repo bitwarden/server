@@ -1,11 +1,14 @@
 ﻿using System;
 using Bit.Core.Domains;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Bit.Api.Models
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(Cipher cipher)
+        public LoginResponseModel(Cipher cipher, Guid userId)
             : base("login")
         {
             if(cipher == null)
@@ -29,6 +32,16 @@ namespace Bit.Api.Models
             Password = data.Password;
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
+
+            if(!string.IsNullOrWhiteSpace(cipher.Shares))
+            {
+                var shares = JsonConvert.DeserializeObject<IEnumerable<Cipher.Share>>(cipher.Shares);
+                var userShare = shares.FirstOrDefault(s => s.UserId == userId);
+                if(userShare != null)
+                {
+                    Key = userShare.Key;
+                }
+            }
         }
 
         public string Id { get; set; }
@@ -39,6 +52,7 @@ namespace Bit.Api.Models
         public string Username { get; set; }
         public string Password { get; set; }
         public string Notes { get; set; }
+        public string Key { get; set; }
         public DateTime RevisionDate { get; set; }
 
         // Expandables
