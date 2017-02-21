@@ -5,7 +5,6 @@
     [Type]         TINYINT          NOT NULL,
     [Favorite]     BIT              NOT NULL,
     [Data]         NVARCHAR (MAX)   NOT NULL,
-    [Shares]       NVARCHAR (MAX)   NULL,
     [CreationDate] DATETIME2 (7)    NOT NULL,
     [RevisionDate] DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),

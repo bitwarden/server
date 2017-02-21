@@ -11,20 +11,12 @@ namespace Bit.Core.Domains
         public Enums.CipherType Type { get; set; }
         public bool Favorite { get; set; }
         public string Data { get; set; }
-        public string Shares { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
-        }
-
-        public class Share
-        {
-            public Guid UserId { get; set; }
-            public string Key { get; set; }
-            // TODO: permission flags?
         }
     }
 }

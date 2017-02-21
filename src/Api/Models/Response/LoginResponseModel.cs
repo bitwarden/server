@@ -32,16 +32,6 @@ namespace Bit.Api.Models
             Password = data.Password;
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
-
-            if(!string.IsNullOrWhiteSpace(cipher.Shares))
-            {
-                var shares = JsonConvert.DeserializeObject<IEnumerable<Cipher.Share>>(cipher.Shares);
-                var userShare = shares.FirstOrDefault(s => s.UserId == userId);
-                if(userShare != null)
-                {
-                    Key = userShare.Key;
-                }
-            }
         }
 
         public string Id { get; set; }

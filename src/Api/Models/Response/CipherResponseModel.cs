@@ -33,16 +33,6 @@ namespace Bit.Api.Models
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
-
-            if(!string.IsNullOrWhiteSpace(cipher.Shares))
-            {
-                var shares = JsonConvert.DeserializeObject<IEnumerable<Cipher.Share>>(cipher.Shares);
-                var userShare = shares.FirstOrDefault(s => s.UserId == userId);
-                if(userShare != null)
-                {
-                    Key = userShare.Key;
-                }
-            }
         }
 
         public string Id { get; set; }

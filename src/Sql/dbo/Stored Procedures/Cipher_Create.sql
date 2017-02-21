@@ -5,7 +5,6 @@
     @Type TINYINT,
     @Favorite BIT,
     @Data NVARCHAR(MAX),
-    @Shares NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -20,7 +19,6 @@ BEGIN
         [Type],
         [Favorite],
         [Data],
-        [Shares],
         [CreationDate],
         [RevisionDate]
     )
@@ -32,7 +30,6 @@ BEGIN
         @Type,
         @Favorite,
         @Data,
-        @Shares,
         @CreationDate,
         @RevisionDate
     )

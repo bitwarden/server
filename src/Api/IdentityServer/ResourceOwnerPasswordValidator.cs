@@ -123,7 +123,7 @@ namespace Bit.Api.IdentityServer
                 claims: claims.Count > 0 ? claims : null,
                 customResponse: new Dictionary<string, object>
                 {
-                    { "PrivateKey", user.PrivateKey }
+                    { "EncryptedPrivateKey", user.PrivateKey }
                 });
         }
 

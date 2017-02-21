@@ -7,7 +7,7 @@ namespace Bit.Api.Models
     {
         public string PublicKey { get; set; }
         [Required]
-        public string PrivateKey { get; set; }
+        public string EncryptedPrivateKey { get; set; }
 
         public User ToUser(User existingUser)
         {
@@ -16,7 +16,7 @@ namespace Bit.Api.Models
                 existingUser.PublicKey = PublicKey;
             }
 
-            existingUser.PrivateKey = PrivateKey;
+            existingUser.PrivateKey = EncryptedPrivateKey;
             return existingUser;
         }
     }
