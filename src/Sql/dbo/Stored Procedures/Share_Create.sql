@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Share_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
+    @SharerUserId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
     @Key NVARCHAR(MAX),
     @Permissions NVARCHAR(MAX),
@@ -15,6 +16,7 @@ BEGIN
     (
         [Id],
         [UserId],
+        [SharerUserId],
         [CipherId],
         [Key],
         [Permissions],
@@ -26,6 +28,7 @@ BEGIN
     (
         @Id,
         @UserId,
+        @SharerUserId,
         @CipherId,
         @Key,
         @Permissions,

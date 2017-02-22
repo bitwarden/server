@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Share_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
+    @SharerUserId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
     @Key NVARCHAR(MAX),
     @Permissions NVARCHAR(MAX),
@@ -15,6 +16,7 @@ BEGIN
         [dbo].[Share]
     SET
         [UserId] = @UserId,
+        [SharerUserId] = @SharerUserId,
         [CipherId] = @CipherId,
         [Key] = @Key,
         [Permissions] = @Permissions,

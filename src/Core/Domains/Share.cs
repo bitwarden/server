@@ -7,6 +7,7 @@ namespace Bit.Core.Domains
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+        public Guid SharerUserId { get; set; }
         public Guid CipherId { get; set; }
         public string Key { get; set; }
         public string Permissions { get; set; }
