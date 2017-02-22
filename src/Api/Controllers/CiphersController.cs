@@ -31,27 +31,28 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<CipherResponseModel> Get(string id)
+        public async Task<CipherShareResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var cipher = await _cipherRepository.GetShareByIdAsync(new Guid(id), userId);
             if(cipher == null)
             {
                 throw new NotFoundException();
             }
 
-            return new CipherResponseModel(cipher, userId);
+            return new CipherShareResponseModel(cipher, userId);
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherResponseModel>> Get()
+        public async Task<ListResponseModel<CipherShareResponseModel>> Get()
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-            var responses = ciphers.Select(c => new CipherResponseModel(c, userId));
-            return new ListResponseModel<CipherResponseModel>(responses);
+            var ciphers = await _cipherRepository.GetManyShareByUserIdAsync(userId);
+            var responses = ciphers.Select(c => new CipherShareResponseModel(c, userId));
+            return new ListResponseModel<CipherShareResponseModel>(responses);
         }
 
+        [Obsolete]
         [HttpGet("history")]
         public async Task<CipherHistoryResponseModel> Get(DateTime since)
         {

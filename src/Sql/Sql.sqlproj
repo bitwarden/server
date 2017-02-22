@@ -109,5 +109,8 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
+    <Build Include="dbo\Views\CipherShareView.sql" />
+    <Build Include="dbo\Stored Procedures\CipherShare_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\CipherShare_ReadById.sql" />
   </ItemGroup>
 </Project>

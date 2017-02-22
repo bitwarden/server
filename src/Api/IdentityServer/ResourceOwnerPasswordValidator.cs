@@ -118,13 +118,16 @@ namespace Bit.Api.IdentityServer
                 claims.Add(new Claim("device", device.Identifier));
             }
 
+            var customResponse = new Dictionary<string, object>();
+            if(!string.IsNullOrWhiteSpace(user.PrivateKey))
+            {
+                customResponse.Add("EncryptedPrivateKey", user.PrivateKey);
+            }
+
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
                 identityProvider: "bitwarden",
                 claims: claims.Count > 0 ? claims : null,
-                customResponse: new Dictionary<string, object>
-                {
-                    { "EncryptedPrivateKey", user.PrivateKey }
-                });
+                customResponse: customResponse);
         }
 
         private void BuildTwoFactorResult(User user, ResourceOwnerPasswordValidationContext context)

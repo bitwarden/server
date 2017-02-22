@@ -7,6 +7,7 @@ using DataTableProxy;
 using Bit.Core.Domains;
 using System.Data;
 using Dapper;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -31,12 +32,38 @@ namespace Bit.Core.Repositories.SqlServer
             return cipher;
         }
 
+        public async Task<CipherShare> GetShareByIdAsync(Guid id, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherShare>(
+                    $"[{Schema}].[CipherShare_ReadById]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.FirstOrDefault(c => c.UserId == userId);
+            }
+        }
+
         public async Task<ICollection<Cipher>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Cipher>(
                     $"[{Schema}].[{Table}_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<CipherShare>> GetManyShareByUserIdAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherShare>(
+                    $"[{Schema}].[CipherShare_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
