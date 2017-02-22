@@ -66,15 +66,21 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Cipher.sql" />
+    <Build Include="dbo\Tables\Share.sql" />
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\History.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
     <Build Include="dbo\Tables\User.sql" />
+    <Build Include="dbo\Views\ShareView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
+    <Build Include="dbo\Stored Procedures\Share_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Share_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Share_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Share_Update.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
@@ -103,11 +109,5 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
-    <Build Include="dbo\Tables\Share.sql" />
-    <Build Include="dbo\Views\ShareView.sql" />
-    <Build Include="dbo\Stored Procedures\Share_Create.sql" />
-    <Build Include="dbo\Stored Procedures\Share_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\Share_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\Share_Update.sql" />
   </ItemGroup>
 </Project>
