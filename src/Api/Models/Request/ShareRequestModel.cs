@@ -8,8 +8,7 @@ namespace Bit.Api.Models
     public class ShareRequestModel
     {
         [Required]
-        [StringLength(36)]
-        public string UserId { get; set; }
+        public string Email { get; set; }
         [Required]
         [StringLength(36)]
         public string CipherId { get; set; }
@@ -25,7 +24,6 @@ namespace Bit.Api.Models
 
         public Share ToShare(Share existingShare)
         {
-            existingShare.UserId = new Guid(UserId);
             existingShare.CipherId = new Guid(CipherId);
             existingShare.Key = Key;
 

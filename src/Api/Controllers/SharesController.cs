@@ -16,13 +16,16 @@ namespace Bit.Api.Controllers
     {
         private readonly IShareRepository _shareRepository;
         private readonly IUserService _userService;
+        private readonly ICipherService _cipherService;
 
         public SharesController(
             IShareRepository shareRepository,
-            IUserService userService)
+            IUserService userService,
+            ICipherService cipherService)
         {
             _shareRepository = shareRepository;
             _userService = userService;
+            _cipherService = cipherService;
         }
 
         [HttpGet("{id}")]
@@ -42,7 +45,7 @@ namespace Bit.Api.Controllers
         public async Task<ShareResponseModel> Post([FromBody]ShareRequestModel model)
         {
             var share = model.ToShare(_userService.GetProperUserId(User).Value);
-            await _shareRepository.CreateAsync(share);
+            await _cipherService.ShareAsync(share, model.Email);
 
             var response = new ShareResponseModel(share);
             return response;
