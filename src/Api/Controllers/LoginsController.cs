@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Domains;
-using Microsoft.AspNetCore.Identity;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
@@ -34,29 +33,29 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<LoginResponseModel> Get(string id, string[] expand = null)
+        public async Task<LoginShareResponseModel> Get(string id, string[] expand = null)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var login = await _cipherRepository.GetShareByIdAsync(new Guid(id), userId);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login, userId);
+            var response = new LoginShareResponseModel(login, userId);
             await ExpandAsync(login, response, expand, null, userId);
             return response;
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
+        public async Task<ListResponseModel<LoginShareResponseModel>> Get(string[] expand = null)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            ICollection<Cipher> logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
+            var logins = await _cipherRepository.GetManyShareByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
                 userId);
-            var responses = logins.Select(s => new LoginResponseModel(s, userId)).ToList();
+            var responses = logins.Select(s => new LoginShareResponseModel(s, userId)).ToList();
             await ExpandManyAsync(logins, responses, expand, null, userId);
-            return new ListResponseModel<LoginResponseModel>(responses);
+            return new ListResponseModel<LoginShareResponseModel>(responses);
         }
 
         [HttpPost("")]
@@ -120,8 +119,8 @@ namespace Bit.Api.Controllers
             }
         }
 
-        private async Task ExpandManyAsync(IEnumerable<Cipher> logins, ICollection<LoginResponseModel> responses,
-            string[] expand, IEnumerable<Cipher> folders, Guid userId)
+        private async Task ExpandManyAsync<TResponseModel>(IEnumerable<Cipher> logins, ICollection<TResponseModel> responses,
+            string[] expand, IEnumerable<Cipher> folders, Guid userId) where TResponseModel : LoginResponseModel
         {
             if(expand == null || expand.Count() == 0)
             {

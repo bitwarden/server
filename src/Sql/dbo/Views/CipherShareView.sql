@@ -1,10 +1,18 @@
 ﻿CREATE VIEW [dbo].[CipherShareView]
 AS
 SELECT
-    C.*,
-    S.[Key],
-    S.[Permissions],
-    S.[Status]
+    C.[Id],
+    C.[UserId],
+    C.[FolderId],
+    C.[Type],
+    C.[Favorite],
+    ISNULL(S.[Key], C.[Key]) [Key],
+    C.[Data],
+    C.[CreationDate],
+    C.[RevisionDate],
+    S.[ReadOnly],
+    S.[Status],
+    S.[UserId] [ShareUserId]
 FROM
     [dbo].[Cipher] C
 LEFT JOIN

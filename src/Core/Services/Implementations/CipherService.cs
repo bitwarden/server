@@ -104,7 +104,7 @@ namespace Bit.Core.Services
             share.UserId = user.Id;
 
             // TODO: Permissions and status
-            share.Permissions = null;
+            share.ReadOnly = false;
             share.Status = Enums.ShareStatusType.Accepted;
 
             await _shareRepository.CreateAsync(share);

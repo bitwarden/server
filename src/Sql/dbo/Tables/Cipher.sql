@@ -4,6 +4,7 @@
     [FolderId]     UNIQUEIDENTIFIER NULL,
     [Type]         TINYINT          NOT NULL,
     [Favorite]     BIT              NOT NULL,
+    [Key]          NVARCHAR (MAX)   NULL,
     [Data]         NVARCHAR (MAX)   NOT NULL,
     [CreationDate] DATETIME2 (7)    NOT NULL,
     [RevisionDate] DATETIME2 (7)    NOT NULL,

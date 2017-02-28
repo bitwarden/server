@@ -10,4 +10,5 @@ BEGIN
         [dbo].[CipherShareView]
     WHERE
         [UserId] = @UserId
+        OR [ShareUserId] = @UserId
 END

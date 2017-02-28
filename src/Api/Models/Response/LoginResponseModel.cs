@@ -1,14 +1,12 @@
 ﻿using System;
 using Bit.Core.Domains;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Linq;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Models
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(Cipher cipher, Guid userId)
+        public LoginResponseModel(Cipher cipher, Guid userId, string obj = "login")
             : base("login")
         {
             if(cipher == null)
@@ -32,6 +30,7 @@ namespace Bit.Api.Models
             Password = data.Password;
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
+            Key = cipher.Key;
         }
 
         public string Id { get; set; }
@@ -42,10 +41,23 @@ namespace Bit.Api.Models
         public string Username { get; set; }
         public string Password { get; set; }
         public string Notes { get; set; }
-        public string Key { get; set; }
         public DateTime RevisionDate { get; set; }
+        public string Key { get; set; }
 
         // Expandables
         public FolderResponseModel Folder { get; set; }
+    }
+
+    public class LoginShareResponseModel : LoginResponseModel
+    {
+        public LoginShareResponseModel(CipherShare cipherShare, Guid userId)
+            : base(cipherShare, userId, "loginShare")
+        {
+            ReadOnly = cipherShare.ReadOnly;
+            Status = cipherShare.Status;
+        }
+
+        public bool ReadOnly { get; set; }
+        public Core.Enums.ShareStatusType? Status { get; set; }
     }
 }

@@ -4,7 +4,7 @@
     [SharerUserId] UNIQUEIDENTIFIER NOT NULL,
     [CipherId]     UNIQUEIDENTIFIER NOT NULL,
     [Key]          VARCHAR (MAX)    NULL,
-    [Permissions]  VARCHAR (MAX)    NULL,
+    [ReadOnly]     BIT              NOT NULL,
     [Status]       TINYINT          NOT NULL,
     [CreationDate] DATETIME2 (7)    NOT NULL,
     [RevisionDate] DATETIME2 (7)    NOT NULL,

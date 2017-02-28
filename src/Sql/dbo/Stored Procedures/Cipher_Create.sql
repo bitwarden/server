@@ -4,6 +4,7 @@
     @FolderId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Favorite BIT,
+    @Key NVARCHAR(MAX),
     @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -18,6 +19,7 @@ BEGIN
         [FolderId],
         [Type],
         [Favorite],
+        [Key],
         [Data],
         [CreationDate],
         [RevisionDate]
@@ -29,6 +31,7 @@ BEGIN
         @FolderId,
         @Type,
         @Favorite,
+        @Key,
         @Data,
         @CreationDate,
         @RevisionDate

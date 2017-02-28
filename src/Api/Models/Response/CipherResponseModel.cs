@@ -1,8 +1,6 @@
 ﻿using System;
 using Bit.Core.Domains;
 using Bit.Core.Models.Data;
-using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -21,6 +19,7 @@ namespace Bit.Api.Models
             Type = cipher.Type;
             Favorite = cipher.Favorite;
             RevisionDate = cipher.RevisionDate;
+            Key = cipher.Key;
 
             switch(cipher.Type)
             {
@@ -39,6 +38,7 @@ namespace Bit.Api.Models
         public string FolderId { get; set; }
         public Core.Enums.CipherType Type { get; set; }
         public bool Favorite { get; set; }
+        public string Key { get; set; }
         public dynamic Data { get; set; }
         public DateTime RevisionDate { get; set; }
     }
@@ -48,14 +48,11 @@ namespace Bit.Api.Models
         public CipherShareResponseModel(CipherShare cipherShare, Guid userId)
             : base(cipherShare, userId, "cipherShare")
         {
-            Key = cipherShare.Key;
-            Permissions = cipherShare.Permissions == null ? null :
-                JsonConvert.DeserializeObject<IEnumerable<Core.Enums.SharePermissionType>>(cipherShare.Permissions);
+            ReadOnly = cipherShare.ReadOnly;
             Status = cipherShare.Status;
         }
 
-        public string Key { get; set; }
-        public IEnumerable<Core.Enums.SharePermissionType> Permissions { get; set; }
+        public bool ReadOnly { get; set; }
         public Core.Enums.ShareStatusType? Status { get; set; }
     }
 }

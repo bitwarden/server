@@ -4,7 +4,7 @@
     @SharerUserId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
     @Key NVARCHAR(MAX),
-    @Permissions NVARCHAR(MAX),
+    @ReadOnly BIT,
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -19,7 +19,7 @@ BEGIN
         [SharerUserId] = @SharerUserId,
         [CipherId] = @CipherId,
         [Key] = @Key,
-        [Permissions] = @Permissions,
+        [ReadOnly] = @ReadOnly,
         [Status] = @Status,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

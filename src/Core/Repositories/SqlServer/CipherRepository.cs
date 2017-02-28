@@ -88,6 +88,23 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<CipherShare>> GetManyShareByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherShare>(
+                    $"[{Schema}].[CipherShare_ReadByTypeUserId]",
+                    new
+                    {
+                        Type = type,
+                        UserId = userId
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<Tuple<ICollection<Cipher>, ICollection<Guid>>>
             GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(DateTime sinceRevisionDate, Guid userId)
         {

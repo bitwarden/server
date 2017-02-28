@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -40,6 +41,19 @@ namespace Bit.Api.Controllers
 
             return new ShareResponseModel(share);
         }
+
+        //[HttpGet("cipher/{cipherId}")]
+        //public async Task<IEnumerable<ShareResponseModel>> GetCipher(string cipherId)
+        //{
+        //    var userId = _userService.GetProperUserId(User).Value;
+        //    var share = await _shareRepository.GetByIdAsync(new Guid(cipherId), userId);
+        //    if(share == null)
+        //    {
+        //        throw new NotFoundException();
+        //    }
+
+        //    return new ShareResponseModel(share);
+        //}
 
         [HttpPost("")]
         public async Task<ShareResponseModel> Post([FromBody]ShareRequestModel model)

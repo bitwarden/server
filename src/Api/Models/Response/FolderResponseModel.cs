@@ -1,8 +1,5 @@
 ﻿using System;
 using Bit.Core.Domains;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Bit.Api.Models
 {
@@ -30,7 +27,6 @@ namespace Bit.Api.Models
 
         public string Id { get; set; }
         public string Name { get; set; }
-        public string Key { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 }

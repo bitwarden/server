@@ -13,6 +13,7 @@ namespace Bit.Core.Repositories
         Task<ICollection<Cipher>> GetManyByUserIdAsync(Guid userId);
         Task<ICollection<CipherShare>> GetManyShareByUserIdAsync(Guid userId);
         Task<ICollection<Cipher>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId);
+        Task<ICollection<CipherShare>> GetManyShareByTypeAndUserIdAsync(Enums.CipherType type, Guid userId);
         Task<Tuple<ICollection<Cipher>, ICollection<Guid>>>
             GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(DateTime sinceRevisionDate, Guid userId);
         Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers);

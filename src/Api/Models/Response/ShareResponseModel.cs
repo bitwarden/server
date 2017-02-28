@@ -1,7 +1,5 @@
 ﻿using System;
 using Bit.Core.Domains;
-using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models
 {
@@ -20,8 +18,7 @@ namespace Bit.Api.Models
             SharerUserId = share.SharerUserId.ToString();
             CipherId = share.CipherId.ToString();
             Key = Key;
-            Permissions = share.Permissions == null ? null :
-                JsonConvert.DeserializeObject<IEnumerable<Core.Enums.SharePermissionType>>(share.Permissions);
+            ReadOnly = share.ReadOnly;
             Status = share.Status;
         }
 
@@ -30,7 +27,7 @@ namespace Bit.Api.Models
         public string SharerUserId { get; set; }
         public string CipherId { get; set; }
         public string Key { get; set; }
-        public IEnumerable<Core.Enums.SharePermissionType> Permissions { get; set; }
+        public bool ReadOnly { get; set; }
         public Core.Enums.ShareStatusType? Status { get; set; }
     }
 }

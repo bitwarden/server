@@ -112,5 +112,7 @@
     <Build Include="dbo\Views\CipherShareView.sql" />
     <Build Include="dbo\Stored Procedures\CipherShare_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CipherShare_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Share_ReadByCipherId.sql" />
+    <Build Include="dbo\Stored Procedures\CipherShare_ReadByTypeUserId.sql" />
   </ItemGroup>
 </Project>
