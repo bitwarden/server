@@ -14,8 +14,8 @@
     [EquivalentDomains]               NVARCHAR (MAX)   NULL,
     [ExcludedGlobalEquivalentDomains] NVARCHAR (MAX)   NULL,
     [AccountRevisionDate]             DATETIME2 (7)    NOT NULL,
-    [PublicKey]                       NVARCHAR (MAX)   NULL,
-    [PrivateKey]                      NVARCHAR (MAX)   NULL,
+    [PublicKey]                       VARCHAR (MAX)    NULL,
+    [PrivateKey]                      VARCHAR (MAX)    NULL,
     [CreationDate]                    DATETIME2 (7)    NOT NULL,
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
