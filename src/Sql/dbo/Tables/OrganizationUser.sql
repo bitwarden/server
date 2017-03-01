@@ -3,6 +3,7 @@
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
     [UserId]         UNIQUEIDENTIFIER NULL,
     [Email]          NVARCHAR (50)    NULL,
+    [Key]            VARCHAR (MAX)    NULL,
     [Status]         TINYINT          NOT NULL,
     [Type]           TINYINT          NOT NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,

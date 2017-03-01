@@ -16,7 +16,6 @@ BEGIN
     SET
         [SubvaultId] = @SubvaultId,
         [UserId] = @UserId,
-        [Key] = @Key,
         [Admin] = @Admin,
         [ReadOnly] = @ReadOnly,
         [CreationDate] = @CreationDate,
