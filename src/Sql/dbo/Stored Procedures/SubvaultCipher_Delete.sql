@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SubvaultCipher_Delete]
+﻿CREATE PROCEDURE [dbo].[SubvaultCipher_Delete]
     @SubvaultId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER
 AS

@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Subvault_Update]
     @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -10,6 +11,7 @@ BEGIN
     UPDATE
         [dbo].[Subvault]
     SET
+        [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

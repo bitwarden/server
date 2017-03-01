@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Subvault_Create]
     @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -10,6 +11,7 @@ BEGIN
     INSERT INTO [dbo].[Subvault]
     (
         [Id],
+        [OrganizationId],
         [Name],
         [CreationDate],
         [RevisionDate]
@@ -17,6 +19,7 @@ BEGIN
     VALUES
     (
         @Id,
+        @OrganizationId,
         @Name,
         @CreationDate,
         @RevisionDate
