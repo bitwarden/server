@@ -10,6 +10,5 @@ namespace Bit.Core.Services
         Task DeleteAsync(Cipher cipher);
         Task ImportCiphersAsync(List<Cipher> folders, List<Cipher> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships);
-        Task ShareAsync(Share share, string email);
     }
 }

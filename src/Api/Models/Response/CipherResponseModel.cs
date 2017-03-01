@@ -1,6 +1,5 @@
 ﻿using System;
 using Bit.Core.Domains;
-using Bit.Core.Models.Data;
 
 namespace Bit.Api.Models
 {
@@ -19,7 +18,6 @@ namespace Bit.Api.Models
             Type = cipher.Type;
             Favorite = cipher.Favorite;
             RevisionDate = cipher.RevisionDate;
-            Key = cipher.Key;
 
             switch(cipher.Type)
             {
@@ -38,21 +36,7 @@ namespace Bit.Api.Models
         public string FolderId { get; set; }
         public Core.Enums.CipherType Type { get; set; }
         public bool Favorite { get; set; }
-        public string Key { get; set; }
         public dynamic Data { get; set; }
         public DateTime RevisionDate { get; set; }
-    }
-
-    public class CipherShareResponseModel : CipherResponseModel
-    {
-        public CipherShareResponseModel(CipherShare cipherShare, Guid userId)
-            : base(cipherShare, userId, "cipherShare")
-        {
-            ReadOnly = cipherShare.ReadOnly;
-            Status = cipherShare.Status;
-        }
-
-        public bool ReadOnly { get; set; }
-        public Core.Enums.ShareStatusType? Status { get; set; }
     }
 }
