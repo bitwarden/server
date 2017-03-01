@@ -111,5 +111,31 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
+    <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Favorite_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Folder_Update.sql" />
+    <Build Include="dbo\Stored Procedures\FolderCipher_Create.sql" />
+    <Build Include="dbo\Stored Procedures\FolderCipher_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_Update.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_Create.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_Update.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_Update.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Update.sql" />
   </ItemGroup>
 </Project>
