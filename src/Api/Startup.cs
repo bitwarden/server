@@ -46,7 +46,6 @@ namespace Bit.Api
             if(env.IsDevelopment())
             {
                 builder.AddUserSecrets();
-                builder.AddApplicationInsightsSettings(developerMode: true);
             }
 
             builder.AddEnvironmentVariables();
@@ -60,8 +59,6 @@ namespace Bit.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddApplicationInsightsTelemetry(Configuration);
-
             var provider = services.BuildServiceProvider();
 
             // Options
@@ -244,10 +241,6 @@ namespace Bit.Api
 
             // Rate limiting
             app.UseMiddleware<CustomIpRateLimitMiddleware>();
-
-            // Insights
-            app.UseApplicationInsightsRequestTelemetry();
-            app.UseApplicationInsightsExceptionTelemetry();
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();

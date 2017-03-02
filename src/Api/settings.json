@@ -1,7 +1,4 @@
 ﻿{
-  "ApplicationInsights": {
-    "InstrumentationKey": "5e6c8e7c-8a6d-4d4b-866e-4b80e5b9203e"
-  },
   "globalSettings": {
     "siteName": "bitwarden",
     "baseVaultUri": "http://localhost:4001",
