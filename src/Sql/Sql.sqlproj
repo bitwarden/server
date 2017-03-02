@@ -137,5 +137,10 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByIdUserId.sql" />
+    <Build Include="dbo\Views\OrganizationView.sql" />
+    <Build Include="dbo\Views\OrganizationUserView.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
   </ItemGroup>
 </Project>

@@ -76,6 +76,8 @@ namespace Bit.Api
             services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
             services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
             services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
+            services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
+            services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
 
             // Context
             services.AddScoped<CurrentContext>();

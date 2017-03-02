@@ -6,8 +6,6 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Api.Models;
 using Bit.Core.Exceptions;
-using Bit.Core.Domains;
-using Microsoft.AspNetCore.Identity;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
