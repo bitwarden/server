@@ -180,6 +180,7 @@ namespace Bit.Api
             services.AddScoped<IPushService, PushSharpPushService>();
             services.AddScoped<IDeviceService, DeviceService>();
             services.AddScoped<IBlockIpService, AzureQueueBlockIpService>();
+            services.AddScoped<IOrganizationService, OrganizationService>();
 
             // Cors
             services.AddCors(config =>

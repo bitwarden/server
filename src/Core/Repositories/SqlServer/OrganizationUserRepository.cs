@@ -18,13 +18,13 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
-        public async Task<OrganizationUser> GetByIdAsync(Guid id, Guid userId)
+        public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUser>(
                     "[dbo].[OrganizationUser_ReadByIdUserId]",
-                    new { Id = id, UserId = userId },
+                    new { OrganizationId = organizationId, UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();

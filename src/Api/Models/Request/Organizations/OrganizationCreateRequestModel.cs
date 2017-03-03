@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Domains;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using System;
 
 namespace Bit.Api.Models
@@ -7,19 +8,18 @@ namespace Bit.Api.Models
     public class OrganizationCreateRequestModel
     {
         public string Name { get; set; }
-        public PlanType Plan { get; set; }
-        // TODO: Billing info for paid plans.
+        public PlanType PlanType { get; set; }
+        public string Key { get; set; }
 
-        public virtual Organization ToOrganization(Guid userId)
+        public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
-            var organization = new Organization
+            return new OrganizationSignup
             {
-                UserId = userId,
+                Owner = user,
+                OwnerKey = Key,
                 Name = Name,
-                Plan = Plan
+                Plan = PlanType
             };
-
-            return organization;
         }
     }
 }

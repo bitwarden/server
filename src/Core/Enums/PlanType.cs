@@ -5,6 +5,7 @@
         Free = 0,
         Family = 1,
         Teams = 2,
-        Enterprise = 3
+        Enterprise = 3,
+        Custom = 4
     }
 }

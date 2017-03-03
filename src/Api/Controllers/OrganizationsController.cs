@@ -15,18 +15,24 @@ namespace Bit.Api.Controllers
     public class OrganizationsController : Controller
     {
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
+            IOrganizationService organizationService,
             IUserService userService)
         {
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
+            _organizationService = organizationService;
             _userService = userService;
         }
 
         [HttpGet("{id}")]
-        public async Task<OrganizationResponseModel> Get(string id)
+        public async Task<OrganizationExtendedResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);
@@ -35,7 +41,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new OrganizationResponseModel(organization);
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(new Guid(id), userId);
+            if(organizationUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationExtendedResponseModel(organization, organizationUser);
         }
 
         [HttpGet("")]
@@ -48,12 +60,12 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
+        public async Task<OrganizationExtendedResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var organization = model.ToOrganization(_userService.GetProperUserId(User).Value);
-            await _organizationRepository.ReplaceAsync(organization);
-            return new OrganizationResponseModel(organization);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var organizationSignup = model.ToOrganizationSignup(user);
+            var result = await _organizationService.SignUpAsync(organizationSignup);
+            return new OrganizationExtendedResponseModel(result.Item1, result.Item2);
         }
 
         [HttpPut("{id}")]

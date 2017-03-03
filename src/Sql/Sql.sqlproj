@@ -81,6 +81,8 @@
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
+    <Build Include="dbo\Views\OrganizationUserView.sql" />
+    <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
@@ -130,17 +132,15 @@
     <Build Include="dbo\Stored Procedures\SubvaultUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_Update.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
-    <Build Include="dbo\Stored Procedures\Organization_ReadByIdUserId.sql" />
-    <Build Include="dbo\Views\OrganizationView.sql" />
-    <Build Include="dbo\Views\OrganizationUserView.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByIdUserId.sql" />
-    <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,12 @@ namespace Bit.Core.Domains
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
         public string Name { get; set; }
-        public PlanType Plan { get; set; }
+        public string Plan { get; set; }
+        public PlanType PlanType { get; set; }
+        public decimal PlanPrice { get; set; }
+        public decimal PlanRenewalPrice { get; set; }
+        public DateTime? PlanRenewalDate { get; set; }
+        public bool PlanTrial { get; set; }
         public short MaxUsers { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;

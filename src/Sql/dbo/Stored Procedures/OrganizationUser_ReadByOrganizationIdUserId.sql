@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByIdUserId]
-    @Id UNIQUEIDENTIFIER,
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdUserId]
+    @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -10,6 +10,6 @@ BEGIN
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        [Id] = @Id
+        [OrganizationId] = @OrganizationId
         AND [UserId] = @UserId
 END
