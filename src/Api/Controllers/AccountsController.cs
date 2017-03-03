@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Domains;
 using Bit.Core.Enums;
 using System.Linq;
+using Bit.Core.Repositories;
 
 namespace Bit.Api.Controllers
 {
@@ -18,15 +19,18 @@ namespace Bit.Api.Controllers
     {
         private readonly IUserService _userService;
         private readonly ICipherService _cipherService;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly UserManager<User> _userManager;
 
         public AccountsController(
             IUserService userService,
             ICipherService cipherService,
+            IOrganizationRepository organizationRepository,
             UserManager<User> userManager)
         {
             _userService = userService;
             _cipherService = cipherService;
+            _organizationRepository = organizationRepository;
             _userManager = userManager;
         }
 
@@ -155,7 +159,8 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> GetProfile()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var response = new ProfileResponseModel(user);
+            var organizations = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+            var response = new ProfileResponseModel(user, organizations);
             return response;
         }
 
@@ -165,7 +170,7 @@ namespace Bit.Api.Controllers
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             await _userService.SaveUserAsync(model.ToUser(user));
-            var response = new ProfileResponseModel(user);
+            var response = new ProfileResponseModel(user, null);
             return response;
         }
 

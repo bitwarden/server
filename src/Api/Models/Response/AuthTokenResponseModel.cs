@@ -9,7 +9,7 @@ namespace Bit.Api.Models
             : base("authToken")
         {
             Token = token;
-            Profile = user == null ? null : new ProfileResponseModel(user);
+            Profile = user == null ? null : new ProfileResponseModel(user, null);
         }
 
         public string Token { get; set; }
