@@ -32,7 +32,20 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<OrganizationExtendedResponseModel> Get(string id)
+        public async Task<OrganizationResponseModel> Get(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationResponseModel(organization);
+        }
+
+        [HttpGet("{id}/extended")]
+        public async Task<OrganizationExtendedResponseModel> GetExtended(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);

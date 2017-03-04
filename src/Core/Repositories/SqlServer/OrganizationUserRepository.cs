@@ -23,7 +23,7 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUser>(
-                    "[dbo].[OrganizationUser_ReadByIdUserId]",
+                    "[dbo].[OrganizationUser_ReadByOrganizationIdUserId]",
                     new { OrganizationId = organizationId, UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
