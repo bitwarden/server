@@ -4,6 +4,6 @@
     {
         Owner = 0,
         Admin = 1,
-        Regular = 2
+        User = 2
     }
 }

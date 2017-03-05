@@ -36,6 +36,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<string> GetPublicKeyAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<string>(
+                    $"[{Schema}].[{Table}_ReadPublicKeyById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
         public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))

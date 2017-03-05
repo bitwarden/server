@@ -3,8 +3,7 @@
     public enum OrganizationUserStatusType : byte
     {
         Invited = 0,
-        Pending = 1,
-        Accepted = 2,
-        Confirmed = 3
+        Accepted = 1,
+        Confirmed = 2
     }
 }

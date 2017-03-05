@@ -8,7 +8,7 @@ namespace Bit.Core.Domains
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid? UserId { get; set; }
         public string Email { get; set; }
         public string Key { get; set; }
         public OrganizationUserStatusType Status { get; set; }

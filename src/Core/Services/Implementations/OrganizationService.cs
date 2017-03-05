@@ -13,18 +13,21 @@ namespace Bit.Core.Services
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IUserRepository _userRepository;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository)
+            IOrganizationUserRepository organizationUserRepository,
+            IUserRepository userRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _userRepository = userRepository;
         }
 
-        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup)
+        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
-            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organizationSignup.Plan);
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
             if(plan == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -32,8 +35,8 @@ namespace Bit.Core.Services
 
             var organization = new Organization
             {
-                Name = organizationSignup.Name,
-                UserId = organizationSignup.Owner.Id,
+                Name = signup.Name,
+                UserId = signup.Owner.Id,
                 PlanType = plan.Type,
                 MaxUsers = plan.MaxUsers,
                 PlanTrial = plan.Trial.HasValue,
@@ -60,9 +63,9 @@ namespace Bit.Core.Services
                 var orgUser = new OrganizationUser
                 {
                     OrganizationId = organization.Id,
-                    UserId = organizationSignup.Owner.Id,
-                    Email = organizationSignup.Owner.Email,
-                    Key = organizationSignup.OwnerKey,
+                    UserId = signup.Owner.Id,
+                    Email = signup.Owner.Email,
+                    Key = signup.OwnerKey,
                     Type = Enums.OrganizationUserType.Owner,
                     Status = Enums.OrganizationUserStatusType.Confirmed,
                     CreationDate = DateTime.UtcNow,
@@ -78,6 +81,65 @@ namespace Bit.Core.Services
                 await _organizationRepository.DeleteAsync(organization);
                 throw;
             }
+        }
+
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email)
+        {
+            var orgUser = new OrganizationUser
+            {
+                OrganizationId = organizationId,
+                UserId = null,
+                Email = email,
+                Key = null,
+                Type = Enums.OrganizationUserType.User,
+                Status = Enums.OrganizationUserStatusType.Invited,
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow
+            };
+
+            await _organizationUserRepository.CreateAsync(orgUser);
+
+            // TODO: send email
+
+            return orgUser;
+        }
+
+        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            if(orgUser.Email != user.Email)
+            {
+                throw new BadRequestException("User invalid.");
+            }
+
+            // TODO: validate token
+
+            orgUser.Status = Enums.OrganizationUserStatusType.Accepted;
+            orgUser.UserId = orgUser.Id;
+            orgUser.Email = null;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+
+            // TODO: send email
+
+            return orgUser;
+        }
+
+        public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationUserId, string key)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            if(orgUser.Status != Enums.OrganizationUserStatusType.Accepted)
+            {
+                throw new BadRequestException("User not accepted.");
+            }
+
+            orgUser.Status = Enums.OrganizationUserStatusType.Confirmed;
+            orgUser.Key = key;
+            orgUser.Email = null;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+
+            // TODO: send email
+
+            return orgUser;
         }
     }
 }
