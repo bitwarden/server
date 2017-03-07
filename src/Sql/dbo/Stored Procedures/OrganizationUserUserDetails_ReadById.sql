@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUserDetails_ReadById]
+﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[OrganizationUserDetailsView]
+        [dbo].[OrganizationUserUserDetailsView]
     WHERE
         [Id] = @Id
 END

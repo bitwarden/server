@@ -142,9 +142,11 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
-    <Build Include="dbo\Views\OrganizationUserDetailsView.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserDetails_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserDetails_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Views\OrganizationUserUserDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserId.sql" />
+    <Build Include="dbo\Views\OrganizationUserOrganizationDetailsView.sql" />
   </ItemGroup>
 </Project>

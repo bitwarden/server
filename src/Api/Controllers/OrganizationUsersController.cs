@@ -46,7 +46,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<OrganizationUserResponseModel>> Get(string orgId)
         {
-            var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationsAsync(new Guid(orgId));
+            var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(new Guid(orgId));
             var responses = organizationUsers.Select(o => new OrganizationUserResponseModel(o));
             return new ListResponseModel<OrganizationUserResponseModel>(responses);
         }

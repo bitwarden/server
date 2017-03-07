@@ -2,9 +2,10 @@
 
 namespace Bit.Core.Models.Data
 {
-    public class OrganizationUserDetails
+    public class OrganizationUserUserDetails
     {
         public Guid Id { get; set; }
+        public Guid OrganizationId { get; set; }
         public Guid? UserId { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

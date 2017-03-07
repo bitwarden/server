@@ -6,7 +6,7 @@ namespace Bit.Api.Models
 {
     public class OrganizationUserResponseModel : ResponseModel
     {
-        public OrganizationUserResponseModel(OrganizationUserDetails organizationUser, string obj = "organizationUser")
+        public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
             : base(obj)
         {
             if(organizationUser == null)

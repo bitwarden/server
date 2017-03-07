@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[OrganizationUserDetailsView]
+﻿CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
 AS
 SELECT
     OU.[Id],
@@ -11,4 +11,4 @@ SELECT
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
-    [dbo].[User] U ON U.Id = OU.UserId
+    [dbo].[User] U ON U.[Id] = OU.[UserId]

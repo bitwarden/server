@@ -33,12 +33,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<OrganizationUserDetails> GetDetailsByIdAsync(Guid id)
+        public async Task<OrganizationUserUserDetails> GetDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<OrganizationUserDetails>(
-                    "[dbo].[OrganizationUserDetails_ReadById]",
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUserUserDetails_ReadById]",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
 
@@ -46,13 +46,26 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<OrganizationUserDetails>> GetManyDetailsByOrganizationsAsync(Guid organizationId)
+        public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<OrganizationUserDetails>(
-                    "[dbo].[OrganizationUserDetails_ReadByOrganizationId]",
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
                     new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
+                    "[dbo].[OrganizationUserOrganizationDetails_ReadByUserId]",
+                    new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

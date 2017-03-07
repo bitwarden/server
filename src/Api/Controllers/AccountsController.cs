@@ -10,6 +10,7 @@ using Bit.Core.Domains;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
+using System.Collections;
 
 namespace Bit.Api.Controllers
 {
@@ -19,18 +20,18 @@ namespace Bit.Api.Controllers
     {
         private readonly IUserService _userService;
         private readonly ICipherService _cipherService;
-        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly UserManager<User> _userManager;
 
         public AccountsController(
             IUserService userService,
             ICipherService cipherService,
-            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             UserManager<User> userManager)
         {
             _userService = userService;
             _cipherService = cipherService;
-            _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _userManager = userManager;
         }
 
@@ -159,9 +160,18 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> GetProfile()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var organizations = await _organizationRepository.GetManyByUserIdAsync(user.Id);
-            var response = new ProfileResponseModel(user, organizations);
+            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+            var response = new ProfileResponseModel(user, organizationUserDetails);
             return response;
+        }
+
+        [HttpGet("organizations")]
+        public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetOrganizations()
+        {
+            var userId = _userService.GetProperUserId(User);
+            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value);
+            var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
+            return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
         }
 
         [HttpPut("profile")]

@@ -2,12 +2,14 @@
 using Bit.Core.Domains;
 using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Models.Data;
+using Bit.Core.Enums;
 
 namespace Bit.Api.Models
 {
     public class ProfileResponseModel : ResponseModel
     {
-        public ProfileResponseModel(User user, IEnumerable<Organization> organizations)
+        public ProfileResponseModel(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails)
             : base("profile")
         {
             if(user == null)
@@ -21,7 +23,7 @@ namespace Bit.Api.Models
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
             TwoFactorEnabled = user.TwoFactorEnabled;
-            Organizations = organizations?.Select(o => new OrganizationResponseModel(o));
+            Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
         }
 
         public string Id { get; set; }
@@ -30,18 +32,6 @@ namespace Bit.Api.Models
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; }
         public bool TwoFactorEnabled { get; set; }
-        public IEnumerable<OrganizationResponseModel> Organizations { get; set; }
-
-        public class OrganizationResponseModel
-        {
-            public OrganizationResponseModel(Organization organization)
-            {
-                Id = organization.Id.ToString();
-                Name = organization.Name;
-            }
-
-            public string Id { get; set; }
-            public string Name { get; set; }
-        }
+        public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
     }
 }
