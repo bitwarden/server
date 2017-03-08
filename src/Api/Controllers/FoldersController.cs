@@ -35,7 +35,7 @@ namespace Bit.Api.Controllers
         public async Task<FolderResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var folder = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+            var folder = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(folder == null || folder.Type != Core.Enums.CipherType.Folder)
             {
                 throw new NotFoundException();

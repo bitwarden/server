@@ -78,6 +78,8 @@ namespace Bit.Api
             services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
             services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
             services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
+            services.AddSingleton<ISubvaultRepository, SqlServerRepos.SubvaultRepository>();
+            services.AddSingleton<ISubvaultUserRepository, SqlServerRepos.SubvaultUserRepository>();
 
             // Context
             services.AddScoped<CurrentContext>();
