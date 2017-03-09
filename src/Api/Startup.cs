@@ -45,7 +45,7 @@ namespace Bit.Api
 
             if(env.IsDevelopment())
             {
-                builder.AddUserSecrets();
+                builder.AddUserSecrets<Startup>();
             }
 
             builder.AddEnvironmentVariables();
