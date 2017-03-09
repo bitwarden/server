@@ -53,7 +53,7 @@ namespace Bit.Core.Services
             }
             else if(plan.Cycle != null)
             {
-                organization.PlanRenewalDate = DateTime.UtcNow.Add(plan.Cycle());
+                organization.PlanRenewalDate = DateTime.UtcNow.Add(plan.Cycle(DateTime.UtcNow));
             }
 
             await _organizationRepository.CreateAsync(organization);

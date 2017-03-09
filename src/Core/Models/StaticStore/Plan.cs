@@ -9,7 +9,7 @@ namespace Bit.Core.Models.StaticStore
         public short MaxUsers { get; set; }
         public decimal Price { get; set; }
         public TimeSpan? Trial { get; set; }
-        public Func<TimeSpan> Cycle { get; set; }
+        public Func<DateTime, TimeSpan> Cycle { get; set; }
         public bool Disabled { get; set; }
     }
 }

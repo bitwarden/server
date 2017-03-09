@@ -103,10 +103,7 @@ namespace Bit.Core.Utilities
                     MaxUsers = 5,
                     Price = 1,
                     Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = () => {
-                        var now = DateTime.Now;
-                        return now.AddYears(1) - now;
-                    }
+                    Cycle = now => now.AddYears(1) - now
                 },
                 new Plan
                 {
@@ -114,10 +111,7 @@ namespace Bit.Core.Utilities
                     MaxUsers = 5,
                     Price = 10,
                     Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = () => {
-                        var now = DateTime.Now;
-                        return now.AddMonths(1) - now;
-                    }
+                    Cycle = now => now.AddMonths(1) - now
                 }
             };
 
