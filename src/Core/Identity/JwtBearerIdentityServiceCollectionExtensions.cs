@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 

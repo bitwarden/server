@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Models.Response;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;

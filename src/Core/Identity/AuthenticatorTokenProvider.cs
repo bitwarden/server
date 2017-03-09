@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using OtpNet;
 

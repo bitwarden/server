@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using System.Security.Claims;
 
 namespace Bit.Core.Services

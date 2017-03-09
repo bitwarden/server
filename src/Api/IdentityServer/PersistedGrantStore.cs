@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;

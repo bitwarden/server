@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer

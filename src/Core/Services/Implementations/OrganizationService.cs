@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Models.Business;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Exceptions;
 

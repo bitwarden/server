@@ -1,4 +1,4 @@
-﻿using Bit.Core.Domains;
+﻿using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using Bit.Core.Enums;
 using Newtonsoft.Json;

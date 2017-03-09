@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 
 namespace Bit.Api.Models

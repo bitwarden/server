@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Domains
+namespace Bit.Core.Models.Table
 {
     public class Organization : IDataObject<Guid>
     {

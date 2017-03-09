@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using System.Collections.Generic;
 
 namespace Bit.Core.Repositories

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

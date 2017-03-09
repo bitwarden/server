@@ -1,4 +1,4 @@
-﻿using Bit.Core.Domains;
+﻿using Bit.Core.Models.Table;
 
 namespace Bit.Api.Models
 {

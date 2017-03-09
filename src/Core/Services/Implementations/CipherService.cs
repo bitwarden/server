@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services

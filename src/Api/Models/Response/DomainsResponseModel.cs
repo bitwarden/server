@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Bit.Core.Enums;

@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;

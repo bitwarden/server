@@ -8,7 +8,7 @@ using PushSharp.Google;
 using PushSharp.Apple;
 using Microsoft.AspNetCore.Hosting;
 using PushSharp.Core;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;

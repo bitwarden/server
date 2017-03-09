@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Bit.Core.Domains
+namespace Bit.Core.Models.Table
 {
     public class Grant
     {

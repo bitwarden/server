@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 

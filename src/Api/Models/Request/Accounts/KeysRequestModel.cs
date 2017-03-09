@@ -1,4 +1,4 @@
-﻿using Bit.Core.Domains;
+﻿using Bit.Core.Models.Table;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.Models

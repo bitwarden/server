@@ -1,4 +1,4 @@
-﻿using Bit.Core.Domains;
+﻿using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using System;

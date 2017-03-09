@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Domains
+﻿namespace Bit.Core.Models.Table
 {
     /// <summary>
     /// This class is not used. It is implemented to make the Identity provider happy.

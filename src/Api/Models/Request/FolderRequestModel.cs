@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Models

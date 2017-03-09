@@ -6,7 +6,7 @@ using Bit.Api.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;

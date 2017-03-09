@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using DataTableProxy;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using System.Data;
 using Dapper;
 

@@ -5,7 +5,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Domains;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
