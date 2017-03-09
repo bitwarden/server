@@ -41,10 +41,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="1.1.1" />
     <PackageReference Include="AspNetCoreRateLimit" Version="1.0.5" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="1.3.1" />
-    <PackageReference Include="Serilog.Sinks.AzureDocumentDb" Version="3.5.17" />
-    <PackageReference Include="IdentityServer4" Version="1.0.1" />
-    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.0.2" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="1.4.0" />
+    <PackageReference Include="Serilog.Sinks.AzureDocumentDb" Version="3.5.18" />
+    <PackageReference Include="IdentityServer4" Version="1.2.1" />
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.0.5" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">

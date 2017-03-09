@@ -20,7 +20,7 @@
     <PackageReference Include="DataTableProxy" Version="1.2.0" />
     <PackageReference Include="Sendgrid" Version="6.3.4" />
     <PackageReference Include="PushSharp" Version="4.0.10" />
-    <PackageReference Include="WindowsAzure.Storage" Version="8.0.0" />
+    <PackageReference Include="WindowsAzure.Storage" Version="8.1.1" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
   </ItemGroup>
 
