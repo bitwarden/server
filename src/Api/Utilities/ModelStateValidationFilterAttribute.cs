@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Bit.Api.Models.Response;
+using Bit.Core.Models.Api;
 using System.Linq;
 
 namespace Bit.Api.Utilities

@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Identity;
-using Bit.Api.Models;
+using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;

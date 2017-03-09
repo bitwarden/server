@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Api.Models;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers

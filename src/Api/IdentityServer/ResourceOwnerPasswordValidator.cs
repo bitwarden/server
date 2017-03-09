@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Response;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Identity;

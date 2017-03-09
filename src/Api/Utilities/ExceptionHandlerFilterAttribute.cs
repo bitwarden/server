@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Api.Models.Response;
+using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;

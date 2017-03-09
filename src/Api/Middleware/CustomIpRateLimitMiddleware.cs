@@ -1,5 +1,5 @@
 ﻿using AspNetCoreRateLimit;
-using Bit.Api.Models.Response;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
