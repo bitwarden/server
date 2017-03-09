@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Mail;
 using System.Threading.Tasks;
 using Bit.Core.Domains;
 using SendGrid;
+using SendGrid.Helpers.Mail;
 
 namespace Bit.Core.Services
 {
@@ -19,12 +19,12 @@ namespace Bit.Core.Services
         private const string MarketingCategoryName = "Marketing";
 
         private readonly GlobalSettings _globalSettings;
-        private readonly Web _web;
+        private readonly SendGridClient _client;
 
         public SendGridMailService(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
-            _web = new Web(_globalSettings.Mail.ApiKey);
+            _client = new SendGridClient(_globalSettings.Mail.ApiKey);
         }
 
         public async Task SendWelcomeEmailAsync(User user)
@@ -32,10 +32,10 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage(WelcomeTemplateId);
 
             message.Subject = "Welcome";
-            message.AddTo(user.Email);
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Welcome" });
+            message.AddTo(new EmailAddress(user.Email));
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Welcome" });
 
-            await _web.DeliverAsync(message);
+            await _client.SendEmailAsync(message);
         }
 
         public async Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail)
@@ -43,12 +43,12 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage(ChangeEmailAlreadyExistsTemplateId);
 
             message.Subject = "Your Email Change";
-            message.AddTo(toEmail);
-            message.AddSubstitution("{{fromEmail}}", new List<string> { fromEmail });
-            message.AddSubstitution("{{toEmail}}", new List<string> { toEmail });
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Change Email Alrady Exists" });
+            message.AddTo(new EmailAddress(toEmail));
+            message.AddSubstitution("{{fromEmail}}", fromEmail);
+            message.AddSubstitution("{{toEmail}}", toEmail);
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Change Email Alrady Exists" });
 
-            await _web.DeliverAsync(message);
+            await _client.SendEmailAsync(message);
         }
 
         public async Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
@@ -56,12 +56,12 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage(ChangeEmailTemplateId);
 
             message.Subject = "Change Your Email";
-            message.AddTo(newEmailAddress);
-            message.AddSubstitution("{{token}}", new List<string> { Uri.EscapeDataString(token) });
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Change Email" });
-            message.DisableBypassListManagement();
+            message.AddTo(new EmailAddress(newEmailAddress));
+            message.AddSubstitution("{{token}}", Uri.EscapeDataString(token));
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Change Email" });
+            message.SetBypassListManagement(true);
 
-            await _web.DeliverAsync(message);
+            await _client.SendEmailAsync(message);
         }
 
         public async Task SendNoMasterPasswordHintEmailAsync(string email)
@@ -69,10 +69,10 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage(NoMasterPasswordHintTemplateId);
 
             message.Subject = "Your Master Password Hint";
-            message.AddTo(email);
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "No Master Password Hint" });
+            message.AddTo(new EmailAddress(email));
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "No Master Password Hint" });
 
-            await _web.DeliverAsync(message);
+            await _client.SendEmailAsync(message);
         }
 
         public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
@@ -80,29 +80,29 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage(MasterPasswordHintTemplateId);
 
             message.Subject = "Your Master Password Hint";
-            message.AddTo(email);
-            message.AddSubstitution("{{hint}}", new List<string> { hint });
-            message.SetCategories(new List<string> { AdministrativeCategoryName, "Master Password Hint" });
+            message.AddTo(new EmailAddress(email));
+            message.AddSubstitution("{{hint}}", hint);
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Master Password Hint" });
 
-            await _web.DeliverAsync(message);
+            await _client.SendEmailAsync(message);
         }
 
         private SendGridMessage CreateDefaultMessage(string templateId)
         {
             var message = new SendGridMessage
             {
-                From = new MailAddress(_globalSettings.Mail.ReplyToEmail, _globalSettings.SiteName),
-                Html = " ",
-                Text = " "
+                From = new EmailAddress(_globalSettings.Mail.ReplyToEmail, _globalSettings.SiteName),
+                HtmlContent = " ",
+                PlainTextContent = " "
             };
 
             if(!string.IsNullOrWhiteSpace(templateId))
             {
-                message.EnableTemplateEngine(templateId);
+                message.TemplateId = templateId;
             }
 
-            message.AddSubstitution("{{siteName}}", new List<string> { _globalSettings.SiteName });
-            message.AddSubstitution("{{baseVaultUri}}", new List<string> { _globalSettings.BaseVaultUri });
+            message.AddSubstitution("{{siteName}}", _globalSettings.SiteName);
+            message.AddSubstitution("{{baseVaultUri}}", _globalSettings.BaseVaultUri);
 
             return message;
         }

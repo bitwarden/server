@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="1.1.2" />
     <PackageReference Include="Dapper" Version="1.50.2" />
     <PackageReference Include="DataTableProxy" Version="1.2.0" />
-    <PackageReference Include="Sendgrid" Version="6.3.4" />
+    <PackageReference Include="Sendgrid" Version="9.0.12" />
     <PackageReference Include="PushSharp" Version="4.0.10" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.1.1" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
