@@ -6,25 +6,20 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class SubvaultCreateRequestModel : SubvaultUpdateRequestModel
-    {
-        public string OrganizationId { get; set; }
-
-        public Subvault ToSubvault()
-        {
-            return ToSubvault(new Subvault
-            {
-                OrganizationId = new Guid(OrganizationId)
-            });
-        }
-    }
-
-    public class SubvaultUpdateRequestModel
+    public class SubvaultRequestModel
     {
         [Required]
         [EncryptedString]
         [StringLength(300)]
         public string Name { get; set; }
+
+        public Subvault ToSubvault(Guid orgId)
+        {
+            return ToSubvault(new Subvault
+            {
+                OrganizationId = orgId
+            });
+        }
 
         public Subvault ToSubvault(Subvault existingSubvault)
         {

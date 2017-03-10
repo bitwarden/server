@@ -10,7 +10,7 @@ using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
-    [Route("subvaults")]
+    [Route("organizations/{orgId}/subvaults")]
     [Authorize("Application")]
     public class SubvaultsController : Controller
     {
@@ -26,7 +26,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<SubvaultResponseModel> Get(string id)
+        public async Task<SubvaultResponseModel> Get(string orgId, string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id), userId);
@@ -38,7 +38,7 @@ namespace Bit.Api.Controllers
             return new SubvaultResponseModel(subvault);
         }
 
-        [HttpGet("")]
+        [HttpGet("~/subvaults")]
         public async Task<ListResponseModel<SubvaultResponseModel>> Get()
         {
             var subvaults = await _subvaultRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
@@ -46,27 +46,27 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<SubvaultResponseModel>(responses);
         }
 
-        [HttpGet("organization/{organizationId}")]
-        public async Task<ListResponseModel<SubvaultResponseModel>> GetByOrganization(string organizationId)
+        [HttpGet("")]
+        public async Task<ListResponseModel<SubvaultResponseModel>> GetByOrganization(string orgId)
         {
-            var subvaults = await _subvaultRepository.GetManyByOrganizationIdAdminUserIdAsync(new Guid(organizationId),
+            var subvaults = await _subvaultRepository.GetManyByOrganizationIdAdminUserIdAsync(new Guid(orgId),
                 _userService.GetProperUserId(User).Value);
             var responses = subvaults.Select(s => new SubvaultResponseModel(s));
             return new ListResponseModel<SubvaultResponseModel>(responses);
         }
 
         [HttpPost("")]
-        public async Task<SubvaultResponseModel> Post([FromBody]SubvaultCreateRequestModel model)
+        public async Task<SubvaultResponseModel> Post(string orgId, [FromBody]SubvaultRequestModel model)
         {
             // TODO: permission check
-            var subvault = model.ToSubvault();
+            var subvault = model.ToSubvault(new Guid(orgId));
             await _subvaultRepository.CreateAsync(subvault);
             return new SubvaultResponseModel(subvault);
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<SubvaultResponseModel> Put(string id, [FromBody]SubvaultUpdateRequestModel model)
+        public async Task<SubvaultResponseModel> Put(string orgId, string id, [FromBody]SubvaultRequestModel model)
         {
             var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id),
                 _userService.GetProperUserId(User).Value);
@@ -81,7 +81,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id)
+        public async Task Delete(string orgId, string id)
         {
             var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id),
                 _userService.GetProperUserId(User).Value);
