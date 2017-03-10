@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
             var result = await _organizationService.InviteUserAsync(new Guid(orgId), model.Email);
         }
 
-        [HttpPut("accept")]
+        [HttpPut("{id}/accept")]
         [HttpPost("{id}/accept")]
         public async Task Accept(string orgId, string id, [FromBody]OrganizationUserAcceptRequestModel model)
         {
@@ -66,11 +66,24 @@ namespace Bit.Api.Controllers
             var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token);
         }
 
-        [HttpPost("confirm")]
+        [HttpPut("{id}/confirm")]
         [HttpPost("{id}/confirm")]
         public async Task Confirm(string orgId, string id, [FromBody]OrganizationUserConfirmRequestModel model)
         {
             var result = await _organizationService.ConfirmUserAsync(new Guid(id), model.Key);
+        }
+
+        [HttpPut("{id}")]
+        [HttpPost("{id}")]
+        public async Task Put(string id, [FromBody]OrganizationUserUpdateRequestModel model)
+        {
+            var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if(organizationUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.SaveUserAsync(organizationUser, model.Subvaults.Select(s => s.ToSubvaultUser()));
         }
 
         [HttpDelete("{id}")]

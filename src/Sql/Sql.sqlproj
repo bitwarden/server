@@ -78,6 +78,10 @@
     <Build Include="dbo\Tables\Favorite.sql" />
     <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Tables\Folder.sql" />
+    <Build Include="dbo\Tables\Group.sql" />
+    <Build Include="dbo\Tables\GroupUser.sql" />
+    <Build Include="dbo\Tables\SubvaultGroup.sql" />
+    <Build Include="dbo\Views\SubvaultUserView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
@@ -85,6 +89,11 @@
     <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
+    <Build Include="dbo\Views\OrganizationUserOrganizationDetailsView.sql" />
+    <Build Include="dbo\Views\OrganizationUserUserDetailsView.sql" />
+    <Build Include="dbo\Views\SubvaultView.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
@@ -142,14 +151,11 @@
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
-    <Build Include="dbo\Views\OrganizationUserUserDetailsView.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserId.sql" />
-    <Build Include="dbo\Views\OrganizationUserOrganizationDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
-    <Build Include="dbo\Views\SubvaultView.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
   </ItemGroup>

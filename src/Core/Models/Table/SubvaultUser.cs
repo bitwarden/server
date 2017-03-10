@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Table
     {
         public Guid Id { get; set; }
         public Guid SubvaultId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid OrganizationUserId { get; set; }
         public bool Admin { get; set; }
         public bool ReadOnly { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

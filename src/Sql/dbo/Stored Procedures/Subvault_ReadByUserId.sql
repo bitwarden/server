@@ -10,6 +10,8 @@ BEGIN
         [dbo].[SubvaultView] S
     INNER JOIN
         [SubvaultUser] SU ON SU.[SubvaultId] = S.[Id]
+    INNER JOIN
+        [OrganizationUser] OU ON SU.[OrganizationUserId] = OU.[Id]
     WHERE
-        SU.[UserId] = @UserId
+        OU.[UserId] = @UserId
 END

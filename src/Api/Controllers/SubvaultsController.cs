@@ -79,6 +79,20 @@ namespace Bit.Api.Controllers
             return new SubvaultResponseModel(subvault);
         }
 
+        [HttpPut("user")]
+        [HttpPost("user")]
+        public async Task PutUserSubvaults(string orgId, [FromBody]OrganizationUserConfirmRequestModel model)
+        {
+            
+        }
+
+        [HttpPut("{id}/users")]
+        [HttpPost("{id}/users")]
+        public async Task PutUsers(string orgId, string id, [FromBody]SubvaultRequestModel model)
+        {
+            
+        }
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)

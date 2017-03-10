@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[SubvaultUser_Create]
     @Id UNIQUEIDENTIFIER,
     @SubvaultId UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER,
+    @OrganizationUserId UNIQUEIDENTIFIER,
     @Admin BIT,
     @ReadOnly BIT,
     @CreationDate DATETIME2(7),
@@ -14,7 +14,7 @@ BEGIN
     (
         [Id],
         [SubvaultId],
-        [UserId],
+        [OrganizationUserId],
         [Admin],
         [ReadOnly],
         [CreationDate],
@@ -24,7 +24,7 @@ BEGIN
     (
         @Id,
         @SubvaultId,
-        @UserId,
+        @OrganizationUserId,
         @Admin,
         @ReadOnly,
         @CreationDate,

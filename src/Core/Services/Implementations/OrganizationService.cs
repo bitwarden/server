@@ -6,6 +6,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Exceptions;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
@@ -13,15 +14,21 @@ namespace Bit.Core.Services
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ISubvaultRepository _subvaultRepository;
+        private readonly ISubvaultUserRepository _subvaultUserRepository;
         private readonly IUserRepository _userRepository;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            ISubvaultRepository subvaultRepository,
+            ISubvaultUserRepository subvaultUserRepository,
             IUserRepository userRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _subvaultRepository = subvaultRepository;
+            _subvaultUserRepository = subvaultUserRepository;
             _userRepository = userRepository;
         }
 
@@ -140,6 +147,38 @@ namespace Bit.Core.Services
             // TODO: send email
 
             return orgUser;
+        }
+
+        public async Task<OrganizationUser> SaveUserAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults)
+        {
+            if(user.Id.Equals(default(Guid)))
+            {
+                throw new BadRequestException("Invite the user first.");
+            }
+
+            await _organizationUserRepository.ReplaceAsync(user);
+
+            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
+            var currentUserSubvaults = await _subvaultUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
+
+            // Let's make sure all these belong to this user and organization.
+            var filteredSubvaults = subvaults.Where(s =>
+                orgSubvaults.Any(os => os.Id == s.SubvaultId) &&
+                (s.Id == default(Guid) || currentUserSubvaults.Any(cs => cs.Id == s.Id)));
+
+            var subvaultsToDelete = currentUserSubvaults.Where(cs => !subvaults.Any(s => s.Id == cs.Id));
+
+            foreach(var subvault in filteredSubvaults)
+            {
+                await _subvaultUserRepository.UpsertAsync(subvault);
+            }
+
+            foreach(var subvault in subvaultsToDelete)
+            {
+                await _subvaultUserRepository.DeleteAsync(subvault);
+            }
+
+            return user;
         }
     }
 }

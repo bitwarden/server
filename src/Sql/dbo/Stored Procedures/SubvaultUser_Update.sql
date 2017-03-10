@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[SubvaultUser_Update]
     @Id UNIQUEIDENTIFIER,
     @SubvaultId UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER,
+    @OrganizationUserId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),
     @Admin BIT,
     @ReadOnly BIT,
@@ -15,7 +15,7 @@ BEGIN
         [dbo].[SubvaultUser]
     SET
         [SubvaultId] = @SubvaultId,
-        [UserId] = @UserId,
+        [OrganizationUserId] = @OrganizationUserId,
         [Admin] = @Admin,
         [ReadOnly] = @ReadOnly,
         [CreationDate] = @CreationDate,

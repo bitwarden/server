@@ -45,6 +45,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<Subvault>> GetManyByOrganizationIdAsync(Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Subvault>(
+                    $"[{Schema}].[{Table}_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<Subvault>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
