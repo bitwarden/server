@@ -45,6 +45,7 @@
     <PackageReference Include="Serilog.Sinks.AzureDocumentDb" Version="3.5.18" />
     <PackageReference Include="IdentityServer4" Version="1.2.1" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.0.5" />
+    <PackageReference Include="System.Net.Http" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">

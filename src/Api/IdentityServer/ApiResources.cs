@@ -10,7 +10,7 @@ namespace Bit.Api.IdentityServer
         {
             return new List<ApiResource>
             {
-                new ApiResource("api", "Vault API", new string[] {
+                new ApiResource("api", new string[] {
                     ClaimTypes.AuthenticationMethod,
                     ClaimTypes.NameIdentifier,
                     ClaimTypes.Email,

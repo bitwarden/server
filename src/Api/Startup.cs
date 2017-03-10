@@ -260,7 +260,7 @@ namespace Bit.Api
                 AllowedScopes = new string[] { "api" },
                 Authority = env.IsProduction() ? "https://api.bitwarden.com" : "http://localhost:4000",
                 RequireHttpsMetadata = env.IsProduction(),
-                ApiName = "Vault API",
+                ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
                 // Version "2" until we retire the old jwt scheme and replace it with this one.
                 AuthenticationScheme = "Bearer2",
