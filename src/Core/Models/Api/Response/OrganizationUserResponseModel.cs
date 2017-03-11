@@ -1,6 +1,9 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using System.Collections.Generic;
+using Bit.Core.Models.Table;
+using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -28,5 +31,17 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
+    }
+
+    public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
+    {
+        public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+            IEnumerable<Subvault> subvaults)
+            : base(organizationUser, "organizationUserDetails")
+        {
+            Subvaults = new ListResponseModel<SubvaultResponseModel>(subvaults.Select(s => new SubvaultResponseModel(s)));
+        }
+
+        public ListResponseModel<SubvaultResponseModel> Subvaults { get; set; }
     }
 }

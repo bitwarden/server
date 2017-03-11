@@ -17,22 +17,25 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly ISubvaultRepository _subvaultRepository;
         private readonly IUserService _userService;
 
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
+            ISubvaultRepository subvaultRepository,
             IUserService userService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
+            _subvaultRepository = subvaultRepository;
             _userService = userService;
         }
 
         [HttpGet("{id}")]
-        public async Task<OrganizationUserResponseModel> Get(string orgId, string id)
+        public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
         {
             var organizationUser = await _organizationUserRepository.GetDetailsByIdAsync(new Guid(id));
             if(organizationUser == null)
@@ -40,7 +43,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new OrganizationUserResponseModel(organizationUser);
+            return new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
         }
 
         [HttpGet("")]
