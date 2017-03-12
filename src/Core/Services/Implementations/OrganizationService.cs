@@ -90,7 +90,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email)
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email,
+            IEnumerable<SubvaultUser> subvaults)
         {
             var orgUser = new OrganizationUser
             {
@@ -105,6 +106,7 @@ namespace Bit.Core.Services
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
+            await SaveUserSubvaultsAsync(orgUser, subvaults, true);
 
             // TODO: send email
 
@@ -149,7 +151,7 @@ namespace Bit.Core.Services
             return orgUser;
         }
 
-        public async Task<OrganizationUser> SaveUserAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults)
+        public async Task SaveUserAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults)
         {
             if(user.Id.Equals(default(Guid)))
             {
@@ -157,28 +159,36 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.ReplaceAsync(user);
+            await SaveUserSubvaultsAsync(user, subvaults, false);
+        }
 
+        private async Task SaveUserSubvaultsAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults, bool newUser)
+        {
             var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-            var currentUserSubvaults = await _subvaultUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
+            var currentUserSubvaults = newUser ? null : await _subvaultUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
 
             // Let's make sure all these belong to this user and organization.
-            var filteredSubvaults = subvaults.Where(s =>
-                orgSubvaults.Any(os => os.Id == s.SubvaultId) &&
-                (s.Id == default(Guid) || currentUserSubvaults.Any(cs => cs.Id == s.Id)));
-
-            var subvaultsToDelete = currentUserSubvaults.Where(cs => !subvaults.Any(s => s.Id == cs.Id));
+            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
+            if(!newUser)
+            {
+                filteredSubvaults = filteredSubvaults.Where(s =>
+                    s.Id == default(Guid) || currentUserSubvaults.Any(cs => cs.Id == s.Id));
+            }
 
             foreach(var subvault in filteredSubvaults)
             {
+                subvault.OrganizationUserId = user.Id;
                 await _subvaultUserRepository.UpsertAsync(subvault);
             }
 
-            foreach(var subvault in subvaultsToDelete)
+            if(!newUser)
             {
-                await _subvaultUserRepository.DeleteAsync(subvault);
+                var subvaultsToDelete = currentUserSubvaults.Where(cs => !subvaults.Any(s => s.Id == cs.Id));
+                foreach(var subvault in subvaultsToDelete)
+                {
+                    await _subvaultUserRepository.DeleteAsync(subvault);
+                }
             }
-
-            return user;
         }
     }
 }

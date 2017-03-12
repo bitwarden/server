@@ -9,9 +9,9 @@ namespace Bit.Core.Services
     public interface IOrganizationService
     {
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
-        Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email);
+        Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email, IEnumerable<SubvaultUser> subvaults);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationUserId, string key);
-        Task<OrganizationUser> SaveUserAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults);
+        Task SaveUserAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults);
     }
 }

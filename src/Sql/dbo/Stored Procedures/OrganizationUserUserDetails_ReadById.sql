@@ -12,11 +12,9 @@ BEGIN
         [Id] = @Id
 
     SELECT
-        S.*
+        *
     FROM
-        [dbo].[SubvaultView] S
-    INNER JOIN
-        [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = S.[Id]
+        [dbo].[SubvaultUserDetailsView]
     WHERE
-        SU.[OrganizationUserId] = @Id
+        [OrganizationUserId] = @Id
 END

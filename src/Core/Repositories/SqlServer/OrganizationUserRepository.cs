@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<Tuple<OrganizationUserUserDetails, ICollection<Subvault>>> GetDetailsByIdAsync(Guid id)
+        public async Task<Tuple<OrganizationUserUserDetails, ICollection<SubvaultUserDetails>>> GetDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -43,8 +43,8 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
-                var subvaults = (await results.ReadAsync<Subvault>()).ToList();
-                return new Tuple<OrganizationUserUserDetails, ICollection<Subvault>>(user, subvaults);
+                var subvaults = (await results.ReadAsync<SubvaultUserDetails>()).ToList();
+                return new Tuple<OrganizationUserUserDetails, ICollection<SubvaultUserDetails>>(user, subvaults);
             }
         }
 

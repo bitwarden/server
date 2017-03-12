@@ -58,7 +58,8 @@ namespace Bit.Api.Controllers
         public async Task Invite(string orgId, [FromBody]OrganizationUserInviteRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var result = await _organizationService.InviteUserAsync(new Guid(orgId), model.Email);
+            var result = await _organizationService.InviteUserAsync(new Guid(orgId), model.Email,
+                model.Subvaults.Select(s => s.ToSubvaultUser()));
         }
 
         [HttpPut("{id}/accept")]

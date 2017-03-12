@@ -1,15 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[SubvaultUserDetails_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
     SELECT
-        S.*
+        SU.*
     FROM
-        [dbo].[SubvaultView] S
-    INNER JOIN
-        [SubvaultUser] SU ON SU.[SubvaultId] = S.[Id]
+        [dbo].[SubvaultUserDetailsView] SU
     INNER JOIN
         [OrganizationUser] OU ON SU.[OrganizationUserId] = OU.[Id]
     WHERE

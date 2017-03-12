@@ -156,7 +156,8 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
-    <Build Include="dbo\Stored Procedures\Subvault_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUserDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
+    <Build Include="dbo\Views\SubvaultUserDetailsView.sql" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserInviteRequestModel
     {
         public string Email { get; set; }
+        public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
     }
 
     public class OrganizationUserAcceptRequestModel
@@ -22,31 +23,35 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserUpdateRequestModel
     {
         public Enums.OrganizationUserType Type { get; set; }
-        public IEnumerable<Subvault> Subvaults { get; set; }
+        public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
+    }
 
-        public class Subvault
+    public class OrganizationUserSubvaultRequestModel
+    {
+        public string Id { get; set; }
+        public string SubvaultId { get; set; }
+        public bool Admin { get; set; }
+        public bool ReadOnly { get; set; }
+
+        public SubvaultUser ToSubvaultUser()
         {
-            public string Id { get; set; }
-            public string SubvaultId { get; set; }
-            public bool Admin { get; set; }
-            public bool ReadOnly { get; set; }
-
-            public SubvaultUser ToSubvaultUser()
+            var subvault = new SubvaultUser
             {
-                var user = new SubvaultUser
-                {
-                    SubvaultId = new Guid(SubvaultId),
-                    Admin = Admin,
-                    ReadOnly = ReadOnly
-                };
+                Admin = Admin,
+                ReadOnly = ReadOnly
+            };
 
-                if(string.IsNullOrWhiteSpace(Id))
-                {
-                    user.Id = new Guid(Id);
-                }
-
-                return user;
+            if(!string.IsNullOrWhiteSpace(SubvaultId))
+            {
+                subvault.SubvaultId = new Guid(SubvaultId);
             }
+
+            if(!string.IsNullOrWhiteSpace(Id))
+            {
+                subvault.Id = new Guid(Id);
+            }
+
+            return subvault;
         }
     }
 }
