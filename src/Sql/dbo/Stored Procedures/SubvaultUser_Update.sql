@@ -2,7 +2,6 @@
     @Id UNIQUEIDENTIFIER,
     @SubvaultId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
-    @Key VARCHAR(MAX),
     @Admin BIT,
     @ReadOnly BIT,
     @CreationDate DATETIME2(7),

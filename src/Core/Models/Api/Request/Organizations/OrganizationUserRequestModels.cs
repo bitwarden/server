@@ -28,7 +28,6 @@ namespace Bit.Core.Models.Api
 
     public class OrganizationUserSubvaultRequestModel
     {
-        public string Id { get; set; }
         public string SubvaultId { get; set; }
         public bool Admin { get; set; }
         public bool ReadOnly { get; set; }
@@ -44,11 +43,6 @@ namespace Bit.Core.Models.Api
             if(!string.IsNullOrWhiteSpace(SubvaultId))
             {
                 subvault.SubvaultId = new Guid(SubvaultId);
-            }
-
-            if(!string.IsNullOrWhiteSpace(Id))
-            {
-                subvault.Id = new Guid(Id);
             }
 
             return subvault;

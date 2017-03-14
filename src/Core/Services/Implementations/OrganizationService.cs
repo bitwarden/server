@@ -164,26 +164,33 @@ namespace Bit.Core.Services
 
         private async Task SaveUserSubvaultsAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults, bool newUser)
         {
+            if(subvaults == null)
+            {
+                subvaults = new List<SubvaultUser>();
+            }
+
             var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
             var currentUserSubvaults = newUser ? null : await _subvaultUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
 
             // Let's make sure all these belong to this user and organization.
             var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
-            if(!newUser)
-            {
-                filteredSubvaults = filteredSubvaults.Where(s =>
-                    s.Id == default(Guid) || currentUserSubvaults.Any(cs => cs.Id == s.Id));
-            }
-
             foreach(var subvault in filteredSubvaults)
             {
+                var existingSubvaultUser = currentUserSubvaults?.FirstOrDefault(cs => cs.SubvaultId == subvault.SubvaultId);
+                if(existingSubvaultUser != null)
+                {
+                    subvault.Id = existingSubvaultUser.Id;
+                    subvault.CreationDate = existingSubvaultUser.CreationDate;
+                }
+
                 subvault.OrganizationUserId = user.Id;
                 await _subvaultUserRepository.UpsertAsync(subvault);
             }
 
             if(!newUser)
             {
-                var subvaultsToDelete = currentUserSubvaults.Where(cs => !subvaults.Any(s => s.Id == cs.Id));
+                var subvaultsToDelete = currentUserSubvaults.Where(cs =>
+                    !filteredSubvaults.Any(s => s.SubvaultId == cs.SubvaultId));
                 foreach(var subvault in subvaultsToDelete)
                 {
                     await _subvaultUserRepository.DeleteAsync(subvault);

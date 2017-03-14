@@ -59,7 +59,7 @@ namespace Bit.Api.Controllers
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var result = await _organizationService.InviteUserAsync(new Guid(orgId), model.Email,
-                model.Subvaults.Select(s => s.ToSubvaultUser()));
+                model.Subvaults?.Select(s => s.ToSubvaultUser()));
         }
 
         [HttpPut("{id}/accept")]
@@ -87,7 +87,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.SaveUserAsync(organizationUser, model.Subvaults.Select(s => s.ToSubvaultUser()));
+            await _organizationService.SaveUserAsync(organizationUser, model.Subvaults?.Select(s => s.ToSubvaultUser()));
         }
 
         [HttpDelete("{id}")]
