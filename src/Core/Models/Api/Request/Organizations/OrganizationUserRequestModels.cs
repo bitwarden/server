@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserInviteRequestModel
     {
         public string Email { get; set; }
+        public Enums.OrganizationUserType Type { get; set; }
         public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
     }
 
@@ -24,6 +25,12 @@ namespace Bit.Core.Models.Api
     {
         public Enums.OrganizationUserType Type { get; set; }
         public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
+
+        public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
+        {
+            existingUser.Type = Type;
+            return existingUser;
+        }
     }
 
     public class OrganizationUserSubvaultRequestModel

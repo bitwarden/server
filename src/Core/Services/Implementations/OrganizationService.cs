@@ -90,7 +90,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email,
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, string email, Enums.OrganizationUserType type,
             IEnumerable<SubvaultUser> subvaults)
         {
             var orgUser = new OrganizationUser
@@ -99,7 +99,7 @@ namespace Bit.Core.Services
                 UserId = null,
                 Email = email,
                 Key = null,
-                Type = Enums.OrganizationUserType.User,
+                Type = type,
                 Status = Enums.OrganizationUserStatusType.Invited,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
