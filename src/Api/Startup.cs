@@ -103,6 +103,7 @@ namespace Bit.Api
             })
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
+            services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
 
             if(Environment.IsProduction())
             {
