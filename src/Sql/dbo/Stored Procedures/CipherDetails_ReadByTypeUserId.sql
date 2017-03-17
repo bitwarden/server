@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_ReadByTypeUserId]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByTypeUserId]
     @Type TINYINT,
     @UserId UNIQUEIDENTIFIER
 AS
@@ -8,7 +8,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[CipherView]
+        [dbo].[CipherDetailsView]
     WHERE
         [Type] = @Type
         AND [UserId] = @UserId

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_ReadByRevisionDateUserWithDeleteHistory]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByRevisionDateUserWithDeleteHistory]
     @SinceRevisionDate DATETIME2(7),
     @UserId UNIQUEIDENTIFIER
 AS
@@ -8,7 +8,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[CipherView]
+        [dbo].[CipherDetailsView]
     WHERE
         [RevisionDate] > @SinceRevisionDate
         AND [UserId] = @UserId

@@ -1,14 +1,12 @@
 ﻿CREATE TABLE [dbo].[Cipher] (
-    [Id]           UNIQUEIDENTIFIER NOT NULL,
-    [UserId]       UNIQUEIDENTIFIER NOT NULL,
-    [FolderId]     UNIQUEIDENTIFIER NULL,
-    [Type]         TINYINT          NOT NULL,
-    [Favorite]     BIT              NOT NULL,
-    [Data]         NVARCHAR (MAX)   NOT NULL,
-    [CreationDate] DATETIME2 (7)    NOT NULL,
-    [RevisionDate] DATETIME2 (7)    NOT NULL,
+    [Id]                UNIQUEIDENTIFIER NOT NULL,
+    [UserId]            UNIQUEIDENTIFIER NULL,
+    [OrganizationId]    UNIQUEIDENTIFIER NULL,
+    [Type]              TINYINT          NOT NULL,
+    [Data]              NVARCHAR (MAX)   NOT NULL,
+    [CreationDate]      DATETIME2 (7)    NOT NULL,
+    [RevisionDate]      DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Cipher_Folder] FOREIGN KEY ([FolderId]) REFERENCES [dbo].[Cipher] ([Id]),
     CONSTRAINT [FK_Cipher_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 

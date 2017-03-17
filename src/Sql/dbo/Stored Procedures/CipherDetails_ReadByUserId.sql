@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[CipherView]
+        [dbo].[CipherDetailsView]
     WHERE
         [UserId] = @UserId
 END

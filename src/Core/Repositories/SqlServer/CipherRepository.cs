@@ -7,6 +7,7 @@ using DataTableProxy;
 using Bit.Core.Models.Table;
 using System.Data;
 using Dapper;
+using Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -31,12 +32,12 @@ namespace Bit.Core.Repositories.SqlServer
             return cipher;
         }
 
-        public async Task<ICollection<Cipher>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<Cipher>(
-                    $"[{Schema}].[{Table}_ReadByUserId]",
+                var results = await connection.QueryAsync<CipherDetails>(
+                    $"[{Schema}].[CipherDetails_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
@@ -44,12 +45,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Cipher>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
+        public async Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<Cipher>(
-                    $"[{Schema}].[{Table}_ReadByTypeUserId]",
+                var results = await connection.QueryAsync<CipherDetails>(
+                    $"[{Schema}].[CipherDetails_ReadByTypeUserId]",
                     new
                     {
                         Type = type,
@@ -61,13 +62,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<Tuple<ICollection<Cipher>, ICollection<Guid>>>
+        public async Task<Tuple<ICollection<CipherDetails>, ICollection<Guid>>>
             GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(DateTime sinceRevisionDate, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryMultipleAsync(
-                    $"[{Schema}].[{Table}_ReadByRevisionDateUserWithDeleteHistory]",
+                    $"[{Schema}].[CipherDetails_ReadByRevisionDateUserWithDeleteHistory]",
                     new
                     {
                         SinceRevisionDate = sinceRevisionDate,
@@ -75,10 +76,10 @@ namespace Bit.Core.Repositories.SqlServer
                     },
                     commandType: CommandType.StoredProcedure);
 
-                var ciphers = await results.ReadAsync<Cipher>();
+                var ciphers = await results.ReadAsync<CipherDetails>();
                 var deletes = await results.ReadAsync<Guid>();
 
-                return new Tuple<ICollection<Cipher>, ICollection<Guid>>(ciphers.ToList(), deletes.ToList());
+                return new Tuple<ICollection<CipherDetails>, ICollection<Guid>>(ciphers.ToList(), deletes.ToList());
             }
         }
 

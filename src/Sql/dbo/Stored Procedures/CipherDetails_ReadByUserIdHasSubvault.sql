@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_ReadByUserIdHasSubvault]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByUserIdHasSubvault]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT DISTINCT
         C.*
     FROM
-        [dbo].[CipherView] C
+        [dbo].[CipherDetailsView] C
     INNER JOIN
         [dbo].[SubvaultCipher] SC ON SC.[CipherId] = C.[Id]
     INNER JOIN

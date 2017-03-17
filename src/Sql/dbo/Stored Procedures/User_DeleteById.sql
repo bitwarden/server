@@ -15,7 +15,6 @@ BEGIN
             [dbo].[Cipher]
         WHERE
             [UserId] = @Id
-            AND [Type] > 0
 
         SET @BatchSize = @@ROWCOUNT
 
@@ -23,13 +22,6 @@ BEGIN
     END
 
     BEGIN TRANSACTION User_DeleteById
-
-    DELETE
-    FROM
-        [dbo].[Cipher]
-    WHERE
-        [UserId] = @Id
-        AND [Type] = 0
 
     DELETE
     FROM

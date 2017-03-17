@@ -1,9 +1,8 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @FolderId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @Favorite BIT,
     @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -15,9 +14,8 @@ BEGIN
     (
         [Id],
         [UserId],
-        [FolderId],
+        [OrganizationId],
         [Type],
-        [Favorite],
         [Data],
         [CreationDate],
         [RevisionDate]
@@ -26,9 +24,8 @@ BEGIN
     (
         @Id,
         @UserId,
-        @FolderId,
+        @OrganizationId,
         @Type,
-        @Favorite,
         @Data,
         @CreationDate,
         @RevisionDate
