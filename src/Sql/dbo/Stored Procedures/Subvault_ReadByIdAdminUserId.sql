@@ -1,5 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_ReadByIdAdminUserId]
-    @Id UNIQUEIDENTIFIER,
+﻿CREATE PROCEDURE [dbo].[Subvault_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -10,9 +9,9 @@ BEGIN
     FROM
         [dbo].[SubvaultView] S
     INNER JOIN
-        [OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId]
+        [SubvaultUser] SU ON SU.[SubvaultId] = S.[Id]
+    INNER JOIN
+        [OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     WHERE
-        S.[Id] = @Id
-        AND OU.[UserId] = @UserId
-        AND OU.[Type] <= 1 -- Owner and admin
+        OU.[UserId] = @UserId
 END

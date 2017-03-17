@@ -159,5 +159,7 @@
     <Build Include="dbo\Stored Procedures\SubvaultUserDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
     <Build Include="dbo\Views\SubvaultUserDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_ReadByUserIdHasSubvault.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByUserId.sql" />
   </ItemGroup>
 </Project>
