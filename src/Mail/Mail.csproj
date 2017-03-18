@@ -8,6 +8,7 @@
     <PackageId>Mail</PackageId>
     <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
     <PackageTargetFallback>$(PackageTargetFallback);dotnet5.6;portable-net45+win8</PackageTargetFallback>
+    <RootNamespace>Bit.Mail</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

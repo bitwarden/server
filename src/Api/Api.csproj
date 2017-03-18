@@ -14,6 +14,7 @@
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <RootNamespace>Bit.Api</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
