@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Models.Data
 {
-    class CipherDetails
+    public class CipherDetails
     {
         public Guid Id { get; set; }
         public Guid? UserId { get; set; }
