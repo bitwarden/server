@@ -5,24 +5,17 @@ namespace Bit.Core.Models.Api
 {
     public class FolderResponseModel : ResponseModel
     {
-        public FolderResponseModel(Cipher cipher, Guid userId)
+        public FolderResponseModel(Folder folder)
             : base("folder")
         {
-            if(cipher == null)
+            if(folder == null)
             {
-                throw new ArgumentNullException(nameof(cipher));
+                throw new ArgumentNullException(nameof(folder));
             }
 
-            if(cipher.Type != Core.Enums.CipherType.Folder)
-            {
-                throw new ArgumentException(nameof(cipher.Type));
-            }
-
-            var data = new FolderDataModel(cipher);
-
-            Id = cipher.Id.ToString();
-            Name = data.Name;
-            RevisionDate = cipher.RevisionDate;
+            Id = folder.Id.ToString();
+            Name = folder.Name;
+            RevisionDate = folder.RevisionDate;
         }
 
         public string Id { get; set; }

@@ -13,19 +13,17 @@ namespace Bit.Core.Models.Api
         [StringLength(300)]
         public string Name { get; set; }
 
-        public Cipher ToCipher(Guid userId)
+        public Folder ToFolder(Guid userId)
         {
-            return ToCipher(new Cipher
+            return ToFolder(new Folder
             {
                 UserId = userId
             });
         }
 
-        public Cipher ToCipher(Cipher existingFolder)
+        public Folder ToFolder(Folder existingFolder)
         {
-            existingFolder.Data = JsonConvert.SerializeObject(new FolderDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            existingFolder.Type = Core.Enums.CipherType.Folder;
-
+            existingFolder.Name = Name;
             return existingFolder;
         }
     }

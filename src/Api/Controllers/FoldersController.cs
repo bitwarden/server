@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -7,8 +6,6 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
-using Microsoft.AspNetCore.Identity;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
@@ -17,16 +14,16 @@ namespace Bit.Api.Controllers
     [Authorize("Application")]
     public class FoldersController : Controller
     {
-        private readonly ICipherRepository _cipherRepository;
+        private readonly IFolderRepository _folderRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
 
         public FoldersController(
-            ICipherRepository cipherRepository,
+            IFolderRepository folderRepository,
             ICipherService cipherService,
             IUserService userService)
         {
-            _cipherRepository = cipherRepository;
+            _folderRepository = folderRepository;
             _cipherService = cipherService;
             _userService = userService;
         }
@@ -35,22 +32,21 @@ namespace Bit.Api.Controllers
         public async Task<FolderResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var folder = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(folder == null || folder.Type != Core.Enums.CipherType.Folder)
+            var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
+            if(folder == null)
             {
                 throw new NotFoundException();
             }
 
-            return new FolderResponseModel(folder, userId);
+            return new FolderResponseModel(folder);
         }
 
         [HttpGet("")]
         public async Task<ListResponseModel<FolderResponseModel>> Get()
         {
             var userId = _userService.GetProperUserId(User).Value;
-            ICollection<Cipher> folders = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Folder,
-                userId);
-            var responses = folders.Select(f => new FolderResponseModel(f, userId));
+            var folders = await _folderRepository.GetManyByUserIdAsync(userId);
+            var responses = folders.Select(f => new FolderResponseModel(f));
             return new ListResponseModel<FolderResponseModel>(responses);
         }
 
@@ -58,9 +54,9 @@ namespace Bit.Api.Controllers
         public async Task<FolderResponseModel> Post([FromBody]FolderRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var folder = model.ToCipher(_userService.GetProperUserId(User).Value);
-            await _cipherService.SaveAsync(folder);
-            return new FolderResponseModel(folder, userId);
+            var folder = model.ToFolder(_userService.GetProperUserId(User).Value);
+            await _cipherService.SaveFolderAsync(folder);
+            return new FolderResponseModel(folder);
         }
 
         [HttpPut("{id}")]
@@ -68,27 +64,28 @@ namespace Bit.Api.Controllers
         public async Task<FolderResponseModel> Put(string id, [FromBody]FolderRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var folder = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(folder == null || folder.Type != Core.Enums.CipherType.Folder)
+            var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
+            if(folder == null)
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveAsync(model.ToCipher(folder));
-            return new FolderResponseModel(folder, userId);
+            await _cipherService.SaveFolderAsync(model.ToFolder(folder));
+            return new FolderResponseModel(folder);
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var folder = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
-            if(folder == null || folder.Type != Core.Enums.CipherType.Folder)
+            var userId = _userService.GetProperUserId(User).Value;
+            var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
+            if(folder == null)
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.DeleteAsync(folder);
+            await _cipherService.DeleteFolderAsync(folder);
         }
     }
 }
