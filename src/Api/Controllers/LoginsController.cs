@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +6,6 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
@@ -33,7 +31,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<LoginResponseModel> Get(string id, string[] expand = null)
+        public async Task<LoginResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
@@ -42,37 +40,34 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login, userId);
-            await ExpandAsync(login, response, expand, null, userId);
+            var response = new LoginResponseModel(login);
             return response;
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
+        public async Task<ListResponseModel<LoginResponseModel>> Get()
         {
             var userId = _userService.GetProperUserId(User).Value;
             var logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
                 userId);
-            var responses = logins.Select(s => new LoginResponseModel(s, userId)).ToList();
-            await ExpandManyAsync(logins, responses, expand, null, userId);
+            var responses = logins.Select(s => new LoginResponseModel(s)).ToList();
             return new ListResponseModel<LoginResponseModel>(responses);
         }
 
         [HttpPost("")]
-        public async Task<LoginResponseModel> Post([FromBody]LoginRequestModel model, string[] expand = null)
+        public async Task<LoginResponseModel> Post([FromBody]LoginRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var login = model.ToCipher(userId);
             await _cipherService.SaveAsync(login);
 
-            var response = new LoginResponseModel(login, userId);
-            await ExpandAsync(login, response, expand, null, userId);
+            var response = new LoginResponseModel(login);
             return response;
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<LoginResponseModel> Put(string id, [FromBody]LoginRequestModel model, string[] expand = null)
+        public async Task<LoginResponseModel> Put(string id, [FromBody]LoginRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
@@ -83,8 +78,7 @@ namespace Bit.Api.Controllers
 
             await _cipherService.SaveAsync(model.ToCipher(login));
 
-            var response = new LoginResponseModel(login, userId);
-            await ExpandAsync(login, response, expand, null, userId);
+            var response = new LoginResponseModel(login);
             return response;
         }
 
@@ -99,62 +93,6 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.DeleteAsync(login);
-        }
-
-        private async Task ExpandAsync(Cipher login, LoginResponseModel response, string[] expand, Cipher folder, Guid userId)
-        {
-            if(expand == null || expand.Count() == 0)
-            {
-                return;
-            }
-
-            if(expand.Any(e => e.ToLower() == "folder") && login.FolderId.HasValue)
-            {
-                if(folder == null)
-                {
-                    folder = await _cipherRepository.GetByIdAsync(login.FolderId.Value);
-                }
-
-                response.Folder = new FolderResponseModel(folder, userId);
-            }
-        }
-
-        private async Task ExpandManyAsync(IEnumerable<Cipher> logins, ICollection<LoginResponseModel> responses,
-            string[] expand, IEnumerable<Cipher> folders, Guid userId)
-        {
-            if(expand == null || expand.Count() == 0)
-            {
-                return;
-            }
-
-            if(expand.Any(e => e.ToLower() == "folder"))
-            {
-                if(folders == null)
-                {
-                    folders = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Folder,
-                        _userService.GetProperUserId(User).Value);
-                }
-
-                if(folders != null && folders.Count() > 0)
-                {
-                    foreach(var response in responses)
-                    {
-                        var login = logins.SingleOrDefault(s => s.Id.ToString() == response.Id);
-                        if(login == null)
-                        {
-                            continue;
-                        }
-
-                        var folder = folders.SingleOrDefault(f => f.Id == login.FolderId);
-                        if(folder == null)
-                        {
-                            continue;
-                        }
-
-                        response.Folder = new FolderResponseModel(folder, userId);
-                    }
-                }
-            }
         }
     }
 }

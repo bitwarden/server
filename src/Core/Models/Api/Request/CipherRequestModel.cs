@@ -39,15 +39,12 @@ namespace Bit.Core.Models.Api
             {
                 Id = new Guid(Id),
                 UserId = userId,
-                FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
+                //FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId),
                 Type = Type
             };
 
             switch(Type)
             {
-                case CipherType.Folder:
-                    cipher.Data = JsonConvert.SerializeObject(new FolderDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-                    break;
                 case CipherType.Login:
                     cipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;

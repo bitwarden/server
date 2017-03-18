@@ -2,7 +2,7 @@
 {
     public enum CipherType : byte
     {
-        Folder = 0,
+        //Folder = 0,
         Login = 1
     }
 }

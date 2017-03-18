@@ -21,15 +21,17 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
-        public async Task<Cipher> GetByIdAsync(Guid id, Guid userId)
+        public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
         {
-            var cipher = await GetByIdAsync(id);
-            if(cipher == null || cipher.UserId != userId)
+            using(var connection = new SqlConnection(ConnectionString))
             {
-                return null;
-            }
+                var results = await connection.QueryAsync<CipherDetails>(
+                    $"[{Schema}].[CipherDetails_ReadById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
 
-            return cipher;
+                return results.FirstOrDefault(c => c.UserId == userId);
+            }
         }
 
         public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId)

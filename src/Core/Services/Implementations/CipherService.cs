@@ -4,21 +4,25 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Core.Models.Data;
 
 namespace Bit.Core.Services
 {
     public class CipherService : ICipherService
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly IFolderRepository _folderRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPushService _pushService;
 
         public CipherService(
             ICipherRepository cipherRepository,
+            IFolderRepository folderRepository,
             IUserRepository userRepository,
             IPushService pushService)
         {
             _cipherRepository = cipherRepository;
+            _folderRepository = folderRepository;
             _userRepository = userRepository;
             _pushService = pushService;
         }
@@ -50,16 +54,43 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
+        public async Task SaveFolderAsync(Folder folder)
+        {
+            if(folder.Id == default(Guid))
+            {
+                await _folderRepository.CreateAsync(folder);
+
+                // push
+                //await _pushService.PushSyncCipherCreateAsync(cipher);
+            }
+            else
+            {
+                folder.RevisionDate = DateTime.UtcNow;
+                await _folderRepository.UpsertAsync(folder);
+
+                // push
+                //await _pushService.PushSyncCipherUpdateAsync(cipher);
+            }
+        }
+
+        public async Task DeleteFolderAsync(Folder folder)
+        {
+            await _folderRepository.DeleteAsync(folder);
+
+            // push
+            //await _pushService.PushSyncCipherDeleteAsync(cipher);
+        }
+
         public async Task ImportCiphersAsync(
-            List<Cipher> folders,
-            List<Cipher> ciphers,
+            List<Folder> folders,
+            List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships)
         {
             // create all the folders
             var folderTasks = new List<Task>();
             foreach(var folder in folders)
             {
-                folderTasks.Add(_cipherRepository.CreateAsync(folder));
+                folderTasks.Add(_folderRepository.CreateAsync(folder));
             }
             await Task.WhenAll(folderTasks);
 
@@ -74,7 +105,7 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                cipher.FolderId = folder.Id;
+                //cipher.FolderId = folder.Id;
             }
 
             // create all the ciphers

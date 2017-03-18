@@ -1,11 +1,12 @@
 ﻿using System;
+using Core.Models.Data;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(Cipher cipher, Guid userId, string obj = "login")
+        public LoginResponseModel(CipherDetails cipher, string obj = "login")
             : base(obj)
         {
             if(cipher == null)
@@ -13,7 +14,7 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(cipher));
             }
 
-            if(cipher.Type != Core.Enums.CipherType.Login)
+            if(cipher.Type != Enums.CipherType.Login)
             {
                 throw new ArgumentException(nameof(cipher.Type));
             }

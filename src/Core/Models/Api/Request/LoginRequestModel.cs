@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Table;
 using Newtonsoft.Json;
+using Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
@@ -28,21 +29,22 @@ namespace Bit.Core.Models.Api
         [StringLength(10000)]
         public string Notes { get; set; }
 
-        public Cipher ToCipher(Guid userId)
+        public CipherDetails ToCipher(Guid userId)
         {
-            return ToCipher(new Cipher
+            return ToCipher(new CipherDetails
             {
                 UserId = userId
             });
         }
 
-        public Cipher ToCipher(Cipher existingLogin)
+        public CipherDetails ToCipher(CipherDetails existingLogin)
         {
             existingLogin.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingLogin.Favorite = Favorite;
+
             existingLogin.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
                 new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            existingLogin.Type = Core.Enums.CipherType.Login;
+            existingLogin.Type = Enums.CipherType.Login;
 
             return existingLogin;
         }

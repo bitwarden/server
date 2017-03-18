@@ -54,9 +54,9 @@ namespace Bit.Core.Services
         {
             switch(cipher.Type)
             {
-                case CipherType.Folder:
-                    await PushCipherAsync(cipher, PushType.SyncFolderDelete);
-                    break;
+                //case CipherType.Folder:
+                //    await PushCipherAsync(cipher, PushType.SyncFolderDelete);
+                //    break;
                 case CipherType.Login:
                     await PushCipherAsync(cipher, PushType.SyncLoginDelete);
                     break;

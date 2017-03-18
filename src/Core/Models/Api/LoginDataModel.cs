@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Models.Table;
 using Newtonsoft.Json;
+using Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
@@ -28,7 +29,23 @@ namespace Bit.Core.Models.Api
 
         public LoginDataModel(Cipher cipher)
         {
-            if(cipher.Type != Core.Enums.CipherType.Login)
+            if(cipher.Type != Enums.CipherType.Login)
+            {
+                throw new ArgumentException("Cipher is not correct type.");
+            }
+
+            var data = JsonConvert.DeserializeObject<LoginDataModel>(cipher.Data);
+
+            Name = data.Name;
+            Uri = data.Uri;
+            Username = data.Username;
+            Password = data.Password;
+            Notes = data.Notes;
+        }
+
+        public LoginDataModel(CipherDetails cipher)
+        {
+            if(cipher.Type != Enums.CipherType.Login)
             {
                 throw new ArgumentException("Cipher is not correct type.");
             }
