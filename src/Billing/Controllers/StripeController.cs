@@ -6,7 +6,7 @@ namespace Bit.Billing.Controllers
     public class StripeController : Controller
     {
         [HttpPost("webhook")]
-        public void PostWebhook([FromBody]dynamic body)
+        public void PostWebhook([FromBody]dynamic body, [FromQuery] string key)
         {
 
         }

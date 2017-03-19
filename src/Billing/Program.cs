@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using Microsoft.AspNetCore.Builder;
+﻿using System.IO;
 using Microsoft.AspNetCore.Hosting;
 
 namespace Bit.Billing
@@ -14,7 +12,6 @@ namespace Bit.Billing
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()
-                .UseApplicationInsights()
                 .Build();
 
             host.Run();

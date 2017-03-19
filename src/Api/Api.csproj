@@ -18,12 +18,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="Views">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
@@ -43,9 +37,9 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="1.1.1" />
     <PackageReference Include="AspNetCoreRateLimit" Version="1.0.5" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="1.4.0" />
-    <PackageReference Include="Serilog.Sinks.AzureDocumentDb" Version="3.5.18" />
-    <PackageReference Include="IdentityServer4" Version="1.2.1" />
-    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.0.5" />
+    <PackageReference Include="Serilog.Sinks.AzureDocumentDb" Version="3.6.1" />
+    <PackageReference Include="IdentityServer4" Version="1.3.1" />
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.1.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.1" />
   </ItemGroup>
 
