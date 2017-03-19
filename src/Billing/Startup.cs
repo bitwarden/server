@@ -17,8 +17,15 @@ namespace Bit.Billing
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("settings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables();
+                .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true);
+
+            if(env.IsDevelopment())
+            {
+                builder.AddUserSecrets<Startup>();
+            }
+
+            builder.AddEnvironmentVariables();
+
             Configuration = builder.Build();
         }
 
