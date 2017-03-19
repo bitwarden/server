@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
         public async Task<LoginResponseModel> Post([FromBody]LoginRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var login = model.ToCipher(userId);
+            var login = model.ToCipherDetails(userId);
             await _cipherService.SaveAsync(login);
 
             var response = new LoginResponseModel(login);
@@ -76,7 +76,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveAsync(model.ToCipher(login));
+            await _cipherService.SaveAsync(model.ToCipherDetails(login));
 
             var response = new LoginResponseModel(login);
             return response;

@@ -5,10 +5,7 @@
     @Type TINYINT,
     @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7),
-    -- Extra, unused props from cipher details model since dapper maps all child properties too. This is kind of a hack.
-    @FolderId UNIQUEIDENTIFIER,
-    @Favorite BIT
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON

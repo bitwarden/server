@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
-using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 using Core.Models.Data;
 
@@ -29,15 +28,15 @@ namespace Bit.Core.Models.Api
         [StringLength(10000)]
         public string Notes { get; set; }
 
-        public CipherDetails ToCipher(Guid userId)
+        public CipherDetails ToCipherDetails(Guid userId)
         {
-            return ToCipher(new CipherDetails
+            return ToCipherDetails(new CipherDetails
             {
                 UserId = userId
             });
         }
 
-        public CipherDetails ToCipher(CipherDetails existingLogin)
+        public CipherDetails ToCipherDetails(CipherDetails existingLogin)
         {
             existingLogin.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingLogin.Favorite = Favorite;

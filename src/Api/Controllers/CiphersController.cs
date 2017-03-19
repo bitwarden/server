@@ -65,7 +65,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folderCiphers = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-            var otherCiphers = model.Logins.Select(s => s.ToCipher(userId)).ToList();
+            var otherCiphers = model.Logins.Select(s => s.ToCipherDetails(userId)).ToList();
 
             await _cipherService.ImportCiphersAsync(
                 folderCiphers,

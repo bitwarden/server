@@ -20,7 +20,7 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(deletedIds));
             }
 
-            Revised = revisedCiphers.Select(c => new CipherResponseModel(c));
+            //Revised = revisedCiphers.Select(c => new CipherResponseModel(c));
             Deleted = deletedIds.Select(id => id.ToString());
         }
 

@@ -165,5 +165,8 @@
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadById.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\CipherDetails_Update.sql" />
+    <Build Include="dbo\Stored Procedures\CipherDetails_Create.sql" />
+    <Build Include="dbo\Stored Procedures\FolderCipher_DeleteByUserId.sql" />
   </ItemGroup>
 </Project>

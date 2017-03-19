@@ -85,6 +85,41 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task CreateAsync(CipherDetails cipher)
+        {
+            cipher.SetNewId();
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[CipherDetails_Create]",
+                    cipher,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceAsync(CipherDetails obj)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[CipherDetails_Update]",
+                    obj,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpsertAsync(CipherDetails cipher)
+        {
+            if(cipher.Id.Equals(default(Guid)))
+            {
+                await CreateAsync(cipher);
+            }
+            else
+            {
+                await ReplaceAsync(cipher);
+            }
+        }
+
         public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
         {
             if(ciphers.Count() == 0)

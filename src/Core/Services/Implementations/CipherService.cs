@@ -27,7 +27,7 @@ namespace Bit.Core.Services
             _pushService = pushService;
         }
 
-        public async Task SaveAsync(Cipher cipher)
+        public async Task SaveAsync(CipherDetails cipher)
         {
             if(cipher.Id == default(Guid))
             {

@@ -1,11 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_Create]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @FolderId UNIQUEIDENTIFIER,
+    @Favorite BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,4 +32,14 @@ BEGIN
         @CreationDate,
         @RevisionDate
     )
+
+    IF @FolderId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[FolderCipher_Create] @FolderId, @Id
+    END
+
+    IF @Favorite = 1
+    BEGIN
+        EXEC [dbo].[Favorite_Create] @UserId, @Id
+    END
 END

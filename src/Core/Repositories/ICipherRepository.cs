@@ -13,6 +13,9 @@ namespace Bit.Core.Repositories
         Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId);
         Task<Tuple<ICollection<CipherDetails>, ICollection<Guid>>> GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(
             DateTime sinceRevisionDate, Guid userId);
+        Task CreateAsync(CipherDetails cipher);
+        Task ReplaceAsync(CipherDetails cipher);
+        Task UpsertAsync(CipherDetails cipher);
         Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers);
         Task CreateAsync(IEnumerable<Cipher> ciphers);
     }

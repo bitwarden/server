@@ -1,6 +1,5 @@
 ﻿using System;
 using Core.Models.Data;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
@@ -41,8 +40,5 @@ namespace Bit.Core.Models.Api
         public string Password { get; set; }
         public string Notes { get; set; }
         public DateTime RevisionDate { get; set; }
-
-        // Expandables
-        public FolderResponseModel Folder { get; set; }
     }
 }

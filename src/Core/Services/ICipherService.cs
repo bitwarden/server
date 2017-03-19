@@ -7,7 +7,7 @@ namespace Bit.Core.Services
 {
     public interface ICipherService
     {
-        Task SaveAsync(Cipher cipher);
+        Task SaveAsync(CipherDetails cipher);
         Task DeleteAsync(Cipher cipher);
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);
