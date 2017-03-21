@@ -63,6 +63,7 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Views\" />
     <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="dbo\UserDefinedTypes" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\SubvaultCipher.sql" />
@@ -168,5 +169,8 @@
     <Build Include="dbo\Stored Procedures\CipherDetails_Update.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_Create.sql" />
     <Build Include="dbo\Stored Procedures\FolderCipher_DeleteByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadPermissionsBySubvaultUserId.sql" />
+    <Build Include="dbo\UserDefinedTypes\GuidIdArray.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_UpdateWithSubvaults.sql" />
   </ItemGroup>
 </Project>

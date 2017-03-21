@@ -6,6 +6,8 @@ using System.Data;
 using System.Data.SqlClient;
 using Dapper;
 using System.Linq;
+using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -26,6 +28,33 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<SubvaultUser>(
                     $"[{Schema}].[{Table}_ReadByOrganizationUserId]",
                     new { OrganizationUserId = orgUserId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<SubvaultUserDetails>> GetManyDetailsByUserIdAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SubvaultUserDetails>(
+                    $"[{Schema}].[SubvaultUserDetails_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<SubvaultUserPermissions>> GetPermissionsByUserIdAsync(Guid userId,
+            IEnumerable<Guid> subvaultIds, Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SubvaultUserPermissions>(
+                    $"[{Schema}].[SubvaultUser_ReadPermissionsBySubvaultUserId]",
+                    new { UserId = userId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP(), OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

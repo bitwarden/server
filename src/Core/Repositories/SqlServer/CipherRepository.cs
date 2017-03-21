@@ -8,6 +8,8 @@ using Bit.Core.Models.Table;
 using System.Data;
 using Dapper;
 using Core.Models.Data;
+using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -117,6 +119,20 @@ namespace Bit.Core.Repositories.SqlServer
             else
             {
                 await ReplaceAsync(cipher);
+            }
+        }
+
+        public async Task ReplaceAsync(Cipher obj, IEnumerable<Guid> subvaultIds)
+        {
+            var objWithSubvaults = JsonConvert.DeserializeObject<CipherWithSubvaults>(JsonConvert.SerializeObject(obj));
+            objWithSubvaults.SubvaultIds = subvaultIds.ToGuidIdArrayTVP();
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_UpdateWithSubvaults]",
+                    objWithSubvaults,
+                    commandType: CommandType.StoredProcedure);
             }
         }
 
@@ -251,6 +267,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             return Task.FromResult(0);
+        }
+
+        public class CipherWithSubvaults : Cipher
+        {
+            public DataTable SubvaultIds { get; set; }
         }
     }
 }

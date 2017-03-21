@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Api
             var data = new LoginDataModel(cipher);
 
             Id = cipher.Id.ToString();
+            OrganizationId = cipher.OrganizationId?.ToString();
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
             Name = data.Name;
@@ -32,6 +33,7 @@ namespace Bit.Core.Models.Api
         }
 
         public string Id { get; set; }
+        public string OrganizationId { get; set; }
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public string Name { get; set; }

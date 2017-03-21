@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Dapper;
+using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
@@ -38,6 +41,28 @@ namespace Bit.Core.Utilities
             Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
             return new Guid(guidArray);
+        }
+
+        public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
+        {
+            return ids.ToArrayTVP("GuidId");
+        }
+
+        public static DataTable ToArrayTVP<T>(this IEnumerable<T> values, string columnName)
+        {
+            var table = new DataTable();
+            table.Columns.Add(columnName, typeof(T));
+            table.SetTypeName($"[dbo].[{columnName}Array]");
+
+            if(values != null)
+            {
+                foreach(var value in values)
+                {
+                    table.Rows.Add(value);
+                }
+            }
+
+            return table;
         }
 
         public static X509Certificate2 GetCertificate(string thumbprint)

@@ -6,7 +6,7 @@ namespace Bit.Core.Models.Table
     public class Cipher : IDataObject<Guid>
     {
         public Guid Id { get; set; }
-        public Guid UserId { get; set; }
+        public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
         public Enums.CipherType Type { get; set; }
         public string Data { get; set; }

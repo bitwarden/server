@@ -1,5 +1,8 @@
 ﻿using System;
 using Core.Models.Data;
+using System.Collections.Generic;
+using Bit.Core.Models.Table;
+using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -16,6 +19,7 @@ namespace Bit.Core.Models.Api
             Id = cipher.Id.ToString();
             Type = cipher.Type;
             RevisionDate = cipher.RevisionDate;
+            OrganizationId = cipher.OrganizationId?.ToString();
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
 
@@ -30,10 +34,22 @@ namespace Bit.Core.Models.Api
         }
 
         public string Id { get; set; }
+        public string OrganizationId { get; set; }
         public string FolderId { get; set; }
         public Enums.CipherType Type { get; set; }
         public bool Favorite { get; set; }
         public dynamic Data { get; set; }
         public DateTime RevisionDate { get; set; }
+    }
+
+    public class CipherDetailsResponseModel : CipherResponseModel
+    {
+        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<SubvaultCipher> subvaultCipher)
+            : base(cipher, "cipherDetails")
+        {
+            SubvaultIds = subvaultCipher.Select(s => s.SubvaultId);
+        }
+
+        public IEnumerable<Guid> SubvaultIds { get; set; }
     }
 }

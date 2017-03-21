@@ -71,7 +71,7 @@ namespace Bit.Core.Services
             {
                 Type = type,
                 Id = cipher.Id,
-                UserId = cipher.UserId,
+                UserId = cipher.UserId.Value,
                 RevisionDate = cipher.RevisionDate,
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
@@ -82,7 +82,7 @@ namespace Bit.Core.Services
                 excludedTokens.Add(_currentContext.DeviceIdentifier);
             }
 
-            await PushToAllUserDevicesAsync(cipher.UserId, JObject.FromObject(message), excludedTokens);
+            await PushToAllUserDevicesAsync(cipher.UserId.Value, JObject.FromObject(message), excludedTokens);
         }
 
         public async Task PushSyncCiphersAsync(Guid userId)

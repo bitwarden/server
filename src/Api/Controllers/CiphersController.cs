@@ -88,6 +88,21 @@ namespace Bit.Api.Controllers
         //    await _cipherService.SaveAsync(cipher);
         //}
 
+        [HttpPut("{id}/move")]
+        [HttpPost("{id}/move")]
+        public async Task PostMoveSubvault(string id, [FromBody]CipherMoveRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.MoveSubvaultAsync(model.Cipher.ToCipher(cipher),
+                model.SubvaultIds.Select(s => new Guid(s)), userId);
+        }
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
