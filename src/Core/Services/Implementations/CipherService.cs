@@ -103,12 +103,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException(nameof(cipher.OrganizationId));
             }
 
-            var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-            if(existingCipher == null || (existingCipher.UserId.HasValue && existingCipher.UserId != userId))
-            {
-                throw new NotFoundException();
-            }
-
             var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(userId, subvaultIds,
                 cipher.OrganizationId.Value);
 
@@ -117,7 +111,7 @@ namespace Bit.Core.Services
             await _cipherRepository.ReplaceAsync(cipher, subvaultUserDetails.Where(s => s.Admin).Select(s => s.SubvaultId));
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher);
+            //await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
         public async Task ImportCiphersAsync(

@@ -172,5 +172,6 @@
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadPermissionsBySubvaultUserId.sql" />
     <Build Include="dbo\UserDefinedTypes\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdateWithSubvaults.sql" />
+    <Build Include="dbo\Stored Procedures\CipherDetails_ReadByIdUserId.sql" />
   </ItemGroup>
 </Project>

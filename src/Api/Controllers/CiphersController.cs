@@ -90,10 +90,10 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/move")]
         [HttpPost("{id}/move")]
-        public async Task PostMoveSubvault(string id, [FromBody]CipherMoveRequestModel model)
+        public async Task PostMove(string id, [FromBody]CipherMoveRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(cipher == null)
             {
                 throw new NotFoundException();
@@ -107,7 +107,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(cipher == null)
             {
                 throw new NotFoundException();

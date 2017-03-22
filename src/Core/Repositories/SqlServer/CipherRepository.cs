@@ -28,11 +28,11 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadById]",
-                    new { Id = id },
+                    $"[{Schema}].[CipherDetails_ReadByIdUserId]",
+                    new { Id = id, UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.FirstOrDefault(c => c.UserId == userId);
+                return results.FirstOrDefault();
             }
         }
 

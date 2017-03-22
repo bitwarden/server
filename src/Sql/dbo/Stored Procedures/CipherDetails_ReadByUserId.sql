@@ -16,5 +16,5 @@ BEGIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     WHERE
         (C.[UserId] IS NOT NULL AND C.[UserId] = @UserId)
-        OR OU.[UserId] = @UserId
+        OR (OU.[UserId] = @UserId AND OU.[Status] = 2) -- 2 = Confirmed
 END

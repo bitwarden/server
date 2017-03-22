@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByUserIdHasSubvault]
+﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadByIdUserId]
+    @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -8,13 +9,16 @@ BEGIN
         C.*
     FROM
         [dbo].[CipherDetailsView] C
-    INNER JOIN
+    LEFT JOIN
         [dbo].[SubvaultCipher] SC ON SC.[CipherId] = C.[Id]
-    INNER JOIN
+    LEFT JOIN
         [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = SC.[SubvaultId]
-    INNER JOIN
+    LEFT JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     WHERE
-        OU.[UserId] = @UserId 
-        AND OU.[Status] = 2 -- 2 = Confirmed
+        C.Id = @Id
+        AND (
+            (C.[UserId] IS NOT NULL AND C.[UserId] = @UserId)
+            OR (OU.[UserId] = @UserId AND OU.[Status] = 2) -- 2 = Confirmed
+        )
 END
