@@ -44,7 +44,7 @@ namespace Bit.Core.Services
                 await _cipherRepository.CreateAsync(cipher);
 
                 // push
-                await _pushService.PushSyncCipherCreateAsync(cipher);
+                //await _pushService.PushSyncCipherCreateAsync(cipher);
             }
             else
             {
@@ -52,7 +52,7 @@ namespace Bit.Core.Services
                 await _cipherRepository.ReplaceAsync(cipher);
 
                 // push
-                await _pushService.PushSyncCipherUpdateAsync(cipher);
+                //await _pushService.PushSyncCipherUpdateAsync(cipher);
             }
         }
 
@@ -61,7 +61,7 @@ namespace Bit.Core.Services
             await _cipherRepository.DeleteAsync(cipher);
 
             // push
-            await _pushService.PushSyncCipherDeleteAsync(cipher);
+            //await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
         public async Task SaveFolderAsync(Folder folder)
