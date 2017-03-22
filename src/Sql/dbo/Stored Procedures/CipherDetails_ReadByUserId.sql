@@ -7,7 +7,7 @@ BEGIN
     SELECT DISTINCT
         C.*
     FROM
-        [dbo].[CipherDetailsView] C
+        [dbo].[CipherDetails](@UserId) C
     LEFT JOIN
         [dbo].[SubvaultCipher] SC ON SC.[CipherId] = C.[Id]
     LEFT JOIN

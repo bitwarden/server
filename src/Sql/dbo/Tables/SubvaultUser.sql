@@ -7,7 +7,7 @@
     [CreationDate]       DATETIME2 (7)    NOT NULL,
     [RevisionDate]       DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_SubvaultUser] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_SubvaultUser_OrganizationUser] FOREIGN KEY ([OrganizationUserId]) REFERENCES [dbo].[OrganizationUser] ([Id]),
-    CONSTRAINT [FK_SubvaultUser_Subvault] FOREIGN KEY ([SubvaultId]) REFERENCES [dbo].[Subvault] ([Id])
+    CONSTRAINT [FK_SubvaultUser_OrganizationUser] FOREIGN KEY ([OrganizationUserId]) REFERENCES [dbo].[OrganizationUser] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_SubvaultUser_Subvault] FOREIGN KEY ([SubvaultId]) REFERENCES [dbo].[Subvault] ([Id]) ON DELETE CASCADE
 );
 

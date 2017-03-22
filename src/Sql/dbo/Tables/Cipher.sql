@@ -1,11 +1,11 @@
 ﻿CREATE TABLE [dbo].[Cipher] (
-    [Id]                UNIQUEIDENTIFIER NOT NULL,
-    [UserId]            UNIQUEIDENTIFIER NULL,
-    [OrganizationId]    UNIQUEIDENTIFIER NULL,
-    [Type]              TINYINT          NOT NULL,
-    [Data]              NVARCHAR (MAX)   NOT NULL,
-    [CreationDate]      DATETIME2 (7)    NOT NULL,
-    [RevisionDate]      DATETIME2 (7)    NOT NULL,
+    [Id]             UNIQUEIDENTIFIER NOT NULL,
+    [UserId]         UNIQUEIDENTIFIER NULL,
+    [OrganizationId] UNIQUEIDENTIFIER NULL,
+    [Type]           TINYINT          NOT NULL,
+    [Data]           NVARCHAR (MAX)   NOT NULL,
+    [CreationDate]   DATETIME2 (7)    NOT NULL,
+    [RevisionDate]   DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Cipher_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
@@ -50,6 +50,7 @@ BEGIN
     WHERE
         [Id] = @UserId
 END
+
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
 ON [dbo].[Cipher] AFTER UPDATE
@@ -84,6 +85,7 @@ BEGIN
     WHERE
         [Id] = @UserId
 END
+
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
 ON [dbo].[Cipher] AFTER DELETE

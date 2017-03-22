@@ -8,7 +8,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[CipherDetailsView]
+        [dbo].[CipherDetails](@UserId) C
     WHERE
         [RevisionDate] > @SinceRevisionDate
         AND [UserId] = @UserId
