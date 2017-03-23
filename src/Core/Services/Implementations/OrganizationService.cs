@@ -137,7 +137,7 @@ namespace Bit.Core.Services
 
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId ||
-                orgUser.Status == Enums.OrganizationUserStatusType.Invited)
+                orgUser.Status != Enums.OrganizationUserStatusType.Invited)
             {
                 throw new BadRequestException("User invalid.");
             }
