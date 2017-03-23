@@ -84,9 +84,14 @@ namespace Bit.Core.Utilities
             return cert;
         }
 
-        public static long EpocMilliseconds(DateTime date)
+        public static long ToEpocMilliseconds(DateTime date)
         {
             return (long)Math.Round((date - _epoc).TotalMilliseconds, 0);
+        }
+
+        public static DateTime FromEpocMilliseconds(long milliseconds)
+        {
+            return _epoc.AddMilliseconds(milliseconds);
         }
     }
 }

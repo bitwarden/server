@@ -57,9 +57,17 @@ namespace Bit.Api.Controllers
         [HttpPost("invite")]
         public async Task Invite(string orgId, [FromBody]OrganizationUserInviteRequestModel model)
         {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            var result = await _organizationService.InviteUserAsync(new Guid(orgId), model.Email, model.Type,
+            var userId = _userService.GetProperUserId(User);
+            var result = await _organizationService.InviteUserAsync(new Guid(orgId), userId.Value, model.Email, model.Type,
                 model.Subvaults?.Select(s => s.ToSubvaultUser()));
+        }
+
+        [HttpPut("{id}/reinvite")]
+        [HttpPost("{id}/reinvite")]
+        public async Task Reinvite(string orgId, string id)
+        {
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.ResendInviteAsync(new Guid(orgId), userId.Value, new Guid(id));
         }
 
         [HttpPut("{id}/accept")]
@@ -74,12 +82,13 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/confirm")]
         public async Task Confirm(string orgId, string id, [FromBody]OrganizationUserConfirmRequestModel model)
         {
-            var result = await _organizationService.ConfirmUserAsync(new Guid(id), model.Key);
+            var userId = _userService.GetProperUserId(User);
+            var result = await _organizationService.ConfirmUserAsync(new Guid(orgId), new Guid(id), model.Key, userId.Value);
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task Put(string id, [FromBody]OrganizationUserUpdateRequestModel model)
+        public async Task Put(string orgId, string id, [FromBody]OrganizationUserUpdateRequestModel model)
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
             if(organizationUser == null)
@@ -87,7 +96,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser),
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
                 model.Subvaults?.Select(s => s.ToSubvaultUser()));
         }
 
@@ -95,14 +105,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id),
-                _userService.GetProperUserId(User).Value);
-            if(organization == null)
-            {
-                throw new NotFoundException();
-            }
-
-            await _organizationRepository.DeleteAsync(organization);
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.DeleteUserAsync(new Guid(orgId), new Guid(id), userId.Value);
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Bit.Core.Services
         private const string ChangeEmailTemplateId = "ec2c1471-8292-4f17-b6b6-8223d514f86e";
         private const string NoMasterPasswordHintTemplateId = "136eb299-e102-495a-88bd-f96736eea159";
         private const string MasterPasswordHintTemplateId = "be77cfde-95dd-4cb9-b5e0-8286b53885f1";
+        private const string OrganizationInviteTemplateId = "1eff5512-e36c-49a8-b9e2-2b215d6bbced";
 
         private const string AdministrativeCategoryName = "Administrative";
         private const string MarketingCategoryName = "Marketing";
@@ -83,6 +84,19 @@ namespace Bit.Core.Services
             message.AddTo(new EmailAddress(email));
             message.AddSubstitution("{{hint}}", hint);
             message.AddCategories(new List<string> { AdministrativeCategoryName, "Master Password Hint" });
+
+            await _client.SendEmailAsync(message);
+        }
+
+        public async Task SendOrganizationInviteEmailAsync(string organizationName, string email, string token)
+        {
+            var message = CreateDefaultMessage(OrganizationInviteTemplateId);
+
+            message.Subject = $"Join {organizationName}";
+            message.AddTo(new EmailAddress(email));
+            message.AddSubstitution("{{organizationName}}", organizationName);
+            message.AddSubstitution("{{token}}", token);
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization Invite" });
 
             await _client.SendEmailAsync(message);
         }

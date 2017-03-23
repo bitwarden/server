@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
@@ -21,6 +22,11 @@ namespace Bit.Core.Services
         }
 
         public Task SendNoMasterPasswordHintEmailAsync(string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendOrganizationInviteEmailAsync(string organizationName, string email, string token)
         {
             return Task.FromResult(0);
         }

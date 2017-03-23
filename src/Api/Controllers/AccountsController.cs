@@ -192,7 +192,7 @@ namespace Bit.Api.Controllers
             if(userId.HasValue)
             {
                 var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
-                revisionDate = Core.Utilities.CoreHelpers.EpocMilliseconds(date);
+                revisionDate = Core.Utilities.CoreHelpers.ToEpocMilliseconds(date);
             }
 
             return revisionDate;
