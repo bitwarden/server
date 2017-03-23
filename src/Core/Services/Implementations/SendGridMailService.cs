@@ -88,13 +88,15 @@ namespace Bit.Core.Services
             await _client.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationInviteEmailAsync(string organizationName, string email, string token)
+        public async Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token)
         {
             var message = CreateDefaultMessage(OrganizationInviteTemplateId);
 
             message.Subject = $"Join {organizationName}";
-            message.AddTo(new EmailAddress(email));
+            message.AddTo(new EmailAddress(orgUser.Email));
             message.AddSubstitution("{{organizationName}}", organizationName);
+            message.AddSubstitution("{{organizationId}}", orgUser.OrganizationId.ToString());
+            message.AddSubstitution("{{organizationUserId}}", orgUser.Id.ToString());
             message.AddSubstitution("{{token}}", token);
             message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization Invite" });
 

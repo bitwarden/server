@@ -150,7 +150,7 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync("Organization Name", orgUser.Email, token);
+            await _mailService.SendOrganizationInviteEmailAsync("Organization Name", orgUser, token);
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
@@ -189,7 +189,7 @@ namespace Bit.Core.Services
             }
 
             orgUser.Status = Enums.OrganizationUserStatusType.Accepted;
-            orgUser.UserId = orgUser.Id;
+            orgUser.UserId = user.Id;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
