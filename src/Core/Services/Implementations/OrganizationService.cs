@@ -123,7 +123,7 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.CreateAsync(orgUser);
             await SaveUserSubvaultsAsync(orgUser, subvaults, true);
-            await SendInviteAsync(organizationId, email);
+            await SendInviteAsync(orgUser);
 
             return orgUser;
         }
@@ -142,15 +142,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User invalid.");
             }
 
-            await SendInviteAsync(organizationId, orgUser.Email);
+            await SendInviteAsync(orgUser);
         }
 
-        private async Task SendInviteAsync(Guid organizationId, string email)
+        private async Task SendInviteAsync(OrganizationUser orgUser)
         {
+            var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
-                $"OrganizationInvite {organizationId} {email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-            await _mailService.SendOrganizationInviteEmailAsync("Organization Name", email, token);
+                $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
+            await _mailService.SendOrganizationInviteEmailAsync("Organization Name", orgUser.Email, token);
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
@@ -171,8 +171,8 @@ namespace Bit.Core.Services
             {
                 var unprotectedData = _dataProtector.Unprotect(token);
                 var dataParts = unprotectedData.Split(' ');
-                if(dataParts.Length == 4 && dataParts[0] == "OrganizationInvite" &&
-                    new Guid(dataParts[1]) == orgUser.OrganizationId && dataParts[2] == user.Email)
+                if(dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
+                    new Guid(dataParts[1]) == orgUser.Id && dataParts[2] == user.Email)
                 {
                     var creationTime = CoreHelpers.FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
                     tokenValidationFailed = creationTime.AddDays(5) < DateTime.UtcNow;
