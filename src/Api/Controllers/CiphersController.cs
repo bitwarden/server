@@ -15,15 +15,18 @@ namespace Bit.Api.Controllers
     public class CiphersController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly ISubvaultCipherRepository _subvaultCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
 
         public CiphersController(
             ICipherRepository cipherRepository,
+            ISubvaultCipherRepository subvaultCipherRepository,
             ICipherService cipherService,
             IUserService userService)
         {
             _cipherRepository = cipherRepository;
+            _subvaultCipherRepository = subvaultCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
         }
@@ -48,6 +51,16 @@ namespace Bit.Api.Controllers
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
             var responses = ciphers.Select(c => new CipherResponseModel(c));
             return new ListResponseModel<CipherResponseModel>(responses);
+        }
+
+        [HttpGet("subvaults")]
+        public async Task<ListResponseModel<CipherDetailsResponseModel>> GetSubvaults()
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var ciphers = await _cipherRepository.GetManyByUserIdHasSubvaultsAsync(userId);
+            var subvaultCiphers = await _subvaultCipherRepository.GetManyByUserIdAsync(userId);
+            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, subvaultCiphers));
+            return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
         //[Obsolete]
