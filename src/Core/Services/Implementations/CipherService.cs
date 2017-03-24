@@ -37,8 +37,14 @@ namespace Bit.Core.Services
             _pushService = pushService;
         }
 
-        public async Task SaveAsync(CipherDetails cipher)
+        public async Task SaveAsync(CipherDetails cipher, Guid savingUserId)
         {
+            if(!(await UserHasAdminRights(cipher, savingUserId)))
+            {
+                throw new BadRequestException("Not an admin.");
+            }
+
+            cipher.UserId = savingUserId;
             if(cipher.Id == default(Guid))
             {
                 await _cipherRepository.CreateAsync(cipher);
@@ -56,8 +62,13 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DeleteAsync(Cipher cipher)
+        public async Task DeleteAsync(CipherDetails cipher, Guid deletingUserId)
         {
+            if(!(await UserHasAdminRights(cipher, deletingUserId)))
+            {
+                throw new BadRequestException("Not an admin.");
+            }
+
             await _cipherRepository.DeleteAsync(cipher);
 
             // push
@@ -150,6 +161,16 @@ namespace Bit.Core.Services
             {
                 await _pushService.PushSyncCiphersAsync(userId.Value);
             }
+        }
+
+        private async Task<bool> UserHasAdminRights(CipherDetails cipher, Guid userId)
+        {
+            if(!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)
+            {
+                return true;
+            }
+
+            return await _subvaultUserRepository.GetIsAdminByUserIdCipherIdAsync(userId, cipher.Id);
         }
     }
 }

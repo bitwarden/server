@@ -127,7 +127,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.DeleteAsync(cipher);
+            await _cipherService.DeleteAsync(cipher, userId);
         }
     }
 }

@@ -25,7 +25,7 @@ BEGIN
     VALUES
     (
         @Id,
-        @UserId,
+        CASE WHEN @OrganizationId IS NULL THEN @UserId ELSE NULL END,
         @OrganizationId,
         @Type,
         @Data,

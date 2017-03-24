@@ -60,5 +60,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<bool> GetIsAdminByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var result = await connection.QueryFirstOrDefaultAsync<bool>(
+                    $"[{Schema}].[SubvaultUser_ReadIsAdminByCipherIdUserId]",
+                    new { UserId = userId, CipherId = cipherId },
+                    commandType: CommandType.StoredProcedure);
+
+                return result;
+            }
+        }
     }
 }

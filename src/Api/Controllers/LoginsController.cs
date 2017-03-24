@@ -59,7 +59,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var login = model.ToCipherDetails(userId);
-            await _cipherService.SaveAsync(login);
+            await _cipherService.SaveAsync(login, userId);
 
             var response = new LoginResponseModel(login);
             return response;
@@ -76,7 +76,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveAsync(model.ToCipherDetails(login));
+            await _cipherService.SaveAsync(model.ToCipherDetails(login), userId);
 
             var response = new LoginResponseModel(login);
             return response;
@@ -86,13 +86,14 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+            var userId = _userService.GetProperUserId(User).Value;
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.DeleteAsync(login);
+            await _cipherService.DeleteAsync(login, userId);
         }
     }
 }
