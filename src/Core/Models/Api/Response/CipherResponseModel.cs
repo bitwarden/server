@@ -44,10 +44,18 @@ namespace Bit.Core.Models.Api
 
     public class CipherDetailsResponseModel : CipherResponseModel
     {
-        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<SubvaultCipher> subvaultCipher)
+        public CipherDetailsResponseModel(CipherDetails cipher,
+            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers)
             : base(cipher, "cipherDetails")
         {
-            SubvaultIds = subvaultCipher.Select(s => s.SubvaultId);
+            if(subvaultCiphers.ContainsKey(cipher.Id))
+            {
+                SubvaultIds = subvaultCiphers[cipher.Id].Select(s => s.SubvaultId);
+            }
+            else
+            {
+                SubvaultIds = new Guid[] { };
+            }
         }
 
         public IEnumerable<Guid> SubvaultIds { get; set; }

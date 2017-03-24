@@ -58,8 +58,11 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var ciphers = await _cipherRepository.GetManyByUserIdHasSubvaultsAsync(userId);
+
             var subvaultCiphers = await _subvaultCipherRepository.GetManyByUserIdAsync(userId);
-            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, subvaultCiphers));
+            var subvaultCiphersGroupDict = subvaultCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+
+            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, subvaultCiphersGroupDict));
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
