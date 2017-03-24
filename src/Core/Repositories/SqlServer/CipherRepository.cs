@@ -36,6 +36,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<CipherFullDetails> GetFullDetailsByIdAsync(Guid id, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherFullDetails>(
+                    $"[{Schema}].[CipherFullDetails_ReadByIdUserId]",
+                    new { Id = id, UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.FirstOrDefault();
+            }
+        }
+
         public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
@@ -145,6 +158,17 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_UpdateWithSubvaults]",
                     objWithSubvaults,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_UpdatePartial]",
+                    new { Id = id, UserId = userId, FolderId = folderId, Favorite = favorite },
                     commandType: CommandType.StoredProcedure);
             }
         }

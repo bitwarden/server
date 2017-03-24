@@ -12,6 +12,6 @@ namespace Bit.Core.Repositories
         Task<ICollection<SubvaultUserDetails>> GetManyDetailsByUserIdAsync(Guid userId);
         Task<ICollection<SubvaultUserPermissions>> GetPermissionsByUserIdAsync(Guid userId, IEnumerable<Guid> subvaultIds,
             Guid organizationId);
-        Task<bool> GetIsAdminByUserIdCipherIdAsync(Guid userId, Guid cipherId);
+        Task<bool> GetCanEditByUserIdCipherIdAsync(Guid userId, Guid cipherId);
     }
 }

@@ -43,4 +43,15 @@ namespace Bit.Core.Models.Api
         public string Notes { get; set; }
         public DateTime RevisionDate { get; set; }
     }
+
+    public class LoginDetailsResponseModel : LoginResponseModel
+    {
+        public LoginDetailsResponseModel(CipherFullDetails cipher)
+            : base(cipher, "loginDetails")
+        {
+            Edit = cipher.Edit;
+        }
+
+        public bool Edit { get; set; }
+    }
 }

@@ -104,6 +104,15 @@ namespace Bit.Api.Controllers
         //    await _cipherService.SaveAsync(cipher);
         //}
 
+        [HttpPut("{id}/partial")]
+        [HttpPost("{id}/partial")]
+        public async Task PutPartial(string id, [FromBody]CipherPartialRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
+            await _cipherService.UpdatePartialAsync(new Guid(id), userId, folderId, model.Favorite);
+        }
+
         [HttpPut("{id}/move")]
         [HttpPost("{id}/move")]
         public async Task PostMove(string id, [FromBody]CipherMoveRequestModel model)

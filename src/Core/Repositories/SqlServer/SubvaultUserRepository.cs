@@ -61,12 +61,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<bool> GetIsAdminByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+        public async Task<bool> GetCanEditByUserIdCipherIdAsync(Guid userId, Guid cipherId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.QueryFirstOrDefaultAsync<bool>(
-                    $"[{Schema}].[SubvaultUser_ReadIsAdminByCipherIdUserId]",
+                    $"[{Schema}].[SubvaultUser_ReadCanEditByCipherIdUserId]",
                     new { UserId = userId, CipherId = cipherId },
                     commandType: CommandType.StoredProcedure);
 

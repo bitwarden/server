@@ -1,13 +1,15 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_ReadIsAdminByCipherIdUserId]
-    @UserId UNIQUEIDENTIFIER,
-    @CipherId AS UNIQUEIDENTIFIER
-AS
+﻿CREATE FUNCTION [dbo].[UserCanEditCipher](@UserId UNIQUEIDENTIFIER, @CipherId UNIQUEIDENTIFIER)
+RETURNS BIT AS
 BEGIN
-    SET NOCOUNT ON
+    DECLARE @CanEdit BIT
 
     ;WITH [CTE] AS(
         SELECT
-            CASE WHEN OU.[Type] = 2 THEN SU.[Admin] ELSE 1 END AS [Admin] -- 2 = Regular User
+            CASE
+                WHEN OU.[Type] = 2 AND SU.[Admin] = 1 THEN 1 -- 2 = Regular User
+                WHEN SU.[ReadOnly] = 0 THEN 1
+                ELSE 0
+            END [CanEdit]
         FROM
             [dbo].[SubvaultUser] SU
         INNER JOIN
@@ -22,9 +24,11 @@ BEGIN
             AND OU.[Status] = 2 -- 2 = Confirmed
     )
     SELECT
-        CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
+        @CanEdit = CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
     FROM
         [CTE]
     WHERE
-        [Admin] = 1
+        [CanEdit] = 1
+
+    RETURN @CanEdit
 END

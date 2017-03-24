@@ -39,7 +39,7 @@ namespace Bit.Core.Services
 
         public async Task SaveAsync(CipherDetails cipher, Guid savingUserId)
         {
-            if(!(await UserHasAdminRights(cipher, savingUserId)))
+            if(!(await UserCanEditAsync(cipher, savingUserId)))
             {
                 throw new BadRequestException("Not an admin.");
             }
@@ -62,9 +62,19 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UpdatePartialAsync(Guid cipherId, Guid savingUserId, Guid? folderId, bool favorite)
+        {
+            if(!(await UserCanPartialEditAsync(cipherId, savingUserId)))
+            {
+                throw new BadRequestException("Cannot edit.");
+            }
+
+            await _cipherRepository.UpdatePartialAsync(cipherId, savingUserId, folderId, favorite);
+        }
+
         public async Task DeleteAsync(CipherDetails cipher, Guid deletingUserId)
         {
-            if(!(await UserHasAdminRights(cipher, deletingUserId)))
+            if(!(await UserCanEditAsync(cipher, deletingUserId)))
             {
                 throw new BadRequestException("Not an admin.");
             }
@@ -163,14 +173,22 @@ namespace Bit.Core.Services
             }
         }
 
-        private async Task<bool> UserHasAdminRights(CipherDetails cipher, Guid userId)
+        private async Task<bool> UserCanEditAsync(CipherDetails cipher, Guid userId)
         {
             if(!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)
             {
                 return true;
             }
 
-            return await _subvaultUserRepository.GetIsAdminByUserIdCipherIdAsync(userId, cipher.Id);
+            return await _subvaultUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipher.Id);
+        }
+
+        private Task<bool> UserCanPartialEditAsync(Guid cipherId, Guid userId)
+        {
+            // TODO: implement
+
+            return Task.FromResult(true);
+            //return await _subvaultUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipherId);
         }
     }
 }
