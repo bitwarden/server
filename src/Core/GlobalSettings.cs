@@ -11,6 +11,7 @@
         public virtual PushSettings Push { get; set; } = new PushSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
+        public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
 
         public class SqlServerSettings
@@ -45,6 +46,11 @@
         }
 
         public class IdentityServerSettings
+        {
+            public string CertificateThumbprint { get; set; }
+        }
+
+        public class DataProtectionSettings
         {
             public string CertificateThumbprint { get; set; }
         }

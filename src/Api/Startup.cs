@@ -31,6 +31,8 @@ using Serilog;
 using Serilog.Events;
 using Bit.Api.IdentityServer;
 using Bit.Core.Enums;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.WindowsAzure.Storage;
 
 namespace Bit.Api
 {
@@ -71,6 +73,16 @@ namespace Bit.Api
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
             services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
 
+            // Data Protection
+            if(Environment.IsProduction())
+            {
+                var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                services.AddDataProtection()
+                    .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
+                    .ProtectKeysWithCertificate(dataProtectionCert);
+            }
+
             // Repositories
             services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
             services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
@@ -81,6 +93,7 @@ namespace Bit.Api
             services.AddSingleton<ISubvaultRepository, SqlServerRepos.SubvaultRepository>();
             services.AddSingleton<ISubvaultUserRepository, SqlServerRepos.SubvaultUserRepository>();
             services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
+            services.AddSingleton<ISubvaultCipherRepository, SqlServerRepos.SubvaultCipherRepository>();
 
             // Context
             services.AddScoped<CurrentContext>();

@@ -24,6 +24,9 @@
     "identityServer": {
       "certificateThumbprint": "SECRET"
     },
+    "dataProtection": {
+      "certificateThumbprint": "SECRET"
+    },
     "storage": {
       "connectionString": "SECRET"
     },
