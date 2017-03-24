@@ -7,7 +7,6 @@
         public virtual string JwtSigningKey { get; set; }
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual LoggrSettings Loggr { get; set; } = new LoggrSettings();
         public virtual PushSettings Push { get; set; } = new PushSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -28,12 +27,6 @@
         {
             public string ApiKey { get; set; }
             public string ReplyToEmail { get; set; }
-        }
-
-        public class LoggrSettings
-        {
-            public string LogKey { get; set; }
-            public string ApiKey { get; set; }
         }
 
         public class PushSettings

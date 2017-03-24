@@ -10,10 +10,6 @@
       "apiKey": "SECRET",
       "replyToEmail": "hello@bitwarden.com"
     },
-    "loggr": {
-      "logKey": "SECRET",
-      "apiKey": "SECRET"
-    },
     "push": {
       "apnsCertificateThumbprint": "SECRET",
       "apnsCertificatePassword": "SECRET",
