@@ -5,7 +5,8 @@ SELECT
     OU.[OrganizationId],
     O.[Name],
     OU.[Key],
-    OU.[Status]
+    OU.[Status],
+    OU.[Type]
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN
