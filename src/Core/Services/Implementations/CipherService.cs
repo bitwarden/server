@@ -112,24 +112,38 @@ namespace Bit.Core.Services
             //await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
-        public async Task MoveSubvaultAsync(Cipher cipher, IEnumerable<Guid> subvaultIds, Guid userId)
+        public async Task MoveSubvaultAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid movingUserId)
         {
             if(cipher.Id == default(Guid))
             {
                 throw new BadRequestException(nameof(cipher.Id));
             }
 
-            if(!cipher.OrganizationId.HasValue)
+            if(organizationId == default(Guid))
             {
-                throw new BadRequestException(nameof(cipher.OrganizationId));
+                throw new BadRequestException(nameof(organizationId));
             }
 
-            var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(userId, subvaultIds,
-                cipher.OrganizationId.Value);
+            if(!cipher.UserId.HasValue || cipher.UserId.Value != movingUserId)
+            {
+                throw new NotFoundException();
+            }
+
+            // We do not need to check if the user belongs to this organization since this call will return no subvaults
+            // and therefore be caught by the .Any() check below.
+            var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(movingUserId, subvaultIds,
+                organizationId);
+
+            var adminSubvaults = subvaultUserDetails.Where(s => s.Admin).Select(s => s.SubvaultId);
+            if(!adminSubvaults.Any())
+            {
+                throw new BadRequestException("No subvaults.");
+            }
 
             cipher.UserId = null;
+            cipher.OrganizationId = organizationId;
             cipher.RevisionDate = DateTime.UtcNow;
-            await _cipherRepository.ReplaceAsync(cipher, subvaultUserDetails.Where(s => s.Admin).Select(s => s.SubvaultId));
+            await _cipherRepository.ReplaceAsync(cipher, adminSubvaults);
 
             // push
             //await _pushService.PushSyncCipherUpdateAsync(cipher);
@@ -173,7 +187,7 @@ namespace Bit.Core.Services
             }
         }
 
-        private async Task<bool> UserCanEditAsync(CipherDetails cipher, Guid userId)
+        private async Task<bool> UserCanEditAsync(Cipher cipher, Guid userId)
         {
             if(!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)
             {

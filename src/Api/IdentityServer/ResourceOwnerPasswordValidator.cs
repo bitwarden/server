@@ -121,7 +121,7 @@ namespace Bit.Api.IdentityServer
             var customResponse = new Dictionary<string, object>();
             if(!string.IsNullOrWhiteSpace(user.PrivateKey))
             {
-                customResponse.Add("EncryptedPrivateKey", user.PrivateKey);
+                customResponse.Add("PrivateKey", user.PrivateKey);
             }
 
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application",

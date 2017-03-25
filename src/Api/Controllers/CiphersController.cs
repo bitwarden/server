@@ -119,12 +119,12 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(cipher == null)
+            if(cipher == null || cipher.OrganizationId.HasValue || cipher.UserId != userId)
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.MoveSubvaultAsync(model.Cipher.ToCipher(cipher),
+            await _cipherService.MoveSubvaultAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
                 model.SubvaultIds.Select(s => new Guid(s)), userId);
         }
 
