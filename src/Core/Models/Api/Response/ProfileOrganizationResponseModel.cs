@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Api
             Name = organization.Name;
             Key = organization.Key;
             Status = organization.Status;
-            Type = organization;
+            Type = organization.Type;
         }
 
         public string Id { get; set; }
