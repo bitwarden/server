@@ -7,6 +7,7 @@ using Dapper;
 using System.Linq;
 using Bit.Core.Models.Data;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -61,13 +62,14 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId)
+        public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId, 
+            OrganizationUserStatusType? status = null)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
-                    "[dbo].[OrganizationUserOrganizationDetails_ReadByUserId]",
-                    new { UserId = userId },
+                    "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]",
+                    new { UserId = userId, Status = status },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

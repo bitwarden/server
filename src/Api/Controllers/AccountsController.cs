@@ -160,7 +160,8 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> GetProfile()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+                OrganizationUserStatusType.Confirmed);
             var response = new ProfileResponseModel(user, organizationUserDetails);
             return response;
         }
@@ -169,7 +170,8 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetOrganizations()
         {
             var userId = _userService.GetProperUserId(User);
-            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value);
+            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
+                OrganizationUserStatusType.Confirmed);
             var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
             return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
         }

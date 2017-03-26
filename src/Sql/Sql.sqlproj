@@ -168,7 +168,7 @@
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
