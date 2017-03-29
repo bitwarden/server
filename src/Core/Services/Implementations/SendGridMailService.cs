@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using SendGrid;
 using SendGrid.Helpers.Mail;
+using System.Net;
 
 namespace Bit.Core.Services
 {
@@ -98,6 +99,7 @@ namespace Bit.Core.Services
             message.AddSubstitution("{{organizationId}}", orgUser.OrganizationId.ToString());
             message.AddSubstitution("{{organizationUserId}}", orgUser.Id.ToString());
             message.AddSubstitution("{{token}}", token);
+            message.AddSubstitution("{{email}}", WebUtility.UrlEncode(orgUser.Email));
             message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization Invite" });
 
             await _client.SendEmailAsync(message);

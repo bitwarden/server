@@ -105,9 +105,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Cannot invite users.");
             }
 
-            // TODO: make sure user is not already invited
+            // Make sure user is not already invited
+            var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
+            if(existingOrgUser != null)
+            {
+                throw new BadRequestException("User already invited.");
+            }
 
-            // TODO: validate subvaults?
+            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(organizationId);
+            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
 
             var orgUser = new OrganizationUser
             {
@@ -122,7 +128,7 @@ namespace Bit.Core.Services
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
-            await SaveUserSubvaultsAsync(orgUser, subvaults, true);
+            await SaveUserSubvaultsAsync(orgUser, filteredSubvaults, true);
             await SendInviteAsync(orgUser);
 
             return orgUser;
@@ -147,10 +153,11 @@ namespace Bit.Core.Services
 
         private async Task SendInviteAsync(OrganizationUser orgUser)
         {
+            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync("Organization Name", orgUser, token);
+            await _mailService.SendOrganizationInviteEmailAsync(org.Name, orgUser, token);
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)

@@ -34,6 +34,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByOrganizationIdEmail]",
+                    new { OrganizationId = organizationId, Email = email },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
         public async Task<Tuple<OrganizationUserUserDetails, ICollection<SubvaultUserDetails>>> GetDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
