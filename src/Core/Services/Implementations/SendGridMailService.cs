@@ -100,6 +100,7 @@ namespace Bit.Core.Services
             message.AddSubstitution("{{organizationUserId}}", orgUser.Id.ToString());
             message.AddSubstitution("{{token}}", token);
             message.AddSubstitution("{{email}}", WebUtility.UrlEncode(orgUser.Email));
+            message.AddSubstitution("{{organizationNameUrlEncoded}}", WebUtility.UrlEncode(organizationName));
             message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization Invite" });
 
             await _client.SendEmailAsync(message);
