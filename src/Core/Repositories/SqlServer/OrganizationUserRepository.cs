@@ -47,6 +47,20 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId,
+            OrganizationUserType? type)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId, Type = type },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<Tuple<OrganizationUserUserDetails, ICollection<SubvaultUserDetails>>> GetDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
@@ -75,7 +89,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId, 
+        public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
             OrganizationUserStatusType? status = null)
         {
             using(var connection = new SqlConnection(ConnectionString))

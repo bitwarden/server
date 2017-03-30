@@ -178,5 +178,6 @@
     <Build Include="dbo\Functions\UserCanEditCipher.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdatePartial.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
   </ItemGroup>
 </Project>

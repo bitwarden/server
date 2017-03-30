@@ -242,10 +242,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Cannot update users.");
             }
 
-            // TODO: validate subvaults?
+            var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
+            if(confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
+            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
 
             await _organizationUserRepository.ReplaceAsync(user);
-            await SaveUserSubvaultsAsync(user, subvaults, false);
+            await SaveUserSubvaultsAsync(user, filteredSubvaults, false);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -261,7 +268,20 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
+            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
+            if(confirmedOwners.Count == 1 && confirmedOwners[0].Id == organizationUserId)
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
             await _organizationUserRepository.DeleteAsync(orgUser);
+        }
+
+        private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
+        {
+            var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
+                Enums.OrganizationUserType.Owner);
+            return owners.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed);
         }
 
         private async Task<bool> OrganizationUserHasAdminRightsAsync(Guid organizationId, Guid userId)
