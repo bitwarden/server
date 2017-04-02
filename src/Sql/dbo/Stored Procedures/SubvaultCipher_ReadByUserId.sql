@@ -13,5 +13,6 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     WHERE
-        [OU].[UserId] = @UserId
+        OU.[UserId] = @UserId
+        AND OU.[Status] = 2 -- Confirmed
 END
