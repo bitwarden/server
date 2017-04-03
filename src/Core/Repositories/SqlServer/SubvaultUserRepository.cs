@@ -34,13 +34,26 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<SubvaultUserDetails>> GetManyDetailsByUserIdAsync(Guid userId)
+        public async Task<ICollection<SubvaultUserSubvaultDetails>> GetManyDetailsByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultUserDetails>(
-                    $"[{Schema}].[SubvaultUserDetails_ReadByUserId]",
+                var results = await connection.QueryAsync<SubvaultUserSubvaultDetails>(
+                    $"[{Schema}].[SubvaultUserSubvaultDetails_ReadByUserId]",
                     new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<SubvaultUserUserDetails>> GetManyDetailsBySubvaultIdAsync(Guid subvaultId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SubvaultUserUserDetails>(
+                    $"[{Schema}].[SubvaultUserUserDetails_ReadBySubvaultId]",
+                    new { SubvaultId = subvaultId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

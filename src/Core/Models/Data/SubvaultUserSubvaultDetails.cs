@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Data
 {
-    public class SubvaultUserDetails
+    public class SubvaultUserSubvaultDetails
     {
         public Guid Id { get; set; }
         public Guid OrganizationUserId { get; set; }

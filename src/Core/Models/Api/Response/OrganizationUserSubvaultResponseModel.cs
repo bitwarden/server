@@ -5,7 +5,7 @@ namespace Bit.Core.Models.Api
 {
     public class OrganizationUserSubvaultResponseModel : ResponseModel
     {
-        public OrganizationUserSubvaultResponseModel(SubvaultUserDetails details,
+        public OrganizationUserSubvaultResponseModel(SubvaultUserSubvaultDetails details,
             string obj = "organizationUserSubvault")
             : base(obj)
         {

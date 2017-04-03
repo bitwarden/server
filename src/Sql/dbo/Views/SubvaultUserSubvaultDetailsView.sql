@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[SubvaultUserDetailsView]
+﻿CREATE VIEW [dbo].[SubvaultUserSubvaultDetailsView]
 AS
 SELECT
     SU.[Id],

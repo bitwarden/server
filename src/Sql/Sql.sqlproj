@@ -84,7 +84,7 @@
     <Build Include="dbo\Tables\GroupUser.sql" />
     <Build Include="dbo\Tables\SubvaultGroup.sql" />
     <Build Include="dbo\Views\SubvaultUserView.sql" />
-    <Build Include="dbo\Views\SubvaultUserDetailsView.sql" />
+    <Build Include="dbo\Views\SubvaultUserSubvaultDetailsView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
@@ -99,7 +99,7 @@
     <Build Include="dbo\Functions\CipherDetails.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadByOrganizationUserId.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultUserDetails_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUserSubvaultDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
@@ -180,5 +180,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
+    <Build Include="dbo\Views\SubvaultUserUserDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUserUserDetails_ReadBySubvaultId.sql" />
   </ItemGroup>
 </Project>

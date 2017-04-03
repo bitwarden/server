@@ -35,7 +35,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
     {
         public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-            IEnumerable<SubvaultUserDetails> subvaults)
+            IEnumerable<SubvaultUserSubvaultDetails> subvaults)
             : base(organizationUser, "organizationUserDetails")
         {
             Subvaults = new ListResponseModel<OrganizationUserSubvaultResponseModel>(
