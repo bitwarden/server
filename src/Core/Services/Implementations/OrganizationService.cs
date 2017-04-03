@@ -243,7 +243,7 @@ namespace Bit.Core.Services
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
-            if(confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+            if(user.Type != Enums.OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
