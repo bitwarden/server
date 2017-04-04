@@ -67,9 +67,6 @@
     <Folder Include="dbo\User Defined Types\" />
   </ItemGroup>
   <ItemGroup>
-    <RefactorLog Include="Sql.refactorlog" />
-  </ItemGroup>
-  <ItemGroup>
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\History.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
