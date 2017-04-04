@@ -44,6 +44,21 @@ namespace Bit.Api.Controllers
             return new CipherResponseModel(cipher);
         }
 
+        [HttpGet("{id}/full-details")]
+        public async Task<CipherFullDetailsResponseModel> GetDetails(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipherId = new Guid(id);
+            var cipher = await _cipherRepository.GetFullDetailsByIdAsync(cipherId, userId);
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var subvaultCiphers = await _subvaultCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
+            return new CipherFullDetailsResponseModel(cipher, subvaultCiphers);
+        }
+
         [HttpGet("")]
         public async Task<ListResponseModel<CipherResponseModel>> Get()
         {
@@ -53,7 +68,7 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
-        [HttpGet("subvaults")]
+        [HttpGet("details")]
         public async Task<ListResponseModel<CipherDetailsResponseModel>> GetSubvaults()
         {
             var userId = _userService.GetProperUserId(User).Value;

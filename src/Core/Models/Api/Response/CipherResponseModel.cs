@@ -45,8 +45,8 @@ namespace Bit.Core.Models.Api
     public class CipherDetailsResponseModel : CipherResponseModel
     {
         public CipherDetailsResponseModel(CipherDetails cipher,
-            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers)
-            : base(cipher, "cipherDetails")
+            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers, string obj = "cipherDetails")
+            : base(cipher, obj)
         {
             if(subvaultCiphers.ContainsKey(cipher.Id))
             {
@@ -58,6 +58,24 @@ namespace Bit.Core.Models.Api
             }
         }
 
+        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<SubvaultCipher> subvaultCiphers,
+            string obj = "cipherDetails")
+            : base(cipher, obj)
+        {
+            SubvaultIds = subvaultCiphers.Select(s => s.SubvaultId);
+        }
+
         public IEnumerable<Guid> SubvaultIds { get; set; }
+    }
+
+    public class CipherFullDetailsResponseModel : CipherDetailsResponseModel
+    {
+        public CipherFullDetailsResponseModel(CipherFullDetails cipher, IEnumerable<SubvaultCipher> subvaultCiphers)
+            : base(cipher, subvaultCiphers, "cipherFullDetails")
+        {
+            Edit = cipher.Edit;
+        }
+
+        public bool Edit { get; set; }
     }
 }
