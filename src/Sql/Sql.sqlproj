@@ -67,24 +67,26 @@
     <Folder Include="dbo\User Defined Types\" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="dbo\Tables\SubvaultCipher.sql" />
+    <RefactorLog Include="Sql.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\History.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
-    <Build Include="dbo\Tables\OrganizationUser.sql" />
-    <Build Include="dbo\Tables\SubvaultUser.sql" />
-    <Build Include="dbo\Tables\Subvault.sql" />
     <Build Include="dbo\Tables\FolderCipher.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
-    <Build Include="dbo\Tables\Organization.sql" />
     <Build Include="dbo\Tables\Favorite.sql" />
-    <Build Include="dbo\Tables\User.sql" />
-    <Build Include="dbo\Tables\Folder.sql" />
     <Build Include="dbo\Tables\Group.sql" />
+    <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Tables\GroupUser.sql" />
+    <Build Include="dbo\Tables\Folder.sql" />
+    <Build Include="dbo\Tables\Organization.sql" />
+    <Build Include="dbo\Tables\OrganizationUser.sql" />
+    <Build Include="dbo\Tables\Subvault.sql" />
+    <Build Include="dbo\Tables\SubvaultCipher.sql" />
     <Build Include="dbo\Tables\SubvaultGroup.sql" />
+    <Build Include="dbo\Tables\SubvaultUser.sql" />
     <Build Include="dbo\Views\SubvaultUserView.sql" />
-    <Build Include="dbo\Views\SubvaultUserSubvaultDetailsView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
@@ -92,14 +94,16 @@
     <Build Include="dbo\Views\OrganizationUserView.sql" />
     <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Views\SubvaultUserSubvaultDetailsView.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
+    <Build Include="dbo\Views\SubvaultUserUserDetailsView.sql" />
     <Build Include="dbo\Views\OrganizationUserOrganizationDetailsView.sql" />
     <Build Include="dbo\Views\OrganizationUserUserDetailsView.sql" />
     <Build Include="dbo\Views\SubvaultView.sql" />
+    <Build Include="dbo\Functions\UserCanEditCipher.sql" />
     <Build Include="dbo\Functions\CipherDetails.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadByOrganizationUserId.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultUserSubvaultDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
@@ -157,10 +161,19 @@
     <Build Include="dbo\Stored Procedures\SubvaultUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_Update.sql" />
+    <Build Include="dbo\Stored Procedures\CipherFullDetails_ReadByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadCanEditByCipherIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_UpdatePartial.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUserSubvaultDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultUserUserDetails_ReadBySubvaultId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
@@ -168,19 +181,9 @@
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadCanEditByCipherIdUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CipherFullDetails_ReadByIdUserId.sql" />
-    <Build Include="dbo\Functions\UserCanEditCipher.sql" />
-    <Build Include="dbo\Stored Procedures\Cipher_UpdatePartial.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
-    <Build Include="dbo\Views\SubvaultUserUserDetailsView.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultUserUserDetails_ReadBySubvaultId.sql" />
   </ItemGroup>
 </Project>

@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services
 {
@@ -49,41 +50,68 @@ namespace Bit.Core.Services
             }
 
             var customerService = new StripeCustomerService();
-            var customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
-            {
-                SourceToken = signup.PaymentToken
-            });
-
             var subscriptionService = new StripeSubscriptionService();
-            var subscription = await subscriptionService.CreateAsync(customer.Id, plan.StripeId);
+            StripeCustomer customer = null;
+            StripeSubscription subscription = null;
+
+            if(plan.Type != Enums.PlanType.Free)
+            {
+                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+                {
+                    Description = signup.BusinessName,
+                    Email = signup.BillingEmail,
+                    SourceToken = signup.PaymentToken
+                });
+
+                var subCreateOptions = new StripeSubscriptionCreateOptions
+                {
+                    Items = new List<StripeSubscriptionItemOption>
+                    {
+                        new StripeSubscriptionItemOption
+                        {
+                            PlanId = plan.CanMonthly && signup.Monthly ? plan.StripeMonthlyPlanId : plan.StripeAnnualPlanId,
+                            Quantity = 1
+                        }
+                    }
+                };
+
+                if(plan.CanBuyAdditionalUsers && signup.AdditionalUsers > 0)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = plan.CanMonthly && signup.Monthly ? plan.StripeMonthlyUserPlanId : plan.StripeAnnualUserPlanId,
+                        Quantity = signup.AdditionalUsers
+                    });
+                }
+
+                subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
+            }
 
             var organization = new Organization
             {
                 Name = signup.Name,
+                BillingEmail = signup.BillingEmail,
+                BusinessName = signup.BusinessName,
                 UserId = signup.Owner.Id,
                 PlanType = plan.Type,
-                MaxUsers = plan.MaxUsers,
+                BaseUsers = plan.BaseUsers,
+                AdditionalUsers = (short)(plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0),
+                MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
                 PlanTrial = plan.Trial.HasValue,
-                PlanPrice = plan.Trial.HasValue ? 0 : plan.Price,
-                PlanRenewalPrice = plan.Price,
+                PlanBasePrice = plan.CanMonthly && signup.Monthly ? plan.BaseMonthlyPrice : plan.BaseAnnualPrice,
+                PlanUserPrice = plan.CanMonthly && signup.Monthly ? plan.UserMonthlyPrice : plan.UserAnnualPrice,
+                PlanRenewalDate = subscription?.CurrentPeriodEnd,
                 Plan = plan.ToString(),
+                StripeCustomerId = customer?.Id,
+                StripeSubscriptionId = subscription?.Id,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
 
-            if(plan.Trial.HasValue)
-            {
-                organization.PlanRenewalDate = DateTime.UtcNow.Add(plan.Trial.Value);
-            }
-            else if(plan.Cycle != null)
-            {
-                organization.PlanRenewalDate = DateTime.UtcNow.Add(plan.Cycle(DateTime.UtcNow));
-            }
-
-            await _organizationRepository.CreateAsync(organization);
-
             try
             {
+                await _organizationRepository.CreateAsync(organization);
+
                 var orgUser = new OrganizationUser
                 {
                     OrganizationId = organization.Id,
@@ -102,7 +130,18 @@ namespace Bit.Core.Services
             }
             catch
             {
-                await _organizationRepository.DeleteAsync(organization);
+                if(subscription != null)
+                {
+                    await subscriptionService.CancelAsync(subscription.Id);
+                }
+
+                // TODO: reverse payments
+
+                if(organization.Id != default(Guid))
+                {
+                    await _organizationRepository.DeleteAsync(organization);
+                }
+
                 throw;
             }
         }

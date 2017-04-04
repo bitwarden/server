@@ -9,13 +9,19 @@ namespace Bit.Core.Models.Table
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
         public string Name { get; set; }
+        public string BusinessName { get; set; }
+        public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public decimal PlanPrice { get; set; }
-        public decimal PlanRenewalPrice { get; set; }
+        public decimal PlanBasePrice { get; set; }
+        public decimal PlanUserPrice { get; set; }
         public DateTime? PlanRenewalDate { get; set; }
         public bool PlanTrial { get; set; }
+        public short BaseUsers { get; set; }
+        public short AdditionalUsers { get; set; }
         public short MaxUsers { get; set; }
+        public string StripeCustomerId { get; set; }
+        public string StripeSubscriptionId { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

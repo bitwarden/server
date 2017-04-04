@@ -94,27 +94,40 @@ namespace Bit.Core.Utilities
                 new Plan
                 {
                     Type = PlanType.Free,
-                    MaxUsers = 1,
-                    Price = 0
+                    BaseUsers = 1,
+                    CanBuyAdditionalUsers = false,
+                    Name = "Free"
                 },
                 new Plan
                 {
                     Type = PlanType.Personal,
-                    MaxUsers = 5,
-                    Price = 1,
+                    BaseUsers = 5,
+                    BaseAnnualPrice = 12,
+                    UserAnnualPrice = 12,
+                    CanBuyAdditionalUsers = true,
                     Trial = new TimeSpan(14, 0, 0, 0),
                     Cycle = now => now.AddYears(1) - now,
                     Name = "Personal",
-                    StripeId = "premium-yearly"
-
+                    StripeAnnualPlanId = "premium-yearly",
+                    StripeAnnualUserPlanId = "premium-user-yearly"
                 },
                 new Plan
                 {
                     Type = PlanType.Teams,
-                    MaxUsers = 5,
-                    Price = 10,
+                    BaseUsers = 5,
+                    BaseAnnualPrice = 60,
+                    UserAnnualPrice = 24,
+                    BaseMonthlyPrice = 8,
+                    UserMonthlyPrice = 2.5M,
+                    CanBuyAdditionalUsers = true,
+                    CanMonthly = true,
                     Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = now => now.AddMonths(1) - now
+                    Cycle = now => now.AddMonths(1) - now,
+                    Name = "Teams",
+                    StripeAnnualPlanId = "premium-yearly",
+                    StripeAnnualUserPlanId = "premium-user-yearly",
+                    StripeMonthlyPlanId = "premium-yearly",
+                    StripeMonthlyUserPlanId = "premium-user-yearly"
                 }
             };
 
