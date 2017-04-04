@@ -10,6 +10,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public PlanType PlanType { get; set; }
         public string Key { get; set; }
+        public string CardToken { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -18,7 +19,8 @@ namespace Bit.Core.Models.Api
                 Owner = user,
                 OwnerKey = Key,
                 Name = Name,
-                Plan = PlanType
+                Plan = PlanType,
+                PaymentToken = CardToken
             };
         }
     }

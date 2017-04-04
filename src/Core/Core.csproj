@@ -22,6 +22,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
     <PackageReference Include="Sendgrid" Version="9.0.12" />
     <PackageReference Include="PushSharp" Version="4.0.10" />
+    <PackageReference Include="Stripe.net" Version="7.7.0" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.1.1" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
   </ItemGroup>

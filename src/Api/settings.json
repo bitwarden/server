@@ -3,6 +3,7 @@
     "siteName": "bitwarden",
     "baseVaultUri": "http://localhost:4001/#",
     "jwtSigningKey": "THIS IS A SECRET. IT KEEPS YOUR TOKEN SAFE. :)",
+    "stripeApiKey": "SECRET",
     "sqlServer": {
       "connectionString": "SECRET"
     },

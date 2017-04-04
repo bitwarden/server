@@ -9,12 +9,6 @@ namespace Bit.Core.Models.Business
         public User Owner { get; set; }
         public string OwnerKey { get; set; }
         public Enums.PlanType Plan { get; set; }
-        public PaymentDetails Payment { get; set; }
-
-        public class PaymentDetails
-        {
-            public string Name { get; set; }
-            public string Token { get; set; }
-        }
+        public string PaymentToken { get; set; }
     }
 }

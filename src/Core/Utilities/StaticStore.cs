@@ -99,11 +99,14 @@ namespace Bit.Core.Utilities
                 },
                 new Plan
                 {
-                    Type = PlanType.Family,
+                    Type = PlanType.Personal,
                     MaxUsers = 5,
                     Price = 1,
                     Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = now => now.AddYears(1) - now
+                    Cycle = now => now.AddYears(1) - now,
+                    Name = "Personal",
+                    StripeId = "premium-yearly"
+
                 },
                 new Plan
                 {

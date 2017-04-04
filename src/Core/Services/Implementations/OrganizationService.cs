@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
+using Stripe;
 
 namespace Bit.Core.Services
 {
@@ -46,6 +47,15 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Plan not found.");
             }
+
+            var customerService = new StripeCustomerService();
+            var customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+            {
+                SourceToken = signup.PaymentToken
+            });
+
+            var subscriptionService = new StripeSubscriptionService();
+            var subscription = await subscriptionService.CreateAsync(customer.Id, plan.StripeId);
 
             var organization = new Organization
             {

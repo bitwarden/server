@@ -33,6 +33,7 @@ using Bit.Api.IdentityServer;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.WindowsAzure.Storage;
+using Stripe;
 
 namespace Bit.Api
 {
@@ -82,6 +83,9 @@ namespace Bit.Api
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
+
+            // Stripe Billing
+            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
 
             // Repositories
             services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();

@@ -5,6 +5,7 @@
         public virtual string SiteName { get; set; }
         public virtual string BaseVaultUri { get; set; }
         public virtual string JwtSigningKey { get; set; }
+        public virtual string StripeApiKey { get; set; }
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual PushSettings Push { get; set; } = new PushSettings();
