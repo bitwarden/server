@@ -108,8 +108,8 @@ namespace Bit.Core.Utilities
                     Trial = new TimeSpan(14, 0, 0, 0),
                     Cycle = now => now.AddYears(1) - now,
                     Name = "Personal",
-                    StripeAnnualPlanId = "premium-yearly",
-                    StripeAnnualUserPlanId = "premium-user-yearly"
+                    StripeAnnualPlanId = "personal-annual",
+                    StripeAnnualUserPlanId = "personal-user-annual"
                 },
                 new Plan
                 {
@@ -124,10 +124,10 @@ namespace Bit.Core.Utilities
                     Trial = new TimeSpan(14, 0, 0, 0),
                     Cycle = now => now.AddMonths(1) - now,
                     Name = "Teams",
-                    StripeAnnualPlanId = "premium-yearly",
-                    StripeAnnualUserPlanId = "premium-user-yearly",
-                    StripeMonthlyPlanId = "premium-yearly",
-                    StripeMonthlyUserPlanId = "premium-user-yearly"
+                    StripeAnnualPlanId = "teams-annual",
+                    StripeAnnualUserPlanId = "teams-user-annual",
+                    StripeMonthlyPlanId = "teams-monthly",
+                    StripeMonthlyUserPlanId = "teams-user-monthly"
                 }
             };
 
