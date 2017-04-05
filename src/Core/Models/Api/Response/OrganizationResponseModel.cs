@@ -24,24 +24,8 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string Name { get; set; }
         public string Plan { get; set; }
-        public Core.Enums.PlanType PlanType { get; set; }
+        public Enums.PlanType PlanType { get; set; }
         public bool PlanTrial { get; set; }
         public short MaxUsers { get; set; }
-    }
-
-    public class OrganizationExtendedResponseModel : OrganizationResponseModel
-    {
-        public OrganizationExtendedResponseModel(Organization organization, OrganizationUser organizationUser)
-            : base(organization, "organizationExtended")
-        {
-            if(organizationUser == null)
-            {
-                throw new ArgumentNullException(nameof(organizationUser));
-            }
-
-            Key = organizationUser.Key;
-        }
-
-        public string Key { get; set; }
     }
 }

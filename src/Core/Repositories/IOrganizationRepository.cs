@@ -7,7 +7,6 @@ namespace Bit.Core.Repositories
 {
     public interface IOrganizationRepository : IRepository<Organization, Guid>
     {
-        Task<Organization> GetByIdAsync(Guid id, Guid userId);
         Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
     }
 }

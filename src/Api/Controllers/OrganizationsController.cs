@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -18,49 +19,32 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
+        private readonly CurrentContext _currentContext;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
-            IUserService userService)
+            IUserService userService,
+            CurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         [HttpGet("{id}")]
         public async Task<OrganizationResponseModel> Get(string id)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);
-            if(organization == null)
+            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
             {
                 throw new NotFoundException();
             }
 
             return new OrganizationResponseModel(organization);
-        }
-
-        [HttpGet("{id}/extended")]
-        public async Task<OrganizationExtendedResponseModel> GetExtended(string id)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);
-            if(organization == null)
-            {
-                throw new NotFoundException();
-            }
-
-            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(new Guid(id), userId);
-            if(organizationUser == null)
-            {
-                throw new NotFoundException();
-            }
-
-            return new OrganizationExtendedResponseModel(organization, organizationUser);
         }
 
         [HttpGet("")]
@@ -73,22 +57,20 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<OrganizationExtendedResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
+        public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
-            return new OrganizationExtendedResponseModel(result.Item1, result.Item2);
+            return new OrganizationResponseModel(result.Item1);
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
         public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id), userId);
-            // TODO: Permission checks
-            if(organization == null)
+            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
             {
                 throw new NotFoundException();
             }
@@ -101,9 +83,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id),
-                _userService.GetProperUserId(User).Value);
-            if(organization == null)
+            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
             {
                 throw new NotFoundException();
             }

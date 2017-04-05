@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Bit.Core.Models.Table;
+using Bit.Core.Enums;
 
 namespace Bit.Core
 {
@@ -10,5 +10,26 @@ namespace Bit.Core
     {
         public virtual User User { get; set; }
         public virtual string DeviceIdentifier { get; set; }
+        public virtual List<CurrentContentOrganization> Organizations { get; set; } = new List<CurrentContentOrganization>();
+
+        public bool OrganizationUser(Guid orgId)
+        {
+            return Organizations.Any(o => o.Id == orgId);
+        }
+        public bool OrganizationAdmin(Guid orgId)
+        {
+            return Organizations.Any(o => o.Id == orgId &&
+                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin));
+        }
+        public bool OrganizationOwner(Guid orgId)
+        {
+            return Organizations.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner);
+        }
+
+        public class CurrentContentOrganization
+        {
+            public Guid Id { get; set; }
+            public OrganizationUserType Type { get; set; }
+        }
     }
 }
