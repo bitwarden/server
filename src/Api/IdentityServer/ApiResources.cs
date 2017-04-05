@@ -20,7 +20,10 @@ namespace Bit.Api.IdentityServer
                     "email",
                     "sstamp", // security stamp
                     "plan",
-                    "device"
+                    "device",
+                    "orgowner",
+                    "orgadmin",
+                    "orguser"
                 })
             };
         }

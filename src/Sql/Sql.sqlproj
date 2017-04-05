@@ -183,5 +183,6 @@
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByCipherId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
   </ItemGroup>
 </Project>

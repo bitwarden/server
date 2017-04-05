@@ -18,7 +18,7 @@ namespace Bit.Api.IdentityServer
 
         public class ApiClient : Client
         {
-            public ApiClient(string id)
+            public ApiClient(string id, string[] additionalScopes = null)
             {
                 ClientId = id;
                 RequireClientSecret = false;
@@ -26,7 +26,13 @@ namespace Bit.Api.IdentityServer
                 UpdateAccessTokenClaimsOnRefresh = true;
                 AccessTokenLifetime = 60 * 60; // 1 hour
                 AllowOfflineAccess = true;
-                AllowedScopes = new string[] { "api" };
+
+                var scopes = new List<string> { "api" };
+                if(additionalScopes != null)
+                {
+                    scopes.AddRange(additionalScopes);
+                }
+                AllowedScopes = scopes;
             }
         }
     }

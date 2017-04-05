@@ -16,15 +16,18 @@ namespace Bit.Api.IdentityServer
     {
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private IdentityOptions _identityOptions;
 
         public ProfileService(
             IUserRepository userRepository,
             IUserService userService,
+            IOrganizationUserRepository organizationUserRepository,
             IOptions<IdentityOptions> identityOptionsAccessor)
         {
             _userRepository = userRepository;
             _userService = userService;
+            _organizationUserRepository = organizationUserRepository;
             _identityOptions = identityOptionsAccessor?.Value ?? new IdentityOptions();
         }
 
@@ -42,7 +45,7 @@ namespace Bit.Api.IdentityServer
                     new Claim("sstamp", user.SecurityStamp),
                     new Claim("email", user.Email),
 
-                    // Deprecated claims for backwards compatability,
+                    // Deprecated claims for backwards compatability
                     new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email),
                     new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
                 });
@@ -51,11 +54,47 @@ namespace Bit.Api.IdentityServer
                 {
                     newClaims.Add(new Claim("name", user.Name));
                 }
+
+                // Orgs that this user belongs to
+                var orgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                if(orgs.Any())
+                {
+                    var groupedOrgs = orgs.Where(o => o.Status == Core.Enums.OrganizationUserStatusType.Confirmed)
+                        .GroupBy(o => o.Type);
+
+                    foreach(var group in groupedOrgs)
+                    {
+                        switch(group.Key)
+                        {
+                            case Core.Enums.OrganizationUserType.Owner:
+                                foreach(var org in group)
+                                {
+                                    newClaims.Add(new Claim("orgowner", org.Id.ToString()));
+                                }
+                                break;
+                            case Core.Enums.OrganizationUserType.Admin:
+                                foreach(var org in group)
+                                {
+                                    newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
+                                }
+                                break;
+                            case Core.Enums.OrganizationUserType.User:
+                                foreach(var org in group)
+                                {
+                                    newClaims.Add(new Claim("orguser", org.Id.ToString()));
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
             }
 
             // filter out any of the new claims
             var existingClaimsToKeep = existingClaims
-                .Where(c => newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type)).ToList();
+                .Where(c => !c.Type.StartsWith("org") && (newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type)))
+                .ToList();
 
             newClaims.AddRange(existingClaimsToKeep);
             if(newClaims.Any())
