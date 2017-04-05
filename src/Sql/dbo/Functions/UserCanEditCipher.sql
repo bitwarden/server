@@ -5,11 +5,7 @@ BEGIN
 
     ;WITH [CTE] AS(
         SELECT
-            CASE
-                WHEN OU.[Type] = 2 AND SU.[Admin] = 1 THEN 1 -- 2 = Regular User
-                WHEN SU.[ReadOnly] = 0 THEN 1
-                ELSE 0
-            END [CanEdit]
+            CASE WHEN SU.[ReadOnly] = 0 THEN 1 ELSE 0 END [CanEdit]
         FROM
             [dbo].[SubvaultUser] SU
         INNER JOIN

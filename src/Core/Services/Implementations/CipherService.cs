@@ -119,9 +119,9 @@ namespace Bit.Core.Services
                 throw new BadRequestException(nameof(cipher.Id));
             }
 
-            if(organizationId == default(Guid))
+            if(cipher.OrganizationId.HasValue)
             {
-                throw new BadRequestException(nameof(organizationId));
+                throw new BadRequestException("Already belongs to an organization.");
             }
 
             if(!cipher.UserId.HasValue || cipher.UserId.Value != movingUserId)
@@ -134,8 +134,8 @@ namespace Bit.Core.Services
             var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(movingUserId, subvaultIds,
                 organizationId);
 
-            var adminSubvaults = subvaultUserDetails.Where(s => s.Admin).Select(s => s.SubvaultId);
-            if(!adminSubvaults.Any())
+            var writeableSubvaults = subvaultUserDetails.Where(s => !s.ReadOnly).Select(s => s.SubvaultId);
+            if(!writeableSubvaults.Any())
             {
                 throw new BadRequestException("No subvaults.");
             }
@@ -143,7 +143,7 @@ namespace Bit.Core.Services
             cipher.UserId = null;
             cipher.OrganizationId = organizationId;
             cipher.RevisionDate = DateTime.UtcNow;
-            await _cipherRepository.ReplaceAsync(cipher, adminSubvaults);
+            await _cipherRepository.ReplaceAsync(cipher, writeableSubvaults);
 
             // push
             //await _pushService.PushSyncCipherUpdateAsync(cipher);

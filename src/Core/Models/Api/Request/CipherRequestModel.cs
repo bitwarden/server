@@ -5,6 +5,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -48,12 +49,11 @@ namespace Bit.Core.Models.Api
 
         public Cipher ToCipher(Cipher existingCipher)
         {
-            existingCipher.OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? null : (Guid?)new Guid(OrganizationId);
-
             switch(existingCipher.Type)
             {
                 case CipherType.Login:
-                    existingCipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingCipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
@@ -63,10 +63,20 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class CipherMoveRequestModel
+    public class CipherMoveRequestModel : IValidatableObject
     {
+        [Required]
         public IEnumerable<string> SubvaultIds { get; set; }
         [Required]
         public CipherRequestModel Cipher { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(!SubvaultIds?.Any() ?? false)
+            {
+                yield return new ValidationResult("You must select at least one subvault.",
+                    new string[] { nameof(SubvaultIds) });
+            }
+        }
     }
 }
