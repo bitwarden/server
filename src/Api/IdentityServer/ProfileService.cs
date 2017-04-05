@@ -69,19 +69,19 @@ namespace Bit.Api.IdentityServer
                             case Core.Enums.OrganizationUserType.Owner:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orgowner", org.Id.ToString()));
+                                    newClaims.Add(new Claim("orgowner", org.OrganizationId.ToString()));
                                 }
                                 break;
                             case Core.Enums.OrganizationUserType.Admin:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
+                                    newClaims.Add(new Claim("orgadmin", org.OrganizationId.ToString()));
                                 }
                                 break;
                             case Core.Enums.OrganizationUserType.User:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orguser", org.Id.ToString()));
+                                    newClaims.Add(new Claim("orguser", org.OrganizationId.ToString()));
                                 }
                                 break;
                             default:
