@@ -171,7 +171,6 @@
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUserUserDetails_ReadBySubvaultId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />

@@ -9,7 +9,6 @@ using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services
 {
@@ -149,11 +148,6 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
         {
-            if(!(await OrganizationUserHasAdminRightsAsync(organizationId, invitingUserId)))
-            {
-                throw new BadRequestException("Cannot invite users.");
-            }
-
             // Make sure user is not already invited
             var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
             if(existingOrgUser != null)
@@ -185,11 +179,6 @@ namespace Bit.Core.Services
 
         public async Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId)
         {
-            if(!(await OrganizationUserHasAdminRightsAsync(organizationId, invitingUserId)))
-            {
-                throw new BadRequestException("Cannot invite users.");
-            }
-
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId ||
                 orgUser.Status != Enums.OrganizationUserStatusType.Invited)
@@ -257,11 +246,6 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
             Guid confirmingUserId)
         {
-            if(!(await OrganizationUserHasAdminRightsAsync(organizationId, confirmingUserId)))
-            {
-                throw new BadRequestException("Cannot confirm users.");
-            }
-
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.Status != Enums.OrganizationUserStatusType.Accepted ||
                 orgUser.OrganizationId != organizationId)
@@ -286,11 +270,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
-            if(!(await OrganizationUserHasAdminRightsAsync(user.OrganizationId, savingUserId)))
-            {
-                throw new BadRequestException("Cannot update users.");
-            }
-
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
             if(user.Type != Enums.OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
             {
@@ -306,11 +285,6 @@ namespace Bit.Core.Services
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
         {
-            if(!(await OrganizationUserHasAdminRightsAsync(organizationId, deletingUserId)))
-            {
-                throw new BadRequestException("Cannot delete users.");
-            }
-
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId)
             {
@@ -331,18 +305,6 @@ namespace Bit.Core.Services
             var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
                 Enums.OrganizationUserType.Owner);
             return owners.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed);
-        }
-
-        private async Task<bool> OrganizationUserHasAdminRightsAsync(Guid organizationId, Guid userId)
-        {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-            if(orgUser == null)
-            {
-                return false;
-            }
-
-            return orgUser.Status == Enums.OrganizationUserStatusType.Confirmed &&
-                orgUser.Type != Enums.OrganizationUserType.User;
         }
 
         private async Task SaveUserSubvaultsAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults, bool newUser)
