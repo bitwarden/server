@@ -165,7 +165,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\Subvault_ReadByIdAdminUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUserSubvaultDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
@@ -178,7 +177,6 @@
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationIdAdminUserId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByCipherId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />

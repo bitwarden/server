@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -16,21 +17,23 @@ namespace Bit.Api.Controllers
     {
         private readonly ISubvaultRepository _subvaultRepository;
         private readonly IUserService _userService;
+        private readonly CurrentContext _currentContext;
 
         public SubvaultsController(
             ISubvaultRepository subvaultRepository,
-            IUserService userService)
+            IUserService userService,
+            CurrentContext currentContext)
         {
             _subvaultRepository = subvaultRepository;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         [HttpGet("{id}")]
         public async Task<SubvaultResponseModel> Get(string orgId, string id)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id), userId);
-            if(subvault == null)
+            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
+            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -38,19 +41,24 @@ namespace Bit.Api.Controllers
             return new SubvaultResponseModel(subvault);
         }
 
-        [HttpGet("~/subvaults")]
-        public async Task<ListResponseModel<SubvaultResponseModel>> Get()
+        [HttpGet("")]
+        public async Task<ListResponseModel<SubvaultResponseModel>> Get(string orgId)
         {
-            var subvaults = await _subvaultRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
+            var orgIdGuid = new Guid(orgId);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var subvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             var responses = subvaults.Select(s => new SubvaultResponseModel(s));
             return new ListResponseModel<SubvaultResponseModel>(responses);
         }
 
-        [HttpGet("")]
-        public async Task<ListResponseModel<SubvaultResponseModel>> GetByOrganization(string orgId)
+        [HttpGet("~/subvaults")]
+        public async Task<ListResponseModel<SubvaultResponseModel>> GetUser()
         {
-            var subvaults = await _subvaultRepository.GetManyByOrganizationIdAdminUserIdAsync(new Guid(orgId),
-                _userService.GetProperUserId(User).Value);
+            var subvaults = await _subvaultRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
             var responses = subvaults.Select(s => new SubvaultResponseModel(s));
             return new ListResponseModel<SubvaultResponseModel>(responses);
         }
@@ -58,8 +66,13 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<SubvaultResponseModel> Post(string orgId, [FromBody]SubvaultRequestModel model)
         {
-            // TODO: permission check
-            var subvault = model.ToSubvault(new Guid(orgId));
+            var orgIdGuid = new Guid(orgId);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var subvault = model.ToSubvault(orgIdGuid);
             await _subvaultRepository.CreateAsync(subvault);
             return new SubvaultResponseModel(subvault);
         }
@@ -68,9 +81,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}")]
         public async Task<SubvaultResponseModel> Put(string orgId, string id, [FromBody]SubvaultRequestModel model)
         {
-            var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id),
-                _userService.GetProperUserId(User).Value);
-            if(subvault == null)
+            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
+            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -83,9 +95,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var subvault = await _subvaultRepository.GetByIdAdminUserIdAsync(new Guid(id),
-                _userService.GetProperUserId(User).Value);
-            if(subvault == null)
+            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
+            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
             {
                 throw new NotFoundException();
             }
