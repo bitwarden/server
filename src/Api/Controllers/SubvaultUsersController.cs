@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -17,22 +18,31 @@ namespace Bit.Api.Controllers
         private readonly ISubvaultRepository _subvaultRepository;
         private readonly ISubvaultUserRepository _subvaultUserRepository;
         private readonly IUserService _userService;
+        private readonly CurrentContext _currentContext;
 
         public SubvaultUsersController(
             ISubvaultRepository subvaultRepository,
             ISubvaultUserRepository subvaultUserRepository,
-            IUserService userService)
+            IUserService userService,
+            CurrentContext currentContext)
         {
             _subvaultRepository = subvaultRepository;
             _subvaultUserRepository = subvaultUserRepository;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         [HttpGet("{subvaultId}")]
         public async Task<ListResponseModel<SubvaultUserResponseModel>> GetBySubvault(string orgId, string subvaultId)
         {
-            // TODO: permission check
-            var subvaultUsers = await _subvaultUserRepository.GetManyDetailsBySubvaultIdAsync(new Guid(subvaultId));
+            var subvaultIdGuid = new Guid(subvaultId);
+            var subvault = await _subvaultRepository.GetByIdAsync(subvaultIdGuid);
+            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var subvaultUsers = await _subvaultUserRepository.GetManyDetailsBySubvaultIdAsync(subvaultIdGuid);
             var responses = subvaultUsers.Select(s => new SubvaultUserResponseModel(s));
             return new ListResponseModel<SubvaultUserResponseModel>(responses);
         }
@@ -47,7 +57,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            // TODO: permission check
+            var subvault = await _subvaultRepository.GetByIdAsync(user.SubvaultId);
+            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
             await _subvaultUserRepository.DeleteAsync(user);
         }
     }
