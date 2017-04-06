@@ -38,11 +38,37 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}")]
         public async Task<OrganizationResponseModel> Get(string id)
         {
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
-            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationResponseModel(organization);
+        }
+
+        [HttpGet("{id}/billing")]
+        public async Task<OrganizationResponseModel> GetBilling(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            // TODO: billing stuff
 
             return new OrganizationResponseModel(organization);
         }
@@ -69,8 +95,14 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}")]
         public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
         {
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
-            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
             {
                 throw new NotFoundException();
             }
@@ -83,8 +115,14 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
-            if(organization == null || !_currentContext.OrganizationAdmin(organization.Id))
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
             {
                 throw new NotFoundException();
             }
