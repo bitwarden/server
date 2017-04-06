@@ -54,7 +54,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/billing")]
-        public async Task<OrganizationResponseModel> GetBilling(string id)
+        public async Task<OrganizationBillingResponseModel> GetBilling(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -68,9 +68,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            // TODO: billing stuff
+            var billingInfo = await _organizationService.GetBillingAsync(organization);
+            if(billingInfo == null)
+            {
+                throw new NotFoundException();
+            }
 
-            return new OrganizationResponseModel(organization);
+            return new OrganizationBillingResponseModel(organization, billingInfo);
         }
 
         [HttpGet("")]

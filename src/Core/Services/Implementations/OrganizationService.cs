@@ -39,6 +39,40 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
         }
+        public async Task<OrganizationBilling> GetBillingAsync(Organization organization)
+        {
+            var orgBilling = new OrganizationBilling();
+            var customerService = new StripeCustomerService();
+            var subscriptionService = new StripeSubscriptionService();
+            var chargeService = new StripeChargeService();
+
+            if(!string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            {
+                var customer = await customerService.GetAsync(organization.StripeCustomerId);
+                if(customer != null)
+                {
+                    orgBilling.PaymentSource = customer.DefaultSource;
+
+                    var charges = await chargeService.ListAsync(new StripeChargeListOptions
+                    {
+                        CustomerId = customer.Id,
+                        Limit = 20
+                    });
+                    orgBilling.Charges = charges.OrderByDescending(c => c.Created);
+                }
+            }
+
+            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
+                if(sub != null)
+                {
+                    orgBilling.Subscription = sub;
+                }
+            }
+
+            return orgBilling;
+        }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
