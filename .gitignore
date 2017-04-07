@@ -201,3 +201,4 @@ project.lock.json
 *.jfm
 mail_dist/
 *.refactorlog
+*.scmp
