@@ -27,21 +27,62 @@ namespace Bit.Core.Utilities
                     return false;
                 }
 
-                var encStringPieces = encString.Split('|');
-                if(encStringPieces.Length != 2 && encStringPieces.Length != 3)
+                var headerPieces = encString.Split('.');
+                string[] encStringPieces = null;
+                var encType = Enums.EncryptionType.AesCbc256_B64;
+
+                if(headerPieces.Length == 1)
                 {
-                    return false;
+                    encStringPieces = headerPieces[0].Split('|');
+                    // encType stays AesCbc256_B64
+                }
+                else if(headerPieces.Length == 2)
+                {
+                    encStringPieces = headerPieces[1].Split('|');
+                    if(!Enum.TryParse(headerPieces[0], out encType))
+                    {
+                        return false;
+                    }
                 }
 
-                var iv = Convert.FromBase64String(encStringPieces[0]);
-                var ct = Convert.FromBase64String(encStringPieces[1]);
-
-                if(iv.Length < 1 || ct.Length < 1)
+                switch(encType)
                 {
-                    return false;
+                    case Enums.EncryptionType.AesCbc256_B64:
+                        if(encStringPieces.Length != 2)
+                        {
+                            return false;
+                        }
+                        break;
+                    case Enums.EncryptionType.AesCbc128_HmacSha256_B64:
+                    case Enums.EncryptionType.AesCbc256_HmacSha256_B64:
+                        if(encStringPieces.Length != 3)
+                        {
+                            return false;
+                        }
+                        break;
+                    case Enums.EncryptionType.RsaOaep_Sha256_B64:
+                        if(encStringPieces.Length != 1)
+                        {
+                            return false;
+                        }
+                        break;
+                    default:
+                        return false;
                 }
 
-                if(encStringPieces.Length == 3)
+                if(encType != Enums.EncryptionType.RsaOaep_Sha256_B64)
+                {
+                    var iv = Convert.FromBase64String(encStringPieces[0]);
+                    var ct = Convert.FromBase64String(encStringPieces[1]);
+
+                    if(iv.Length < 1 || ct.Length < 1)
+                    {
+                        return false;
+                    }
+                }
+
+                if(encType == Enums.EncryptionType.AesCbc128_HmacSha256_B64 ||
+                    encType == Enums.EncryptionType.AesCbc256_HmacSha256_B64)
                 {
                     var mac = Convert.FromBase64String(encStringPieces[2]);
                     if(mac.Length < 1)
