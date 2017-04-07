@@ -87,7 +87,16 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
-            if(plan.Type != Enums.PlanType.Free)
+            if(plan.Type == Enums.PlanType.Free)
+            {
+                var ownerExistingOrgs = await _organizationUserRepository.GetManyByUserAsync(signup.Owner.Id);
+                if(ownerExistingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner ||
+                    ou.Type == Enums.OrganizationUserType.Admin))
+                {
+                    throw new BadRequestException("You can only be an admin of 1 free organization.");
+                }
+            }
+            else
             {
                 customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
                 {
@@ -243,6 +252,12 @@ namespace Bit.Core.Services
             if(orgUser.Status != Enums.OrganizationUserStatusType.Invited)
             {
                 throw new BadRequestException("Already accepted.");
+            }
+
+            var existingOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            if(existingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner || ou.Type == Enums.OrganizationUserType.Admin))
+            {
+                throw new BadRequestException("You can only be an admin of 1 free organization.");
             }
 
             var tokenValidationFailed = true;
