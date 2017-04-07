@@ -94,7 +94,7 @@ namespace Bit.Core.Utilities
                 new Plan
                 {
                     Type = PlanType.Free,
-                    BaseUsers = 1,
+                    BaseUsers = 2,
                     CanBuyAdditionalUsers = false,
                     Name = "Free"
                 },
@@ -105,8 +105,7 @@ namespace Bit.Core.Utilities
                     BaseAnnualPrice = 12,
                     UserAnnualPrice = 12,
                     CanBuyAdditionalUsers = true,
-                    Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = now => now.AddYears(1) - now,
+                    CanMonthly = false,
                     Name = "Personal",
                     StripeAnnualPlanId = "personal-annual",
                     StripeAnnualUserPlanId = "personal-user-annual"
@@ -121,8 +120,6 @@ namespace Bit.Core.Utilities
                     UserMonthlyPrice = 2.5M,
                     CanBuyAdditionalUsers = true,
                     CanMonthly = true,
-                    Trial = new TimeSpan(14, 0, 0, 0),
-                    Cycle = now => now.AddMonths(1) - now,
                     Name = "Teams",
                     StripeAnnualPlanId = "teams-annual",
                     StripeAnnualUserPlanId = "teams-user-annual",

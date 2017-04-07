@@ -6,6 +6,7 @@
     [Plan]                 NVARCHAR (20)    NOT NULL,
     [PlanType]             TINYINT          NOT NULL,
     [MaxUsers]             SMALLINT         NULL,
+    [MaxSubvaults]         SMALLINT         NULL,
     [StripeCustomerId]     VARCHAR (50)     NULL,
     [StripeSubscriptionId] VARCHAR (50)     NULL,
     [CreationDate]         DATETIME2 (7)    NOT NULL,

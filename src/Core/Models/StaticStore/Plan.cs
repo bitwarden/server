@@ -18,8 +18,6 @@ namespace Bit.Core.Models.StaticStore
         public decimal UserMonthlyPrice { get; set; }
         public decimal BaseAnnualPrice { get; set; }
         public decimal UserAnnualPrice { get; set; }
-        public TimeSpan? Trial { get; set; }
-        public Func<DateTime, TimeSpan> Cycle { get; set; }
         public bool Disabled { get; set; }
     }
 }
