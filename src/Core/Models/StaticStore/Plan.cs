@@ -18,6 +18,7 @@ namespace Bit.Core.Models.StaticStore
         public decimal UserMonthlyPrice { get; set; }
         public decimal BaseAnnualPrice { get; set; }
         public decimal UserAnnualPrice { get; set; }
+        public short? MaxSubvaults { get; set; }
         public bool Disabled { get; set; }
     }
 }

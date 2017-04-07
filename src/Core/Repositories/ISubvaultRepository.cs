@@ -7,6 +7,7 @@ namespace Bit.Core.Repositories
 {
     public interface ISubvaultRepository : IRepository<Subvault, Guid>
     {
+        Task<int> GetCountByOrganizationIdAsync(Guid organizationId);
         Task<ICollection<Subvault>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<ICollection<Subvault>> GetManyByUserIdAsync(Guid userId);
 

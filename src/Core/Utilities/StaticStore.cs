@@ -96,6 +96,7 @@ namespace Bit.Core.Utilities
                     Type = PlanType.Free,
                     BaseUsers = 2,
                     CanBuyAdditionalUsers = false,
+                    MaxSubvaults = 2,
                     Name = "Free"
                 },
                 new Plan

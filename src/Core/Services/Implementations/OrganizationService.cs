@@ -76,7 +76,7 @@ namespace Bit.Core.Services
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
-            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
             if(plan == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -136,6 +136,7 @@ namespace Bit.Core.Services
                 BusinessName = signup.BusinessName,
                 PlanType = plan.Type,
                 MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
+                MaxSubvaults = plan.MaxSubvaults,
                 Plan = plan.ToString(),
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,
@@ -184,6 +185,22 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
         {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(organization.MaxUsers.HasValue)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+                if(userCount >= organization.MaxUsers.Value)
+                {
+                    throw new BadRequestException("You have reached the maximum number of users " +
+                        $"({organization.MaxUsers.Value}) for this organization.");
+                }
+            }
+
             // Make sure user is not already invited
             var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
             if(existingOrgUser != null)

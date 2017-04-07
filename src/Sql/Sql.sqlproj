@@ -181,5 +181,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
   </ItemGroup>
 </Project>
