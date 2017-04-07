@@ -93,7 +93,7 @@ namespace Bit.Core.Services
                 if(ownerExistingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner ||
                     ou.Type == Enums.OrganizationUserType.Admin))
                 {
-                    throw new BadRequestException("You can only be an admin of 1 free organization.");
+                    throw new BadRequestException("You can only be an admin of one free organization.");
                 }
             }
             else
@@ -257,7 +257,7 @@ namespace Bit.Core.Services
             var existingOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             if(existingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner || ou.Type == Enums.OrganizationUserType.Admin))
             {
-                throw new BadRequestException("You can only be an admin of 1 free organization.");
+                throw new BadRequestException("You can only be an admin of one free organization.");
             }
 
             var tokenValidationFailed = true;
