@@ -44,14 +44,12 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public string SubvaultId { get; set; }
-        public bool Admin { get; set; }
         public bool ReadOnly { get; set; }
 
         public SubvaultUser ToSubvaultUser()
         {
             var subvault = new SubvaultUser
             {
-                Admin = Admin,
                 ReadOnly = ReadOnly,
                 SubvaultId = new Guid(SubvaultId)
             };

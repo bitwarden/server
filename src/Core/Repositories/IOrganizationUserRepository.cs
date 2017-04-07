@@ -9,6 +9,7 @@ namespace Bit.Core.Repositories
 {
     public interface IOrganizationUserRepository : IRepository<OrganizationUser, Guid>
     {
+        Task<int> GetCountByFreeOrganizationAdminUserAsync(Guid userId);
         Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
         Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
         Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email);

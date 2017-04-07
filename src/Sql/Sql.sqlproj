@@ -99,8 +99,11 @@
     <Build Include="dbo\Views\SubvaultView.sql" />
     <Build Include="dbo\Functions\UserCanEditCipher.sql" />
     <Build Include="dbo\Functions\CipherDetails.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByUserIdCipherId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadByOrganizationUserId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
@@ -178,7 +181,5 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByCipherId.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
   </ItemGroup>
 </Project>

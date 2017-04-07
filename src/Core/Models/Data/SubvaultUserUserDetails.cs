@@ -12,6 +12,5 @@ namespace Bit.Core.Models.Data
         public Enums.OrganizationUserStatusType Status { get; set; }
         public Enums.OrganizationUserType Type { get; set; }
         public bool ReadOnly { get; set; }
-        public bool Admin { get; set; }
     }
 }

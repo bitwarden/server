@@ -23,7 +23,6 @@ namespace Bit.Core.Models.Api
             Type = subvaultUser.Type;
             Status = subvaultUser.Status;
             ReadOnly = subvaultUser.ReadOnly;
-            Admin = subvaultUser.Admin;
         }
 
         public string Id { get; set; }
@@ -34,6 +33,5 @@ namespace Bit.Core.Models.Api
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public bool ReadOnly { get; set; }
-        public bool Admin { get; set; }
     }
 }

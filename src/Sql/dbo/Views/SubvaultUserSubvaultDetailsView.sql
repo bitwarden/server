@@ -5,8 +5,7 @@ SELECT
     SU.[OrganizationUserId],
     S.[Name],
     S.[Id] SubvaultId,
-    SU.[ReadOnly],
-    SU.[Admin]
+    SU.[ReadOnly]
 FROM
     [dbo].[SubvaultUser] SU
 INNER JOIN

@@ -89,9 +89,9 @@ namespace Bit.Core.Services
 
             if(plan.Type == Enums.PlanType.Free)
             {
-                var ownerExistingOrgs = await _organizationUserRepository.GetManyByUserAsync(signup.Owner.Id);
-                if(ownerExistingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner ||
-                    ou.Type == Enums.OrganizationUserType.Admin))
+                var ownerExistingOrgCount =
+                    await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
+                if(ownerExistingOrgCount > 0)
                 {
                     throw new BadRequestException("You can only be an admin of one free organization.");
                 }
@@ -136,13 +136,7 @@ namespace Bit.Core.Services
                 BusinessName = signup.BusinessName,
                 UserId = signup.Owner.Id,
                 PlanType = plan.Type,
-                BaseUsers = plan.BaseUsers,
-                AdditionalUsers = (short)(plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0),
                 MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
-                PlanTrial = plan.Trial.HasValue,
-                PlanBasePrice = plan.CanMonthly && signup.Monthly ? plan.BaseMonthlyPrice : plan.BaseAnnualPrice,
-                PlanUserPrice = plan.CanMonthly && signup.Monthly ? plan.UserMonthlyPrice : plan.UserAnnualPrice,
-                PlanRenewalDate = subscription?.CurrentPeriodEnd,
                 Plan = plan.ToString(),
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,
@@ -254,8 +248,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already accepted.");
             }
 
-            var existingOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-            if(existingOrgs.Any(ou => ou.Type == Enums.OrganizationUserType.Owner || ou.Type == Enums.OrganizationUserType.Admin))
+            var ownerExistingOrgCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+            if(ownerExistingOrgCount > 0)
             {
                 throw new BadRequestException("You can only be an admin of one free organization.");
             }

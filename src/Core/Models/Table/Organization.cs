@@ -13,12 +13,6 @@ namespace Bit.Core.Models.Table
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public decimal PlanBasePrice { get; set; }
-        public decimal PlanUserPrice { get; set; }
-        public DateTime? PlanRenewalDate { get; set; }
-        public bool PlanTrial { get; set; }
-        public short BaseUsers { get; set; }
-        public short AdditionalUsers { get; set; }
         public short MaxUsers { get; set; }
         public string StripeCustomerId { get; set; }
         public string StripeSubscriptionId { get; set; }

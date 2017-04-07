@@ -5,6 +5,6 @@
     [CreationDate]   DATETIME         NOT NULL,
     [RevisionDate]   DATETIME         NOT NULL,
     CONSTRAINT [PK_Group] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Group_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+    CONSTRAINT [FK_Group_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 

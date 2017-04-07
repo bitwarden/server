@@ -2,7 +2,6 @@
     @Id UNIQUEIDENTIFIER,
     @SubvaultId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
-    @Admin BIT,
     @ReadOnly BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -15,7 +14,6 @@ BEGIN
     SET
         [SubvaultId] = @SubvaultId,
         [OrganizationUserId] = @OrganizationUserId,
-        [Admin] = @Admin,
         [ReadOnly] = @ReadOnly,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

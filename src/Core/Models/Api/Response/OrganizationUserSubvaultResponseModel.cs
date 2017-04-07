@@ -18,13 +18,11 @@ namespace Bit.Core.Models.Api
             Name = details.Name;
             SubvaultId = details.SubvaultId.ToString();
             ReadOnly = details.ReadOnly;
-            Admin = details.Admin;
         }
 
         public string Id { get; set; }
         public string Name { get; set; }
         public string SubvaultId { get; set; }
         public bool ReadOnly { get; set; }
-        public bool Admin { get; set; }
     }
 }

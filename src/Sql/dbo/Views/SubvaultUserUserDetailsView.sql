@@ -8,8 +8,7 @@ SELECT
     ISNULL(U.[Email], OU.[Email]) Email,
     OU.[Status],
     OU.[Type],
-    SU.[ReadOnly],
-    SU.[Admin]
+    SU.[ReadOnly]
 FROM
     [dbo].[SubvaultUser] SU
 INNER JOIN

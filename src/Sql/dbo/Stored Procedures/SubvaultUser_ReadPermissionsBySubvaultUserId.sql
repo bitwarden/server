@@ -8,7 +8,6 @@ BEGIN
 
     SELECT
         SU.[SubvaultId],
-        CASE WHEN OU.[Type] = 2 THEN SU.[Admin] ELSE 1 END AS [Admin], -- 2 = Regular User
         SU.[ReadOnly]
     FROM
         [dbo].[SubvaultUser] SU

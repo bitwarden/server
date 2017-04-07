@@ -21,6 +21,19 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
+        public async Task<int> GetCountByFreeOrganizationAdminUserAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteScalarAsync<int>(
+                    "[dbo].[OrganizationUser_ReadCountByFreeOrganizationAdminUser]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results;
+            }
+        }
+
         public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email)
         {
             using(var connection = new SqlConnection(ConnectionString))

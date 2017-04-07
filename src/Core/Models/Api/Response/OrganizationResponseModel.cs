@@ -23,7 +23,6 @@ namespace Bit.Core.Models.Api
             BillingEmail = organization.BillingEmail;
             Plan = organization.Plan;
             PlanType = organization.PlanType;
-            PlanTrial = organization.PlanTrial;
             MaxUsers = organization.MaxUsers;
         }
 
@@ -33,7 +32,6 @@ namespace Bit.Core.Models.Api
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public Enums.PlanType PlanType { get; set; }
-        public bool PlanTrial { get; set; }
         public short MaxUsers { get; set; }
     }
 

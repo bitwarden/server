@@ -1,9 +1,5 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
-using Bit.Core.Utilities;
 using Bit.Core.Models.Table;
-using Newtonsoft.Json;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -20,7 +16,6 @@ namespace Bit.Core.Models.Api
             {
                 OrganizationUserId = new Guid(UserId),
                 SubvaultId = new Guid(s.SubvaultId),
-                Admin = s.Admin,
                 ReadOnly = s.ReadOnly
             });
         }
@@ -28,7 +23,6 @@ namespace Bit.Core.Models.Api
         public class Subvault
         {
             public string SubvaultId { get; set; }
-            public bool Admin { get; set; }
             public bool ReadOnly { get; set; }
         }
     }
@@ -36,7 +30,6 @@ namespace Bit.Core.Models.Api
     public class SubvaultUserUserRequestModel
     {
         public string UserId { get; set; }
-        public bool Admin { get; set; }
         public bool ReadOnly { get; set; }
     }
 }

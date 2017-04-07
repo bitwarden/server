@@ -9,6 +9,5 @@ namespace Bit.Core.Models.Data
         public string Name { get; set; }
         public Guid SubvaultId { get; set; }
         public bool ReadOnly { get; set; }
-        public bool Admin { get; set; }
     }
 }
