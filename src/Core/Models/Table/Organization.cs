@@ -7,7 +7,6 @@ namespace Bit.Core.Models.Table
     public class Organization : IDataObject<Guid>
     {
         public Guid Id { get; set; }
-        public Guid UserId { get; set; }
         public string Name { get; set; }
         public string BusinessName { get; set; }
         public string BillingEmail { get; set; }

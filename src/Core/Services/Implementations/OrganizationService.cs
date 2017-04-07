@@ -134,7 +134,6 @@ namespace Bit.Core.Services
                 Name = signup.Name,
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
-                UserId = signup.Owner.Id,
                 PlanType = plan.Type,
                 MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
                 Plan = plan.ToString(),
