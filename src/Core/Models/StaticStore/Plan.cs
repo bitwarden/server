@@ -13,6 +13,7 @@ namespace Bit.Core.Models.StaticStore
         public PlanType Type { get; set; }
         public short BaseUsers { get; set; }
         public bool CanBuyAdditionalUsers { get; set; }
+        public short? MaxAdditionalUsers { get; set; }
         public bool CanMonthly { get; set; }
         public decimal BaseMonthlyPrice { get; set; }
         public decimal UserMonthlyPrice { get; set; }

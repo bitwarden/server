@@ -106,6 +106,7 @@ namespace Bit.Core.Utilities
                     BaseAnnualPrice = 12,
                     UserAnnualPrice = 12,
                     CanBuyAdditionalUsers = true,
+                    MaxAdditionalUsers = 5,
                     CanMonthly = false,
                     Name = "Personal",
                     StripeAnnualPlanId = "personal-annual",

@@ -87,6 +87,12 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
+            if(signup.AdditionalUsers > plan.MaxAdditionalUsers.GetValueOrDefault(0))
+            {
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                    $"{plan.MaxAdditionalUsers.GetValueOrDefault(0)} additional users.");
+            }
+
             if(plan.Type == Enums.PlanType.Free)
             {
                 var ownerExistingOrgCount =
