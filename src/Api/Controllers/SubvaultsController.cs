@@ -16,15 +16,18 @@ namespace Bit.Api.Controllers
     public class SubvaultsController : Controller
     {
         private readonly ISubvaultRepository _subvaultRepository;
+        private readonly ISubvaultService _subvaultService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public SubvaultsController(
             ISubvaultRepository subvaultRepository,
+            ISubvaultService subvaultService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _subvaultRepository = subvaultRepository;
+            _subvaultService = subvaultService;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -73,7 +76,7 @@ namespace Bit.Api.Controllers
             }
 
             var subvault = model.ToSubvault(orgIdGuid);
-            await _subvaultRepository.CreateAsync(subvault);
+            await _subvaultService.SaveAsync(subvault);
             return new SubvaultResponseModel(subvault);
         }
 
@@ -87,7 +90,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _subvaultRepository.ReplaceAsync(model.ToSubvault(subvault));
+            await _subvaultService.SaveAsync(model.ToSubvault(subvault));
             return new SubvaultResponseModel(subvault);
         }
 

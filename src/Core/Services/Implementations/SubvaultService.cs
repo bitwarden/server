@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Repositories;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
 using Bit.Core.Exceptions;
-using System.Collections.Generic;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
@@ -35,6 +31,32 @@ namespace Bit.Core.Services
             _mailService = mailService;
         }
 
+        public async Task SaveAsync(Subvault subvault)
+        {
+            if(subvault.Id == default(Guid))
+            {
+                var org = await _organizationRepository.GetByIdAsync(subvault.OrganizationId);
+                if(org == null)
+                {
+                    throw new BadRequestException("Org not found");
+                }
 
+                if(org.MaxSubvaults.HasValue)
+                {
+                    var subvaultCount = await _subvaultRepository.GetCountByOrganizationIdAsync(org.Id);
+                    if(org.MaxSubvaults.Value <= subvaultCount)
+                    {
+                        throw new BadRequestException("You have reached the maximum number of subvaults " +
+                        $"({org.MaxSubvaults.Value}) for this organization.");
+                    }
+                }
+
+                await _subvaultRepository.CreateAsync(subvault);
+            }
+            else
+            {
+                await _subvaultRepository.ReplaceAsync(subvault);
+            }
+        }
     }
 }
