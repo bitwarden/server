@@ -10,6 +10,7 @@ namespace Bit.Core.Services
     {
         Task<OrganizationBilling> GetBillingAsync(Organization organization);
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
+        Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults);

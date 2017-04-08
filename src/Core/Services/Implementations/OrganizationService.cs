@@ -127,6 +127,39 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                throw new BadRequestException("Organization has no subscription.");
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            var sub = await subscriptionService.GetAsync(organization.StripeCustomerId);
+
+            if(sub == null)
+            {
+                throw new BadRequestException("Organization subscription was not found.");
+            }
+
+            if(sub.Status == "canceled")
+            {
+                throw new BadRequestException("Organization subscription is already canceled.");
+            }
+
+            var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
+            if(canceledSub?.Status != "canceled")
+            {
+                throw new BadRequestException("Unable to cancel subscription.");
+            }
+        }
+
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
