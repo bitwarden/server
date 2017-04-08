@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
         public PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
-        public string CardToken { get; set; }
+        public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
         public short AdditionalUsers { get; set; }
         public bool Monthly { get; set; }
@@ -32,7 +32,7 @@ namespace Bit.Core.Models.Api
                 OwnerKey = Key,
                 Name = Name,
                 Plan = PlanType,
-                PaymentToken = CardToken,
+                PaymentToken = PaymentToken,
                 AdditionalUsers = AdditionalUsers,
                 BillingEmail = BillingEmail,
                 BusinessName = BusinessName,
@@ -42,9 +42,9 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(PlanType != PlanType.Free && string.IsNullOrWhiteSpace(CardToken))
+            if(PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
             {
-                yield return new ValidationResult("Card required.", new string[] { nameof(CardToken) });
+                yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
             }
         }
     }

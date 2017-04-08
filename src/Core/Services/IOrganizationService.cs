@@ -9,6 +9,7 @@ namespace Bit.Core.Services
     public interface IOrganizationService
     {
         Task<OrganizationBilling> GetBillingAsync(Organization organization);
+        Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults);

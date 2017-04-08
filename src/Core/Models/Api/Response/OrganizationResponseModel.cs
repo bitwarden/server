@@ -58,7 +58,8 @@ namespace Bit.Core.Models.Api
                 switch(source.Type)
                 {
                     case SourceType.Card:
-                        Description = $"{source.Card.Brand}, *{source.Card.Last4}";
+                        Description = $"{source.Card.Brand}, *{source.Card.Last4}, " +
+                            $"{source.Card.ExpirationMonth}/{source.Card.ExpirationYear}";
                         CardBrand = source.Card.Brand;
                         break;
                     case SourceType.BankAccount:

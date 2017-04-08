@@ -51,7 +51,19 @@ namespace Bit.Core.Services
                 var customer = await customerService.GetAsync(organization.StripeCustomerId);
                 if(customer != null)
                 {
-                    orgBilling.PaymentSource = customer.DefaultSource;
+                    if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
+                    {
+                        if(customer.DefaultSourceId.StartsWith("card_"))
+                        {
+                            orgBilling.PaymentSource =
+                                customer.Sources.Data.FirstOrDefault(s => s.Card?.Id == customer.DefaultSourceId);
+                        }
+                        else if(customer.DefaultSourceId.StartsWith("ba_"))
+                        {
+                            orgBilling.PaymentSource =
+                                customer.Sources.Data.FirstOrDefault(s => s.BankAccount?.Id == customer.DefaultSourceId);
+                        }
+                    }
 
                     var charges = await chargeService.ListAsync(new StripeChargeListOptions
                     {
@@ -74,6 +86,47 @@ namespace Bit.Core.Services
             return orgBilling;
         }
 
+        public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var cardService = new StripeCardService();
+            var customerService = new StripeCustomerService();
+            StripeCustomer customer = null;
+
+            if(!string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            {
+                customer = await customerService.GetAsync(organization.StripeCustomerId);
+            }
+
+            if(customer == null)
+            {
+                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+                {
+                    Description = organization.BusinessName,
+                    Email = organization.BillingEmail,
+                    SourceToken = paymentToken
+                });
+
+                organization.StripeCustomerId = customer.Id;
+                await _organizationRepository.ReplaceAsync(organization);
+            }
+
+            await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
+            {
+                SourceToken = paymentToken
+            });
+
+            if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
+            {
+                await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
+            }
+        }
+
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
@@ -87,7 +140,8 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
-            if(signup.AdditionalUsers > plan.MaxAdditionalUsers.GetValueOrDefault(0))
+            if(plan.CanBuyAdditionalUsers && plan.MaxAdditionalUsers.HasValue &&
+                signup.AdditionalUsers > plan.MaxAdditionalUsers.Value)
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
                     $"{plan.MaxAdditionalUsers.GetValueOrDefault(0)} additional users.");
@@ -143,7 +197,7 @@ namespace Bit.Core.Services
                 PlanType = plan.Type,
                 MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
                 MaxSubvaults = plan.MaxSubvaults,
-                Plan = plan.ToString(),
+                Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,
                 CreationDate = DateTime.UtcNow,

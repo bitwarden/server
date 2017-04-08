@@ -115,6 +115,19 @@ namespace Bit.Api.Controllers
             return new OrganizationResponseModel(organization);
         }
 
+        [HttpPut("{id}/payment")]
+        [HttpPost("{id}/payment")]
+        public async Task PutPayment(string id, [FromBody]OrganizationPaymentRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
+        }
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
