@@ -59,7 +59,10 @@ namespace Bit.Core.Models.Api
                 {
                     case SourceType.Card:
                         Description = $"{source.Card.Brand}, *{source.Card.Last4}, " +
-                            $"{source.Card.ExpirationMonth}/{source.Card.ExpirationYear}";
+                            string.Format("{0}/{1}",
+                                string.Concat(source.Card.ExpirationMonth.Length == 1 ?
+                                    "0" : string.Empty, source.Card.ExpirationMonth),
+                                source.Card.ExpirationYear);
                         CardBrand = source.Card.Brand;
                         break;
                     case SourceType.BankAccount:
