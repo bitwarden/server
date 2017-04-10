@@ -313,7 +313,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("No payment method found.");
             }
 
-            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
             {
                 throw new BadRequestException("No subscription found.");
             }
@@ -353,28 +353,44 @@ namespace Bit.Core.Services
             }
 
             var subscriptionService = new StripeSubscriptionService();
-            var subUpdateOptions = new StripeSubscriptionUpdateOptions
+            var subscriptionItemService = new StripeSubscriptionItemService();
+            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
+            if(sub == null)
             {
-                Items = new List<StripeSubscriptionItemUpdateOption>
-                {
-                    new StripeSubscriptionItemUpdateOption
-                    {
-                        PlanId = plan.StripePlanId,
-                        Quantity = 1
-                    }
-                }
-            };
-
-            if(additionalSeats > 0)
-            {
-                subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
-                {
-                    PlanId = plan.StripeSeatPlanId,
-                    Quantity = additionalSeats
-                });
+                throw new BadRequestException("Subscription not found.");
             }
 
-            await subscriptionService.UpdateAsync(organization.StripeSubscriptionId, subUpdateOptions);
+            var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
+            if(seatItem == null)
+            {
+                var subItemCreateOptions = new StripeSubscriptionItemCreateOptions
+                {
+                    PlanId = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats,
+                    Prorate = true,
+                    SubscriptionId = sub.Id
+                };
+
+                await subscriptionItemService.CreateAsync(subItemCreateOptions);
+            }
+            else if(additionalSeats > 0)
+            {
+                var subItemUpdateOptions = new StripeSubscriptionItemUpdateOptions
+                {
+                    PlanId = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats,
+                    Prorate = true
+                };
+
+                await subscriptionItemService.UpdateAsync(seatItem.Id, subItemUpdateOptions);
+            }
+            else if(additionalSeats == 0)
+            {
+                await subscriptionItemService.DeleteAsync(seatItem.Id);
+            }
+
+            organization.Seats = (short?)newSeatTotal;
+            await _organizationRepository.ReplaceAsync(organization);
         }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
