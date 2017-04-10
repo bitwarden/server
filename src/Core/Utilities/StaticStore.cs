@@ -97,36 +97,45 @@ namespace Bit.Core.Utilities
                     BaseUsers = 2,
                     CanBuyAdditionalUsers = false,
                     MaxSubvaults = 2,
-                    Name = "Free"
+                    Name = "Free",
+                    UpgradeSortOrder = -1 // Always the lowest plan, cannot be upgraded to
                 },
                 new Plan
                 {
-                    Type = PlanType.Personal,
+                    Type = PlanType.PersonalAnnually,
                     BaseUsers = 5,
-                    BaseAnnualPrice = 12,
-                    UserAnnualPrice = 12,
+                    BasePrice = 12,
+                    UserPrice = 12,
                     CanBuyAdditionalUsers = true,
                     MaxAdditionalUsers = 5,
-                    CanMonthly = false,
                     Name = "Personal",
-                    StripeAnnualPlanId = "personal-annual",
-                    StripeAnnualUserPlanId = "personal-user-annual"
+                    StripePlanId = "personal-annual",
+                    StripeUserPlanId = "personal-user-annual",
+                    UpgradeSortOrder = 1
                 },
                 new Plan
                 {
-                    Type = PlanType.Teams,
+                    Type = PlanType.TeamsMonthly,
                     BaseUsers = 5,
-                    BaseAnnualPrice = 60,
-                    UserAnnualPrice = 24,
-                    BaseMonthlyPrice = 8,
-                    UserMonthlyPrice = 2.5M,
+                    BasePrice = 8,
+                    UserPrice = 2.5M,
                     CanBuyAdditionalUsers = true,
-                    CanMonthly = true,
-                    Name = "Teams",
-                    StripeAnnualPlanId = "teams-annual",
-                    StripeAnnualUserPlanId = "teams-user-annual",
-                    StripeMonthlyPlanId = "teams-monthly",
-                    StripeMonthlyUserPlanId = "teams-user-monthly"
+                    Name = "Teams (Monthly)",
+                    StripePlanId = "teams-monthly",
+                    StripeUserPlanId = "teams-user-monthly",
+                    UpgradeSortOrder = 2
+                },
+                new Plan
+                {
+                    Type = PlanType.TeamsAnnually,
+                    BaseUsers = 5,
+                    BasePrice = 60,
+                    UserPrice = 24,
+                    CanBuyAdditionalUsers = true,
+                    Name = "Teams (Annually)",
+                    StripePlanId = "teams-annual",
+                    StripeUserPlanId = "teams-user-annual",
+                    UpgradeSortOrder = 2
                 }
             };
 

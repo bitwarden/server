@@ -3,9 +3,11 @@
     public enum PlanType : byte
     {
         Free = 0,
-        Personal = 1,
-        Teams = 2,
-        Enterprise = 3,
-        Custom = 4
+        PersonalAnnually = 1,
+        TeamsMonthly = 2,
+        TeamsAnnually = 3,
+        EnterpriseMonthly = 4,
+        EnterpriseAnnually = 5,
+        Custom = 6
     }
 }

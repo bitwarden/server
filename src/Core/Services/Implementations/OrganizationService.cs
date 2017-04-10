@@ -160,6 +160,201 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UpgradePlanAsync(OrganizationChangePlan model)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(model.OrganizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            {
+                throw new BadRequestException("No payment method found.");
+            }
+
+            var existingPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            if(existingPlan == null)
+            {
+                throw new BadRequestException("Existing plan not found.");
+            }
+
+            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == model.PlanType && !p.Disabled);
+            if(newPlan == null)
+            {
+                throw new BadRequestException("Plan not found.");
+            }
+
+            if(existingPlan.Type == newPlan.Type)
+            {
+                throw new BadRequestException("Organization is already on this plan.");
+            }
+
+            if(existingPlan.UpgradeSortOrder >= newPlan.UpgradeSortOrder)
+            {
+                throw new BadRequestException("You cannot upgrade to this plan.");
+            }
+
+            if(!newPlan.CanBuyAdditionalUsers && model.AdditionalUsers > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional users.");
+            }
+
+            if(newPlan.CanBuyAdditionalUsers && newPlan.MaxAdditionalUsers.HasValue &&
+                model.AdditionalUsers > newPlan.MaxAdditionalUsers.Value)
+            {
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                    $"{newPlan.MaxAdditionalUsers.Value} additional users.");
+            }
+
+            var newPlanMaxUsers = (short)(newPlan.BaseUsers + (newPlan.CanBuyAdditionalUsers ? model.AdditionalUsers : 0));
+            if(!organization.MaxUsers.HasValue || organization.MaxUsers.Value > newPlanMaxUsers)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(userCount >= newPlanMaxUsers)
+                {
+                    throw new BadRequestException($"Your organization currently has {userCount} users. Your new plan " +
+                        $"allows for a maximum of ({newPlanMaxUsers}) users. Remove some users.");
+                }
+            }
+
+            if(newPlan.MaxSubvaults.HasValue &&
+                (!organization.MaxSubvaults.HasValue || organization.MaxSubvaults.Value > newPlan.MaxSubvaults.Value))
+            {
+                var subvaultCount = await _subvaultRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(subvaultCount > newPlan.MaxSubvaults.Value)
+                {
+                    throw new BadRequestException($"Your organization currently has {subvaultCount} subvaults. " +
+                        $"Your new plan allows for a maximum of ({newPlan.MaxSubvaults.Value}) users. Remove some subvaults.");
+                }
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                // They must have been on a free plan. Create new sub.
+                var subCreateOptions = new StripeSubscriptionCreateOptions
+                {
+                    Items = new List<StripeSubscriptionItemOption>
+                    {
+                        new StripeSubscriptionItemOption
+                        {
+                            PlanId = newPlan.StripePlanId,
+                            Quantity = 1
+                        }
+                    }
+                };
+
+                if(model.AdditionalUsers > 0)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = newPlan.StripeUserPlanId,
+                        Quantity = model.AdditionalUsers
+                    });
+                }
+
+                await subscriptionService.CreateAsync(organization.StripeCustomerId, subCreateOptions);
+            }
+            else
+            {
+                // Update existing sub.
+                var subUpdateOptions = new StripeSubscriptionUpdateOptions
+                {
+                    Items = new List<StripeSubscriptionItemUpdateOption>
+                    {
+                        new StripeSubscriptionItemUpdateOption
+                        {
+                            PlanId = newPlan.StripePlanId,
+                            Quantity = 1
+                        }
+                    }
+                };
+
+                if(model.AdditionalUsers > 0)
+                {
+                    subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
+                    {
+                        PlanId = newPlan.StripeUserPlanId,
+                        Quantity = model.AdditionalUsers
+                    });
+                }
+
+                await subscriptionService.UpdateAsync(organization.StripeSubscriptionId, subUpdateOptions);
+            }
+        }
+
+        public async Task AdjustAdditionalUsersAsync(Guid organizationId, short additionalUsers)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            {
+                throw new BadRequestException("No payment method found.");
+            }
+
+            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                throw new BadRequestException("No subscription found.");
+            }
+
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            if(plan == null)
+            {
+                throw new BadRequestException("Existing plan not found.");
+            }
+
+            if(!plan.CanBuyAdditionalUsers)
+            {
+                throw new BadRequestException("Plan does not allow additional users.");
+            }
+
+            if(plan.MaxAdditionalUsers.HasValue && additionalUsers > plan.MaxAdditionalUsers.Value)
+            {
+                throw new BadRequestException($"Organization plan allows a maximum of " +
+                    $"{plan.MaxAdditionalUsers.Value} additional users.");
+            }
+
+            var planNewMaxUsers = (short)(plan.BaseUsers + additionalUsers);
+            if(!organization.MaxUsers.HasValue || organization.MaxUsers.Value > planNewMaxUsers)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(userCount >= planNewMaxUsers)
+                {
+                    throw new BadRequestException($"Your organization currently has {userCount} users. Your new plan " +
+                        $"allows for a maximum of ({planNewMaxUsers}) users. Remove some users.");
+                }
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            var subUpdateOptions = new StripeSubscriptionUpdateOptions
+            {
+                Items = new List<StripeSubscriptionItemUpdateOption>
+                {
+                    new StripeSubscriptionItemUpdateOption
+                    {
+                        PlanId = plan.StripePlanId,
+                        Quantity = 1
+                    }
+                }
+            };
+
+            if(additionalUsers > 0)
+            {
+                subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
+                {
+                    PlanId = plan.StripeUserPlanId,
+                    Quantity = additionalUsers
+                });
+            }
+
+            await subscriptionService.UpdateAsync(organization.StripeSubscriptionId, subUpdateOptions);
+        }
+
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
@@ -172,6 +367,11 @@ namespace Bit.Core.Services
             var subscriptionService = new StripeSubscriptionService();
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
+
+            if(!plan.CanBuyAdditionalUsers && signup.AdditionalUsers > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional users.");
+            }
 
             if(plan.CanBuyAdditionalUsers && plan.MaxAdditionalUsers.HasValue &&
                 signup.AdditionalUsers > plan.MaxAdditionalUsers.Value)
@@ -204,17 +404,17 @@ namespace Bit.Core.Services
                     {
                         new StripeSubscriptionItemOption
                         {
-                            PlanId = plan.CanMonthly && signup.Monthly ? plan.StripeMonthlyPlanId : plan.StripeAnnualPlanId,
+                            PlanId = plan.StripePlanId,
                             Quantity = 1
                         }
                     }
                 };
 
-                if(plan.CanBuyAdditionalUsers && signup.AdditionalUsers > 0)
+                if(signup.AdditionalUsers > 0)
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
-                        PlanId = plan.CanMonthly && signup.Monthly ? plan.StripeMonthlyUserPlanId : plan.StripeAnnualUserPlanId,
+                        PlanId = plan.StripeUserPlanId,
                         Quantity = signup.AdditionalUsers
                     });
                 }
@@ -228,7 +428,7 @@ namespace Bit.Core.Services
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
                 PlanType = plan.Type,
-                MaxUsers = (short)(plan.BaseUsers + (plan.CanBuyAdditionalUsers ? signup.AdditionalUsers : 0)),
+                MaxUsers = (short)(plan.BaseUsers + signup.AdditionalUsers),
                 MaxSubvaults = plan.MaxSubvaults,
                 Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
