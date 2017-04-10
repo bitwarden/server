@@ -128,6 +128,45 @@ namespace Bit.Api.Controllers
             await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
         }
 
+        [HttpPut("{id}/upgrade")]
+        [HttpPost("{id}/upgrade")]
+        public async Task PutUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
+        }
+
+        [HttpPut("{id}/seat")]
+        [HttpPost("{id}/seat")]
+        public async Task PutSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+        }
+
+        [HttpPut("{id}/cancel")]
+        [HttpPost("{id}/cancel")]
+        public async Task PutCancel(string id, [FromBody]OrganizationSeatRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
+        }
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)

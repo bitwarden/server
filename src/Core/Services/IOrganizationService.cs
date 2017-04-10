@@ -3,6 +3,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using System;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -11,6 +12,8 @@ namespace Bit.Core.Services
         Task<OrganizationBilling> GetBillingAsync(Organization organization);
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
         Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false);
+        Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats);
+        Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults);

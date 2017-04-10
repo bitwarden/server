@@ -175,7 +175,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, short additionalSeats)
+        public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -300,7 +300,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task AdjustAdditionalSeatsAsync(Guid organizationId, short additionalSeats)
+        public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -329,20 +329,26 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional seats.");
             }
 
+            var newSeatTotal = organization.Seats + seatAdjustment;
+            if(plan.BaseSeats > newSeatTotal)
+            {
+                throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} seats.");
+            }
+
+            var additionalSeats = newSeatTotal - plan.BaseSeats;
             if(plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 throw new BadRequestException($"Organization plan allows a maximum of " +
                     $"{plan.MaxAdditionalSeats.Value} additional seats.");
             }
 
-            var planNewSeats = (short)(plan.BaseSeats + additionalSeats);
-            if(!organization.Seats.HasValue || organization.Seats.Value > planNewSeats)
+            if(!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(userCount >= planNewSeats)
+                if(userCount > newSeatTotal)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
-                        $"only has ({planNewSeats}) seats. Remove some users.");
+                        $"only has ({newSeatTotal}) seats. Remove some users.");
                 }
             }
 
