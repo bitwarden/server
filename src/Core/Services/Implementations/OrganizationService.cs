@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -160,9 +161,9 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpgradePlanAsync(OrganizationChangePlan model)
+        public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, short additionalSeats)
         {
-            var organization = await _organizationRepository.GetByIdAsync(model.OrganizationId);
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -179,7 +180,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == model.PlanType && !p.Disabled);
+            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == plan && !p.Disabled);
             if(newPlan == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -195,26 +196,26 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot upgrade to this plan.");
             }
 
-            if(!newPlan.CanBuyAdditionalUsers && model.AdditionalUsers > 0)
+            if(!newPlan.CanBuyAdditionalSeats && additionalSeats > 0)
             {
-                throw new BadRequestException("Plan does not allow additional users.");
+                throw new BadRequestException("Plan does not allow additional seats.");
             }
 
-            if(newPlan.CanBuyAdditionalUsers && newPlan.MaxAdditionalUsers.HasValue &&
-                model.AdditionalUsers > newPlan.MaxAdditionalUsers.Value)
+            if(newPlan.CanBuyAdditionalSeats && newPlan.MaxAdditionalSeats.HasValue &&
+                additionalSeats > newPlan.MaxAdditionalSeats.Value)
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{newPlan.MaxAdditionalUsers.Value} additional users.");
+                    $"{newPlan.MaxAdditionalSeats.Value} additional seats.");
             }
 
-            var newPlanMaxUsers = (short)(newPlan.BaseUsers + (newPlan.CanBuyAdditionalUsers ? model.AdditionalUsers : 0));
-            if(!organization.MaxUsers.HasValue || organization.MaxUsers.Value > newPlanMaxUsers)
+            var newPlanSeats = (short)(newPlan.BaseSeats + (newPlan.CanBuyAdditionalSeats ? additionalSeats : 0));
+            if(!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(userCount >= newPlanMaxUsers)
+                if(userCount >= newPlanSeats)
                 {
-                    throw new BadRequestException($"Your organization currently has {userCount} users. Your new plan " +
-                        $"allows for a maximum of ({newPlanMaxUsers}) users. Remove some users.");
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
+                        $"only has ({newPlanSeats}) seats. Remove some users.");
                 }
             }
 
@@ -225,7 +226,8 @@ namespace Bit.Core.Services
                 if(subvaultCount > newPlan.MaxSubvaults.Value)
                 {
                     throw new BadRequestException($"Your organization currently has {subvaultCount} subvaults. " +
-                        $"Your new plan allows for a maximum of ({newPlan.MaxSubvaults.Value}) users. Remove some subvaults.");
+                        $"Your new plan allows for a maximum of ({newPlan.MaxSubvaults.Value}) subvaults. " +
+                        "Remove some subvaults.");
                 }
             }
 
@@ -245,12 +247,12 @@ namespace Bit.Core.Services
                     }
                 };
 
-                if(model.AdditionalUsers > 0)
+                if(additionalSeats > 0)
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
-                        PlanId = newPlan.StripeUserPlanId,
-                        Quantity = model.AdditionalUsers
+                        PlanId = newPlan.StripeSeatPlanId,
+                        Quantity = additionalSeats
                     });
                 }
 
@@ -271,12 +273,12 @@ namespace Bit.Core.Services
                     }
                 };
 
-                if(model.AdditionalUsers > 0)
+                if(additionalSeats > 0)
                 {
                     subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
                     {
-                        PlanId = newPlan.StripeUserPlanId,
-                        Quantity = model.AdditionalUsers
+                        PlanId = newPlan.StripeSeatPlanId,
+                        Quantity = additionalSeats
                     });
                 }
 
@@ -284,7 +286,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task AdjustAdditionalUsersAsync(Guid organizationId, short additionalUsers)
+        public async Task AdjustAdditionalSeatsAsync(Guid organizationId, short additionalSeats)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -308,25 +310,25 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            if(!plan.CanBuyAdditionalUsers)
+            if(!plan.CanBuyAdditionalSeats)
             {
-                throw new BadRequestException("Plan does not allow additional users.");
+                throw new BadRequestException("Plan does not allow additional seats.");
             }
 
-            if(plan.MaxAdditionalUsers.HasValue && additionalUsers > plan.MaxAdditionalUsers.Value)
+            if(plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 throw new BadRequestException($"Organization plan allows a maximum of " +
-                    $"{plan.MaxAdditionalUsers.Value} additional users.");
+                    $"{plan.MaxAdditionalSeats.Value} additional seats.");
             }
 
-            var planNewMaxUsers = (short)(plan.BaseUsers + additionalUsers);
-            if(!organization.MaxUsers.HasValue || organization.MaxUsers.Value > planNewMaxUsers)
+            var planNewSeats = (short)(plan.BaseSeats + additionalSeats);
+            if(!organization.Seats.HasValue || organization.Seats.Value > planNewSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(userCount >= planNewMaxUsers)
+                if(userCount >= planNewSeats)
                 {
-                    throw new BadRequestException($"Your organization currently has {userCount} users. Your new plan " +
-                        $"allows for a maximum of ({planNewMaxUsers}) users. Remove some users.");
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
+                        $"only has ({planNewSeats}) seats. Remove some users.");
                 }
             }
 
@@ -343,12 +345,12 @@ namespace Bit.Core.Services
                 }
             };
 
-            if(additionalUsers > 0)
+            if(additionalSeats > 0)
             {
                 subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
                 {
-                    PlanId = plan.StripeUserPlanId,
-                    Quantity = additionalUsers
+                    PlanId = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats
                 });
             }
 
@@ -368,16 +370,16 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
-            if(!plan.CanBuyAdditionalUsers && signup.AdditionalUsers > 0)
+            if(!plan.CanBuyAdditionalSeats && signup.AdditionalSeats > 0)
             {
                 throw new BadRequestException("Plan does not allow additional users.");
             }
 
-            if(plan.CanBuyAdditionalUsers && plan.MaxAdditionalUsers.HasValue &&
-                signup.AdditionalUsers > plan.MaxAdditionalUsers.Value)
+            if(plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
+                signup.AdditionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{plan.MaxAdditionalUsers.GetValueOrDefault(0)} additional users.");
+                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
             if(plan.Type == Enums.PlanType.Free)
@@ -410,12 +412,12 @@ namespace Bit.Core.Services
                     }
                 };
 
-                if(signup.AdditionalUsers > 0)
+                if(signup.AdditionalSeats > 0)
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
-                        PlanId = plan.StripeUserPlanId,
-                        Quantity = signup.AdditionalUsers
+                        PlanId = plan.StripeSeatPlanId,
+                        Quantity = signup.AdditionalSeats
                     });
                 }
 
@@ -428,7 +430,7 @@ namespace Bit.Core.Services
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
                 PlanType = plan.Type,
-                MaxUsers = (short)(plan.BaseUsers + signup.AdditionalUsers),
+                Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxSubvaults = plan.MaxSubvaults,
                 Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
@@ -484,13 +486,13 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(organization.MaxUsers.HasValue)
+            if(organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
-                if(userCount >= organization.MaxUsers.Value)
+                if(userCount >= organization.Seats.Value)
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
-                        $"({organization.MaxUsers.Value}) for this organization.");
+                        $"({organization.Seats.Value}) for this organization.");
                 }
             }
 

@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Api
             BillingEmail = organization.BillingEmail;
             Plan = organization.Plan;
             PlanType = organization.PlanType;
-            MaxUsers = organization.MaxUsers;
+            Seats = organization.Seats;
         }
 
         public string Id { get; set; }
@@ -32,7 +32,7 @@ namespace Bit.Core.Models.Api
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public Enums.PlanType PlanType { get; set; }
-        public short? MaxUsers { get; set; }
+        public short? Seats { get; set; }
     }
 
     public class OrganizationBillingResponseModel : OrganizationResponseModel

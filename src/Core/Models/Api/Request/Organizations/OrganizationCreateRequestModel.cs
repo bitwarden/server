@@ -21,8 +21,7 @@ namespace Bit.Core.Models.Api
         public string Key { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
-        public short AdditionalUsers { get; set; }
-        public bool Monthly { get; set; }
+        public short AdditionalSeats { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -33,10 +32,9 @@ namespace Bit.Core.Models.Api
                 Name = Name,
                 Plan = PlanType,
                 PaymentToken = PaymentToken,
-                AdditionalUsers = AdditionalUsers,
+                AdditionalSeats = AdditionalSeats,
                 BillingEmail = BillingEmail,
-                BusinessName = BusinessName,
-                Monthly = Monthly
+                BusinessName = BusinessName
             };
         }
 

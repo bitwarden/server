@@ -184,4 +184,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="Sql.refactorlog" />
+  </ItemGroup>
 </Project>

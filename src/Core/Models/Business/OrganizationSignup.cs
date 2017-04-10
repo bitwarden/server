@@ -11,8 +11,7 @@ namespace Bit.Core.Models.Business
         public User Owner { get; set; }
         public string OwnerKey { get; set; }
         public Enums.PlanType Plan { get; set; }
-        public short AdditionalUsers { get; set; }
+        public short AdditionalSeats { get; set; }
         public string PaymentToken { get; set; }
-        public bool Monthly { get; set; }
     }
 }

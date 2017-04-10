@@ -94,8 +94,8 @@ namespace Bit.Core.Utilities
                 new Plan
                 {
                     Type = PlanType.Free,
-                    BaseUsers = 2,
-                    CanBuyAdditionalUsers = false,
+                    BaseSeats = 2,
+                    CanBuyAdditionalSeats = false,
                     MaxSubvaults = 2,
                     Name = "Free",
                     UpgradeSortOrder = -1 // Always the lowest plan, cannot be upgraded to
@@ -103,38 +103,38 @@ namespace Bit.Core.Utilities
                 new Plan
                 {
                     Type = PlanType.PersonalAnnually,
-                    BaseUsers = 5,
+                    BaseSeats = 5,
                     BasePrice = 12,
-                    UserPrice = 12,
-                    CanBuyAdditionalUsers = true,
-                    MaxAdditionalUsers = 5,
+                    SeatPrice = 12,
+                    CanBuyAdditionalSeats = true,
+                    MaxAdditionalSeats = 5,
                     Name = "Personal",
                     StripePlanId = "personal-annual",
-                    StripeUserPlanId = "personal-user-annual",
+                    StripeSeatPlanId = "personal-user-annual",
                     UpgradeSortOrder = 1
                 },
                 new Plan
                 {
                     Type = PlanType.TeamsMonthly,
-                    BaseUsers = 5,
+                    BaseSeats = 5,
                     BasePrice = 8,
-                    UserPrice = 2.5M,
-                    CanBuyAdditionalUsers = true,
+                    SeatPrice = 2.5M,
+                    CanBuyAdditionalSeats = true,
                     Name = "Teams (Monthly)",
                     StripePlanId = "teams-monthly",
-                    StripeUserPlanId = "teams-user-monthly",
+                    StripeSeatPlanId = "teams-user-monthly",
                     UpgradeSortOrder = 2
                 },
                 new Plan
                 {
                     Type = PlanType.TeamsAnnually,
-                    BaseUsers = 5,
+                    BaseSeats = 5,
                     BasePrice = 60,
-                    UserPrice = 24,
-                    CanBuyAdditionalUsers = true,
+                    SeatPrice = 24,
+                    CanBuyAdditionalSeats = true,
                     Name = "Teams (Annually)",
                     StripePlanId = "teams-annual",
-                    StripeUserPlanId = "teams-user-annual",
+                    StripeSeatPlanId = "teams-user-annual",
                     UpgradeSortOrder = 2
                 }
             };
