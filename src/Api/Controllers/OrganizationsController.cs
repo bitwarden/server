@@ -111,7 +111,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationRepository.ReplaceAsync(model.ToOrganization(organization));
+            await _organizationService.UpdateAsync(model.ToOrganization(organization), true);
             return new OrganizationResponseModel(organization);
         }
 

@@ -621,6 +621,26 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UpdateAsync(Organization organization, bool updateBilling = false)
+        {
+            if(organization.Id == default(Guid))
+            {
+                throw new ApplicationException("Cannot create org this way. Call SignUpAsync.");
+            }
+
+            await _organizationRepository.ReplaceAsync(organization);
+
+            if(updateBilling && !string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            {
+                var customerService = new StripeCustomerService();
+                await customerService.UpdateAsync(organization.StripeCustomerId, new StripeCustomerUpdateOptions
+                {
+                    Email = organization.BillingEmail,
+                    Description = organization.BusinessName
+                });
+            }
+        }
+
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
         {
