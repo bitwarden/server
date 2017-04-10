@@ -46,6 +46,7 @@ namespace Bit.Core.Services
             var customerService = new StripeCustomerService();
             var subscriptionService = new StripeSubscriptionService();
             var chargeService = new StripeChargeService();
+            var invoiceService = new StripeInvoiceService();
 
             if(!string.IsNullOrWhiteSpace(organization.StripeCustomerId))
             {
@@ -72,6 +73,19 @@ namespace Bit.Core.Services
                         Limit = 20
                     });
                     orgBilling.Charges = charges.OrderByDescending(c => c.Created);
+
+                    if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+                    {
+                        try
+                        {
+                            var upcomingInvoice = await invoiceService.UpcomingAsync(organization.StripeCustomerId);
+                            if(upcomingInvoice != null)
+                            {
+                                orgBilling.UpcomingInvoice = upcomingInvoice;
+                            }
+                        }
+                        catch(StripeException) { }
+                    }
                 }
             }
 

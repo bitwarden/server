@@ -43,10 +43,12 @@ namespace Bit.Core.Models.Api
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
+            UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
         }
 
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
+        public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; }
 
         public class BillingSource
@@ -86,9 +88,9 @@ namespace Bit.Core.Models.Api
                 Status = sub.Status;
                 TrialStartDate = sub.TrialStart;
                 TrialEndDate = sub.TrialEnd;
-                NextBillDate = sub.CurrentPeriodEnd;
+                EndDate = sub.CurrentPeriodEnd;
                 CancelledDate = sub.CanceledAt;
-                CancelAtNextBillDate = sub.CancelAtPeriodEnd;
+                CancelAtEndDate = sub.CancelAtPeriodEnd;
                 if(sub.Items?.Data != null)
                 {
                     Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
@@ -97,9 +99,9 @@ namespace Bit.Core.Models.Api
 
             public DateTime? TrialStartDate { get; set; }
             public DateTime? TrialEndDate { get; set; }
-            public DateTime? NextBillDate { get; set; }
+            public DateTime? EndDate { get; set; }
             public DateTime? CancelledDate { get; set; }
-            public bool CancelAtNextBillDate { get; set; }
+            public bool CancelAtEndDate { get; set; }
             public string Status { get; set; }
             public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
 
@@ -122,6 +124,18 @@ namespace Bit.Core.Models.Api
                 public int Quantity { get; set; }
                 public string Interval { get; set; }
             }
+        }
+
+        public class BillingInvoice
+        {
+            public BillingInvoice(StripeInvoice inv)
+            {
+                Amount = inv.AmountDue / 100;
+                Date = inv.Date.Value;
+            }
+
+            public decimal Amount { get; set; }
+            public DateTime? Date { get; set; }
         }
 
         public class BillingCharge

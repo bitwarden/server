@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Business
     {
         public Source PaymentSource { get; set; }
         public StripeSubscription Subscription { get; set; }
+        public StripeInvoice UpcomingInvoice { get; set; }
         public IEnumerable<StripeCharge> Charges { get; set; } = new List<StripeCharge>();
     }
 }
