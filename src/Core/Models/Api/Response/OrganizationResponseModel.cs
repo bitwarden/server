@@ -149,6 +149,7 @@ namespace Bit.Core.Models.Api
                 FailureMessage = charge.FailureMessage;
                 Refunded = charge.Refunded;
                 Status = charge.Status;
+                InvoiceId = charge.InvoiceId;
             }
 
             public DateTime CreatedDate { get; set; }
@@ -159,6 +160,7 @@ namespace Bit.Core.Models.Api
             public bool Refunded { get; set; }
             public bool PartiallyRefunded => !Refunded && RefundedAmount > 0;
             public decimal RefundedAmount { get; set; }
+            public string InvoiceId { get; set; }
         }
     }
 }

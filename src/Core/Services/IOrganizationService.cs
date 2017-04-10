@@ -12,6 +12,7 @@ namespace Bit.Core.Services
         Task<OrganizationBilling> GetBillingAsync(Organization organization);
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
         Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false);
+        Task UncancelSubscriptionAsync(Guid organizationId);
         Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats);
         Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);

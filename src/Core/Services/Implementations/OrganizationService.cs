@@ -72,20 +72,7 @@ namespace Bit.Core.Services
                         CustomerId = customer.Id,
                         Limit = 20
                     });
-                    orgBilling.Charges = charges.OrderByDescending(c => c.Created);
-
-                    if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
-                    {
-                        try
-                        {
-                            var upcomingInvoice = await invoiceService.UpcomingAsync(organization.StripeCustomerId);
-                            if(upcomingInvoice != null)
-                            {
-                                orgBilling.UpcomingInvoice = upcomingInvoice;
-                            }
-                        }
-                        catch(StripeException) { }
-                    }
+                    orgBilling.Charges = charges?.Data?.OrderByDescending(c => c.Created);
                 }
             }
 
@@ -95,6 +82,19 @@ namespace Bit.Core.Services
                 if(sub != null)
                 {
                     orgBilling.Subscription = sub;
+                }
+
+                if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+                {
+                    try
+                    {
+                        var upcomingInvoice = await invoiceService.UpcomingAsync(organization.StripeCustomerId);
+                        if(upcomingInvoice != null)
+                        {
+                            orgBilling.UpcomingInvoice = upcomingInvoice;
+                        }
+                    }
+                    catch(StripeException) { }
                 }
             }
 
@@ -156,22 +156,54 @@ namespace Bit.Core.Services
             }
 
             var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(organization.StripeCustomerId);
-
+            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
             if(sub == null)
             {
                 throw new BadRequestException("Organization subscription was not found.");
             }
 
-            if(sub.Status == "canceled")
+            if(sub.CanceledAt.HasValue)
             {
                 throw new BadRequestException("Organization subscription is already canceled.");
             }
 
             var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
-            if(canceledSub?.Status != "canceled")
+            if(!canceledSub.CanceledAt.HasValue)
             {
                 throw new BadRequestException("Unable to cancel subscription.");
+            }
+        }
+
+        public async Task UncancelSubscriptionAsync(Guid organizationId)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                throw new BadRequestException("Organization has no subscription.");
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
+            if(sub == null)
+            {
+                throw new BadRequestException("Organization subscription was not found.");
+            }
+
+            if(sub.Status != "active" || !sub.CanceledAt.HasValue)
+            {
+                throw new BadRequestException("Organization subscription is not marked for cancellation.");
+            }
+
+            // Just touch the subscription.
+            var updatedSub = await subscriptionService.UpdateAsync(sub.Id, new StripeSubscriptionUpdateOptions { });
+            if(updatedSub.CanceledAt.HasValue)
+            {
+                throw new BadRequestException("Unable to activate subscription.");
             }
         }
 
@@ -353,6 +385,8 @@ namespace Bit.Core.Services
             }
 
             var subscriptionService = new StripeSubscriptionService();
+            var invoiceService = new StripeInvoiceService();
+            var invoiceItemService = new StripeInvoiceItemService();
             var subscriptionItemService = new StripeSubscriptionItemService();
             var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
             if(sub == null)
@@ -363,11 +397,48 @@ namespace Bit.Core.Services
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             if(seatItem == null)
             {
+                var upcomingPreview = await invoiceService.UpcomingAsync(organization.StripeCustomerId,
+                    new StripeUpcomingInvoiceOptions
+                    {
+                        SubscriptionId = organization.StripeSubscriptionId,
+                        SubscriptionItems = new List<StripeUpcomingInvoiceSubscriptionItemOptions>
+                        {
+                            new StripeUpcomingInvoiceSubscriptionItemOptions
+                            {
+                                PlanId = plan.StripeSeatPlanId,
+                                Quantity = additionalSeats
+                            }
+                        }
+                    });
+
+                var prorateSub = true;
+                var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?.Last()?.Amount;
+                if(prorationAmount.GetValueOrDefault() > 0)
+                {
+                    var invoiceItem = await invoiceItemService.CreateAsync(new StripeInvoiceItemCreateOptions
+                    {
+                        SubscriptionId = organization.StripeSubscriptionId,
+                        CustomerId = organization.StripeCustomerId,
+                        Amount = prorationAmount.Value,
+                        Description = $"Prorated amount for ${additionalSeats} additional seats.",
+                        Currency = "USD"
+                    });
+
+                    var invoice = await invoiceService.CreateAsync(organization.StripeCustomerId,
+                        new StripeInvoiceCreateOptions
+                        {
+                            SubscriptionId = organization.StripeSubscriptionId
+                        });
+
+                    var paidInvoice = await invoiceService.PayAsync(invoice.Id);
+                    prorateSub = !paidInvoice.Paid;
+                }
+
                 var subItemCreateOptions = new StripeSubscriptionItemCreateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = true,
+                    Prorate = prorateSub,
                     SubscriptionId = sub.Id
                 };
 
@@ -375,11 +446,48 @@ namespace Bit.Core.Services
             }
             else if(additionalSeats > 0)
             {
+                var upcomingPreview = await invoiceService.UpcomingAsync(organization.StripeCustomerId,
+                    new StripeUpcomingInvoiceOptions
+                    {
+                        SubscriptionId = organization.StripeSubscriptionId,
+                        SubscriptionItems = new List<StripeUpcomingInvoiceSubscriptionItemOptions>
+                        {
+                            new StripeUpcomingInvoiceSubscriptionItemOptions
+                            {
+                                Id = seatItem.Id,
+                                Quantity = additionalSeats
+                            }
+                        }
+                    });
+
+                var prorateSub = true;
+                var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?.Take(2).Sum(i => i.Amount);
+                if(prorationAmount.GetValueOrDefault() > 0)
+                {
+                    var invoiceItem = await invoiceItemService.CreateAsync(new StripeInvoiceItemCreateOptions
+                    {
+                        SubscriptionId = organization.StripeSubscriptionId,
+                        CustomerId = organization.StripeCustomerId,
+                        Amount = prorationAmount.Value,
+                        Description = $"Prorated amount for ${additionalSeats} additional seats.",
+                        Currency = "USD"
+                    });
+
+                    var invoice = await invoiceService.CreateAsync(organization.StripeCustomerId,
+                        new StripeInvoiceCreateOptions
+                        {
+                            SubscriptionId = organization.StripeSubscriptionId
+                        });
+
+                    var paidInvoice = await invoiceService.PayAsync(invoice.Id);
+                    prorateSub = !paidInvoice.Paid;
+                }
+
                 var subItemUpdateOptions = new StripeSubscriptionItemUpdateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = true
+                    Prorate = prorateSub
                 };
 
                 await subscriptionItemService.UpdateAsync(seatItem.Id, subItemUpdateOptions);

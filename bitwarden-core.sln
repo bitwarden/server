@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.9
+VisualStudioVersion = 15.0.26403.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
 EndProject
@@ -21,6 +21,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mail", "src\Mail\Mail.csproj", "{B78A6C74-1A24-48C6-802A-13BE3E4DAFF1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Billing", "src\Billing\Billing.csproj", "{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stripe.net", "..\stripe.net\src\Stripe.net\Stripe.net.csproj", "{F9D4653F-1E61-44E3-953F-0D67D60195C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +52,10 @@ Global
 		{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D4653F-1E61-44E3-953F-0D67D60195C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9D4653F-1E61-44E3-953F-0D67D60195C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9D4653F-1E61-44E3-953F-0D67D60195C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9D4653F-1E61-44E3-953F-0D67D60195C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -60,5 +66,6 @@ Global
 		{58554E52-FDEC-4832-AFF9-302B01E08DCA} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{B78A6C74-1A24-48C6-802A-13BE3E4DAFF1} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
+		{F9D4653F-1E61-44E3-953F-0D67D60195C7} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 	EndGlobalSection
 EndGlobal

@@ -156,7 +156,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/cancel")]
         [HttpPost("{id}/cancel")]
-        public async Task PutCancel(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task PutCancel(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -165,6 +165,19 @@ namespace Bit.Api.Controllers
             }
 
             await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
+        }
+
+        [HttpPut("{id}/uncancel")]
+        [HttpPost("{id}/uncancel")]
+        public async Task PutActivate(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UncancelSubscriptionAsync(orgIdGuid);
         }
 
         [HttpDelete("{id}")]
