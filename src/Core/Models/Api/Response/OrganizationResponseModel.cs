@@ -112,7 +112,7 @@ namespace Bit.Core.Models.Api
                     if(item.Plan != null)
                     {
                         Name = item.Plan.Name;
-                        Amount = item.Plan.Amount / 100;
+                        Amount = item.Plan.Amount / 100M;
                         Interval = item.Plan.Interval;
                     }
 
@@ -130,7 +130,7 @@ namespace Bit.Core.Models.Api
         {
             public BillingInvoice(StripeInvoice inv)
             {
-                Amount = inv.AmountDue / 100;
+                Amount = inv.AmountDue / 100M;
                 Date = inv.Date.Value;
             }
 
@@ -142,8 +142,8 @@ namespace Bit.Core.Models.Api
         {
             public BillingCharge(StripeCharge charge)
             {
-                Amount = charge.Amount / 100;
-                RefundedAmount = charge.AmountRefunded / 100;
+                Amount = charge.Amount / 100M;
+                RefundedAmount = charge.AmountRefunded / 100M;
                 PaymentSource = charge.Source != null ? new BillingSource(charge.Source) : null;
                 CreatedDate = charge.Created;
                 FailureMessage = charge.FailureMessage;
