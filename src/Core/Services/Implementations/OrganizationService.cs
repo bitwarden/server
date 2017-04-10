@@ -174,7 +174,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UncancelSubscriptionAsync(Guid organizationId)
+        public async Task ReinstateSubscriptionAsync(Guid organizationId)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -203,7 +203,7 @@ namespace Bit.Core.Services
             var updatedSub = await subscriptionService.UpdateAsync(sub.Id, new StripeSubscriptionUpdateOptions { });
             if(updatedSub.CanceledAt.HasValue)
             {
-                throw new BadRequestException("Unable to activate subscription.");
+                throw new BadRequestException("Unable to reinstate subscription.");
             }
         }
 
@@ -401,9 +401,9 @@ namespace Bit.Core.Services
                     new StripeUpcomingInvoiceOptions
                     {
                         SubscriptionId = organization.StripeSubscriptionId,
-                        SubscriptionItems = new List<StripeUpcomingInvoiceSubscriptionItemOptions>
+                        SubscriptionItems = new List<StripeInvoiceSubscriptionItemOptions>
                         {
-                            new StripeUpcomingInvoiceSubscriptionItemOptions
+                            new StripeInvoiceSubscriptionItemOptions
                             {
                                 PlanId = plan.StripeSeatPlanId,
                                 Quantity = additionalSeats
@@ -450,9 +450,9 @@ namespace Bit.Core.Services
                     new StripeUpcomingInvoiceOptions
                     {
                         SubscriptionId = organization.StripeSubscriptionId,
-                        SubscriptionItems = new List<StripeUpcomingInvoiceSubscriptionItemOptions>
+                        SubscriptionItems = new List<StripeInvoiceSubscriptionItemOptions>
                         {
-                            new StripeUpcomingInvoiceSubscriptionItemOptions
+                            new StripeInvoiceSubscriptionItemOptions
                             {
                                 Id = seatItem.Id,
                                 Quantity = additionalSeats
