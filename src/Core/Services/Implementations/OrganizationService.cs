@@ -514,7 +514,19 @@ namespace Bit.Core.Services
                     });
                 }
 
-                subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
+                try
+                {
+                    subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
+                }
+                catch(StripeException)
+                {
+                    if(customer != null)
+                    {
+                        await customerService.DeleteAsync(customer.Id);
+                    }
+
+                    throw;
+                }
             }
 
             var organization = new Organization
@@ -542,8 +554,8 @@ namespace Bit.Core.Services
                     UserId = signup.Owner.Id,
                     Email = signup.Owner.Email,
                     Key = signup.OwnerKey,
-                    Type = Enums.OrganizationUserType.Owner,
-                    Status = Enums.OrganizationUserStatusType.Confirmed,
+                    Type = OrganizationUserType.Owner,
+                    Status = OrganizationUserStatusType.Confirmed,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 };
@@ -556,10 +568,24 @@ namespace Bit.Core.Services
             {
                 if(subscription != null)
                 {
-                    await subscriptionService.CancelAsync(subscription.Id);
+                    await subscriptionService.CancelAsync(subscription.Id, false);
                 }
 
-                // TODO: reverse payments
+                if(customer != null)
+                {
+                    var chargeService = new StripeChargeService();
+                    var charges = await chargeService.ListAsync(new StripeChargeListOptions { CustomerId = customer.Id });
+                    if(charges?.Data != null)
+                    {
+                        var refundService = new StripeRefundService();
+                        foreach(var charge in charges.Data.Where(c => !c.Refunded))
+                        {
+                            await refundService.CreateAsync(charge.Id);
+                        }
+                    }
+
+                    await customerService.DeleteAsync(customer.Id);
+                }
 
                 if(organization.Id != default(Guid))
                 {
