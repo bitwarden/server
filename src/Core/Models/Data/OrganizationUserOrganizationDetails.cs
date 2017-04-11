@@ -10,5 +10,6 @@ namespace Bit.Core.Models.Data
         public string Key { get; set; }
         public Enums.OrganizationUserStatusType Status { get; set; }
         public Enums.OrganizationUserType Type { get; set; }
+        public bool Enabled { get; set; }
     }
 }

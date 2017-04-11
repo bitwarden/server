@@ -13,6 +13,7 @@ namespace Bit.Core.Models.Api
             Key = organization.Key;
             Status = organization.Status;
             Type = organization.Type;
+            Enabled = organization.Enabled;
         }
 
         public string Id { get; set; }
@@ -20,5 +21,6 @@ namespace Bit.Core.Models.Api
         public string Key { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }
+        public bool Enabled { get; set; }
     }
 }
