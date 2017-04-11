@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Stripe;
 
 namespace Bit.Api.Utilities
 {
@@ -24,6 +25,7 @@ namespace Bit.Api.Utilities
             }
 
             var badRequestException = exception as BadRequestException;
+            var stripeException = exception as StripeException;
             if(badRequestException != null)
             {
                 context.HttpContext.Response.StatusCode = 400;
@@ -36,6 +38,11 @@ namespace Bit.Api.Utilities
                 {
                     errorModel.Message = badRequestException.Message;
                 }
+            }
+            else if(stripeException != null && stripeException?.StripeError?.ErrorType == "card_error")
+            {
+                context.HttpContext.Response.StatusCode = 400;
+                errorModel = new ErrorResponseModel(stripeException.StripeError.Parameter, stripeException.Message);
             }
             else if(exception is ApplicationException)
             {
