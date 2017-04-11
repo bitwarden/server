@@ -14,10 +14,13 @@ BEGIN
             [dbo].[Cipher] C ON SC.[CipherId] = C.[Id]
         INNER JOIN
             [dbo].[OrganizationUser] OU ON OU.Id = SU.OrganizationUserId AND OU.OrganizationId = C.OrganizationId
+        INNER JOIN
+            [dbo].[Organization] O ON O.Id = C.OrganizationId
         WHERE
             C.[Id] = @CipherId
             AND OU.[UserId] = @UserId
             AND OU.[Status] = 2 -- 2 = Confirmed
+            AND O.[Enabled] = 1
     )
     SELECT
         @CanEdit = CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END

@@ -4,6 +4,7 @@ SELECT
     OU.[UserId],
     OU.[OrganizationId],
     O.[Name],
+    O.[Enabled],
     OU.[Key],
     OU.[Status],
     OU.[Type]

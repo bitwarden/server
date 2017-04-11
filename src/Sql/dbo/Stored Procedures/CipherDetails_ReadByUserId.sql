@@ -14,7 +14,9 @@ BEGIN
         [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = SC.[SubvaultId]
     LEFT JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
+    LEFT JOIN
+        [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
     WHERE
         (C.[UserId] IS NOT NULL AND C.[UserId] = @UserId)
-        OR (OU.[UserId] = @UserId AND OU.[Status] = 2) -- 2 = Confirmed
+        OR (OU.[UserId] = @UserId AND OU.[Status] = 2 AND O.[Enabled] = 1) -- 2 = Confirmed
 END
