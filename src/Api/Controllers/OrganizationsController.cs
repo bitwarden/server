@@ -111,7 +111,10 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpdateAsync(model.ToOrganization(organization), true);
+            var updatebilling = model.BusinessName != organization.BusinessName ||
+                model.BillingEmail != organization.BillingEmail;
+
+            await _organizationService.UpdateAsync(model.ToOrganization(organization), updatebilling);
             return new OrganizationResponseModel(organization);
         }
 
