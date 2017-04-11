@@ -8,6 +8,8 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using Microsoft.AspNetCore.Identity;
+using Bit.Core.Models.Table;
 
 namespace Bit.Api.Controllers
 {
@@ -20,19 +22,22 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
+        private readonly UserManager<User> _userManager;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IUserService userService,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            UserManager<User> userManager)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _userService = userService;
             _currentContext = currentContext;
+            _userManager = userManager;
         }
 
         [HttpGet("{id}")]
@@ -185,7 +190,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id)
+        public async Task Delete(string id, [FromBody]OrganizationDeleteRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -199,7 +204,16 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationRepository.DeleteAsync(organization);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                await Task.Delay(2000);
+            }
+            else
+            {
+                await _organizationService.DeleteAsync(organization);
+            }
         }
     }
 }

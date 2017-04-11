@@ -570,6 +570,21 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task DeleteAsync(Organization organization)
+        {
+            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            {
+                var subscriptionService = new StripeSubscriptionService();
+                var canceledSub = await subscriptionService.CancelAsync(organization.StripeSubscriptionId, false);
+                if(!canceledSub.CanceledAt.HasValue)
+                {
+                    throw new BadRequestException("Unable to cancel subscription.");
+                }
+            }
+
+            await _organizationRepository.DeleteAsync(organization);
+        }
+
         public async Task UpdateAsync(Organization organization, bool updateBilling = false)
         {
             if(organization.Id == default(Guid))
