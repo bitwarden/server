@@ -9,6 +9,7 @@
     [MaxSubvaults]         SMALLINT         NULL,
     [StripeCustomerId]     VARCHAR (50)     NULL,
     [StripeSubscriptionId] VARCHAR (50)     NULL,
+    [Enabled]              BIT              NOT NULL,
     [CreationDate]         DATETIME2 (7)    NOT NULL,
     [RevisionDate]         DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)

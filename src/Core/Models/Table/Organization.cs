@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Table
         public short? MaxSubvaults { get; set; }
         public string StripeCustomerId { get; set; }
         public string StripeSubscriptionId { get; set; }
+        public bool Enabled { get; set; } = true;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

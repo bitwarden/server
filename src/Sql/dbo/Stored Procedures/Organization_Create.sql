@@ -9,6 +9,7 @@
     @MaxSubvaults SMALLINT,
     @StripeCustomerId VARCHAR(50),
     @StripeSubscriptionId VARCHAR(50),
+    @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -27,6 +28,7 @@ BEGIN
         [MaxSubvaults],
         [StripeCustomerId],
         [StripeSubscriptionId],
+        [Enabled],
         [CreationDate],
         [RevisionDate]
     )
@@ -42,6 +44,7 @@ BEGIN
         @MaxSubvaults,
         @StripeCustomerId,
         @StripeSubscriptionId,
+        @Enabled,
         @CreationDate,
         @RevisionDate
     )
