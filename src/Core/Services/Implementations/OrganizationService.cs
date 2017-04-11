@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services
 {
@@ -384,10 +385,9 @@ namespace Bit.Core.Services
                 }
             }
 
-            var subscriptionService = new StripeSubscriptionService();
             var invoiceService = new StripeInvoiceService();
-            var invoiceItemService = new StripeInvoiceItemService();
             var subscriptionItemService = new StripeSubscriptionItemService();
+            var subscriptionService = new StripeSubscriptionService();
             var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
             if(sub == null)
             {
@@ -397,100 +397,26 @@ namespace Bit.Core.Services
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             if(seatItem == null)
             {
-                var upcomingPreview = await invoiceService.UpcomingAsync(organization.StripeCustomerId,
-                    new StripeUpcomingInvoiceOptions
-                    {
-                        SubscriptionId = organization.StripeSubscriptionId,
-                        SubscriptionItems = new List<StripeInvoiceSubscriptionItemOptions>
-                        {
-                            new StripeInvoiceSubscriptionItemOptions
-                            {
-                                PlanId = plan.StripeSeatPlanId,
-                                Quantity = additionalSeats
-                            }
-                        }
-                    });
-
-                var prorateSub = true;
-                var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?.Last()?.Amount;
-                if(prorationAmount.GetValueOrDefault() > 0)
-                {
-                    var invoiceItem = await invoiceItemService.CreateAsync(new StripeInvoiceItemCreateOptions
-                    {
-                        SubscriptionId = organization.StripeSubscriptionId,
-                        CustomerId = organization.StripeCustomerId,
-                        Amount = prorationAmount.Value,
-                        Description = $"Prorated amount for ${additionalSeats} additional seats.",
-                        Currency = "USD"
-                    });
-
-                    var invoice = await invoiceService.CreateAsync(organization.StripeCustomerId,
-                        new StripeInvoiceCreateOptions
-                        {
-                            SubscriptionId = organization.StripeSubscriptionId
-                        });
-
-                    var paidInvoice = await invoiceService.PayAsync(invoice.Id);
-                    prorateSub = !paidInvoice.Paid;
-                }
-
-                var subItemCreateOptions = new StripeSubscriptionItemCreateOptions
+                await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = prorateSub,
+                    Prorate = true,
                     SubscriptionId = sub.Id
-                };
+                });
 
-                await subscriptionItemService.CreateAsync(subItemCreateOptions);
+                await PreviewUpcomingAndPayAsync(invoiceService, organization, plan);
             }
             else if(additionalSeats > 0)
             {
-                var upcomingPreview = await invoiceService.UpcomingAsync(organization.StripeCustomerId,
-                    new StripeUpcomingInvoiceOptions
-                    {
-                        SubscriptionId = organization.StripeSubscriptionId,
-                        SubscriptionItems = new List<StripeInvoiceSubscriptionItemOptions>
-                        {
-                            new StripeInvoiceSubscriptionItemOptions
-                            {
-                                Id = seatItem.Id,
-                                Quantity = additionalSeats
-                            }
-                        }
-                    });
-
-                var prorateSub = true;
-                var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?.Take(2).Sum(i => i.Amount);
-                if(prorationAmount.GetValueOrDefault() > 0)
-                {
-                    var invoiceItem = await invoiceItemService.CreateAsync(new StripeInvoiceItemCreateOptions
-                    {
-                        SubscriptionId = organization.StripeSubscriptionId,
-                        CustomerId = organization.StripeCustomerId,
-                        Amount = prorationAmount.Value,
-                        Description = $"Prorated amount for ${additionalSeats} additional seats.",
-                        Currency = "USD"
-                    });
-
-                    var invoice = await invoiceService.CreateAsync(organization.StripeCustomerId,
-                        new StripeInvoiceCreateOptions
-                        {
-                            SubscriptionId = organization.StripeSubscriptionId
-                        });
-
-                    var paidInvoice = await invoiceService.PayAsync(invoice.Id);
-                    prorateSub = !paidInvoice.Paid;
-                }
-
-                var subItemUpdateOptions = new StripeSubscriptionItemUpdateOptions
+                await subscriptionItemService.UpdateAsync(seatItem.Id, new StripeSubscriptionItemUpdateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = prorateSub
-                };
+                    Prorate = true
+                });
 
-                await subscriptionItemService.UpdateAsync(seatItem.Id, subItemUpdateOptions);
+                await PreviewUpcomingAndPayAsync(invoiceService, organization, plan);
             }
             else if(additionalSeats == 0)
             {
@@ -499,6 +425,29 @@ namespace Bit.Core.Services
 
             organization.Seats = (short?)newSeatTotal;
             await _organizationRepository.ReplaceAsync(organization);
+        }
+
+        private async Task PreviewUpcomingAndPayAsync(StripeInvoiceService invoiceService, Organization org, Plan plan)
+        {
+            var upcomingPreview = await invoiceService.UpcomingAsync(org.StripeCustomerId,
+                new StripeUpcomingInvoiceOptions
+                {
+                    SubscriptionId = org.StripeSubscriptionId
+                });
+
+            var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
+                .TakeWhile(i => i.Plan.Id == plan.StripeSeatPlanId).Sum(i => i.Amount);
+            if(prorationAmount.GetValueOrDefault() >= 500)
+            {
+                // Owes more than $5.00 on next invoice. Invoice them and pay now instead of waiting until next month.
+                var invoice = await invoiceService.CreateAsync(org.StripeCustomerId,
+                    new StripeInvoiceCreateOptions
+                    {
+                        SubscriptionId = org.StripeSubscriptionId
+                    });
+
+                await invoiceService.PayAsync(invoice.Id);
+            }
         }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
