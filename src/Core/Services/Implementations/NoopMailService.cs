@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 
@@ -24,6 +25,16 @@ namespace Bit.Core.Services
         public Task SendNoMasterPasswordHintEmailAsync(string email)
         {
             return Task.FromResult(0);
+        }
+
+        public Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail, IEnumerable<string> adminEmails)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+        {
+            throw new NotImplementedException();
         }
 
         public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token)

@@ -5,6 +5,7 @@ using Bit.Core.Models.Table;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using System.Net;
+using System.Linq;
 
 namespace Bit.Core.Services
 {
@@ -16,6 +17,8 @@ namespace Bit.Core.Services
         private const string NoMasterPasswordHintTemplateId = "136eb299-e102-495a-88bd-f96736eea159";
         private const string MasterPasswordHintTemplateId = "be77cfde-95dd-4cb9-b5e0-8286b53885f1";
         private const string OrganizationInviteTemplateId = "1eff5512-e36c-49a8-b9e2-2b215d6bbced";
+        private const string OrganizationAcceptedTemplateId = "28f7f741-598e-449c-85fe-601e1cc32ba3";
+        private const string OrganizationConfirmedTemplateId = "a8afe2a0-6161-4eb9-b40c-08a7f520ec50";
 
         private const string AdministrativeCategoryName = "Administrative";
         private const string MarketingCategoryName = "Marketing";
@@ -101,7 +104,33 @@ namespace Bit.Core.Services
             message.AddSubstitution("{{token}}", token);
             message.AddSubstitution("{{email}}", WebUtility.UrlEncode(orgUser.Email));
             message.AddSubstitution("{{organizationNameUrlEncoded}}", WebUtility.UrlEncode(organizationName));
-            message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization Invite" });
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization User Invite" });
+
+            await _client.SendEmailAsync(message);
+        }
+
+        public async Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
+            IEnumerable<string> adminEmails)
+        {
+            var message = CreateDefaultMessage(OrganizationAcceptedTemplateId);
+
+            message.Subject = $"User {userEmail} Has Accepted Invite";
+            message.AddTos(adminEmails.Select(e => new EmailAddress(e)).ToList());
+            message.AddSubstitution("{{userEmail}}", userEmail);
+            message.AddSubstitution("{{organizationName}}", organizationName);
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization User Accepted" });
+
+            await _client.SendEmailAsync(message);
+        }
+
+        public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+        {
+            var message = CreateDefaultMessage(OrganizationConfirmedTemplateId);
+
+            message.Subject = $"You Have Been Confirmed To {organizationName}";
+            message.AddTo(new EmailAddress(email));
+            message.AddSubstitution("{{organizationName}}", organizationName);
+            message.AddCategories(new List<string> { AdministrativeCategoryName, "Organization User Confirmed" });
 
             await _client.SendEmailAsync(message);
         }

@@ -632,7 +632,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
+            OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -667,7 +667,7 @@ namespace Bit.Core.Services
                 Email = email,
                 Key = null,
                 Type = type,
-                Status = Enums.OrganizationUserStatusType.Invited,
+                Status = OrganizationUserStatusType.Invited,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -683,7 +683,7 @@ namespace Bit.Core.Services
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId ||
-                orgUser.Status != Enums.OrganizationUserStatusType.Invited)
+                orgUser.Status != OrganizationUserStatusType.Invited)
             {
                 throw new BadRequestException("User invalid.");
             }
@@ -708,7 +708,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User invalid.");
             }
 
-            if(orgUser.Status != Enums.OrganizationUserStatusType.Invited)
+            if(orgUser.Status != OrganizationUserStatusType.Invited)
             {
                 throw new BadRequestException("Already accepted.");
             }
@@ -741,12 +741,12 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
-            orgUser.Status = Enums.OrganizationUserStatusType.Accepted;
+            orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.UserId = user.Id;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            // TODO: send email
+            // TODO: send notification emails to org admins
 
             return orgUser;
         }
@@ -761,12 +761,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
-            orgUser.Status = Enums.OrganizationUserStatusType.Confirmed;
+            orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            // TODO: send email
+            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(user != null && org != null)
+            {
+                await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+            }
 
             return orgUser;
         }
@@ -779,7 +784,7 @@ namespace Bit.Core.Services
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
-            if(user.Type != Enums.OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+            if(user.Type != OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
