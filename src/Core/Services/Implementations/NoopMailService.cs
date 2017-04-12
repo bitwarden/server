@@ -29,12 +29,12 @@ namespace Bit.Core.Services
 
         public Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail, IEnumerable<string> adminEmails)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(0);
         }
 
         public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(0);
         }
 
         public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token)
