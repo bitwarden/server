@@ -14,6 +14,7 @@ namespace Bit.Core.Repositories
         Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
         Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
         Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email);
+        Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId);
         Task<Tuple<OrganizationUserUserDetails, ICollection<SubvaultUserSubvaultDetails>>> GetDetailsByIdAsync(Guid id);
         Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId);
         Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,

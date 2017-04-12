@@ -188,6 +188,19 @@ namespace Bit.Api.Controllers
             await _organizationService.ReinstateSubscriptionAsync(orgIdGuid);
         }
 
+        [HttpPost("{id}/leave")]
+        public async Task Leave(string id)
+        {
+            var orgGuidId = new Guid(id);
+            if(!_currentContext.OrganizationUser(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.DeleteUserAsync(orgGuidId, userId.Value);
+        }
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id, [FromBody]OrganizationDeleteRequestModel model)

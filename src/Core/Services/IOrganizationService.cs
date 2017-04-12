@@ -25,5 +25,6 @@ namespace Bit.Core.Services
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
         Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SubvaultUser> subvaults);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
+        Task DeleteUserAsync(Guid organizationId, Guid userId);
     }
 }

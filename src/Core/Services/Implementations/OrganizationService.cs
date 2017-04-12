@@ -808,6 +808,23 @@ namespace Bit.Core.Services
             await _organizationUserRepository.DeleteAsync(orgUser);
         }
 
+        public async Task DeleteUserAsync(Guid organizationId, Guid userId)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+            if(orgUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
+            if(confirmedOwners.Count == 1 && confirmedOwners[0].Id == orgUser.Id)
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            await _organizationUserRepository.DeleteAsync(orgUser);
+        }
+
         private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
         {
             var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
