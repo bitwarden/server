@@ -85,15 +85,12 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
-        //[Obsolete]
-        //[HttpGet("history")]
-        //public async Task<CipherHistoryResponseModel> Get(DateTime since)
-        //{
-        //    var userId = _userService.GetProperUserId(User).Value;
-        //    var history = await _cipherRepository.GetManySinceRevisionDateAndUserIdWithDeleteHistoryAsync(
-        //        since, userId);
-        //    return new CipherHistoryResponseModel(history.Item1, history.Item2, userId);
-        //}
+        [Obsolete]
+        [HttpGet("history")]
+        public Task<CipherHistoryResponseModel> Get(DateTime since)
+        {
+            return Task.FromResult(new CipherHistoryResponseModel());
+        }
 
         [HttpPost("import")]
         public async Task PostImport([FromBody]ImportRequestModel model)
@@ -108,20 +105,20 @@ namespace Bit.Api.Controllers
                 model.FolderRelationships);
         }
 
-        //[HttpPut("{id}/favorite")]
-        //[HttpPost("{id}/favorite")]
-        //public async Task Favorite(string id)
-        //{
-        //    var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
-        //    if(cipher == null)
-        //    {
-        //        throw new NotFoundException();
-        //    }
-
-        //    cipher.Favorite = !cipher.Favorite;
-
-        //    await _cipherService.SaveAsync(cipher);
-        //}
+        [Obsolete]
+        [HttpPut("{id}/favorite")]
+        [HttpPost("{id}/favorite")]
+        public async Task Favorite(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+            
+            await _cipherService.UpdatePartialAsync(new Guid(id), userId, cipher.FolderId, !cipher.Favorite);
+        }
 
         [HttpPut("{id}/partial")]
         [HttpPost("{id}/partial")]

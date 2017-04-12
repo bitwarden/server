@@ -68,7 +68,6 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Device.sql" />
-    <Build Include="dbo\Tables\History.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
     <Build Include="dbo\Tables\FolderCipher.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
@@ -85,7 +84,6 @@
     <Build Include="dbo\Tables\SubvaultUser.sql" />
     <Build Include="dbo\Views\SubvaultUserView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
-    <Build Include="dbo\Views\HistoryView.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\OrganizationUserView.sql" />
@@ -123,7 +121,6 @@
     <Build Include="dbo\Stored Procedures\Device_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Organization_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Device_ReadByIdentifierUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CipherDetails_ReadByRevisionDateUserWithDeleteHistory.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Device_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByTypeUserId.sql" />
@@ -131,7 +128,6 @@
     <Build Include="dbo\Stored Procedures\Device_Update.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Create.sql" />
-    <Build Include="dbo\Stored Procedures\History_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByUserIdHasSubvault.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\User_Create.sql" />

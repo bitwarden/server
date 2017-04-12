@@ -26,21 +26,6 @@ BEGIN
 
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[History]
-    (
-        [UserId],
-        [CipherId],
-        [Event],
-        [Date]
-    )
-    SELECT
-        [UserId],
-        [Id],
-        0, --Insert
-        [CreationDate]
-    FROM
-        INSERTED
-
     DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM INSERTED)
 
     UPDATE
@@ -61,21 +46,6 @@ BEGIN
 
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[History]
-    (
-        [UserId],
-        [CipherId],
-        [Event],
-        [Date]
-    )
-    SELECT
-        [UserId],
-        [Id],
-        1, --Update
-        [RevisionDate]
-    FROM
-        INSERTED
-
     DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM INSERTED)
 
     UPDATE
@@ -95,21 +65,6 @@ BEGIN
     IF @Count = 0 RETURN
 
     SET NOCOUNT ON
-
-    INSERT INTO [dbo].[History]
-    (
-        [UserId],
-        [CipherId],
-        [Event],
-        [Date]
-    )
-    SELECT
-        [UserId],
-        [Id],
-        2, --Delete
-        GETUTCDATE()
-    FROM
-        DELETED
 
     DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM DELETED)
 
