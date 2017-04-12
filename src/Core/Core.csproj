@@ -18,7 +18,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="1.1.2" />
     <PackageReference Include="Dapper" Version="1.50.2" />
-    <PackageReference Include="DataTableProxy" Version="1.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
     <PackageReference Include="Sendgrid" Version="9.0.12" />
     <PackageReference Include="PushSharp" Version="4.0.10" />

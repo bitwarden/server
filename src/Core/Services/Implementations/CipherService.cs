@@ -186,15 +186,30 @@ namespace Bit.Core.Services
             List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships)
         {
-            // create all the folders
-            var folderTasks = new List<Task>();
+            // Init. ids and build out favorites.
+            var favorites = new List<Favorite>();
+            foreach(var cipher in ciphers)
+            {
+                cipher.SetNewId();
+
+                if(cipher.UserId.HasValue && cipher.Favorite)
+                {
+                    favorites.Add(new Favorite
+                    {
+                        UserId = cipher.UserId.Value,
+                        CipherId = cipher.Id
+                    });
+                }
+            }
+
+            // Init. ids for folders
             foreach(var folder in folders)
             {
-                folderTasks.Add(_folderRepository.CreateAsync(folder));
+                folder.SetNewId();
             }
-            await Task.WhenAll(folderTasks);
 
-            // associate the newly created folders to the ciphers
+            // Create the folder associations based on the newly created folder ids
+            var folderCiphers = new List<FolderCipher>();
             foreach(var relationship in folderRelationships)
             {
                 var cipher = ciphers.ElementAtOrDefault(relationship.Key);
@@ -205,11 +220,15 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                //cipher.FolderId = folder.Id;
+                folderCiphers.Add(new FolderCipher
+                {
+                    FolderId = folder.Id,
+                    CipherId = cipher.Id
+                });
             }
 
-            // create all the ciphers
-            await _cipherRepository.CreateAsync(ciphers);
+            // Create it all
+            await _cipherRepository.CreateAsync(ciphers, favorites, folders, folderCiphers);
 
             // push
             var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;

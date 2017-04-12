@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using DataTableProxy;
 using Bit.Core.Models.Table;
 using System.Data;
 using Dapper;
@@ -198,8 +197,7 @@ namespace Bit.Core.Repositories.SqlServer
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "#TempCipher";
-
-                            var dataTable = ciphers.ToTable(new ClassMapping<Cipher>().AddAllPropertiesAsColumns());
+                            var dataTable = BuildCiphersTable(ciphers);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -209,12 +207,7 @@ namespace Bit.Core.Repositories.SqlServer
                             UPDATE
                                 [dbo].[Cipher]
                             SET
-                                -- Do not update [UserId]
-                                -- Do not update [FolderId]
-                                -- Do not update [Type]
-                                -- Do not update [Favorite]
                                 [Data] = TC.[Data],
-                                -- Do not update [CreationDate]
                                 [RevisionDate] = TC.[RevisionDate]
                             FROM
                                 [dbo].[Cipher] C
@@ -244,17 +237,12 @@ namespace Bit.Core.Repositories.SqlServer
             return Task.FromResult(0);
         }
 
-        public Task CreateAsync(IEnumerable<Cipher> ciphers)
+        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Favorite> favorites, IEnumerable<Folder> folders,
+            IEnumerable<FolderCipher> folderCiphers)
         {
-            if(ciphers.Count() == 0)
+            if(!ciphers.Any())
             {
                 return Task.FromResult(0);
-            }
-
-            // Generate new Ids for these new ciphers
-            foreach(var cipher in ciphers)
-            {
-                cipher.SetNewId();
             }
 
             using(var connection = new SqlConnection(ConnectionString))
@@ -265,11 +253,45 @@ namespace Bit.Core.Repositories.SqlServer
                 {
                     try
                     {
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                        if(folders.Any())
+                        {
+                            using(var bulkCopy = new SqlBulkCopy(connection,
+                                SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[Folder]";
+                                var dataTable = BuildFoldersTable(folders);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
+                        }
+
+                        using(var bulkCopy = new SqlBulkCopy(connection,
+                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                            var dataTable = ciphers.ToTable(new ClassMapping<Cipher>().AddAllPropertiesAsColumns());
+                            var dataTable = BuildCiphersTable(ciphers);
                             bulkCopy.WriteToServer(dataTable);
+                        }
+
+                        if(folderCiphers.Any())
+                        {
+                            using(var bulkCopy = new SqlBulkCopy(connection,
+                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[FolderCipher]";
+                                var dataTable = BuildFolderCiphersTable(folderCiphers);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
+                        }
+
+                        if(favorites.Any())
+                        {
+                            using(var bulkCopy = new SqlBulkCopy(connection,
+                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[Favorite]";
+                                var dataTable = BuildFavoritesTable(favorites);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
 
                         transaction.Commit();
@@ -283,6 +305,160 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             return Task.FromResult(0);
+        }
+
+        private DataTable BuildCiphersTable(IEnumerable<Cipher> ciphers)
+        {
+            var c = ciphers.FirstOrDefault();
+            if(c == null)
+            {
+                throw new ApplicationException("Must have some ciphers to bulk import.");
+            }
+
+            var ciphersTable = new DataTable("CipherDataTable");
+
+            var idColumn = new DataColumn(nameof(c.Id), c.Id.GetType());
+            ciphersTable.Columns.Add(idColumn);
+            var userIdColumn = new DataColumn(nameof(c.UserId), typeof(Guid));
+            ciphersTable.Columns.Add(userIdColumn);
+            var organizationId = new DataColumn(nameof(c.OrganizationId), typeof(Guid));
+            ciphersTable.Columns.Add(organizationId);
+            var typeColumn = new DataColumn(nameof(c.Type), typeof(short));
+            ciphersTable.Columns.Add(typeColumn);
+            var dataColumn = new DataColumn(nameof(c.Data), typeof(string));
+            ciphersTable.Columns.Add(dataColumn);
+            var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
+            ciphersTable.Columns.Add(creationDateColumn);
+            var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
+            ciphersTable.Columns.Add(revisionDateColumn);
+
+            var keys = new DataColumn[1];
+            keys[0] = idColumn;
+            ciphersTable.PrimaryKey = keys;
+
+            foreach(var cipher in ciphers)
+            {
+                var row = ciphersTable.NewRow();
+
+                row[idColumn] = cipher.Id;
+                row[userIdColumn] = cipher.UserId.HasValue ? (object)cipher.UserId.Value : DBNull.Value;
+                row[organizationId] = cipher.OrganizationId.HasValue ? (object)cipher.OrganizationId.Value : DBNull.Value;
+                row[typeColumn] = (short)cipher.Type;
+                row[dataColumn] = cipher.Data;
+                row[creationDateColumn] = cipher.CreationDate;
+                row[revisionDateColumn] = cipher.RevisionDate;
+
+                ciphersTable.Rows.Add(row);
+            }
+
+            return ciphersTable;
+        }
+
+        private DataTable BuildFavoritesTable(IEnumerable<Favorite> favorites)
+        {
+            var f = favorites.FirstOrDefault();
+            if(f == null)
+            {
+                throw new ApplicationException("Must have some favorites to bulk import.");
+            }
+
+            var favoritesTable = new DataTable("FavoriteDataTable");
+
+            var userIdColumn = new DataColumn(nameof(f.UserId), f.UserId.GetType());
+            favoritesTable.Columns.Add(userIdColumn);
+            var cipherIdColumn = new DataColumn(nameof(f.CipherId), f.CipherId.GetType());
+            favoritesTable.Columns.Add(cipherIdColumn);
+
+            var keys = new DataColumn[2];
+            keys[0] = userIdColumn;
+            keys[1] = cipherIdColumn;
+            favoritesTable.PrimaryKey = keys;
+
+            foreach(var favorite in favorites)
+            {
+                var row = favoritesTable.NewRow();
+
+                row[cipherIdColumn] = favorite.CipherId;
+                row[userIdColumn] = favorite.UserId;
+
+                favoritesTable.Rows.Add(row);
+            }
+
+            return favoritesTable;
+        }
+
+        private DataTable BuildFolderCiphersTable(IEnumerable<FolderCipher> folderCiphers)
+        {
+            var f = folderCiphers.FirstOrDefault();
+            if(f == null)
+            {
+                throw new ApplicationException("Must have some folderCiphers to bulk import.");
+            }
+
+            var folderCiphersTable = new DataTable("FolderCipherDataTable");
+
+            var folderIdColumn = new DataColumn(nameof(f.FolderId), f.FolderId.GetType());
+            folderCiphersTable.Columns.Add(folderIdColumn);
+            var cipherIdColumn = new DataColumn(nameof(f.CipherId), f.CipherId.GetType());
+            folderCiphersTable.Columns.Add(cipherIdColumn);
+
+            var keys = new DataColumn[2];
+            keys[0] = folderIdColumn;
+            keys[1] = cipherIdColumn;
+            folderCiphersTable.PrimaryKey = keys;
+
+            foreach(var folderCipher in folderCiphers)
+            {
+                var row = folderCiphersTable.NewRow();
+
+                row[folderIdColumn] = folderCipher.FolderId;
+                row[cipherIdColumn] = folderCipher.CipherId;
+
+                folderCiphersTable.Rows.Add(row);
+            }
+
+            return folderCiphersTable;
+        }
+
+        private DataTable BuildFoldersTable(IEnumerable<Folder> folders)
+        {
+            var f = folders.FirstOrDefault();
+            if(f == null)
+            {
+                throw new ApplicationException("Must have some folders to bulk import.");
+            }
+
+            var foldersTable = new DataTable("FolderDataTable");
+
+            var idColumn = new DataColumn(nameof(f.Id), f.Id.GetType());
+            foldersTable.Columns.Add(idColumn);
+            var userIdColumn = new DataColumn(nameof(f.UserId), f.UserId.GetType());
+            foldersTable.Columns.Add(userIdColumn);
+            var nameColumn = new DataColumn(nameof(f.Name), typeof(string));
+            foldersTable.Columns.Add(nameColumn);
+            var creationDateColumn = new DataColumn(nameof(f.CreationDate), f.CreationDate.GetType());
+            foldersTable.Columns.Add(creationDateColumn);
+            var revisionDateColumn = new DataColumn(nameof(f.RevisionDate), f.RevisionDate.GetType());
+            foldersTable.Columns.Add(revisionDateColumn);
+
+            var keys = new DataColumn[1];
+            keys[0] = idColumn;
+            foldersTable.PrimaryKey = keys;
+
+            foreach(var folder in folders)
+            {
+                var row = foldersTable.NewRow();
+
+                row[idColumn] = folder.Id;
+                row[userIdColumn] = folder.UserId;
+                row[nameColumn] = folder.Name;
+                row[creationDateColumn] = folder.CreationDate;
+                row[revisionDateColumn] = folder.RevisionDate;
+
+                foldersTable.Rows.Add(row);
+            }
+
+            return foldersTable;
         }
 
         public class CipherWithSubvaults : Cipher
