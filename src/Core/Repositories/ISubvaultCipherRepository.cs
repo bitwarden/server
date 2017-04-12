@@ -9,5 +9,6 @@ namespace Bit.Core.Repositories
     {
         Task<ICollection<SubvaultCipher>> GetManyByUserIdAsync(Guid userId);
         Task<ICollection<SubvaultCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId);
+        Task UpdateSubvaultsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> subvaultIds);
     }
 }

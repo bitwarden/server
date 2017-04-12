@@ -184,5 +184,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_UpdateSubvaults.sql" />
   </ItemGroup>
 </Project>

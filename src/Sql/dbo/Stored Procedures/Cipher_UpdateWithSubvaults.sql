@@ -14,7 +14,7 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [UserId] = @UserId,
+        [UserId] = NULL,
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
         [Data] = @Data,

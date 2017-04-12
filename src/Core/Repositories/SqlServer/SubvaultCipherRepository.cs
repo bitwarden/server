@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Data;
 using Dapper;
 using System.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -24,7 +25,7 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<SubvaultCipher>(
-                    $"[dbo].[SubvaultCipher_ReadByUserId]",
+                    "[dbo].[SubvaultCipher_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
@@ -37,11 +38,22 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<SubvaultCipher>(
-                    $"[dbo].[SubvaultCipher_ReadByUserIdCipherId]",
+                    "[dbo].[SubvaultCipher_ReadByUserIdCipherId]",
                     new { UserId = userId, CipherId = cipherId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
+            }
+        }
+
+        public async Task UpdateSubvaultsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> subvaultIds)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[SubvaultCipher_UpdateSubvaults]",
+                    new { CipherId = cipherId, UserId = userId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

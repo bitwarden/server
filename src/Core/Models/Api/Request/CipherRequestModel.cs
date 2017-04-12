@@ -63,12 +63,33 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class CipherMoveRequestModel : IValidatableObject
+    public class CipherShareRequestModel : IValidatableObject
     {
         [Required]
         public IEnumerable<string> SubvaultIds { get; set; }
         [Required]
         public CipherRequestModel Cipher { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(string.IsNullOrWhiteSpace(Cipher.OrganizationId))
+            {
+                yield return new ValidationResult("Cipher OrganizationId is required.",
+                    new string[] { nameof(Cipher.OrganizationId) });
+            }
+
+            if(!SubvaultIds?.Any() ?? false)
+            {
+                yield return new ValidationResult("You must select at least one subvault.",
+                    new string[] { nameof(SubvaultIds) });
+            }
+        }
+    }
+
+    public class CipherSubvaultsRequestModel : IValidatableObject
+    {
+        [Required]
+        public IEnumerable<string> SubvaultIds { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

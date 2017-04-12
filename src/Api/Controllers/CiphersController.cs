@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -18,17 +19,20 @@ namespace Bit.Api.Controllers
         private readonly ISubvaultCipherRepository _subvaultCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
+        private readonly CurrentContext _currentContext;
 
         public CiphersController(
             ICipherRepository cipherRepository,
             ISubvaultCipherRepository subvaultCipherRepository,
             ICipherService cipherService,
-            IUserService userService)
+            IUserService userService,
+            CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
             _subvaultCipherRepository = subvaultCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         [HttpGet("{id}")]
@@ -128,19 +132,35 @@ namespace Bit.Api.Controllers
             await _cipherService.UpdatePartialAsync(new Guid(id), userId, folderId, model.Favorite);
         }
 
-        [HttpPut("{id}/move")]
-        [HttpPost("{id}/move")]
-        public async Task PostMove(string id, [FromBody]CipherMoveRequestModel model)
+        [HttpPut("{id}/share")]
+        [HttpPost("{id}/share")]
+        public async Task PutShare(string id, [FromBody]CipherShareRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(cipher == null || cipher.UserId != userId)
+            if(cipher == null || cipher.UserId != userId ||
+                !_currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.MoveSubvaultAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+            await _cipherService.ShareAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
                 model.SubvaultIds.Select(s => new Guid(s)), userId);
+        }
+
+        [HttpPut("{id}/subvaults")]
+        [HttpPost("{id}/subvaults")]
+        public async Task PutSubvaults(string id, [FromBody]CipherSubvaultsRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId);
         }
 
         [HttpDelete("{id}")]

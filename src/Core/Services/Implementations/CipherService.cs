@@ -17,6 +17,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ISubvaultUserRepository _subvaultUserRepository;
+        private readonly ISubvaultCipherRepository _subvaultCipherRepository;
         private readonly IPushService _pushService;
 
         public CipherService(
@@ -26,6 +27,7 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ISubvaultUserRepository subvaultUserRepository,
+            ISubvaultCipherRepository subvaultCipherRepository,
             IPushService pushService)
         {
             _cipherRepository = cipherRepository;
@@ -34,6 +36,7 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _subvaultUserRepository = subvaultUserRepository;
+            _subvaultCipherRepository = subvaultCipherRepository;
             _pushService = pushService;
         }
 
@@ -112,7 +115,7 @@ namespace Bit.Core.Services
             //await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
-        public async Task MoveSubvaultAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid movingUserId)
+        public async Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid sharingUserId)
         {
             if(cipher.Id == default(Guid))
             {
@@ -124,14 +127,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already belongs to an organization.");
             }
 
-            if(!cipher.UserId.HasValue || cipher.UserId.Value != movingUserId)
+            if(!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
             {
                 throw new NotFoundException();
             }
 
             // We do not need to check if the user belongs to this organization since this call will return no subvaults
             // and therefore be caught by the .Any() check below.
-            var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(movingUserId, subvaultIds,
+            var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(sharingUserId, subvaultIds,
                 organizationId);
 
             var writeableSubvaults = subvaultUserDetails.Where(s => !s.ReadOnly).Select(s => s.SubvaultId);
@@ -144,6 +147,35 @@ namespace Bit.Core.Services
             cipher.OrganizationId = organizationId;
             cipher.RevisionDate = DateTime.UtcNow;
             await _cipherRepository.ReplaceAsync(cipher, writeableSubvaults);
+
+            // push
+            //await _pushService.PushSyncCipherUpdateAsync(cipher);
+        }
+
+        public async Task SaveSubvaultsAsync(Cipher cipher, IEnumerable<Guid> subvaultIds, Guid savingUserId)
+        {
+            if(cipher.Id == default(Guid))
+            {
+                throw new BadRequestException(nameof(cipher.Id));
+            }
+
+            if(!cipher.OrganizationId.HasValue)
+            {
+                throw new BadRequestException("Cipher must belong to an organization.");
+            }
+
+            // We do not need to check if the user belongs to this organization since this call will return no subvaults
+            // and therefore be caught by the .Any() check below.
+            var subvaultUserDetails = await _subvaultUserRepository.GetPermissionsByUserIdAsync(savingUserId, subvaultIds,
+                cipher.OrganizationId.Value);
+
+            var writeableSubvaults = subvaultUserDetails.Where(s => !s.ReadOnly).Select(s => s.SubvaultId);
+            if(!writeableSubvaults.Any())
+            {
+                throw new BadRequestException("No subvaults.");
+            }
+
+            await _subvaultCipherRepository.UpdateSubvaultsAsync(cipher.Id, savingUserId, writeableSubvaults);
 
             // push
             //await _pushService.PushSyncCipherUpdateAsync(cipher);
