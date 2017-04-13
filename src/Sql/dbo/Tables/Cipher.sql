@@ -35,7 +35,6 @@ BEGIN
     WHERE
         [Id] = @UserId
 END
-
 GO
 CREATE TRIGGER [dbo].[Cipher_Updated]
 ON [dbo].[Cipher] AFTER UPDATE
@@ -55,7 +54,6 @@ BEGIN
     WHERE
         [Id] = @UserId
 END
-
 GO
 CREATE TRIGGER [dbo].[Cipher_Deleted]
 ON [dbo].[Cipher] AFTER DELETE

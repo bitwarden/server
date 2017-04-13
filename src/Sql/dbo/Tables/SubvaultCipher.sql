@@ -6,3 +6,8 @@
     CONSTRAINT [FK_SubvaultCipher_Subvault] FOREIGN KEY ([SubvaultId]) REFERENCES [dbo].[Subvault] ([Id]) ON DELETE CASCADE
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_SubvaultCipher_CipherId]
+    ON [dbo].[SubvaultCipher]([CipherId] ASC);
+

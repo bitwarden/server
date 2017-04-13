@@ -69,6 +69,7 @@
   <ItemGroup>
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
+    <Build Include="dbo\Tables\Organization.sql" />
     <Build Include="dbo\Tables\FolderCipher.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
     <Build Include="dbo\Tables\Favorite.sql" />
@@ -76,7 +77,6 @@
     <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Tables\GroupUser.sql" />
     <Build Include="dbo\Tables\Folder.sql" />
-    <Build Include="dbo\Tables\Organization.sql" />
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Tables\Subvault.sql" />
     <Build Include="dbo\Tables\SubvaultCipher.sql" />
@@ -84,10 +84,10 @@
     <Build Include="dbo\Tables\SubvaultUser.sql" />
     <Build Include="dbo\Views\SubvaultUserView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
+    <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\FolderView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\OrganizationUserView.sql" />
-    <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\SubvaultUserSubvaultDetailsView.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
@@ -106,7 +106,9 @@
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Favorite_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
     <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
@@ -155,7 +157,9 @@
     <Build Include="dbo\Stored Procedures\SubvaultUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_UpdateSubvaults.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\CipherFullDetails_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadCanEditByCipherIdUserId.sql" />
@@ -177,9 +181,5 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultCipher_UpdateSubvaults.sql" />
   </ItemGroup>
 </Project>

@@ -6,3 +6,8 @@
     CONSTRAINT [FK_FolderCipher_Folder] FOREIGN KEY ([FolderId]) REFERENCES [dbo].[Folder] ([Id])
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_FolderCipher_CipherId]
+    ON [dbo].[FolderCipher]([CipherId] ASC);
+

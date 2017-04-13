@@ -17,6 +17,11 @@ BEGIN
     LEFT JOIN
         [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
     WHERE
-        (C.[UserId] IS NOT NULL AND C.[UserId] = @UserId)
-        OR (OU.[UserId] = @UserId AND OU.[Status] = 2 AND O.[Enabled] = 1) -- 2 = Confirmed
+        C.[UserId] = @UserId
+        OR (
+            C.[UserId] IS NULL
+            AND OU.[UserId] = @UserId
+            AND OU.[Status] = 2 -- 2 = Confirmed
+            AND O.[Enabled] = 1
+        )
 END

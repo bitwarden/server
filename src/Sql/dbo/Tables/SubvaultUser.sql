@@ -10,3 +10,8 @@
     CONSTRAINT [FK_SubvaultUser_Subvault] FOREIGN KEY ([SubvaultId]) REFERENCES [dbo].[Subvault] ([Id]) ON DELETE CASCADE
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_SubvaultUser_SubvaultId]
+    ON [dbo].[SubvaultUser]([SubvaultId] ASC);
+
