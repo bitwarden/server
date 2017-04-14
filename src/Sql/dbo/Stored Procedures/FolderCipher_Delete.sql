@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[FolderCipher_Delete]
     @FolderId UNIQUEIDENTIFIER,
-    @CipherId UNIQUEIDENTIFIER
+    @CipherId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,4 +12,5 @@ BEGIN
     WHERE
         [FolderId] = @FolderId
         AND [CipherId] = @CipherId
+        AND [UserId] = @UserId
 END

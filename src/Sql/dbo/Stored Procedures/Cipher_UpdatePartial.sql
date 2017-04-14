@@ -26,7 +26,7 @@ BEGIN
     
     IF @FolderId IS NOT NULL AND (@ExistingFolderId IS NULL OR @FolderId != @ExistingFolderId)
     BEGIN
-        EXEC [dbo].[FolderCipher_Create] @FolderId, @Id
+        EXEC [dbo].[FolderCipher_Create] @FolderId, @Id, @UserId
     END
 
     IF @Favorite = 0

@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[FolderCipher_Create]
     @FolderId UNIQUEIDENTIFIER,
-    @CipherId UNIQUEIDENTIFIER
+    @CipherId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -8,11 +9,13 @@ BEGIN
     INSERT INTO [dbo].[FolderCipher]
     (
         [FolderId],
-        [CipherId]
+        [CipherId],
+        [UserId]
     )
     VALUES
     (
         @FolderId,
-        @CipherId
+        @CipherId,
+        @UserId
     )
 END
