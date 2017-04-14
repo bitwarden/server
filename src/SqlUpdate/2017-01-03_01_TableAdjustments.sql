@@ -25,7 +25,8 @@ GO
 CREATE TABLE [dbo].[FolderCipher] (
     [FolderId] UNIQUEIDENTIFIER NOT NULL,
     [CipherId] UNIQUEIDENTIFIER NOT NULL,
-    CONSTRAINT [PK_FolderCipher] PRIMARY KEY CLUSTERED ([FolderId] ASC, [CipherId] ASC)
+    [UserId] UNIQUEIDENTIFIER NOT NULL,
+    CONSTRAINT [PK_FolderCipher] PRIMARY KEY CLUSTERED ([UserId] ASC, [FolderId] ASC, [CipherId] ASC)
 )
 GO
 

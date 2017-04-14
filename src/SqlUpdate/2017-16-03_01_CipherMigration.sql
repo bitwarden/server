@@ -6,7 +6,7 @@ from cipher
 where [type] = 0
 
 insert into foldercipher
-select FolderId, Id
+select FolderId, Id, UserId
 from cipher
 where [FolderId] is not null
 

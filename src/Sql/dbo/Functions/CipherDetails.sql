@@ -10,6 +10,6 @@ FROM
 LEFT JOIN
     [dbo].[Favorite] F ON F.[CipherId] = C.[Id] AND F.[UserId] = @UserId
 LEFT JOIN
-    [dbo].[FolderCipher] FC ON FC.[CipherId] = C.[Id]
+    [dbo].[FolderCipher] FC ON FC.[UserId] = @UserId AND FC.[CipherId] = C.[Id]
 LEFT JOIN
-    [dbo].[Folder] FO ON FO.[Id] = FC.[FolderId] AND FO.[UserId] = @UserId
+    [dbo].[Folder] FO ON FO.[Id] = FC.[FolderId]

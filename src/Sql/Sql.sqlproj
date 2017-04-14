@@ -148,7 +148,6 @@
     <Build Include="dbo\Stored Procedures\CipherDetails_Update.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
-    <Build Include="dbo\Stored Procedures\FolderCipher_DeleteByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_Update.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultUser_ReadPermissionsBySubvaultUserId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_Create.sql" />

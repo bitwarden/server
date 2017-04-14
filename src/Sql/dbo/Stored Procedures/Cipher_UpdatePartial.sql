@@ -7,11 +7,24 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    IF @FolderId IS NULL
+    DECLARE @ExistingFolderId UNIQUEIDENTIFIER = NULL
+
+    SELECT TOP 1 
+        @ExistingFolderId = F.Id
+    FROM
+        [dbo].[FolderCipher] FC
+    INNER JOIN
+        [dbo].[Folder] F ON F.[Id] = FC.[FolderId]
+    WHERE
+        F.[UserId] = @UserId
+        AND FC.[CipherId] = @Id
+
+    IF @ExistingFolderId IS NOT NULL AND (@FolderId IS NULL OR @FolderId != @ExistingFolderId)
     BEGIN
-        EXEC [dbo].[FolderCipher_DeleteByUserId] @UserId, @Id
+        EXEC [dbo].[FolderCipher_Delete] @ExistingFolderId, @Id
     END
-    ELSE IF (SELECT COUNT(1) FROM [dbo].[FolderCipher] WHERE [FolderId] = @FolderId AND [CipherId] = @Id) = 0
+    
+    IF @FolderId IS NOT NULL AND (@ExistingFolderId IS NULL OR @FolderId != @ExistingFolderId)
     BEGIN
         EXEC [dbo].[FolderCipher_Create] @FolderId, @Id
     END
