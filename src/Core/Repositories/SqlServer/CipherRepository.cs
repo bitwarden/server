@@ -401,10 +401,13 @@ namespace Bit.Core.Repositories.SqlServer
             folderCiphersTable.Columns.Add(folderIdColumn);
             var cipherIdColumn = new DataColumn(nameof(f.CipherId), f.CipherId.GetType());
             folderCiphersTable.Columns.Add(cipherIdColumn);
+            var userIdColumn = new DataColumn(nameof(f.UserId), f.UserId.GetType());
+            folderCiphersTable.Columns.Add(userIdColumn);
 
-            var keys = new DataColumn[2];
+            var keys = new DataColumn[3];
             keys[0] = folderIdColumn;
             keys[1] = cipherIdColumn;
+            keys[2] = userIdColumn;
             folderCiphersTable.PrimaryKey = keys;
 
             foreach(var folderCipher in folderCiphers)
@@ -413,6 +416,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                 row[folderIdColumn] = folderCipher.FolderId;
                 row[cipherIdColumn] = folderCipher.CipherId;
+                row[userIdColumn] = folderCipher.UserId;
 
                 folderCiphersTable.Rows.Add(row);
             }

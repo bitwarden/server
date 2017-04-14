@@ -223,7 +223,8 @@ namespace Bit.Core.Services
                 folderCiphers.Add(new FolderCipher
                 {
                     FolderId = folder.Id,
-                    CipherId = cipher.Id
+                    CipherId = cipher.Id,
+                    UserId = folder.UserId
                 });
             }
 
