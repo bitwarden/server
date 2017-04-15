@@ -9,7 +9,7 @@ BEGIN
     FROM
         [dbo].[CipherDetails](@UserId) C
     LEFT JOIN
-        [dbo].[SubvaultCipher] SC ON SC.[CipherId] = C.[Id]
+        [dbo].[SubvaultCipher] SC ON C.[UserId] IS NULL AND SC.[CipherId] = C.[Id]
     LEFT JOIN
         [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = SC.[SubvaultId]
     LEFT JOIN
