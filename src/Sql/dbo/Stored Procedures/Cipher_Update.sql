@@ -4,6 +4,8 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -17,6 +19,8 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
         [Data] = @Data,
+        [Favorites] = @Favorites,
+        [Folders] = @Folders,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

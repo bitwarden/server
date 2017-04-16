@@ -70,9 +70,7 @@
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
     <Build Include="dbo\Tables\Organization.sql" />
-    <Build Include="dbo\Tables\FolderCipher.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
-    <Build Include="dbo\Tables\Favorite.sql" />
     <Build Include="dbo\Tables\Group.sql" />
     <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Tables\GroupUser.sql" />
@@ -104,10 +102,8 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\Favorite_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Favorite_Delete.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
     <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
@@ -115,9 +111,7 @@
     <Build Include="dbo\Stored Procedures\Cipher_Update.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Update.sql" />
     <Build Include="dbo\Stored Procedures\Device_ClearPushTokenByIdentifier.sql" />
-    <Build Include="dbo\Stored Procedures\FolderCipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Device_Create.sql" />
-    <Build Include="dbo\Stored Procedures\FolderCipher_Delete.sql" />
     <Build Include="dbo\Stored Procedures\Device_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Create.sql" />
     <Build Include="dbo\Stored Procedures\Device_ReadById.sql" />

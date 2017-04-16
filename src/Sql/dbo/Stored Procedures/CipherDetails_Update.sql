@@ -4,6 +4,8 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX), -- not used
+    @Folders NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,

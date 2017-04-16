@@ -186,19 +186,13 @@ namespace Bit.Core.Services
             List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships)
         {
-            // Init. ids and build out favorites.
-            var favorites = new List<Favorite>();
             foreach(var cipher in ciphers)
             {
                 cipher.SetNewId();
 
                 if(cipher.UserId.HasValue && cipher.Favorite)
                 {
-                    favorites.Add(new Favorite
-                    {
-                        UserId = cipher.UserId.Value,
-                        CipherId = cipher.Id
-                    });
+                    cipher.Favorites = $"[{{\"u\":\"{cipher.UserId.ToString().ToUpperInvariant()}\"}}]";
                 }
             }
 
@@ -209,7 +203,6 @@ namespace Bit.Core.Services
             }
 
             // Create the folder associations based on the newly created folder ids
-            var folderCiphers = new List<FolderCipher>();
             foreach(var relationship in folderRelationships)
             {
                 var cipher = ciphers.ElementAtOrDefault(relationship.Key);
@@ -220,16 +213,12 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                folderCiphers.Add(new FolderCipher
-                {
-                    FolderId = folder.Id,
-                    CipherId = cipher.Id,
-                    UserId = folder.UserId
-                });
+                cipher.Folders = $"[{{\"u\":\"{cipher.UserId.ToString().ToUpperInvariant()}\"," +
+                    $"\"f\":\"{folder.Id.ToString().ToUpperInvariant()}\"}}]";
             }
 
             // Create it all
-            await _cipherRepository.CreateAsync(ciphers, favorites, folders, folderCiphers);
+            await _cipherRepository.CreateAsync(ciphers, folders);
 
             // push
             var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;

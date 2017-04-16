@@ -4,6 +4,8 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @SubvaultIds AS [dbo].[GuidIdArray] READONLY
@@ -16,10 +18,9 @@ BEGIN
     SET
         [UserId] = NULL,
         [OrganizationId] = @OrganizationId,
-        [Type] = @Type,
         [Data] = @Data,
-        [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
+        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id
 

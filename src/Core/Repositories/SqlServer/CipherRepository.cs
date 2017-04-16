@@ -237,8 +237,7 @@ namespace Bit.Core.Repositories.SqlServer
             return Task.FromResult(0);
         }
 
-        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Favorite> favorites, IEnumerable<Folder> folders,
-            IEnumerable<FolderCipher> folderCiphers)
+        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             if(!ciphers.Any())
             {
@@ -270,28 +269,6 @@ namespace Bit.Core.Repositories.SqlServer
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
                             var dataTable = BuildCiphersTable(ciphers);
                             bulkCopy.WriteToServer(dataTable);
-                        }
-
-                        if(folderCiphers.Any())
-                        {
-                            using(var bulkCopy = new SqlBulkCopy(connection,
-                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
-                            {
-                                bulkCopy.DestinationTableName = "[dbo].[FolderCipher]";
-                                var dataTable = BuildFolderCiphersTable(folderCiphers);
-                                bulkCopy.WriteToServer(dataTable);
-                            }
-                        }
-
-                        if(favorites.Any())
-                        {
-                            using(var bulkCopy = new SqlBulkCopy(connection,
-                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
-                            {
-                                bulkCopy.DestinationTableName = "[dbo].[Favorite]";
-                                var dataTable = BuildFavoritesTable(favorites);
-                                bulkCopy.WriteToServer(dataTable);
-                            }
                         }
 
                         transaction.Commit();
@@ -327,6 +304,10 @@ namespace Bit.Core.Repositories.SqlServer
             ciphersTable.Columns.Add(typeColumn);
             var dataColumn = new DataColumn(nameof(c.Data), typeof(string));
             ciphersTable.Columns.Add(dataColumn);
+            var favoritesColumn = new DataColumn(nameof(c.Favorites), typeof(string));
+            ciphersTable.Columns.Add(favoritesColumn);
+            var foldersColumn = new DataColumn(nameof(c.Folders), typeof(string));
+            ciphersTable.Columns.Add(foldersColumn);
             var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
             ciphersTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
@@ -345,6 +326,8 @@ namespace Bit.Core.Repositories.SqlServer
                 row[organizationId] = cipher.OrganizationId.HasValue ? (object)cipher.OrganizationId.Value : DBNull.Value;
                 row[typeColumn] = (short)cipher.Type;
                 row[dataColumn] = cipher.Data;
+                row[favoritesColumn] = cipher.Favorites;
+                row[foldersColumn] = cipher.Folders;
                 row[creationDateColumn] = cipher.CreationDate;
                 row[revisionDateColumn] = cipher.RevisionDate;
 
@@ -352,76 +335,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             return ciphersTable;
-        }
-
-        private DataTable BuildFavoritesTable(IEnumerable<Favorite> favorites)
-        {
-            var f = favorites.FirstOrDefault();
-            if(f == null)
-            {
-                throw new ApplicationException("Must have some favorites to bulk import.");
-            }
-
-            var favoritesTable = new DataTable("FavoriteDataTable");
-
-            var userIdColumn = new DataColumn(nameof(f.UserId), f.UserId.GetType());
-            favoritesTable.Columns.Add(userIdColumn);
-            var cipherIdColumn = new DataColumn(nameof(f.CipherId), f.CipherId.GetType());
-            favoritesTable.Columns.Add(cipherIdColumn);
-
-            var keys = new DataColumn[2];
-            keys[0] = userIdColumn;
-            keys[1] = cipherIdColumn;
-            favoritesTable.PrimaryKey = keys;
-
-            foreach(var favorite in favorites)
-            {
-                var row = favoritesTable.NewRow();
-
-                row[cipherIdColumn] = favorite.CipherId;
-                row[userIdColumn] = favorite.UserId;
-
-                favoritesTable.Rows.Add(row);
-            }
-
-            return favoritesTable;
-        }
-
-        private DataTable BuildFolderCiphersTable(IEnumerable<FolderCipher> folderCiphers)
-        {
-            var f = folderCiphers.FirstOrDefault();
-            if(f == null)
-            {
-                throw new ApplicationException("Must have some folderCiphers to bulk import.");
-            }
-
-            var folderCiphersTable = new DataTable("FolderCipherDataTable");
-
-            var folderIdColumn = new DataColumn(nameof(f.FolderId), f.FolderId.GetType());
-            folderCiphersTable.Columns.Add(folderIdColumn);
-            var cipherIdColumn = new DataColumn(nameof(f.CipherId), f.CipherId.GetType());
-            folderCiphersTable.Columns.Add(cipherIdColumn);
-            var userIdColumn = new DataColumn(nameof(f.UserId), f.UserId.GetType());
-            folderCiphersTable.Columns.Add(userIdColumn);
-
-            var keys = new DataColumn[3];
-            keys[0] = folderIdColumn;
-            keys[1] = cipherIdColumn;
-            keys[2] = userIdColumn;
-            folderCiphersTable.PrimaryKey = keys;
-
-            foreach(var folderCipher in folderCiphers)
-            {
-                var row = folderCiphersTable.NewRow();
-
-                row[folderIdColumn] = folderCipher.FolderId;
-                row[cipherIdColumn] = folderCipher.CipherId;
-                row[userIdColumn] = folderCipher.UserId;
-
-                folderCiphersTable.Rows.Add(row);
-            }
-
-            return folderCiphersTable;
         }
 
         private DataTable BuildFoldersTable(IEnumerable<Folder> folders)

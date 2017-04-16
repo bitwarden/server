@@ -4,6 +4,8 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX), -- not used
+    @Folders NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
@@ -19,6 +21,8 @@ BEGIN
         [OrganizationId],
         [Type],
         [Data],
+        [Favorites],
+        [Folders],
         [CreationDate],
         [RevisionDate]
     )
@@ -29,17 +33,9 @@ BEGIN
         @OrganizationId,
         @Type,
         @Data,
+        CASE WHEN @Favorite = 0 THEN NULL ELSE JSON_QUERY((SELECT @UserId u FOR JSON PATH)) END,
+        CASE WHEN @FolderId IS NULL THEN NULL ELSE JSON_QUERY((SELECT @UserId u, @FolderId f FOR JSON PATH)) END,
         @CreationDate,
         @RevisionDate
     )
-
-    IF @FolderId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[FolderCipher_Create] @FolderId, @Id, @UserId
-    END
-
-    IF @Favorite = 1
-    BEGIN
-        EXEC [dbo].[Favorite_Create] @UserId, @Id
-    END
 END
