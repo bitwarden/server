@@ -192,7 +192,7 @@ namespace Bit.Core.Services
 
                 if(cipher.UserId.HasValue && cipher.Favorite)
                 {
-                    cipher.Favorites = $"[{{\"u\":\"{cipher.UserId.ToString().ToUpperInvariant()}\"}}]";
+                    cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
                 }
             }
 
@@ -213,8 +213,8 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                cipher.Folders = $"[{{\"u\":\"{cipher.UserId.ToString().ToUpperInvariant()}\"," +
-                    $"\"f\":\"{folder.Id.ToString().ToUpperInvariant()}\"}}]";
+                cipher.Folders = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":" +
+                    $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
             }
 
             // Create it all

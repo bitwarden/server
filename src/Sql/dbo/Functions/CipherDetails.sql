@@ -11,35 +11,14 @@ SELECT
     C.[RevisionDate],
     CASE WHEN
         C.[Favorites] IS NULL
-        OR (
-            SELECT TOP 1
-                1
-            FROM
-                OPENJSON(C.[Favorites])
-                WITH (
-                    [Favorites_UserId] UNIQUEIDENTIFIER '$.u'
-                )
-            WHERE
-                [Favorites_UserId] = @UserId
-        ) IS NULL
+        OR JSON_VALUE(C.[Favorites], CONCAT('$."', @UserId, '"')) IS NULL
     THEN 0
     ELSE 1
     END [Favorite],
     CASE WHEN
         C.[Folders] IS NULL
     THEN NULL
-    ELSE (
-        SELECT TOP 1
-            [Folders_FolderId]
-        FROM
-            OPENJSON(C.[Folders])
-            WITH (
-                [Folders_UserId] UNIQUEIDENTIFIER '$.u',
-                [Folders_FolderId] UNIQUEIDENTIFIER '$.f'
-            )
-        WHERE
-            [Folders_UserId] = @UserId
-    )
+    ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
     END [FolderId]
 FROM
     [dbo].[Cipher] C
