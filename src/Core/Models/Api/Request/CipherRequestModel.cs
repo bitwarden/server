@@ -18,8 +18,6 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         [StringLength(36)]
         public string OrganizationId { get; set; }
-        [StringLength(36)]
-        public string FolderId { get; set; }
         [Required]
         [EncryptedString]
         [StringLength(300)]

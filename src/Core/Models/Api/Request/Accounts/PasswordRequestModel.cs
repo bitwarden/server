@@ -11,6 +11,6 @@ namespace Bit.Core.Models.Api
         [StringLength(300)]
         public string NewMasterPasswordHash { get; set; }
         [Required]
-        public CipherRequestModel[] Ciphers { get; set; }
+        public DataReloadRequestModel Data { get; set; }
     }
 }

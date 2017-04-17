@@ -82,7 +82,8 @@ namespace Bit.Api.Controllers
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
+            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
+            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
 
             var result = await _userService.ChangeEmailAsync(
                 user,
@@ -90,7 +91,9 @@ namespace Bit.Api.Controllers
                 model.NewEmail,
                 model.NewMasterPasswordHash,
                 model.Token,
-                ciphers);
+                ciphers,
+                folders,
+                model.Data.PrivateKey);
 
             if(result.Succeeded)
             {
@@ -114,13 +117,16 @@ namespace Bit.Api.Controllers
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
-            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
+            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
+            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
 
             var result = await _userService.ChangePasswordAsync(
                 user,
                 model.MasterPasswordHash,
                 model.NewMasterPasswordHash,
-                ciphers);
+                ciphers,
+                folders,
+                model.Data.PrivateKey);
 
             if(result.Succeeded)
             {

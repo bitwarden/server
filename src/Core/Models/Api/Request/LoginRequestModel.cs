@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;
 using Core.Models.Data;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
@@ -46,6 +47,20 @@ namespace Bit.Core.Models.Api
             existingLogin.Type = Enums.CipherType.Login;
 
             return existingLogin;
+        }
+    }
+
+    public class LoginWithIdRequestModel : LoginRequestModel
+    {
+        public Guid Id { get; set; }
+
+        public Cipher ToCipher(Guid userId)
+        {
+            return ToCipherDetails(new CipherDetails
+            {
+                UserId = userId,
+                Id = Id
+            });
         }
     }
 }

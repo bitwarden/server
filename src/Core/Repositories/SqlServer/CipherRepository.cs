@@ -154,7 +154,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers)
+        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             if(ciphers.Count() == 0)
             {
@@ -179,6 +179,7 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.Parameters.Add("@EmailVerified", SqlDbType.NVarChar).Value = user.EmailVerified;
                             cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
                             cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
                             cmd.ExecuteNonQuery();
                         }
@@ -188,7 +189,11 @@ namespace Bit.Core.Repositories.SqlServer
                         var sqlCreateTemp = @"
                             SELECT TOP 0 *
                             INTO #TempCipher
-                            FROM [dbo].[Cipher]";
+                            FROM [dbo].[Cipher]
+
+                            SELECT TOP 0 *
+                            INTO #TempFolder
+                            FROM [dbo].[Folder]";
 
                         using(var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
                         {
@@ -201,6 +206,13 @@ namespace Bit.Core.Repositories.SqlServer
                         {
                             bulkCopy.DestinationTableName = "#TempCipher";
                             var dataTable = BuildCiphersTable(ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
+
+                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "#TempFolder";
+                            var dataTable = BuildFoldersTable(folders);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -219,7 +231,20 @@ namespace Bit.Core.Repositories.SqlServer
                             WHERE
                                 C.[UserId] = @UserId
 
-                            DROP TABLE #TempCipher";
+                            UPDATE
+                                [dbo].[Folder]
+                            SET
+                                [Name] = TF.[Name],
+                                [RevisionDate] = TF.[RevisionDate]
+                            FROM
+                                [dbo].[Folder] F
+                            INNER JOIN
+                                #TempFolder TF ON F.Id = TF.Id
+                            WHERE
+                                F.[UserId] = @UserId
+
+                            DROP TABLE #TempCipher
+                            DROP TABLE #TempFolder";
 
                         using(var cmd = new SqlCommand(sqlUpdate, connection, transaction))
                         {

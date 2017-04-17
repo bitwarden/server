@@ -4,6 +4,7 @@
     @EmailVerified BIT,
     @MasterPassword NVARCHAR(300),
     @SecurityStamp NVARCHAR(50),
+    @PrivateKey VARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
@@ -16,6 +17,7 @@ BEGIN
         [EmailVerified] = @EmailVerified,
         [MasterPassword] = @MasterPassword,
         [SecurityStamp] = @SecurityStamp,
+        [PrivateKey] = @PrivateKey,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @RevisionDate
     WHERE

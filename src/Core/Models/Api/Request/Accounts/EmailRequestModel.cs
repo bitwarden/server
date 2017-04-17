@@ -17,6 +17,6 @@ namespace Bit.Core.Models.Api
         [Required]
         public string Token { get; set; }
         [Required]
-        public CipherRequestModel[] Ciphers { get; set; }
+        public DataReloadRequestModel Data { get; set; }
     }
 }

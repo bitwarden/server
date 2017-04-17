@@ -169,8 +169,8 @@ namespace Bit.Core.Services
             await _mailService.SendChangeEmailEmailAsync(newEmail, token);
         }
 
-        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, 
-            string newMasterPassword, string token, IEnumerable<Cipher> ciphers)
+        public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail,
+            string newMasterPassword, string token, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey)
         {
             var verifyPasswordResult = _passwordHasher.VerifyHashedPassword(user, user.MasterPassword, masterPassword);
             if(verifyPasswordResult == PasswordVerificationResult.Failed)
@@ -199,10 +199,11 @@ namespace Bit.Core.Services
             user.Email = newEmail;
             user.EmailVerified = true;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.PrivateKey = privateKey;
 
             if(ciphers.Any())
             {
-                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
             }
             else
             {
@@ -218,7 +219,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, 
-            IEnumerable<Cipher> ciphers)
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey)
         {
             if(user == null)
             {
@@ -234,9 +235,10 @@ namespace Bit.Core.Services
                 }
 
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                user.PrivateKey = privateKey;
                 if(ciphers.Any())
                 {
-                    await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers);
+                    await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
                 }
                 else
                 {
