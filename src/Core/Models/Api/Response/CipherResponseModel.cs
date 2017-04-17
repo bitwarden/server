@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
-    public class CipherResponseModel : ResponseModel
+    public class CipherMiniResponseModel : ResponseModel
     {
-        public CipherResponseModel(CipherDetails cipher, string obj = "cipher")
+        public CipherMiniResponseModel(Cipher cipher, string obj = "cipherMini")
             : base(obj)
         {
             if(cipher == null)
@@ -20,8 +20,6 @@ namespace Bit.Core.Models.Api
             Type = cipher.Type;
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
-            FolderId = cipher.FolderId?.ToString();
-            Favorite = cipher.Favorite;
 
             switch(cipher.Type)
             {
@@ -35,11 +33,22 @@ namespace Bit.Core.Models.Api
 
         public string Id { get; set; }
         public string OrganizationId { get; set; }
-        public string FolderId { get; set; }
         public Enums.CipherType Type { get; set; }
-        public bool Favorite { get; set; }
         public dynamic Data { get; set; }
         public DateTime RevisionDate { get; set; }
+    }
+
+    public class CipherResponseModel : CipherMiniResponseModel
+    {
+        public CipherResponseModel(CipherDetails cipher, string obj = "cipher")
+            : base(cipher, obj)
+        {
+            FolderId = cipher.FolderId?.ToString();
+            Favorite = cipher.Favorite;
+        }
+
+        public string FolderId { get; set; }
+        public bool Favorite { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel
@@ -63,6 +72,25 @@ namespace Bit.Core.Models.Api
             : base(cipher, obj)
         {
             SubvaultIds = subvaultCiphers.Select(s => s.SubvaultId);
+        }
+
+        public IEnumerable<Guid> SubvaultIds { get; set; }
+    }
+
+    public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
+    {
+        public CipherMiniDetailsResponseModel(Cipher cipher,
+            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers, string obj = "cipherMiniDetails")
+            : base(cipher, obj)
+        {
+            if(subvaultCiphers.ContainsKey(cipher.Id))
+            {
+                SubvaultIds = subvaultCiphers[cipher.Id].Select(s => s.SubvaultId);
+            }
+            else
+            {
+                SubvaultIds = new Guid[] { };
+            }
         }
 
         public IEnumerable<Guid> SubvaultIds { get; set; }

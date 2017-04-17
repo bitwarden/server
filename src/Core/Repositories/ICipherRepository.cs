@@ -12,6 +12,7 @@ namespace Bit.Core.Repositories
         Task<CipherFullDetails> GetFullDetailsByIdAsync(Guid id, Guid userId);
         Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId);
         Task<ICollection<CipherDetails>> GetManyByUserIdHasSubvaultsAsync(Guid userId);
+        Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId);
         Task CreateAsync(CipherDetails cipher);
         Task ReplaceAsync(CipherDetails cipher);

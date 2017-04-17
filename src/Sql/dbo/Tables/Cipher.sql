@@ -19,6 +19,12 @@ CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_Type]
 
 
 GO
+CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Type]
+    ON [dbo].[Cipher]([OrganizationId] ASC, [Type] ASC)
+    WHERE [OrganizationId] IS NOT NULL;
+
+
+GO
 CREATE TRIGGER [dbo].[Cipher_Inserted]
 ON [dbo].[Cipher] AFTER INSERT
 AS

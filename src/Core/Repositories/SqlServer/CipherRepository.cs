@@ -76,6 +76,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Cipher>(
+                    $"[{Schema}].[Cipher_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))

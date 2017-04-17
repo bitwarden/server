@@ -85,6 +85,25 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
+        [HttpGet("organization-details")]
+        public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationSubvaults(string organizationId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var orgIdGuid = new Guid(organizationId);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+
+            var subvaultCiphers = await _subvaultCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var subvaultCiphersGroupDict = subvaultCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+
+            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, subvaultCiphersGroupDict));
+            return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+        }
+
         [Obsolete]
         [HttpGet("history")]
         public Task<CipherHistoryResponseModel> Get(DateTime since)
@@ -116,7 +135,7 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-            
+
             await _cipherService.UpdatePartialAsync(new Guid(id), userId, cipher.FolderId, !cipher.Favorite);
         }
 

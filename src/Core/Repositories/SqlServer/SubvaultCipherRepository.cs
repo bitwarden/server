@@ -33,6 +33,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<SubvaultCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SubvaultCipher>(
+                    "[dbo].[SubvaultCipher_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<SubvaultCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
         {
             using(var connection = new SqlConnection(ConnectionString))
