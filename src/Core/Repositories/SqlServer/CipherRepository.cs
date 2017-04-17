@@ -57,7 +57,8 @@ namespace Bit.Core.Repositories.SqlServer
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                // Return distinct Id results
+                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
             }
         }
 
@@ -70,7 +71,8 @@ namespace Bit.Core.Repositories.SqlServer
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                // Return distinct Id results
+                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
             }
         }
 
@@ -87,7 +89,8 @@ namespace Bit.Core.Repositories.SqlServer
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                // Return distinct Id results
+                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
             }
         }
 

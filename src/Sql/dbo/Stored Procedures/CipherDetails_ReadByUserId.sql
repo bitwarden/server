@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT DISTINCT
+    SELECT
         C.*
     FROM
         [dbo].[CipherDetails](@UserId) C
@@ -15,7 +15,7 @@ BEGIN
     LEFT JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     LEFT JOIN
-        [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
+        [dbo].[Organization] O ON C.[UserId] IS NULL AND O.[Id] = C.[OrganizationId]
     WHERE
         C.[UserId] = @UserId
         OR (

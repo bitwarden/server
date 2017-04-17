@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT DISTINCT
+    SELECT TOP 1
         C.*,
         CASE 
             WHEN C.[OrganizationId] IS NULL THEN 1 
@@ -14,13 +14,13 @@ BEGIN
     FROM
         [dbo].[CipherDetails](@UserId) C
     LEFT JOIN
-        [dbo].[SubvaultCipher] SC ON SC.[CipherId] = C.[Id]
+        [dbo].[SubvaultCipher] SC ON C.[UserId] IS NULL AND SC.[CipherId] = C.[Id]
     LEFT JOIN
         [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = SC.[SubvaultId]
     LEFT JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
     LEFT JOIN
-        [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
+        [dbo].[Organization] O ON C.[UserId] IS NULL AND O.[Id] = C.[OrganizationId]
     WHERE
         C.Id = @Id
         AND (
