@@ -14,6 +14,9 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @UserIdKey VARCHAR(50) = CONCAT('"', @UserId, '"')
+    DECLARE @UserIdPath VARCHAR(50) = CONCAT('$.', @UserIdKey)
+
     INSERT INTO [dbo].[Cipher]
     (
         [Id],
@@ -33,8 +36,8 @@ BEGIN
         @OrganizationId,
         @Type,
         @Data,
-        CASE WHEN @Favorite = 0 THEN NULL ELSE JSON_QUERY((SELECT @UserId u FOR JSON PATH)) END,
-        CASE WHEN @FolderId IS NULL THEN NULL ELSE JSON_QUERY((SELECT @UserId u, @FolderId f FOR JSON PATH)) END,
+        CASE WHEN @FolderId IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}') ELSE NULL END,
+        CASE WHEN @Favorite = 1 THEN CONCAT('{', @UserIdKey, ':true}') ELSE NULL END,
         @CreationDate,
         @RevisionDate
     )
