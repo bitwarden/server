@@ -201,7 +201,7 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.PrivateKey = privateKey;
 
-            if(ciphers.Any())
+            if(ciphers.Any() || folders.Any())
             {
                 await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
             }
@@ -236,7 +236,7 @@ namespace Bit.Core.Services
 
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.PrivateKey = privateKey;
-                if(ciphers.Any())
+                if(ciphers.Any() || folders.Any())
                 {
                     await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
                 }
