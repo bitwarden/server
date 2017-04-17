@@ -5,13 +5,6 @@ GO
 
 -- Setup new tables
 
-CREATE TABLE [dbo].[Favorite] (
-    [UserId]   UNIQUEIDENTIFIER NOT NULL,
-    [CipherId] UNIQUEIDENTIFIER NOT NULL,
-    CONSTRAINT [PK_Favorite] PRIMARY KEY CLUSTERED ([UserId] ASC, [CipherId] ASC)
-)
-GO
-
 CREATE TABLE [dbo].[Folder] (
     [Id]           UNIQUEIDENTIFIER NOT NULL,
     [UserId]       UNIQUEIDENTIFIER NOT NULL,
@@ -22,13 +15,13 @@ CREATE TABLE [dbo].[Folder] (
 )
 GO
 
-CREATE TABLE [dbo].[FolderCipher] (
-    [FolderId] UNIQUEIDENTIFIER NOT NULL,
-    [CipherId] UNIQUEIDENTIFIER NOT NULL,
-    [UserId] UNIQUEIDENTIFIER NOT NULL,
-    CONSTRAINT [PK_FolderCipher] PRIMARY KEY CLUSTERED ([UserId] ASC, [FolderId] ASC, [CipherId] ASC)
-)
+-- Setup new columns for cipher changes
+
+ALTER TABLE [dbo].[Cipher]
+ADD [Favorites] VARCHAR(MAX) NULL
 GO
 
-
+ALTER TABLE [dbo].[Cipher]
+ADD [Folders] VARCHAR(MAX) NULL
+GO
 

@@ -5,18 +5,16 @@ select Id, UserId, JSON_VALUE(Data,'$.Name') AS [Name], CreationDate, RevisionDa
 from cipher
 where [type] = 0
 
-insert into foldercipher
-select FolderId, Id, UserId
-from cipher
-where [FolderId] is not null
+update cipher set
+Folders = concat('{"', userid, '":"', folderid, '"}')
+where [userid] is not null
+and [folderid] is not null
 
-insert into favorite
-select UserId, [Id]
-from cipher
-where Favorite = 1
+update cipher set
+Favorites = concat('{"', userid, '":true}')
+where [Favorite] = 1
 
-
--- Step 2, drop each column
+-- Step 2, verify data migration from step 1 then drop each column
 
 alter table cipher drop constraint [FK_Cipher_Folder]
 go
