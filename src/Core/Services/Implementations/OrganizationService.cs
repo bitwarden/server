@@ -552,7 +552,6 @@ namespace Bit.Core.Services
                 {
                     OrganizationId = organization.Id,
                     UserId = signup.Owner.Id,
-                    Email = signup.Owner.Email,
                     Key = signup.OwnerKey,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
