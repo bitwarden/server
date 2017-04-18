@@ -657,9 +657,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User already invited.");
             }
 
-            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(organizationId);
-            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
-
             var orgUser = new OrganizationUser
             {
                 OrganizationId = organizationId,
@@ -673,7 +670,7 @@ namespace Bit.Core.Services
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
-            await SaveUserSubvaultsAsync(orgUser, filteredSubvaults, true);
+            await SaveUserSubvaultsAsync(orgUser, subvaults, true);
             await SendInviteAsync(orgUser);
 
             return orgUser;
@@ -789,11 +786,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
-
             await _organizationUserRepository.ReplaceAsync(user);
-            await SaveUserSubvaultsAsync(user, filteredSubvaults, false);
+            await SaveUserSubvaultsAsync(user, subvaults, false);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
