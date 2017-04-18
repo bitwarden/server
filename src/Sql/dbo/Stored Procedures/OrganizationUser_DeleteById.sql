@@ -6,6 +6,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[SubvaultUser]
+    WHERE
+        [OrganizationUserId] = @Id
+
+    DELETE
+    FROM
         [dbo].[OrganizationUser]
     WHERE
         [Id] = @Id

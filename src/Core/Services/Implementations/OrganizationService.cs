@@ -797,6 +797,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
+            if(orgUser.UserId == deletingUserId)
+            {
+                throw new BadRequestException("You cannot remove yourself.");
+            }
+
             var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
             if(confirmedOwners.Count == 1 && confirmedOwners[0].Id == organizationUserId)
             {
