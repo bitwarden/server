@@ -65,16 +65,6 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpdatePartialAsync(Guid cipherId, Guid savingUserId, Guid? folderId, bool favorite)
-        {
-            if(!(await UserCanPartialEditAsync(cipherId, savingUserId)))
-            {
-                throw new BadRequestException("Cannot edit.");
-            }
-
-            await _cipherRepository.UpdatePartialAsync(cipherId, savingUserId, folderId, favorite);
-        }
-
         public async Task DeleteAsync(CipherDetails cipher, Guid deletingUserId)
         {
             if(!(await UserCanEditAsync(cipher, deletingUserId)))
@@ -224,14 +214,6 @@ namespace Bit.Core.Services
             }
 
             return await _subvaultUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipher.Id);
-        }
-
-        private Task<bool> UserCanPartialEditAsync(Guid cipherId, Guid userId)
-        {
-            // TODO: implement
-
-            return Task.FromResult(true);
-            //return await _subvaultUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipherId);
         }
     }
 }

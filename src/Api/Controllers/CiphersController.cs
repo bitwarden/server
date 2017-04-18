@@ -136,7 +136,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.UpdatePartialAsync(new Guid(id), userId, cipher.FolderId, !cipher.Favorite);
+            await _cipherRepository.UpdatePartialAsync(new Guid(id), userId, cipher.FolderId, !cipher.Favorite);
         }
 
         [HttpPut("{id}/partial")]
@@ -145,7 +145,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
-            await _cipherService.UpdatePartialAsync(new Guid(id), userId, folderId, model.Favorite);
+            await _cipherRepository.UpdatePartialAsync(new Guid(id), userId, folderId, model.Favorite);
         }
 
         [HttpPut("{id}/share")]
