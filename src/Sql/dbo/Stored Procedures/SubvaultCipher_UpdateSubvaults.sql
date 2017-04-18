@@ -28,7 +28,8 @@ BEGIN
     ON
         [Target].[SubvaultId] = [Source].[Id]
         AND [Target].[CipherId] = @CipherId
-    WHEN NOT MATCHED BY TARGET THEN
+    WHEN NOT MATCHED BY TARGET
+    AND [Source].[Id] IN (SELECT [SubvaultId] FROM [AvailableSubvaultsCTE]) THEN
         INSERT VALUES
         (
             [Source].[Id],
