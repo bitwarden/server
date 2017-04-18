@@ -7,7 +7,6 @@ using System.Data.SqlClient;
 using Dapper;
 using System.Linq;
 using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -54,20 +53,6 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<SubvaultUserUserDetails>(
                     $"[{Schema}].[SubvaultUserUserDetails_ReadBySubvaultId]",
                     new { SubvaultId = subvaultId },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.ToList();
-            }
-        }
-
-        public async Task<ICollection<SubvaultUserPermissions>> GetPermissionsByUserIdAsync(Guid userId,
-            IEnumerable<Guid> subvaultIds, Guid organizationId)
-        {
-            using(var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<SubvaultUserPermissions>(
-                    $"[{Schema}].[SubvaultUser_ReadPermissionsBySubvaultUserId]",
-                    new { UserId = userId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP(), OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

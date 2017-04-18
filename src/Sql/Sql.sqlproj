@@ -143,7 +143,6 @@
     <Build Include="dbo\Stored Procedures\Subvault_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
     <Build Include="dbo\Stored Procedures\Subvault_Update.sql" />
-    <Build Include="dbo\Stored Procedures\SubvaultUser_ReadPermissionsBySubvaultUserId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_Delete.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdateWithSubvaults.sql" />
@@ -176,5 +175,6 @@
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\SubvaultCipher_UpdateSubvaultsAdmin.sql" />
   </ItemGroup>
 </Project>

@@ -176,7 +176,22 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId);
+            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId, false);
+        }
+
+        [HttpPut("{id}/subvaults-admin")]
+        [HttpPost("{id}/subvaults-admin")]
+        public async Task PutSubvaultsAdmin(string id, [FromBody]CipherSubvaultsRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId, true);
         }
 
         [HttpDelete("{id}")]

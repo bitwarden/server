@@ -84,18 +84,9 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class CipherSubvaultsRequestModel : IValidatableObject
+    public class CipherSubvaultsRequestModel
     {
         [Required]
         public IEnumerable<string> SubvaultIds { get; set; }
-
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            if(!SubvaultIds?.Any() ?? false)
-            {
-                yield return new ValidationResult("You must select at least one subvault.",
-                    new string[] { nameof(SubvaultIds) });
-            }
-        }
     }
 }

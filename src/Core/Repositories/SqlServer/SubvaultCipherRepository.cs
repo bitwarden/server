@@ -69,5 +69,16 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        public async Task UpdateSubvaultsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> subvaultIds)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[SubvaultCipher_UpdateSubvaultsAdmin]",
+                    new { CipherId = cipherId, OrganizationId = organizationId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }
