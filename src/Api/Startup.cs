@@ -275,18 +275,7 @@ namespace Bit.Api
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
-            app.UseIdentityServerAuthentication(new IdentityServerAuthenticationOptions
-            {
-                AllowedScopes = new string[] { "api" },
-                Authority = env.IsProduction() ? "https://api.bitwarden.com" : env.IsEnvironment("Preview") ?
-                    "https://preview-api.bitwarden.com" : "http://localhost:4000",
-                RequireHttpsMetadata = env.IsProduction(),
-                ApiName = "api",
-                NameClaimType = ClaimTypes.Email,
-                // Version "2" until we retire the old jwt scheme and replace it with this one.
-                AuthenticationScheme = "Bearer2",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2")
-            });
+            app.UseIdentityServerAuthentication(GetIdentityOptions(env));
 
             // Add Jwt authentication to the request pipeline.
             app.UseJwtBearerIdentity();
@@ -296,6 +285,36 @@ namespace Bit.Api
 
             // Add MVC to the request pipeline.
             app.UseMvc();
+        }
+
+        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env)
+        {
+            var options = new IdentityServerAuthenticationOptions
+            {
+                AllowedScopes = new string[] { "api" },
+                RequireHttpsMetadata = env.IsProduction(),
+                ApiName = "api",
+                NameClaimType = ClaimTypes.Email,
+                // Version "2" until we retire the old jwt scheme and replace it with this one.
+                AuthenticationScheme = "Bearer2",
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2")
+            };
+
+            if(env.IsProduction())
+            {
+                options.Authority = "https://api.bitwarden.com";
+            }
+            else if(env.IsEnvironment("Preview"))
+            {
+                options.Authority = "https://preview-api.bitwarden.com";
+            }
+            else
+            {
+                options.Authority = "http://localhost:4000";
+                //options.Authority = "http://169.254.80.80:4000"; // for VS Android Emulator
+            }
+
+            return options;
         }
     }
 }
