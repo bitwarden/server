@@ -279,7 +279,7 @@ namespace Bit.Api
             {
                 AllowedScopes = new string[] { "api" },
                 Authority = env.IsProduction() ? "https://api.bitwarden.com" : env.IsEnvironment("Preview") ?
-                    "https://bitwardenpreviewapi-j9dv6m.azurewebsites.net" : "http://localhost:4000",
+                    "https://preview-api.bitwarden.com" : "http://localhost:4000",
                 RequireHttpsMetadata = !env.IsDevelopment(),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
