@@ -67,10 +67,17 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherResponseModel>> Get(bool includeFolders = true)
+        public async Task<ListResponseModel<CipherResponseModel>> Get(bool includeFolders = true, bool includeShared = false)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+
+            // For backwards compat, do not include shared ciphers. Can be removed in a future release.
+            if(!includeShared)
+            {
+                ciphers = ciphers.Where(c => !c.OrganizationId.HasValue).ToList();
+            }
+
             var responses = ciphers.Select(c => new CipherResponseModel(c)).ToList();
 
             // Folders are included for backwards compat. Can be removed in a future release.
