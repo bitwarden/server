@@ -65,9 +65,9 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DeleteAsync(CipherDetails cipher, Guid deletingUserId)
+        public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
         {
-            if(!(await UserCanEditAsync(cipher, deletingUserId)))
+            if(!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
             {
                 throw new BadRequestException("Not an admin.");
             }

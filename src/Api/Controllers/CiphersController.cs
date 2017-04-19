@@ -207,5 +207,20 @@ namespace Bit.Api.Controllers
 
             await _cipherService.DeleteAsync(cipher, userId);
         }
+
+        [HttpDelete("{id}/admin")]
+        [HttpPost("{id}/delete-admin")]
+        public async Task DeleteAdmin(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.DeleteAsync(cipher, userId, true);
+        }
     }
 }

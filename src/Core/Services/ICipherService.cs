@@ -9,7 +9,7 @@ namespace Bit.Core.Services
     public interface ICipherService
     {
         Task SaveAsync(CipherDetails cipher, Guid savingUserId);
-        Task DeleteAsync(CipherDetails cipher, Guid deletingUserId);
+        Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);
         Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid userId);
