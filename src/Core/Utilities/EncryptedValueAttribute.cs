@@ -34,7 +34,14 @@ namespace Bit.Core.Utilities
                 if(headerPieces.Length == 1)
                 {
                     encStringPieces = headerPieces[0].Split('|');
-                    // encType stays AesCbc256_B64
+                    if(encStringPieces.Length == 3)
+                    {
+                        encType = Enums.EncryptionType.AesCbc128_HmacSha256_B64;
+                    }
+                    else
+                    {
+                        encType = Enums.EncryptionType.AesCbc256_B64;
+                    }
                 }
                 else if(headerPieces.Length == 2)
                 {
