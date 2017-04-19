@@ -2,7 +2,8 @@
 {
     public enum CipherType : byte
     {
-        //Folder = 0,
+        // Folder is deprecated
+        Folder = 0,
         Login = 1
     }
 }

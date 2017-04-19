@@ -16,6 +16,7 @@ namespace Bit.Api.Controllers
     public class CiphersController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
+        private readonly IFolderRepository _folderRepository;
         private readonly ISubvaultCipherRepository _subvaultCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
@@ -23,12 +24,14 @@ namespace Bit.Api.Controllers
 
         public CiphersController(
             ICipherRepository cipherRepository,
+            IFolderRepository folderRepository,
             ISubvaultCipherRepository subvaultCipherRepository,
             ICipherService cipherService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
+            _folderRepository = folderRepository;
             _subvaultCipherRepository = subvaultCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
@@ -64,11 +67,19 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherResponseModel>> Get()
+        public async Task<ListResponseModel<CipherResponseModel>> Get(bool includeFolders = true)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-            var responses = ciphers.Select(c => new CipherResponseModel(c));
+            var responses = ciphers.Select(c => new CipherResponseModel(c)).ToList();
+
+            // Folders are included for backwards compat. Can be removed in a future release.
+            if(includeFolders)
+            {
+                var folders = await _folderRepository.GetManyByUserIdAsync(userId);
+                responses.AddRange(folders.Select(f => new CipherResponseModel(f)));
+            }
+
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
