@@ -44,7 +44,7 @@ namespace Bit.Core.Services
         {
             if(!(await UserCanEditAsync(cipher, savingUserId)))
             {
-                throw new BadRequestException("Not an admin.");
+                throw new BadRequestException("You do not have permissions to edit this.");
             }
 
             cipher.UserId = savingUserId;
@@ -69,7 +69,7 @@ namespace Bit.Core.Services
         {
             if(!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
             {
-                throw new BadRequestException("Not an admin.");
+                throw new BadRequestException("You do not have permissions to delete this.");
             }
 
             await _cipherRepository.DeleteAsync(cipher);
