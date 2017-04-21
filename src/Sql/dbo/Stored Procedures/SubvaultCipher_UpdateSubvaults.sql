@@ -6,6 +6,15 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @OrgId UNIQUEIDENTIFIER = (
+        SELECT TOP 1
+            [OrganizationId]
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [Id] = @CipherId
+    )
+
     ;WITH [AvailableSubvaultsCTE] AS(
         SELECT
             S.[Id]
@@ -18,8 +27,9 @@ BEGIN
         LEFT JOIN
             [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
-            OU.[Status] = 2 -- Confirmed
+            O.[Id] = @OrgId
             AND O.[Enabled] = 1
+            AND OU.[Status] = 2 -- Confirmed
             AND (OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0)
     )
     MERGE

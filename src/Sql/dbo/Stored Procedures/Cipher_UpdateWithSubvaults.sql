@@ -36,8 +36,9 @@ BEGIN
         LEFT JOIN
             [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
-            OU.[Status] = 2 -- Confirmed
+            O.[Id] = @OrganizationId
             AND O.[Enabled] = 1
+            AND OU.[Status] = 2 -- Confirmed
             AND (OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0)
     )
     INSERT INTO [dbo].[SubvaultCipher]
