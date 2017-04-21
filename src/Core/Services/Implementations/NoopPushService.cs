@@ -25,5 +25,35 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task PushSyncFolderCreateAsync(Folder folder)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncFolderDeleteAsync(Folder folder)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncFolderUpdateAsync(Folder folder)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncOrgKeysAsync(Guid userId)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncSettingsAsync(Guid userId)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncVaultAsync(Guid userId)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
