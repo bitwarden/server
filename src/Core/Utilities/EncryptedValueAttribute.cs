@@ -67,7 +67,8 @@ namespace Bit.Core.Utilities
                             return false;
                         }
                         break;
-                    case Enums.EncryptionType.RsaOaep_Sha256_B64:
+                    case Enums.EncryptionType.Rsa2048_OaepSha256_B64:
+                    case Enums.EncryptionType.Rsa2048_OaepSha1_B64:
                         if(encStringPieces.Length != 1)
                         {
                             return false;
@@ -77,7 +78,8 @@ namespace Bit.Core.Utilities
                         return false;
                 }
 
-                if(encType != Enums.EncryptionType.RsaOaep_Sha256_B64)
+                if(encType != Enums.EncryptionType.Rsa2048_OaepSha1_B64 &&
+                    encType != Enums.EncryptionType.Rsa2048_OaepSha256_B64)
                 {
                     var iv = Convert.FromBase64String(encStringPieces[0]);
                     var ct = Convert.FromBase64String(encStringPieces[1]);
