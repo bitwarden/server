@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
+        public bool AccessAllSubvaults { get; set; }
         public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
     }
 
@@ -31,11 +32,13 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
+        public bool AccessAllSubvaults { get; set; }
         public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
             existingUser.Type = Type.Value;
+            existingUser.AccessAllSubvaults = AccessAllSubvaults;
             return existingUser;
         }
     }

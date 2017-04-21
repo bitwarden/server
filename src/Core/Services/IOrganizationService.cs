@@ -19,7 +19,7 @@ namespace Bit.Core.Services
         Task DeleteAsync(Organization organization);
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            Enums.OrganizationUserType type, IEnumerable<SubvaultUser> subvaults);
+            Enums.OrganizationUserType type, bool accessAllSubvaults, IEnumerable<SubvaultUser> subvaults);
         Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);

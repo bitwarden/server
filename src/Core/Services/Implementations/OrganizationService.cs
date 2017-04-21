@@ -475,7 +475,7 @@ namespace Bit.Core.Services
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
-            if(plan.Type == Enums.PlanType.Free)
+            if(plan.Type == PlanType.Free)
             {
                 var ownerExistingOrgCount =
                     await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -555,6 +555,7 @@ namespace Bit.Core.Services
                     Key = signup.OwnerKey,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
+                    AccessAllSubvaults = true,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 };
@@ -631,7 +632,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            OrganizationUserType type, IEnumerable<SubvaultUser> subvaults)
+            OrganizationUserType type, bool accessAllSubvaults, IEnumerable<SubvaultUser> subvaults)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -664,12 +665,16 @@ namespace Bit.Core.Services
                 Key = null,
                 Type = type,
                 Status = OrganizationUserStatusType.Invited,
+                AccessAllSubvaults = accessAllSubvaults,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
-            await SaveUserSubvaultsAsync(orgUser, subvaults, true);
+            if(!orgUser.AccessAllSubvaults && subvaults.Any())
+            {
+                await SaveUserSubvaultsAsync(orgUser, subvaults, true);
+            }
             await SendInviteAsync(orgUser);
 
             return orgUser;
@@ -786,6 +791,12 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.ReplaceAsync(user);
+
+            if(user.AccessAllSubvaults)
+            {
+                // We don't need any subvaults if we're flagged to have all access.
+                subvaults = new List<SubvaultUser>();
+            }
             await SaveUserSubvaultsAsync(user, subvaults, false);
         }
 

@@ -11,5 +11,6 @@ namespace Bit.Core.Models.Data
         public string Email { get; set; }
         public Enums.OrganizationUserStatusType Status { get; set; }
         public Enums.OrganizationUserType Type { get; set; }
+        public bool AccessAllSubvaults { get; set; }
     }
 }

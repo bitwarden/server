@@ -5,11 +5,10 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        SU.*
+        *
     FROM
-        [dbo].[SubvaultUserUserDetailsView] SU
-    INNER JOIN
-        [OrganizationUser] OU ON SU.[OrganizationUserId] = OU.[Id]
+        [dbo].[SubvaultUserUserDetailsView]
     WHERE
-        SU.[SubvaultId] = @SubvaultId
+        [AccessAllSubvaults] = 1 
+        OR [SubvaultId] = @SubvaultId
 END

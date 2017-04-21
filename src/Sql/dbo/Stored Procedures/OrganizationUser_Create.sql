@@ -6,6 +6,7 @@
     @Key VARCHAR(MAX),
     @Status TINYINT,
     @Type TINYINT,
+    @AccessAllSubvaults BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -21,6 +22,7 @@ BEGIN
         [Key],
         [Status],
         [Type],
+        [AccessAllSubvaults],
         [CreationDate],
         [RevisionDate]
     )
@@ -33,6 +35,7 @@ BEGIN
         @Key,
         @Status,
         @Type,
+        @AccessAllSubvaults,
         @CreationDate,
         @RevisionDate
     )

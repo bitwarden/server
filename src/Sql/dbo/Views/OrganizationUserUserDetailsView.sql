@@ -7,7 +7,8 @@ SELECT
     U.[Name],
     ISNULL(U.[Email], OU.[Email]) Email,
     OU.[Status],
-    OU.[Type]
+    OU.[Type],
+    OU.[AccessAllSubvaults]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

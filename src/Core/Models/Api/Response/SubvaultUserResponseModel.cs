@@ -15,9 +15,10 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(subvaultUser));
             }
 
-            Id = subvaultUser.Id.ToString();
+            Id = subvaultUser.Id?.ToString();
             OrganizationUserId = subvaultUser.OrganizationUserId.ToString();
-            SubvaultId = subvaultUser.SubvaultId.ToString();
+            SubvaultId = subvaultUser.SubvaultId?.ToString();
+            AccessAllSubvaults = subvaultUser.AccessAllSubvaults;
             Name = subvaultUser.Name;
             Email = subvaultUser.Email;
             Type = subvaultUser.Type;
@@ -28,6 +29,7 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string OrganizationUserId { get; set; }
         public string SubvaultId { get; set; }
+        public bool AccessAllSubvaults { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }

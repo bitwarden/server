@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Api
             Email = organizationUser.Email;
             Type = organizationUser.Type;
             Status = organizationUser.Status;
+            AccessAllSubvaults = organizationUser.AccessAllSubvaults;
         }
 
         public string Id { get; set; }
@@ -30,6 +31,7 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
+        public bool AccessAllSubvaults { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel

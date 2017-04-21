@@ -8,18 +8,19 @@ BEGIN
 
     ;WITH [AvailableSubvaultsCTE] AS(
         SELECT
-            SU.SubvaultId
+            S.[Id]
         FROM
-            [dbo].[SubvaultUser] SU
+            [dbo].[Subvault] S
         INNER JOIN
-            [dbo].[OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
+            [Organization] O ON O.[Id] = S.[OrganizationId]
         INNER JOIN
-            [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+            [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
+        LEFT JOIN
+            [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
-            OU.[UserId] = @UserId
-            AND SU.[ReadOnly] = 0
-            AND OU.[Status] = 2 -- Confirmed
+            OU.[Status] = 2 -- Confirmed
             AND O.[Enabled] = 1
+            AND (OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0)
     )
     MERGE
         [dbo].[SubvaultCipher] AS [Target]
@@ -29,7 +30,7 @@ BEGIN
         [Target].[SubvaultId] = [Source].[Id]
         AND [Target].[CipherId] = @CipherId
     WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [SubvaultId] FROM [AvailableSubvaultsCTE]) THEN
+    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableSubvaultsCTE]) THEN
         INSERT VALUES
         (
             [Source].[Id],
@@ -37,7 +38,7 @@ BEGIN
         )
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CipherId] = @CipherId
-    AND [Target].[SubvaultId] IN (SELECT [SubvaultId] FROM [AvailableSubvaultsCTE]) THEN
+    AND [Target].[SubvaultId] IN (SELECT [Id] FROM [AvailableSubvaultsCTE]) THEN
         DELETE
     ;
 END

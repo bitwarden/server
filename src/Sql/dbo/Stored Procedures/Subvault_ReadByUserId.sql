@@ -9,13 +9,13 @@ BEGIN
     FROM
         [dbo].[SubvaultView] S
     INNER JOIN
-        [SubvaultUser] SU ON SU.[SubvaultId] = S.[Id]
+        [Organization] O ON O.[Id] = S.[OrganizationId]
     INNER JOIN
-        [OrganizationUser] OU ON OU.[Id] = SU.[OrganizationUserId]
-    INNER JOIN
-        [Organization] O ON O.[Id] = OU.[OrganizationId]
+        [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
+    LEFT JOIN
+        [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
     WHERE
-        OU.[UserId] = @UserId
-        AND OU.[Status] = 2 -- Confirmed
+        OU.[Status] = 2 -- Confirmed
         AND O.[Enabled] = 1
+        AND (OU.[AccessAllSubvaults] = 1 OR SU.[SubvaultId] IS NOT NULL)
 END
