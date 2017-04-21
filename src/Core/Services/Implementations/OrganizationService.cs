@@ -23,6 +23,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
+        private readonly IPushService _pushService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -31,7 +32,8 @@ namespace Bit.Core.Services
             ISubvaultUserRepository subvaultUserRepository,
             IUserRepository userRepository,
             IDataProtectionProvider dataProtectionProvider,
-            IMailService mailService)
+            IMailService mailService,
+            IPushService pushService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -40,6 +42,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
+            _pushService = pushService;
         }
         public async Task<OrganizationBilling> GetBillingAsync(Organization organization)
         {
@@ -747,7 +750,7 @@ namespace Bit.Core.Services
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            // TODO: send notification emails to org admins
+            // TODO: send notification emails to org admins and accepting user?
 
             return orgUser;
         }
@@ -773,6 +776,9 @@ namespace Bit.Core.Services
             {
                 await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
             }
+
+            // push
+            await _pushService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
 
             return orgUser;
         }

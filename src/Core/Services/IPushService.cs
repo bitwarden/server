@@ -9,6 +9,12 @@ namespace Bit.Core.Services
         Task PushSyncCipherCreateAsync(Cipher cipher);
         Task PushSyncCipherUpdateAsync(Cipher cipher);
         Task PushSyncCipherDeleteAsync(Cipher cipher);
+        Task PushSyncFolderCreateAsync(Folder folder);
+        Task PushSyncFolderUpdateAsync(Folder folder);
+        Task PushSyncFolderDeleteAsync(Folder folder);
         Task PushSyncCiphersAsync(Guid userId);
+        Task PushSyncVaultAsync(Guid userId);
+        Task PushSyncOrgKeysAsync(Guid userId);
+        Task PushSyncSettingsAsync(Guid userId);
     }
 }

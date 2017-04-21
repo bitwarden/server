@@ -54,9 +54,6 @@ namespace Bit.Core.Services
         {
             switch(cipher.Type)
             {
-                //case CipherType.Folder:
-                //    await PushCipherAsync(cipher, PushType.SyncFolderDelete);
-                //    break;
                 case CipherType.Login:
                     await PushCipherAsync(cipher, PushType.SyncLoginDelete);
                     break;
@@ -65,13 +62,35 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task PushSyncFolderCreateAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncCipherCreate);
+        }
+
+        public async Task PushSyncFolderUpdateAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncFolderUpdate);
+        }
+
+        public async Task PushSyncFolderDeleteAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncFolderDelete);
+        }
+
         private async Task PushCipherAsync(Cipher cipher, PushType type)
         {
+            if(!cipher.UserId.HasValue)
+            {
+                // No push for org ciphers at the moment.
+                return;
+            }
+
             var message = new SyncCipherPushNotification
             {
                 Type = type,
                 Id = cipher.Id,
-                UserId = cipher.UserId.Value,
+                UserId = cipher.UserId,
+                OrganizationId = cipher.OrganizationId,
                 RevisionDate = cipher.RevisionDate,
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
             };
@@ -85,11 +104,51 @@ namespace Bit.Core.Services
             await PushToAllUserDevicesAsync(cipher.UserId.Value, JObject.FromObject(message), excludedTokens);
         }
 
+        private async Task PushFolderAsync(Folder folder, PushType type)
+        {
+            var message = new SyncFolderPushNotification
+            {
+                Type = type,
+                Id = folder.Id,
+                UserId = folder.UserId,
+                RevisionDate = folder.RevisionDate,
+                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
+            };
+
+            var excludedTokens = new List<string>();
+            if(!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+            {
+                excludedTokens.Add(_currentContext.DeviceIdentifier);
+            }
+
+            await PushToAllUserDevicesAsync(folder.UserId, JObject.FromObject(message), excludedTokens);
+        }
+
         public async Task PushSyncCiphersAsync(Guid userId)
         {
-            var message = new SyncCiphersPushNotification
+            await PushSyncUserAsync(userId, PushType.SyncCiphers);
+        }
+
+        public async Task PushSyncVaultAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncVault);
+        }
+
+        public async Task PushSyncOrgKeysAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncOrgKeys);
+        }
+
+        public async Task PushSyncSettingsAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncSettings);
+        }
+
+        private async Task PushSyncUserAsync(Guid userId, PushType type)
+        {
+            var message = new SyncUserPushNotification
             {
-                Type = PushType.SyncCiphers,
+                Type = PushType.SyncOrgKeys,
                 UserId = userId,
                 Date = DateTime.UtcNow,
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
@@ -296,19 +355,24 @@ namespace Bit.Core.Services
             }
         }
 
-        private abstract class SyncPushNotification : PushNotification
-        {
-            public Guid UserId { get; set; }
-        }
-
-        private class SyncCipherPushNotification : SyncPushNotification
+        private class SyncCipherPushNotification : PushNotification
         {
             public Guid Id { get; set; }
+            public Guid? UserId { get; set; }
+            public Guid? OrganizationId { get; set; }
             public DateTime RevisionDate { get; set; }
         }
 
-        private class SyncCiphersPushNotification : SyncPushNotification
+        private class SyncFolderPushNotification : PushNotification
         {
+            public Guid Id { get; set; }
+            public Guid UserId { get; set; }
+            public DateTime RevisionDate { get; set; }
+        }
+
+        private class SyncUserPushNotification : PushNotification
+        {
+            public Guid UserId { get; set; }
             public DateTime Date { get; set; }
         }
     }

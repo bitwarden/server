@@ -53,7 +53,7 @@ namespace Bit.Core.Services
                 await _cipherRepository.CreateAsync(cipher);
 
                 // push
-                //await _pushService.PushSyncCipherCreateAsync(cipher);
+                await _pushService.PushSyncCipherCreateAsync(cipher);
             }
             else
             {
@@ -61,7 +61,7 @@ namespace Bit.Core.Services
                 await _cipherRepository.ReplaceAsync(cipher);
 
                 // push
-                //await _pushService.PushSyncCipherUpdateAsync(cipher);
+                await _pushService.PushSyncCipherUpdateAsync(cipher);
             }
         }
 
@@ -75,7 +75,7 @@ namespace Bit.Core.Services
             await _cipherRepository.DeleteAsync(cipher);
 
             // push
-            //await _pushService.PushSyncCipherDeleteAsync(cipher);
+            await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
         public async Task SaveFolderAsync(Folder folder)
@@ -85,7 +85,7 @@ namespace Bit.Core.Services
                 await _folderRepository.CreateAsync(folder);
 
                 // push
-                //await _pushService.PushSyncCipherCreateAsync(cipher);
+                await _pushService.PushSyncFolderCreateAsync(folder);
             }
             else
             {
@@ -93,7 +93,7 @@ namespace Bit.Core.Services
                 await _folderRepository.UpsertAsync(folder);
 
                 // push
-                //await _pushService.PushSyncCipherUpdateAsync(cipher);
+                await _pushService.PushSyncFolderUpdateAsync(folder);
             }
         }
 
@@ -102,7 +102,7 @@ namespace Bit.Core.Services
             await _folderRepository.DeleteAsync(folder);
 
             // push
-            //await _pushService.PushSyncCipherDeleteAsync(cipher);
+            await _pushService.PushSyncFolderDeleteAsync(folder);
         }
 
         public async Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid sharingUserId)
@@ -129,7 +129,7 @@ namespace Bit.Core.Services
             await _cipherRepository.ReplaceAsync(cipher, subvaultIds);
 
             // push
-            //await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
         public async Task SaveSubvaultsAsync(Cipher cipher, IEnumerable<Guid> subvaultIds, Guid savingUserId, bool orgAdmin)
@@ -156,7 +156,7 @@ namespace Bit.Core.Services
             }
 
             // push
-            //await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
         public async Task ImportCiphersAsync(
@@ -202,7 +202,7 @@ namespace Bit.Core.Services
             var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
             if(userId.HasValue)
             {
-                await _pushService.PushSyncCiphersAsync(userId.Value);
+                await _pushService.PushSyncVaultAsync(userId.Value);
             }
         }
 

@@ -19,6 +19,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IMailService _mailService;
+        private readonly IPushService _pushService;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -29,6 +30,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IMailService mailService,
+            IPushService pushService,
             IUserStore<User> store,
             IOptions<IdentityOptions> optionsAccessor,
             IPasswordHasher<User> passwordHasher,
@@ -53,6 +55,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _mailService = mailService;
+            _pushService = pushService;
             _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
             _identityErrorDescriber = errors;
             _passwordHasher = passwordHasher;
@@ -125,6 +128,9 @@ namespace Bit.Core.Services
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+
+            // push
+            await _pushService.PushSyncSettingsAsync(user.Id);
         }
 
         public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
