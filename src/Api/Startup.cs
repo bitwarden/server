@@ -312,6 +312,7 @@ namespace Bit.Api
             {
                 options.Authority = "http://localhost:4000";
                 //options.Authority = "http://169.254.80.80:4000"; // for VS Android Emulator
+                //options.Authority = "http://192.168.1.8:4000"; // Desktop external
             }
 
             return options;
