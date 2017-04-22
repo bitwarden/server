@@ -565,6 +565,9 @@ namespace Bit.Core.Services
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
+                // push
+                await _pushService.PushSyncOrgKeysAsync(signup.Owner.Id);
+
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
             }
             catch

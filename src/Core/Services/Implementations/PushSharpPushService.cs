@@ -64,7 +64,7 @@ namespace Bit.Core.Services
 
         public async Task PushSyncFolderCreateAsync(Folder folder)
         {
-            await PushFolderAsync(folder, PushType.SyncCipherCreate);
+            await PushFolderAsync(folder, PushType.SyncFolderCreate);
         }
 
         public async Task PushSyncFolderUpdateAsync(Folder folder)
@@ -148,7 +148,7 @@ namespace Bit.Core.Services
         {
             var message = new SyncUserPushNotification
             {
-                Type = PushType.SyncOrgKeys,
+                Type = type,
                 UserId = userId,
                 Date = DateTime.UtcNow,
                 Aps = new PushNotification.AppleData { ContentAvailable = 1 }
