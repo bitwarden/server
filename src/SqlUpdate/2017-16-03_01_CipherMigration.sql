@@ -1,3 +1,12 @@
+-- Step 0, Disable old triggers
+
+ALTER TABLE cipher DISABLE TRIGGER Cipher_Deleted
+GO
+ALTER TABLE cipher DISABLE TRIGGER Cipher_Updated
+GO
+ALTER TABLE cipher DISABLE TRIGGER Cipher_Inserted
+GO
+
 -- Step 1, Run each statement individually
 
 insert into folder
