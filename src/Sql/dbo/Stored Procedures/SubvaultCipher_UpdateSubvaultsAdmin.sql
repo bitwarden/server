@@ -32,4 +32,9 @@ BEGIN
     AND [Target].[CipherId] = @CipherId THEN
         DELETE
     ;
+
+    IF @OrganizationId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    END
 END

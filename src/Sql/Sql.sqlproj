@@ -176,5 +176,8 @@
     <Build Include="dbo\Stored Procedures\Cipher_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SubvaultCipher_UpdateSubvaultsAdmin.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDate.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserId.sql" />
   </ItemGroup>
 </Project>

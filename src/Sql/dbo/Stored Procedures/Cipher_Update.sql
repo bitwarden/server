@@ -25,4 +25,13 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
+
+    IF @OrganizationId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    END
+    ELSE IF @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
 END

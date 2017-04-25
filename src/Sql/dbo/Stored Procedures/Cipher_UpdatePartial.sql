@@ -33,4 +33,9 @@ BEGIN
             END
     WHERE
         [Id] = @Id
+
+    IF @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
 END

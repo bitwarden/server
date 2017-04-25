@@ -19,4 +19,9 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
+
+    IF @OrganizationUserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @OrganizationUserId
+    END
 END

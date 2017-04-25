@@ -51,4 +51,9 @@ BEGIN
     AND [Target].[SubvaultId] IN (SELECT [Id] FROM [AvailableSubvaultsCTE]) THEN
         DELETE
     ;
+
+    IF @OrgId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
+    END
 END

@@ -53,4 +53,13 @@ BEGIN
         @SubvaultIds
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableSubvaultsCTE])
+
+    IF @OrganizationId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    END
+    ELSE IF @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
 END
