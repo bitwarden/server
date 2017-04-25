@@ -14,11 +14,11 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_Type]
-    ON [dbo].[Cipher]([UserId] ASC, [Type] ASC);
+CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Type]
+    ON [dbo].[Cipher]([OrganizationId] ASC, [Type] ASC) WHERE ([OrganizationId] IS NOT NULL);
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Type]
-    ON [dbo].[Cipher]([OrganizationId] ASC, [Type] ASC)
-    WHERE [OrganizationId] IS NOT NULL;
+CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_Type]
+    ON [dbo].[Cipher]([UserId] ASC, [Type] ASC);
+

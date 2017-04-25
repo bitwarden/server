@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[User_ReadAccountRevisionDateById]
+﻿
+CREATE PROCEDURE [dbo].[User_ReadAccountRevisionDateById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
