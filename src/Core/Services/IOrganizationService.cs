@@ -17,6 +17,8 @@ namespace Bit.Core.Services
         Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task DeleteAsync(Organization organization);
+        Task DisableAsync(Guid organizationId);
+        Task EnableAsync(Guid organizationId);
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             Enums.OrganizationUserType type, bool accessAllSubvaults, IEnumerable<SubvaultUser> subvaults);

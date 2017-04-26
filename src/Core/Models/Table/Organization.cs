@@ -22,7 +22,10 @@ namespace Bit.Core.Models.Table
 
         public void SetNewId()
         {
-            Id = CoreHelpers.GenerateComb();
+            if(Id == default(Guid))
+            {
+                Id = CoreHelpers.GenerateComb();
+            }
         }
     }
 }

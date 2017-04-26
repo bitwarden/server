@@ -294,6 +294,9 @@ namespace Bit.Core.Services
                             PlanId = newPlan.StripePlanId,
                             Quantity = 1
                         }
+                    },
+                    Metadata = new Dictionary<string, string> {
+                        { "organizationId", organization.Id.ToString() }
                     }
                 };
 
@@ -478,6 +481,9 @@ namespace Bit.Core.Services
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
+            // Pre-generate the org id so that we can save it with the Stripe subscription..
+            Guid newOrgId = CoreHelpers.GenerateComb();
+
             if(plan.Type == PlanType.Free)
             {
                 var ownerExistingOrgCount =
@@ -505,6 +511,9 @@ namespace Bit.Core.Services
                             PlanId = plan.StripePlanId,
                             Quantity = 1
                         }
+                    },
+                    Metadata = new Dictionary<string, string> {
+                        { "organizationId", newOrgId.ToString() }
                     }
                 };
 
@@ -534,6 +543,7 @@ namespace Bit.Core.Services
 
             var organization = new Organization
             {
+                Id = newOrgId,
                 Name = signup.Name,
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
@@ -615,6 +625,28 @@ namespace Bit.Core.Services
             }
 
             await _organizationRepository.DeleteAsync(organization);
+        }
+
+        public async Task DisableAsync(Guid organizationId)
+        {
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(org != null && org.Enabled)
+            {
+                org.Enabled = false;
+                await _organizationRepository.ReplaceAsync(org);
+
+                // TODO: send email to owners?
+            }
+        }
+
+        public async Task EnableAsync(Guid organizationId)
+        {
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(org != null && !org.Enabled)
+            {
+                org.Enabled = true;
+                await _organizationRepository.ReplaceAsync(org);
+            }
         }
 
         public async Task UpdateAsync(Organization organization, bool updateBilling = false)
