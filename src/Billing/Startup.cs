@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Bit.Core;
 
 namespace Bit.Billing
 {
@@ -33,6 +34,15 @@ namespace Bit.Billing
 
         public void ConfigureServices(IServiceCollection services)
         {
+            // Options
+            services.AddOptions();
+
+            // Settings
+            //var globalSettings = new GlobalSettings();
+            //ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
+            //services.AddSingleton(s => globalSettings);
+            services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
+
             services.AddMvc();
         }
 

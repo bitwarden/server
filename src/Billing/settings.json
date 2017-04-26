@@ -4,5 +4,11 @@
     "LogLevel": {
       "Default": "Warning"
     }
+  },
+  "globalSettings": {
+
+  },
+  "billingSettings": {
+    "stripeWebhookKey": "SECRET"
   }
 }
