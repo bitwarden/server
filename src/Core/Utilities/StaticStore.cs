@@ -109,8 +109,8 @@ namespace Bit.Core.Utilities
                     CanBuyAdditionalSeats = true,
                     MaxAdditionalSeats = 5,
                     Name = "Personal",
-                    StripePlanId = "personal-annual",
-                    StripeSeatPlanId = "personal-user-annual",
+                    StripePlanId = "personal-org-annually",
+                    StripeSeatPlanId = "personal-org-seat-annually",
                     UpgradeSortOrder = 1
                 },
                 new Plan
@@ -121,8 +121,8 @@ namespace Bit.Core.Utilities
                     SeatPrice = 2.5M,
                     CanBuyAdditionalSeats = true,
                     Name = "Teams (Monthly)",
-                    StripePlanId = "teams-monthly",
-                    StripeSeatPlanId = "teams-user-monthly",
+                    StripePlanId = "teams-org-monthly",
+                    StripeSeatPlanId = "teams-org-seat-monthly",
                     UpgradeSortOrder = 2
                 },
                 new Plan
@@ -133,8 +133,8 @@ namespace Bit.Core.Utilities
                     SeatPrice = 24,
                     CanBuyAdditionalSeats = true,
                     Name = "Teams (Annually)",
-                    StripePlanId = "teams-annual",
-                    StripeSeatPlanId = "teams-user-annual",
+                    StripePlanId = "teams-org-annually",
+                    StripeSeatPlanId = "teams-org-seat-annually",
                     UpgradeSortOrder = 2
                 }
             };
