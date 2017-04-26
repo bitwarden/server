@@ -59,7 +59,7 @@ namespace Bit.Api.Middleware
             if(blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
-                _logger.LogDebug("Blocked " + identity.ClientIp);
+                _logger.LogInformation($"Blocked {identity.ClientIp}");
             }
             else
             {

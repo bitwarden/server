@@ -238,12 +238,13 @@ namespace Bit.Api
                 Func<LogEvent, bool> serilogFilter = (e) =>
                 {
                     var context = e.Properties["SourceContext"].ToString();
-                    if(e.Exception != null && e.Exception.GetType() == typeof(SecurityTokenValidationException) || e.Exception.Message == "Bad security stamp.")
+                    if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
+                        e.Exception.Message == "Bad security stamp."))
                     {
                         return false;
                     }
 
-                    if(context == typeof(IpRateLimitMiddleware).FullName && e.Level == LogEventLevel.Information)
+                    if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
                     {
                         return true;
                     }
