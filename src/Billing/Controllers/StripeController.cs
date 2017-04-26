@@ -56,7 +56,7 @@ namespace Bit.Billing.Controllers
             }
             else
             {
-                // not handling this event type
+                // Not handling this event type.
             }
 
             return new OkResult();
