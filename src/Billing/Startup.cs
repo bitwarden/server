@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Bit.Core;
+using Stripe;
 
 namespace Bit.Billing
 {
@@ -38,11 +39,22 @@ namespace Bit.Billing
             services.AddOptions();
 
             // Settings
-            //var globalSettings = new GlobalSettings();
-            //ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
-            //services.AddSingleton(s => globalSettings);
+            var globalSettings = new GlobalSettings();
+            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
+            services.AddSingleton(s => globalSettings);
             services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
 
+            // Stripe Billing
+            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
+
+            // Repositories
+            services.AddSqlServerRepositories();
+
+            // Services
+            services.AddBaseServices();
+            services.AddDefaultServices();
+
+            // Mvc
             services.AddMvc();
         }
 

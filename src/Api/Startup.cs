@@ -13,9 +13,6 @@ using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Models.Table;
 using Bit.Core.Identity;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Text;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -88,16 +85,7 @@ namespace Bit.Api
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
 
             // Repositories
-            services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
-            services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
-            services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
-            services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
-            services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
-            services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
-            services.AddSingleton<ISubvaultRepository, SqlServerRepos.SubvaultRepository>();
-            services.AddSingleton<ISubvaultUserRepository, SqlServerRepos.SubvaultUserRepository>();
-            services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
-            services.AddSingleton<ISubvaultCipherRepository, SqlServerRepos.SubvaultCipherRepository>();
+            services.AddSqlServerRepositories();
 
             // Context
             services.AddScoped<CurrentContext>();
@@ -195,14 +183,8 @@ namespace Bit.Api
             services.AddScoped<AuthenticatorTokenProvider>();
 
             // Services
-            services.AddSingleton<IMailService, SendGridMailService>();
-            services.AddSingleton<ICipherService, CipherService>();
-            services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IPushService, PushSharpPushService>();
-            services.AddScoped<IDeviceService, DeviceService>();
-            services.AddScoped<IBlockIpService, AzureQueueBlockIpService>();
-            services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<ISubvaultService, SubvaultService>();
+            services.AddBaseServices();
+            services.AddDefaultServices();
 
             // Cors
             services.AddCors(config =>
