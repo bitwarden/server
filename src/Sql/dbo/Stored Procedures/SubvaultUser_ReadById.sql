@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_ReadById]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[SubvaultUserView]
+        [dbo].[CollectionUserView]
     WHERE
         [Id] = @Id
 END

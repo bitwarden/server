@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUserUserDetails_ReadBySubvaultId]
-    @SubvaultId UNIQUEIDENTIFIER
+﻿CREATE PROCEDURE [dbo].[CollectionUserUserDetails_ReadByCollectionId]
+    @CollectionId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -7,8 +7,8 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[SubvaultUserUserDetailsView]
+        [dbo].[CollectionUserUserDetailsView]
     WHERE
-        [AccessAllSubvaults] = 1 
-        OR [SubvaultId] = @SubvaultId
+        [AccessAllCollections] = 1 
+        OR [CollectionId] = @CollectionId
 END

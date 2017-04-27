@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_ReadCanEditByCipherIdUserId]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_ReadCanEditByCipherIdUserId]
     @UserId UNIQUEIDENTIFIER,
     @CipherId AS UNIQUEIDENTIFIER
 AS

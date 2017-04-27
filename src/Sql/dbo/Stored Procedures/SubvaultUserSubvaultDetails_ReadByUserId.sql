@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUserSubvaultDetails_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[CollectionUserCollectionDetails_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         SU.*
     FROM
-        [dbo].[SubvaultUserSubvaultDetailsView] SU
+        [dbo].[CollectionUserCollectionDetailsView] SU
     INNER JOIN
         [OrganizationUser] OU ON SU.[OrganizationUserId] = OU.[Id]
     WHERE

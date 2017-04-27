@@ -1,6 +1,6 @@
-﻿CREATE VIEW [dbo].[SubvaultUserView]
+﻿CREATE VIEW [dbo].[CollectionUserView]
 AS
 SELECT
     *
 FROM
-    [dbo].[SubvaultUser]
+    [dbo].[CollectionUser]

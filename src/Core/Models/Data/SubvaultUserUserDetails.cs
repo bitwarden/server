@@ -2,12 +2,12 @@
 
 namespace Bit.Core.Models.Data
 {
-    public class SubvaultUserUserDetails
+    public class CollectionUserUserDetails
     {
         public Guid? Id { get; set; }
         public Guid OrganizationUserId { get; set; }
-        public Guid? SubvaultId { get; set; }
-        public bool AccessAllSubvaults { get; set; }
+        public Guid? CollectionId { get; set; }
+        public bool AccessAllCollections { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public Enums.OrganizationUserStatusType Status { get; set; }

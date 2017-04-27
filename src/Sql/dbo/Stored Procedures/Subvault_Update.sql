@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_Update]
+﻿CREATE PROCEDURE [dbo].[Collection_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
@@ -9,7 +9,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[Subvault]
+        [dbo].[Collection]
     SET
         [OrganizationId] = @OrganizationId,
         [Name] = @Name,

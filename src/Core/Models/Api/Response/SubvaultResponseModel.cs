@@ -3,19 +3,19 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
-    public class SubvaultResponseModel : ResponseModel
+    public class CollectionResponseModel : ResponseModel
     {
-        public SubvaultResponseModel(Subvault subvault)
-            : base("subvault")
+        public CollectionResponseModel(Collection collection)
+            : base("collection")
         {
-            if(subvault == null)
+            if(collection == null)
             {
-                throw new ArgumentNullException(nameof(subvault));
+                throw new ArgumentNullException(nameof(collection));
             }
 
-            Id = subvault.Id.ToString();
-            OrganizationId = subvault.OrganizationId.ToString();
-            Name = subvault.Name;
+            Id = collection.Id.ToString();
+            OrganizationId = collection.OrganizationId.ToString();
+            Name = collection.Name;
         }
 
         public string Id { get; set; }

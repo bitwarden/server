@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_Create]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_Create]
     @Id UNIQUEIDENTIFIER,
-    @SubvaultId UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ReadOnly BIT,
     @CreationDate DATETIME2(7),
@@ -9,10 +9,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[SubvaultUser]
+    INSERT INTO [dbo].[CollectionUser]
     (
         [Id],
-        [SubvaultId],
+        [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
         [CreationDate],
@@ -21,7 +21,7 @@ BEGIN
     VALUES
     (
         @Id,
-        @SubvaultId,
+        @CollectionId,
         @OrganizationUserId,
         @ReadOnly,
         @CreationDate,

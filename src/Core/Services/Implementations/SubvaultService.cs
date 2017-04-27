@@ -6,56 +6,56 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
-    public class SubvaultService : ISubvaultService
+    public class CollectionService : ICollectionService
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ISubvaultRepository _subvaultRepository;
-        private readonly ISubvaultUserRepository _subvaultUserRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
 
-        public SubvaultService(
+        public CollectionService(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            ISubvaultRepository subvaultRepository,
-            ISubvaultUserRepository subvaultUserRepository,
+            ICollectionRepository collectionRepository,
+            ICollectionUserRepository collectionUserRepository,
             IUserRepository userRepository,
             IMailService mailService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _subvaultRepository = subvaultRepository;
-            _subvaultUserRepository = subvaultUserRepository;
+            _collectionRepository = collectionRepository;
+            _collectionUserRepository = collectionUserRepository;
             _userRepository = userRepository;
             _mailService = mailService;
         }
 
-        public async Task SaveAsync(Subvault subvault)
+        public async Task SaveAsync(Collection collection)
         {
-            if(subvault.Id == default(Guid))
+            if(collection.Id == default(Guid))
             {
-                var org = await _organizationRepository.GetByIdAsync(subvault.OrganizationId);
+                var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
                 if(org == null)
                 {
                     throw new BadRequestException("Org not found");
                 }
 
-                if(org.MaxSubvaults.HasValue)
+                if(org.MaxCollections.HasValue)
                 {
-                    var subvaultCount = await _subvaultRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if(org.MaxSubvaults.Value <= subvaultCount)
+                    var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
+                    if(org.MaxCollections.Value <= collectionCount)
                     {
-                        throw new BadRequestException("You have reached the maximum number of subvaults " +
-                        $"({org.MaxSubvaults.Value}) for this organization.");
+                        throw new BadRequestException("You have reached the maximum number of collections " +
+                        $"({org.MaxCollections.Value}) for this organization.");
                     }
                 }
 
-                await _subvaultRepository.CreateAsync(subvault);
+                await _collectionRepository.CreateAsync(collection);
             }
             else
             {
-                await _subvaultRepository.ReplaceAsync(subvault);
+                await _collectionRepository.ReplaceAsync(collection);
             }
         }
     }

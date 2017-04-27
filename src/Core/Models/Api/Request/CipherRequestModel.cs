@@ -64,7 +64,7 @@ namespace Bit.Core.Models.Api
     public class CipherShareRequestModel : IValidatableObject
     {
         [Required]
-        public IEnumerable<string> SubvaultIds { get; set; }
+        public IEnumerable<string> CollectionIds { get; set; }
         [Required]
         public CipherRequestModel Cipher { get; set; }
 
@@ -76,17 +76,17 @@ namespace Bit.Core.Models.Api
                     new string[] { nameof(Cipher.OrganizationId) });
             }
 
-            if(!SubvaultIds?.Any() ?? false)
+            if(!CollectionIds?.Any() ?? false)
             {
-                yield return new ValidationResult("You must select at least one subvault.",
-                    new string[] { nameof(SubvaultIds) });
+                yield return new ValidationResult("You must select at least one collection.",
+                    new string[] { nameof(CollectionIds) });
             }
         }
     }
 
-    public class CipherSubvaultsRequestModel
+    public class CipherCollectionsRequestModel
     {
         [Required]
-        public IEnumerable<string> SubvaultIds { get; set; }
+        public IEnumerable<string> CollectionIds { get; set; }
     }
 }

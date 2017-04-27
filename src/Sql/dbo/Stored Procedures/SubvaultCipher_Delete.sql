@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultCipher_Delete]
-    @SubvaultId UNIQUEIDENTIFIER,
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_Delete]
+    @CollectionId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,9 +7,9 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[SubvaultCipher]
+        [dbo].[CollectionCipher]
     WHERE
-        [SubvaultId] = @SubvaultId
+        [CollectionId] = @CollectionId
         AND [CipherId] = @CipherId
 
     DECLARE @OrganizationId UNIQUEIDENTIFIER = (SELECT TOP 1 [OrganizationId] FROM [dbo].[Cipher] WHERE [Id] = @CipherId)

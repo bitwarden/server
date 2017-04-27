@@ -11,41 +11,41 @@ using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
-    [Route("organizations/{orgId}/subvaults")]
+    [Route("organizations/{orgId}/collections")]
     [Authorize("Application")]
-    public class SubvaultsController : Controller
+    public class CollectionsController : Controller
     {
-        private readonly ISubvaultRepository _subvaultRepository;
-        private readonly ISubvaultService _subvaultService;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionService _collectionService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
-        public SubvaultsController(
-            ISubvaultRepository subvaultRepository,
-            ISubvaultService subvaultService,
+        public CollectionsController(
+            ICollectionRepository collectionRepository,
+            ICollectionService collectionService,
             IUserService userService,
             CurrentContext currentContext)
         {
-            _subvaultRepository = subvaultRepository;
-            _subvaultService = subvaultService;
+            _collectionRepository = collectionRepository;
+            _collectionService = collectionService;
             _userService = userService;
             _currentContext = currentContext;
         }
 
         [HttpGet("{id}")]
-        public async Task<SubvaultResponseModel> Get(string orgId, string id)
+        public async Task<CollectionResponseModel> Get(string orgId, string id)
         {
-            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
-            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
             {
                 throw new NotFoundException();
             }
 
-            return new SubvaultResponseModel(subvault);
+            return new CollectionResponseModel(collection);
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<SubvaultResponseModel>> Get(string orgId)
+        public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
             if(!_currentContext.OrganizationAdmin(orgIdGuid))
@@ -53,21 +53,21 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var subvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = subvaults.Select(s => new SubvaultResponseModel(s));
-            return new ListResponseModel<SubvaultResponseModel>(responses);
+            var collections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var responses = collections.Select(s => new CollectionResponseModel(s));
+            return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
-        [HttpGet("~/subvaults")]
-        public async Task<ListResponseModel<SubvaultResponseModel>> GetUser()
+        [HttpGet("~/collections")]
+        public async Task<ListResponseModel<CollectionResponseModel>> GetUser()
         {
-            var subvaults = await _subvaultRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-            var responses = subvaults.Select(s => new SubvaultResponseModel(s));
-            return new ListResponseModel<SubvaultResponseModel>(responses);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
+            var responses = collections.Select(s => new CollectionResponseModel(s));
+            return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
         [HttpPost("")]
-        public async Task<SubvaultResponseModel> Post(string orgId, [FromBody]SubvaultRequestModel model)
+        public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
             if(!_currentContext.OrganizationAdmin(orgIdGuid))
@@ -75,36 +75,36 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var subvault = model.ToSubvault(orgIdGuid);
-            await _subvaultService.SaveAsync(subvault);
-            return new SubvaultResponseModel(subvault);
+            var collection = model.ToCollection(orgIdGuid);
+            await _collectionService.SaveAsync(collection);
+            return new CollectionResponseModel(collection);
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<SubvaultResponseModel> Put(string orgId, string id, [FromBody]SubvaultRequestModel model)
+        public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody]CollectionRequestModel model)
         {
-            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
-            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
             {
                 throw new NotFoundException();
             }
 
-            await _subvaultService.SaveAsync(model.ToSubvault(subvault));
-            return new SubvaultResponseModel(subvault);
+            await _collectionService.SaveAsync(model.ToCollection(collection));
+            return new CollectionResponseModel(collection);
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var subvault = await _subvaultRepository.GetByIdAsync(new Guid(id));
-            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
             {
                 throw new NotFoundException();
             }
 
-            await _subvaultRepository.DeleteAsync(subvault);
+            await _collectionRepository.DeleteAsync(collection);
         }
     }
 }

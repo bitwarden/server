@@ -1,14 +1,14 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_DeleteById]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @OrganizationUserId UNIQUEIDENTIFIER = (SELECT TOP 1 [OrganizationUserId] FROM [dbo].[SubvaultUser] WHERE [Id] = @Id)
+    DECLARE @OrganizationUserId UNIQUEIDENTIFIER = (SELECT TOP 1 [OrganizationUserId] FROM [dbo].[CollectionUser] WHERE [Id] = @Id)
 
     DELETE
     FROM
-        [dbo].[SubvaultUser]
+        [dbo].[CollectionUser]
     WHERE
         [Id] = @Id
 

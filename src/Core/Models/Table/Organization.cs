@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Table
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
-        public short? MaxSubvaults { get; set; }
+        public short? MaxCollections { get; set; }
         public string StripeCustomerId { get; set; }
         public string StripeSubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;

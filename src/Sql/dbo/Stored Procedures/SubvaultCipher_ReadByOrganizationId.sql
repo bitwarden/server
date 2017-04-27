@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultCipher_ReadByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,9 +7,9 @@ BEGIN
     SELECT
         SC.*
     FROM
-        [dbo].[SubvaultCipher] SC
+        [dbo].[CollectionCipher] SC
     INNER JOIN
-        [dbo].[Subvault] S ON S.[Id] = SC.[SubvaultId]
+        [dbo].[Collection] S ON S.[Id] = SC.[CollectionId]
     WHERE
         S.[OrganizationId] = @OrganizationId
 END

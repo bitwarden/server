@@ -3,8 +3,8 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
-    public interface ISubvaultService
+    public interface ICollectionService
     {
-        Task SaveAsync(Subvault subvault);
+        Task SaveAsync(Collection collection);
     }
 }

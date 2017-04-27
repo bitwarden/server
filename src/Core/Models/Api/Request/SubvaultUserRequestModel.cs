@@ -5,29 +5,29 @@ using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
-    public class SubvaultUserSubvaultRequestModel
+    public class CollectionUserCollectionRequestModel
     {
         public string UserId { get; set; }
-        public IEnumerable<Subvault> Subvaults { get; set; }
+        public IEnumerable<Collection> Collections { get; set; }
 
-        public IEnumerable<SubvaultUser> ToSubvaultUsers()
+        public IEnumerable<CollectionUser> ToCollectionUsers()
         {
-            return Subvaults.Select(s => new SubvaultUser
+            return Collections.Select(s => new CollectionUser
             {
                 OrganizationUserId = new Guid(UserId),
-                SubvaultId = new Guid(s.SubvaultId),
+                CollectionId = new Guid(s.CollectionId),
                 ReadOnly = s.ReadOnly
             });
         }
 
-        public class Subvault
+        public class Collection
         {
-            public string SubvaultId { get; set; }
+            public string CollectionId { get; set; }
             public bool ReadOnly { get; set; }
         }
     }
 
-    public class SubvaultUserUserRequestModel
+    public class CollectionUserUserRequestModel
     {
         public string UserId { get; set; }
         public bool ReadOnly { get; set; }

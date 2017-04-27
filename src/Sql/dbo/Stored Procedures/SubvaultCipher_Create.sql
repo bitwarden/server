@@ -1,18 +1,18 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultCipher_Create]
-    @SubvaultId UNIQUEIDENTIFIER,
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_Create]
+    @CollectionId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[SubvaultCipher]
+    INSERT INTO [dbo].[CollectionCipher]
     (
-        [SubvaultId],
+        [CollectionId],
         [CipherId]
     )
     VALUES
     (
-        @SubvaultId,
+        @CollectionId,
         @CipherId
     )
 

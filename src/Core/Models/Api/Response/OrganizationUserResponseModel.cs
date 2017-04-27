@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Api
             Email = organizationUser.Email;
             Type = organizationUser.Type;
             Status = organizationUser.Status;
-            AccessAllSubvaults = organizationUser.AccessAllSubvaults;
+            AccessAllCollections = organizationUser.AccessAllCollections;
         }
 
         public string Id { get; set; }
@@ -31,19 +31,19 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
-        public bool AccessAllSubvaults { get; set; }
+        public bool AccessAllCollections { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
     {
         public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-            IEnumerable<SubvaultUserSubvaultDetails> subvaults)
+            IEnumerable<CollectionUserCollectionDetails> collections)
             : base(organizationUser, "organizationUserDetails")
         {
-            Subvaults = new ListResponseModel<OrganizationUserSubvaultResponseModel>(
-                subvaults.Select(s => new OrganizationUserSubvaultResponseModel(s)));
+            Collections = new ListResponseModel<OrganizationUserCollectionResponseModel>(
+                collections.Select(s => new OrganizationUserCollectionResponseModel(s)));
         }
 
-        public ListResponseModel<OrganizationUserSubvaultResponseModel> Subvaults { get; set; }
+        public ListResponseModel<OrganizationUserCollectionResponseModel> Collections { get; set; }
     }
 }

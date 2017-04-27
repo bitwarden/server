@@ -1,12 +1,12 @@
-﻿CREATE VIEW [dbo].[SubvaultUserSubvaultDetailsView]
+﻿CREATE VIEW [dbo].[CollectionUserCollectionDetailsView]
 AS
 SELECT
     SU.[Id],
     SU.[OrganizationUserId],
     S.[Name],
-    S.[Id] SubvaultId,
+    S.[Id] CollectionId,
     SU.[ReadOnly]
 FROM
-    [dbo].[SubvaultUser] SU
+    [dbo].[CollectionUser] SU
 INNER JOIN
-    [dbo].[Subvault] S ON S.[Id] = SU.[SubvaultId]
+    [dbo].[Collection] S ON S.[Id] = SU.[CollectionId]

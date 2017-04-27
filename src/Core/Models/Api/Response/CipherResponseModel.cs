@@ -74,52 +74,52 @@ namespace Bit.Core.Models.Api
     public class CipherDetailsResponseModel : CipherResponseModel
     {
         public CipherDetailsResponseModel(CipherDetails cipher,
-            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers, string obj = "cipherDetails")
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
             : base(cipher, obj)
         {
-            if(subvaultCiphers.ContainsKey(cipher.Id))
+            if(collectionCiphers.ContainsKey(cipher.Id))
             {
-                SubvaultIds = subvaultCiphers[cipher.Id].Select(s => s.SubvaultId);
+                CollectionIds = collectionCiphers[cipher.Id].Select(s => s.CollectionId);
             }
             else
             {
-                SubvaultIds = new Guid[] { };
+                CollectionIds = new Guid[] { };
             }
         }
 
-        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<SubvaultCipher> subvaultCiphers,
+        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<CollectionCipher> collectionCiphers,
             string obj = "cipherDetails")
             : base(cipher, obj)
         {
-            SubvaultIds = subvaultCiphers.Select(s => s.SubvaultId);
+            CollectionIds = collectionCiphers.Select(s => s.CollectionId);
         }
 
-        public IEnumerable<Guid> SubvaultIds { get; set; }
+        public IEnumerable<Guid> CollectionIds { get; set; }
     }
 
     public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
     {
         public CipherMiniDetailsResponseModel(Cipher cipher,
-            IDictionary<Guid, IGrouping<Guid, SubvaultCipher>> subvaultCiphers, string obj = "cipherMiniDetails")
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
             : base(cipher, obj)
         {
-            if(subvaultCiphers.ContainsKey(cipher.Id))
+            if(collectionCiphers.ContainsKey(cipher.Id))
             {
-                SubvaultIds = subvaultCiphers[cipher.Id].Select(s => s.SubvaultId);
+                CollectionIds = collectionCiphers[cipher.Id].Select(s => s.CollectionId);
             }
             else
             {
-                SubvaultIds = new Guid[] { };
+                CollectionIds = new Guid[] { };
             }
         }
 
-        public IEnumerable<Guid> SubvaultIds { get; set; }
+        public IEnumerable<Guid> CollectionIds { get; set; }
     }
 
     public class CipherFullDetailsResponseModel : CipherDetailsResponseModel
     {
-        public CipherFullDetailsResponseModel(CipherFullDetails cipher, IEnumerable<SubvaultCipher> subvaultCiphers)
-            : base(cipher, subvaultCiphers, "cipherFullDetails")
+        public CipherFullDetailsResponseModel(CipherFullDetails cipher, IEnumerable<CollectionCipher> collectionCiphers)
+            : base(cipher, collectionCiphers, "cipherFullDetails")
         {
             Edit = cipher.Edit;
         }

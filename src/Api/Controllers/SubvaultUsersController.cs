@@ -11,59 +11,59 @@ using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
-    [Route("organizations/{orgId}/subvaultUsers")]
+    [Route("organizations/{orgId}/collectionUsers")]
     [Authorize("Application")]
-    public class SubvaultUsersController : Controller
+    public class CollectionUsersController : Controller
     {
-        private readonly ISubvaultRepository _subvaultRepository;
-        private readonly ISubvaultUserRepository _subvaultUserRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
-        public SubvaultUsersController(
-            ISubvaultRepository subvaultRepository,
-            ISubvaultUserRepository subvaultUserRepository,
+        public CollectionUsersController(
+            ICollectionRepository collectionRepository,
+            ICollectionUserRepository collectionUserRepository,
             IUserService userService,
             CurrentContext currentContext)
         {
-            _subvaultRepository = subvaultRepository;
-            _subvaultUserRepository = subvaultUserRepository;
+            _collectionRepository = collectionRepository;
+            _collectionUserRepository = collectionUserRepository;
             _userService = userService;
             _currentContext = currentContext;
         }
 
-        [HttpGet("{subvaultId}")]
-        public async Task<ListResponseModel<SubvaultUserResponseModel>> GetBySubvault(string orgId, string subvaultId)
+        [HttpGet("{collectionId}")]
+        public async Task<ListResponseModel<CollectionUserResponseModel>> GetByCollection(string orgId, string collectionId)
         {
-            var subvaultIdGuid = new Guid(subvaultId);
-            var subvault = await _subvaultRepository.GetByIdAsync(subvaultIdGuid);
-            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            var collectionIdGuid = new Guid(collectionId);
+            var collection = await _collectionRepository.GetByIdAsync(collectionIdGuid);
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
             {
                 throw new NotFoundException();
             }
 
-            var subvaultUsers = await _subvaultUserRepository.GetManyDetailsBySubvaultIdAsync(subvaultIdGuid);
-            var responses = subvaultUsers.Select(s => new SubvaultUserResponseModel(s));
-            return new ListResponseModel<SubvaultUserResponseModel>(responses);
+            var collectionUsers = await _collectionUserRepository.GetManyDetailsByCollectionIdAsync(collectionIdGuid);
+            var responses = collectionUsers.Select(s => new CollectionUserResponseModel(s));
+            return new ListResponseModel<CollectionUserResponseModel>(responses);
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var user = await _subvaultUserRepository.GetByIdAsync(new Guid(id));
+            var user = await _collectionUserRepository.GetByIdAsync(new Guid(id));
             if(user == null)
             {
                 throw new NotFoundException();
             }
 
-            var subvault = await _subvaultRepository.GetByIdAsync(user.SubvaultId);
-            if(subvault == null || !_currentContext.OrganizationAdmin(subvault.OrganizationId))
+            var collection = await _collectionRepository.GetByIdAsync(user.CollectionId);
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
             {
                 throw new NotFoundException();
             }
 
-            await _subvaultUserRepository.DeleteAsync(user);
+            await _collectionUserRepository.DeleteAsync(user);
         }
     }
 }

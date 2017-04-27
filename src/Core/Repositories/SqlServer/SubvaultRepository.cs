@@ -9,13 +9,13 @@ using System.Linq;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class SubvaultRepository : Repository<Subvault, Guid>, ISubvaultRepository
+    public class CollectionRepository : Repository<Collection, Guid>, ICollectionRepository
     {
-        public SubvaultRepository(GlobalSettings globalSettings)
+        public CollectionRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString)
         { }
 
-        public SubvaultRepository(string connectionString)
+        public CollectionRepository(string connectionString)
             : base(connectionString)
         { }
 
@@ -24,7 +24,7 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteScalarAsync<int>(
-                    "[dbo].[Subvault_ReadCountByOrganizationId]",
+                    "[dbo].[Collection_ReadCountByOrganizationId]",
                     new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
@@ -32,11 +32,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Subvault>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<Subvault>(
+                var results = await connection.QueryAsync<Collection>(
                     $"[{Schema}].[{Table}_ReadByOrganizationId]",
                     new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
@@ -45,11 +45,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Subvault>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Collection>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<Subvault>(
+                var results = await connection.QueryAsync<Collection>(
                     $"[{Schema}].[{Table}_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);

@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultUser_Update]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_Update]
     @Id UNIQUEIDENTIFIER,
-    @SubvaultId UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ReadOnly BIT,
     @CreationDate DATETIME2(7),
@@ -10,9 +10,9 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[SubvaultUser]
+        [dbo].[CollectionUser]
     SET
-        [SubvaultId] = @SubvaultId,
+        [CollectionId] = @CollectionId,
         [OrganizationUserId] = @OrganizationUserId,
         [ReadOnly] = @ReadOnly,
         [CreationDate] = @CreationDate,

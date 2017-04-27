@@ -62,12 +62,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CipherDetails>> GetManyByUserIdHasSubvaultsAsync(Guid userId)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdHasCollectionsAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadByUserIdHasSubvault]",
+                    $"[{Schema}].[CipherDetails_ReadByUserIdHasCollection]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
@@ -142,16 +142,16 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task ReplaceAsync(Cipher obj, IEnumerable<Guid> subvaultIds)
+        public async Task ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
-            var objWithSubvaults = JsonConvert.DeserializeObject<CipherWithSubvaults>(JsonConvert.SerializeObject(obj));
-            objWithSubvaults.SubvaultIds = subvaultIds.ToGuidIdArrayTVP();
+            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(JsonConvert.SerializeObject(obj));
+            objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Cipher_UpdateWithSubvaults]",
-                    objWithSubvaults,
+                    $"[{Schema}].[Cipher_UpdateWithCollections]",
+                    objWithCollections,
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -419,9 +419,9 @@ namespace Bit.Core.Repositories.SqlServer
             return foldersTable;
         }
 
-        public class CipherWithSubvaults : Cipher
+        public class CipherWithCollections : Cipher
         {
-            public DataTable SubvaultIds { get; set; }
+            public DataTable CollectionIds { get; set; }
         }
     }
 }

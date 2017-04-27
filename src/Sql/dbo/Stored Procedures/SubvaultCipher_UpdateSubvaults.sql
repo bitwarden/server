@@ -1,7 +1,7 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultCipher_UpdateSubvaults]
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_UpdateCollections]
     @CipherId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @SubvaultIds AS [dbo].[GuidIdArray] READONLY
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -15,32 +15,32 @@ BEGIN
             [Id] = @CipherId
     )
 
-    ;WITH [AvailableSubvaultsCTE] AS(
+    ;WITH [AvailableCollectionsCTE] AS(
         SELECT
             S.[Id]
         FROM
-            [dbo].[Subvault] S
+            [dbo].[Collection] S
         INNER JOIN
             [Organization] O ON O.[Id] = S.[OrganizationId]
         INNER JOIN
             [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
         LEFT JOIN
-            [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
+            [dbo].[CollectionUser] SU ON OU.[AccessAllCollections] = 0 AND SU.[CollectionId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
             O.[Id] = @OrgId
             AND O.[Enabled] = 1
             AND OU.[Status] = 2 -- Confirmed
-            AND (OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0)
+            AND (OU.[AccessAllCollections] = 1 OR SU.[ReadOnly] = 0)
     )
     MERGE
-        [dbo].[SubvaultCipher] AS [Target]
+        [dbo].[CollectionCipher] AS [Target]
     USING 
-        @SubvaultIds AS [Source]
+        @CollectionIds AS [Source]
     ON
-        [Target].[SubvaultId] = [Source].[Id]
+        [Target].[CollectionId] = [Source].[Id]
         AND [Target].[CipherId] = @CipherId
     WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableSubvaultsCTE]) THEN
+    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
         INSERT VALUES
         (
             [Source].[Id],
@@ -48,7 +48,7 @@ BEGIN
         )
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CipherId] = @CipherId
-    AND [Target].[SubvaultId] IN (SELECT [Id] FROM [AvailableSubvaultsCTE]) THEN
+    AND [Target].[CollectionId] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
         DELETE
     ;
 

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SubvaultCipher_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,14 +7,14 @@ BEGIN
     SELECT
         SC.*
     FROM
-        [dbo].[SubvaultCipher] SC
+        [dbo].[CollectionCipher] SC
     INNER JOIN
-        [dbo].[Subvault] S ON S.[Id] = SC.[SubvaultId]
+        [dbo].[Collection] S ON S.[Id] = SC.[CollectionId]
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId] AND OU.[UserId] = @UserId
     LEFT JOIN
-        [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] SU ON OU.[AccessAllCollections] = 0 AND SU.[CollectionId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
     WHERE
         OU.[Status] = 2 -- Confirmed
-        AND (OU.[AccessAllSubvaults] = 1 OR SU.[SubvaultId] IS NOT NULL)
+        AND (OU.[AccessAllCollections] = 1 OR SU.[CollectionId] IS NOT NULL)
 END

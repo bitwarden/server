@@ -6,25 +6,25 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class SubvaultRequestModel
+    public class CollectionRequestModel
     {
         [Required]
         [EncryptedString]
         [StringLength(300)]
         public string Name { get; set; }
 
-        public Subvault ToSubvault(Guid orgId)
+        public Collection ToCollection(Guid orgId)
         {
-            return ToSubvault(new Subvault
+            return ToCollection(new Collection
             {
                 OrganizationId = orgId
             });
         }
 
-        public Subvault ToSubvault(Subvault existingSubvault)
+        public Collection ToCollection(Collection existingCollection)
         {
-            existingSubvault.Name = Name;
-            return existingSubvault;
+            existingCollection.Name = Name;
+            return existingCollection;
         }
     }
 }

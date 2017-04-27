@@ -1,6 +1,6 @@
-﻿CREATE VIEW [dbo].[SubvaultView]
+﻿CREATE VIEW [dbo].[CollectionView]
 AS
 SELECT
     *
 FROM
-    [dbo].[Subvault]
+    [dbo].[Collection]

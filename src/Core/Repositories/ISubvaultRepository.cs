@@ -5,11 +5,11 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Repositories
 {
-    public interface ISubvaultRepository : IRepository<Subvault, Guid>
+    public interface ICollectionRepository : IRepository<Collection, Guid>
     {
         Task<int> GetCountByOrganizationIdAsync(Guid organizationId);
-        Task<ICollection<Subvault>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<ICollection<Subvault>> GetManyByUserIdAsync(Guid userId);
+        Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
+        Task<ICollection<Collection>> GetManyByUserIdAsync(Guid userId);
 
     }
 }

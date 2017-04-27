@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class Subvault : IDataObject<Guid>
+    public class Collection : IDataObject<Guid>
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }

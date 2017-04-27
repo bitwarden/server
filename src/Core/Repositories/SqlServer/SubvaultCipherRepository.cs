@@ -10,22 +10,22 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class SubvaultCipherRepository : BaseRepository, ISubvaultCipherRepository
+    public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
     {
-        public SubvaultCipherRepository(GlobalSettings globalSettings)
+        public CollectionCipherRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString)
         { }
 
-        public SubvaultCipherRepository(string connectionString)
+        public CollectionCipherRepository(string connectionString)
             : base(connectionString)
         { }
 
-        public async Task<ICollection<SubvaultCipher>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultCipher>(
-                    "[dbo].[SubvaultCipher_ReadByUserId]",
+                var results = await connection.QueryAsync<CollectionCipher>(
+                    "[dbo].[CollectionCipher_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
@@ -33,12 +33,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<SubvaultCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultCipher>(
-                    "[dbo].[SubvaultCipher_ReadByOrganizationId]",
+                var results = await connection.QueryAsync<CollectionCipher>(
+                    "[dbo].[CollectionCipher_ReadByOrganizationId]",
                     new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
@@ -46,12 +46,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<SubvaultCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+        public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultCipher>(
-                    "[dbo].[SubvaultCipher_ReadByUserIdCipherId]",
+                var results = await connection.QueryAsync<CollectionCipher>(
+                    "[dbo].[CollectionCipher_ReadByUserIdCipherId]",
                     new { UserId = userId, CipherId = cipherId },
                     commandType: CommandType.StoredProcedure);
 
@@ -59,24 +59,24 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task UpdateSubvaultsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> subvaultIds)
+        public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    "[dbo].[SubvaultCipher_UpdateSubvaults]",
-                    new { CipherId = cipherId, UserId = userId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP() },
+                    "[dbo].[CollectionCipher_UpdateCollections]",
+                    new { CipherId = cipherId, UserId = userId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                     commandType: CommandType.StoredProcedure);
             }
         }
 
-        public async Task UpdateSubvaultsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> subvaultIds)
+        public async Task UpdateCollectionsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> collectionIds)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    "[dbo].[SubvaultCipher_UpdateSubvaultsAdmin]",
-                    new { CipherId = cipherId, OrganizationId = organizationId, SubvaultIds = subvaultIds.ToGuidIdArrayTVP() },
+                    "[dbo].[CollectionCipher_UpdateCollectionsAdmin]",
+                    new { CipherId = cipherId, OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                     commandType: CommandType.StoredProcedure);
             }
         }

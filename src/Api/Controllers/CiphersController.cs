@@ -17,7 +17,7 @@ namespace Bit.Api.Controllers
     {
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
-        private readonly ISubvaultCipherRepository _subvaultCipherRepository;
+        private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
@@ -25,14 +25,14 @@ namespace Bit.Api.Controllers
         public CiphersController(
             ICipherRepository cipherRepository,
             IFolderRepository folderRepository,
-            ISubvaultCipherRepository subvaultCipherRepository,
+            ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
-            _subvaultCipherRepository = subvaultCipherRepository;
+            _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
             _currentContext = currentContext;
@@ -62,8 +62,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var subvaultCiphers = await _subvaultCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
-            return new CipherFullDetailsResponseModel(cipher, subvaultCiphers);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
+            return new CipherFullDetailsResponseModel(cipher, collectionCiphers);
         }
 
         [HttpGet("")]
@@ -91,20 +91,20 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("details")]
-        public async Task<ListResponseModel<CipherDetailsResponseModel>> GetSubvaults()
+        public async Task<ListResponseModel<CipherDetailsResponseModel>> GetCollections()
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByUserIdHasSubvaultsAsync(userId);
+            var ciphers = await _cipherRepository.GetManyByUserIdHasCollectionsAsync(userId);
 
-            var subvaultCiphers = await _subvaultCipherRepository.GetManyByUserIdAsync(userId);
-            var subvaultCiphersGroupDict = subvaultCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
+            var collectionCiphersGroupDict = collectionCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
 
-            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, subvaultCiphersGroupDict));
+            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, collectionCiphersGroupDict));
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
         [HttpGet("organization-details")]
-        public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationSubvaults(string organizationId)
+        public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(string organizationId)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
@@ -115,10 +115,10 @@ namespace Bit.Api.Controllers
 
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
-            var subvaultCiphers = await _subvaultCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var subvaultCiphersGroupDict = subvaultCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var collectionCiphersGroupDict = collectionCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
 
-            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, subvaultCiphersGroupDict));
+            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, collectionCiphersGroupDict));
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
@@ -179,12 +179,12 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.ShareAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
-                model.SubvaultIds.Select(s => new Guid(s)), userId);
+                model.CollectionIds.Select(s => new Guid(s)), userId);
         }
 
-        [HttpPut("{id}/subvaults")]
-        [HttpPost("{id}/subvaults")]
-        public async Task PutSubvaults(string id, [FromBody]CipherSubvaultsRequestModel model)
+        [HttpPut("{id}/collections")]
+        [HttpPost("{id}/collections")]
+        public async Task PutCollections(string id, [FromBody]CipherCollectionsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
@@ -194,12 +194,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId, false);
+            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(s => new Guid(s)), userId, false);
         }
 
-        [HttpPut("{id}/subvaults-admin")]
-        [HttpPost("{id}/subvaults-admin")]
-        public async Task PutSubvaultsAdmin(string id, [FromBody]CipherSubvaultsRequestModel model)
+        [HttpPut("{id}/collections-admin")]
+        [HttpPost("{id}/collections-admin")]
+        public async Task PutCollectionsAdmin(string id, [FromBody]CipherCollectionsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
@@ -209,7 +209,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveSubvaultsAsync(cipher, model.SubvaultIds.Select(s => new Guid(s)), userId, true);
+            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(s => new Guid(s)), userId, true);
         }
 
         [HttpDelete("{id}")]

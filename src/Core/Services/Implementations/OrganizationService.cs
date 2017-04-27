@@ -18,8 +18,8 @@ namespace Bit.Core.Services
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ISubvaultRepository _subvaultRepository;
-        private readonly ISubvaultUserRepository _subvaultUserRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
@@ -28,8 +28,8 @@ namespace Bit.Core.Services
         public OrganizationService(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            ISubvaultRepository subvaultRepository,
-            ISubvaultUserRepository subvaultUserRepository,
+            ICollectionRepository collectionRepository,
+            ICollectionUserRepository collectionUserRepository,
             IUserRepository userRepository,
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
@@ -37,8 +37,8 @@ namespace Bit.Core.Services
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _subvaultRepository = subvaultRepository;
-            _subvaultUserRepository = subvaultUserRepository;
+            _collectionRepository = collectionRepository;
+            _collectionUserRepository = collectionUserRepository;
             _userRepository = userRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
@@ -269,15 +269,15 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(newPlan.MaxSubvaults.HasValue &&
-                (!organization.MaxSubvaults.HasValue || organization.MaxSubvaults.Value > newPlan.MaxSubvaults.Value))
+            if(newPlan.MaxCollections.HasValue &&
+                (!organization.MaxCollections.HasValue || organization.MaxCollections.Value > newPlan.MaxCollections.Value))
             {
-                var subvaultCount = await _subvaultRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(subvaultCount > newPlan.MaxSubvaults.Value)
+                var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(collectionCount > newPlan.MaxCollections.Value)
                 {
-                    throw new BadRequestException($"Your organization currently has {subvaultCount} subvaults. " +
-                        $"Your new plan allows for a maximum of ({newPlan.MaxSubvaults.Value}) subvaults. " +
-                        "Remove some subvaults.");
+                    throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
+                        $"Your new plan allows for a maximum of ({newPlan.MaxCollections.Value}) collections. " +
+                        "Remove some collections.");
                 }
             }
 
@@ -551,7 +551,7 @@ namespace Bit.Core.Services
                 BusinessName = signup.BusinessName,
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
-                MaxSubvaults = plan.MaxSubvaults,
+                MaxCollections = plan.MaxCollections,
                 Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,
@@ -570,7 +570,7 @@ namespace Bit.Core.Services
                     Key = signup.OwnerKey,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAllSubvaults = true,
+                    AccessAllCollections = true,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 };
@@ -672,7 +672,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            OrganizationUserType type, bool accessAllSubvaults, IEnumerable<SubvaultUser> subvaults)
+            OrganizationUserType type, bool accessAllCollections, IEnumerable<CollectionUser> collections)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -705,15 +705,15 @@ namespace Bit.Core.Services
                 Key = null,
                 Type = type,
                 Status = OrganizationUserStatusType.Invited,
-                AccessAllSubvaults = accessAllSubvaults,
+                AccessAllCollections = accessAllCollections,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
-            if(!orgUser.AccessAllSubvaults && subvaults.Any())
+            if(!orgUser.AccessAllCollections && collections.Any())
             {
-                await SaveUserSubvaultsAsync(orgUser, subvaults, true);
+                await SaveUserCollectionsAsync(orgUser, collections, true);
             }
             await SendInviteAsync(orgUser);
 
@@ -820,7 +820,7 @@ namespace Bit.Core.Services
             return orgUser;
         }
 
-        public async Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SubvaultUser> subvaults)
+        public async Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<CollectionUser> collections)
         {
             if(user.Id.Equals(default(Guid)))
             {
@@ -835,12 +835,12 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.ReplaceAsync(user);
 
-            if(user.AccessAllSubvaults)
+            if(user.AccessAllCollections)
             {
-                // We don't need any subvaults if we're flagged to have all access.
-                subvaults = new List<SubvaultUser>();
+                // We don't need any collections if we're flagged to have all access.
+                collections = new List<CollectionUser>();
             }
-            await SaveUserSubvaultsAsync(user, subvaults, false);
+            await SaveUserCollectionsAsync(user, collections, false);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -889,38 +889,38 @@ namespace Bit.Core.Services
             return owners.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed);
         }
 
-        private async Task SaveUserSubvaultsAsync(OrganizationUser user, IEnumerable<SubvaultUser> subvaults, bool newUser)
+        private async Task SaveUserCollectionsAsync(OrganizationUser user, IEnumerable<CollectionUser> collections, bool newUser)
         {
-            if(subvaults == null)
+            if(collections == null)
             {
-                subvaults = new List<SubvaultUser>();
+                collections = new List<CollectionUser>();
             }
 
-            var orgSubvaults = await _subvaultRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-            var currentUserSubvaults = newUser ? null : await _subvaultUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
+            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
+            var currentUserCollections = newUser ? null : await _collectionUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
 
             // Let's make sure all these belong to this user and organization.
-            var filteredSubvaults = subvaults.Where(s => orgSubvaults.Any(os => os.Id == s.SubvaultId));
-            foreach(var subvault in filteredSubvaults)
+            var filteredCollections = collections.Where(s => orgCollections.Any(os => os.Id == s.CollectionId));
+            foreach(var collection in filteredCollections)
             {
-                var existingSubvaultUser = currentUserSubvaults?.FirstOrDefault(cs => cs.SubvaultId == subvault.SubvaultId);
-                if(existingSubvaultUser != null)
+                var existingCollectionUser = currentUserCollections?.FirstOrDefault(cs => cs.CollectionId == collection.CollectionId);
+                if(existingCollectionUser != null)
                 {
-                    subvault.Id = existingSubvaultUser.Id;
-                    subvault.CreationDate = existingSubvaultUser.CreationDate;
+                    collection.Id = existingCollectionUser.Id;
+                    collection.CreationDate = existingCollectionUser.CreationDate;
                 }
 
-                subvault.OrganizationUserId = user.Id;
-                await _subvaultUserRepository.UpsertAsync(subvault);
+                collection.OrganizationUserId = user.Id;
+                await _collectionUserRepository.UpsertAsync(collection);
             }
 
             if(!newUser)
             {
-                var subvaultsToDelete = currentUserSubvaults.Where(cs =>
-                    !filteredSubvaults.Any(s => s.SubvaultId == cs.SubvaultId));
-                foreach(var subvault in subvaultsToDelete)
+                var collectionsToDelete = currentUserCollections.Where(cs =>
+                    !filteredCollections.Any(s => s.CollectionId == cs.CollectionId));
+                foreach(var collection in collectionsToDelete)
                 {
-                    await _subvaultUserRepository.DeleteAsync(subvault);
+                    await _collectionUserRepository.DeleteAsync(collection);
                 }
             }
         }

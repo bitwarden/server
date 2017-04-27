@@ -14,7 +14,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[SubvaultUserSubvaultDetailsView]
+        [dbo].[CollectionUserCollectionDetailsView]
     WHERE
         [OrganizationUserId] = @Id
 END

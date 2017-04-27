@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_Create]
+﻿CREATE PROCEDURE [dbo].[Collection_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
@@ -8,7 +8,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[Subvault]
+    INSERT INTO [dbo].[Collection]
     (
         [Id],
         [OrganizationId],

@@ -21,11 +21,11 @@ namespace Bit.Core.Services
         Task EnableAsync(Guid organizationId);
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            Enums.OrganizationUserType type, bool accessAllSubvaults, IEnumerable<SubvaultUser> subvaults);
+            Enums.OrganizationUserType type, bool accessAllCollections, IEnumerable<CollectionUser> collections);
         Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
-        Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SubvaultUser> subvaults);
+        Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<CollectionUser> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
     }

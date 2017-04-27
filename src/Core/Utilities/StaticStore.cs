@@ -96,7 +96,7 @@ namespace Bit.Core.Utilities
                     Type = PlanType.Free,
                     BaseSeats = 2,
                     CanBuyAdditionalSeats = false,
-                    MaxSubvaults = 2,
+                    MaxCollections = 2,
                     Name = "Free",
                     UpgradeSortOrder = -1 // Always the lowest plan, cannot be upgraded to
                 },

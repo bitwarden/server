@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_DeleteById]
+﻿CREATE PROCEDURE [dbo].[Collection_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -6,7 +6,7 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[Subvault]
+        [dbo].[Collection]
     WHERE
         [Id] = @Id
 END

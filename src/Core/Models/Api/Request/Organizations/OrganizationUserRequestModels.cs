@@ -12,8 +12,8 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
-        public bool AccessAllSubvaults { get; set; }
-        public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
+        public bool AccessAllCollections { get; set; }
+        public IEnumerable<OrganizationUserCollectionRequestModel> Collections { get; set; }
     }
 
     public class OrganizationUserAcceptRequestModel
@@ -32,32 +32,32 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
-        public bool AccessAllSubvaults { get; set; }
-        public IEnumerable<OrganizationUserSubvaultRequestModel> Subvaults { get; set; }
+        public bool AccessAllCollections { get; set; }
+        public IEnumerable<OrganizationUserCollectionRequestModel> Collections { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
             existingUser.Type = Type.Value;
-            existingUser.AccessAllSubvaults = AccessAllSubvaults;
+            existingUser.AccessAllCollections = AccessAllCollections;
             return existingUser;
         }
     }
 
-    public class OrganizationUserSubvaultRequestModel
+    public class OrganizationUserCollectionRequestModel
     {
         [Required]
-        public string SubvaultId { get; set; }
+        public string CollectionId { get; set; }
         public bool ReadOnly { get; set; }
 
-        public SubvaultUser ToSubvaultUser()
+        public CollectionUser ToCollectionUser()
         {
-            var subvault = new SubvaultUser
+            var collection = new CollectionUser
             {
                 ReadOnly = ReadOnly,
-                SubvaultId = new Guid(SubvaultId)
+                CollectionId = new Guid(CollectionId)
             };
 
-            return subvault;
+            return collection;
         }
     }
 }

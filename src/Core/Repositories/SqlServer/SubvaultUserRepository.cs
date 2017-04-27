@@ -10,21 +10,21 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class SubvaultUserRepository : Repository<SubvaultUser, Guid>, ISubvaultUserRepository
+    public class CollectionUserRepository : Repository<CollectionUser, Guid>, ICollectionUserRepository
     {
-        public SubvaultUserRepository(GlobalSettings globalSettings)
+        public CollectionUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString)
         { }
 
-        public SubvaultUserRepository(string connectionString)
+        public CollectionUserRepository(string connectionString)
             : base(connectionString)
         { }
 
-        public async Task<ICollection<SubvaultUser>> GetManyByOrganizationUserIdAsync(Guid orgUserId)
+        public async Task<ICollection<CollectionUser>> GetManyByOrganizationUserIdAsync(Guid orgUserId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultUser>(
+                var results = await connection.QueryAsync<CollectionUser>(
                     $"[{Schema}].[{Table}_ReadByOrganizationUserId]",
                     new { OrganizationUserId = orgUserId },
                     commandType: CommandType.StoredProcedure);
@@ -33,12 +33,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<SubvaultUserSubvaultDetails>> GetManyDetailsByUserIdAsync(Guid userId)
+        public async Task<ICollection<CollectionUserCollectionDetails>> GetManyDetailsByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultUserSubvaultDetails>(
-                    $"[{Schema}].[SubvaultUserSubvaultDetails_ReadByUserId]",
+                var results = await connection.QueryAsync<CollectionUserCollectionDetails>(
+                    $"[{Schema}].[CollectionUserCollectionDetails_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
@@ -46,13 +46,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<SubvaultUserUserDetails>> GetManyDetailsBySubvaultIdAsync(Guid subvaultId)
+        public async Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid collectionId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<SubvaultUserUserDetails>(
-                    $"[{Schema}].[SubvaultUserUserDetails_ReadBySubvaultId]",
-                    new { SubvaultId = subvaultId },
+                var results = await connection.QueryAsync<CollectionUserUserDetails>(
+                    $"[{Schema}].[CollectionUserUserDetails_ReadByCollectionId]",
+                    new { CollectionId = collectionId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -64,7 +64,7 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.QueryFirstOrDefaultAsync<bool>(
-                    $"[{Schema}].[SubvaultUser_ReadCanEditByCipherIdUserId]",
+                    $"[{Schema}].[CollectionUser_ReadCanEditByCipherIdUserId]",
                     new { UserId = userId, CipherId = cipherId },
                     commandType: CommandType.StoredProcedure);
 

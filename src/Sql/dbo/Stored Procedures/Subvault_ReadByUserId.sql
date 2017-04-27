@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_ReadByUserId]
+﻿CREATE PROCEDURE [dbo].[Collection_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,15 +7,15 @@ BEGIN
     SELECT
         S.*
     FROM
-        [dbo].[SubvaultView] S
+        [dbo].[CollectionView] S
     INNER JOIN
         [Organization] O ON O.[Id] = S.[OrganizationId]
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
     LEFT JOIN
-        [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] SU ON OU.[AccessAllCollections] = 0 AND SU.[CollectionId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
     WHERE
         OU.[Status] = 2 -- Confirmed
         AND O.[Enabled] = 1
-        AND (OU.[AccessAllSubvaults] = 1 OR SU.[SubvaultId] IS NOT NULL)
+        AND (OU.[AccessAllCollections] = 1 OR SU.[CollectionId] IS NOT NULL)
 END

@@ -5,31 +5,31 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {
-    public class SubvaultUserResponseModel : ResponseModel
+    public class CollectionUserResponseModel : ResponseModel
     {
-        public SubvaultUserResponseModel(SubvaultUserUserDetails subvaultUser)
-            : base("subvaultUser")
+        public CollectionUserResponseModel(CollectionUserUserDetails collectionUser)
+            : base("collectionUser")
         {
-            if(subvaultUser == null)
+            if(collectionUser == null)
             {
-                throw new ArgumentNullException(nameof(subvaultUser));
+                throw new ArgumentNullException(nameof(collectionUser));
             }
 
-            Id = subvaultUser.Id?.ToString();
-            OrganizationUserId = subvaultUser.OrganizationUserId.ToString();
-            SubvaultId = subvaultUser.SubvaultId?.ToString();
-            AccessAllSubvaults = subvaultUser.AccessAllSubvaults;
-            Name = subvaultUser.Name;
-            Email = subvaultUser.Email;
-            Type = subvaultUser.Type;
-            Status = subvaultUser.Status;
-            ReadOnly = subvaultUser.ReadOnly;
+            Id = collectionUser.Id?.ToString();
+            OrganizationUserId = collectionUser.OrganizationUserId.ToString();
+            CollectionId = collectionUser.CollectionId?.ToString();
+            AccessAllCollections = collectionUser.AccessAllCollections;
+            Name = collectionUser.Name;
+            Email = collectionUser.Email;
+            Type = collectionUser.Type;
+            Status = collectionUser.Status;
+            ReadOnly = collectionUser.ReadOnly;
         }
 
         public string Id { get; set; }
         public string OrganizationUserId { get; set; }
-        public string SubvaultId { get; set; }
-        public bool AccessAllSubvaults { get; set; }
+        public string CollectionId { get; set; }
+        public bool AccessAllCollections { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }

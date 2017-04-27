@@ -16,8 +16,8 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ISubvaultUserRepository _subvaultUserRepository;
-        private readonly ISubvaultCipherRepository _subvaultCipherRepository;
+        private readonly ICollectionUserRepository _collectionUserRepository;
+        private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushService _pushService;
 
         public CipherService(
@@ -26,8 +26,8 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            ISubvaultUserRepository subvaultUserRepository,
-            ISubvaultCipherRepository subvaultCipherRepository,
+            ICollectionUserRepository collectionUserRepository,
+            ICollectionCipherRepository collectionCipherRepository,
             IPushService pushService)
         {
             _cipherRepository = cipherRepository;
@@ -35,8 +35,8 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _subvaultUserRepository = subvaultUserRepository;
-            _subvaultCipherRepository = subvaultCipherRepository;
+            _collectionUserRepository = collectionUserRepository;
+            _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
         }
 
@@ -105,7 +105,7 @@ namespace Bit.Core.Services
             await _pushService.PushSyncFolderDeleteAsync(folder);
         }
 
-        public async Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> subvaultIds, Guid sharingUserId)
+        public async Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId)
         {
             if(cipher.Id == default(Guid))
             {
@@ -122,17 +122,17 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            // Sproc will not save this UserId on the cipher. It is used limit scope of the subvaultIds.
+            // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
             cipher.UserId = sharingUserId;
             cipher.OrganizationId = organizationId;
             cipher.RevisionDate = DateTime.UtcNow;
-            await _cipherRepository.ReplaceAsync(cipher, subvaultIds);
+            await _cipherRepository.ReplaceAsync(cipher, collectionIds);
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
-        public async Task SaveSubvaultsAsync(Cipher cipher, IEnumerable<Guid> subvaultIds, Guid savingUserId, bool orgAdmin)
+        public async Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin)
         {
             if(cipher.Id == default(Guid))
             {
@@ -144,15 +144,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Cipher must belong to an organization.");
             }
 
-            // The sprocs will validate that all subvaults belong to this org/user and that they have proper write permissions.
+            // The sprocs will validate that all collections belong to this org/user and that they have proper write permissions.
             if(orgAdmin)
             {
-                await _subvaultCipherRepository.UpdateSubvaultsForAdminAsync(cipher.Id, cipher.OrganizationId.Value,
-                    subvaultIds);
+                await _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value,
+                    collectionIds);
             }
             else
             {
-                await _subvaultCipherRepository.UpdateSubvaultsAsync(cipher.Id, savingUserId, subvaultIds);
+                await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
             }
 
             // push
@@ -213,7 +213,7 @@ namespace Bit.Core.Services
                 return true;
             }
 
-            return await _subvaultUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipher.Id);
+            return await _collectionUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipher.Id);
         }
     }
 }

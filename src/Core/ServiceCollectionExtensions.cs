@@ -15,10 +15,10 @@ namespace Bit.Core
             services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
             services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
             services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
-            services.AddSingleton<ISubvaultRepository, SqlServerRepos.SubvaultRepository>();
-            services.AddSingleton<ISubvaultUserRepository, SqlServerRepos.SubvaultUserRepository>();
+            services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
+            services.AddSingleton<ICollectionUserRepository, SqlServerRepos.CollectionUserRepository>();
             services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
-            services.AddSingleton<ISubvaultCipherRepository, SqlServerRepos.SubvaultCipherRepository>();
+            services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
         }
 
         public static void AddBaseServices(this IServiceCollection services)
@@ -27,7 +27,7 @@ namespace Bit.Core
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IDeviceService, DeviceService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<ISubvaultService, SubvaultService>();
+            services.AddScoped<ICollectionService, CollectionService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services)

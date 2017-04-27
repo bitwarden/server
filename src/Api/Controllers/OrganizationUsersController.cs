@@ -18,7 +18,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
-        private readonly ISubvaultRepository _subvaultRepository;
+        private readonly ICollectionRepository _collectionRepository;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
@@ -26,14 +26,14 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
-            ISubvaultRepository subvaultRepository,
+            ICollectionRepository collectionRepository,
             IUserService userService,
             CurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
-            _subvaultRepository = subvaultRepository;
+            _collectionRepository = collectionRepository;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -75,7 +75,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.InviteUserAsync(orgGuidId, userId.Value, model.Email, model.Type.Value,
-                model.AccessAllSubvaults, model.Subvaults?.Select(s => s.ToSubvaultUser()));
+                model.AccessAllCollections, model.Collections?.Select(s => s.ToCollectionUser()));
         }
 
         [HttpPut("{id}/reinvite")]
@@ -132,7 +132,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-                model.Subvaults?.Select(s => s.ToSubvaultUser()));
+                model.Collections?.Select(s => s.ToCollectionUser()));
         }
 
         [HttpDelete("{id}")]

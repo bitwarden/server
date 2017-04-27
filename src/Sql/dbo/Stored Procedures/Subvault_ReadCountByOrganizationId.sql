@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Subvault_ReadCountByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[Collection_ReadCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         COUNT(1)
     FROM
-        [dbo].[Subvault]
+        [dbo].[Collection]
     WHERE
         [OrganizationId] = @OrganizationId
 END

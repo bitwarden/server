@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_UpdateWithSubvaults]
+﻿CREATE PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -8,7 +8,7 @@
     @Folders NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @SubvaultIds AS [dbo].[GuidIdArray] READONLY
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,35 +24,35 @@ BEGIN
     WHERE
         [Id] = @Id
 
-    ;WITH [AvailableSubvaultsCTE] AS(
+    ;WITH [AvailableCollectionsCTE] AS(
         SELECT
             S.[Id]
         FROM
-            [dbo].[Subvault] S
+            [dbo].[Collection] S
         INNER JOIN
             [Organization] O ON O.[Id] = S.[OrganizationId]
         INNER JOIN
             [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
         LEFT JOIN
-            [dbo].[SubvaultUser] SU ON OU.[AccessAllSubvaults] = 0 AND SU.[SubvaultId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
+            [dbo].[CollectionUser] SU ON OU.[AccessAllCollections] = 0 AND SU.[CollectionId] = S.[Id] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
             O.[Id] = @OrganizationId
             AND O.[Enabled] = 1
             AND OU.[Status] = 2 -- Confirmed
-            AND (OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0)
+            AND (OU.[AccessAllCollections] = 1 OR SU.[ReadOnly] = 0)
     )
-    INSERT INTO [dbo].[SubvaultCipher]
+    INSERT INTO [dbo].[CollectionCipher]
     (
-        [SubvaultId],
+        [CollectionId],
         [CipherId]
     )
     SELECT
         [Id],
         @Id
     FROM
-        @SubvaultIds
+        @CollectionIds
     WHERE
-        [Id] IN (SELECT [Id] FROM [AvailableSubvaultsCTE])
+        [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 
     IF @OrganizationId IS NOT NULL
     BEGIN

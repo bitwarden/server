@@ -5,7 +5,7 @@ BEGIN
 
     ;WITH [CTE] AS(
         SELECT
-            CASE WHEN OU.[AccessAllSubvaults] = 1 OR SU.[ReadOnly] = 0 THEN 1 ELSE 0 END [CanEdit]
+            CASE WHEN OU.[AccessAllCollections] = 1 OR SU.[ReadOnly] = 0 THEN 1 ELSE 0 END [CanEdit]
         FROM
             [dbo].[Cipher] C
         INNER JOIN
@@ -13,14 +13,14 @@ BEGIN
         INNER JOIN
             [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
         LEFT JOIN
-            [dbo].[SubvaultCipher] SC ON C.[UserId] IS NULL AND OU.[AccessAllSubvaults] = 0 AND SC.[CipherId] = C.[Id]
+            [dbo].[CollectionCipher] SC ON C.[UserId] IS NULL AND OU.[AccessAllCollections] = 0 AND SC.[CipherId] = C.[Id]
         LEFT JOIN
-            [dbo].[SubvaultUser] SU ON SU.[SubvaultId] = SC.[SubvaultId] AND SU.[OrganizationUserId] = OU.[Id]
+            [dbo].[CollectionUser] SU ON SU.[CollectionId] = SC.[CollectionId] AND SU.[OrganizationUserId] = OU.[Id]
         WHERE
             C.[Id] = @CipherId
             AND OU.[Status] = 2 -- 2 = Confirmed
             AND O.[Enabled] = 1
-            AND (OU.[AccessAllSubvaults] = 1 OR SU.[SubvaultId] IS NOT NULL)
+            AND (OU.[AccessAllCollections] = 1 OR SU.[CollectionId] IS NOT NULL)
     )
     SELECT
         @CanEdit = CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
