@@ -6,7 +6,7 @@
     @Key VARCHAR(MAX),
     @Status TINYINT,
     @Type TINYINT,
-    @AccessAllCollections BIT,
+    @AccessAll BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -22,7 +22,7 @@ BEGIN
         [Key],
         [Status],
         [Type],
-        [AccessAllCollections],
+        [AccessAll],
         [CreationDate],
         [RevisionDate]
     )
@@ -35,7 +35,7 @@ BEGIN
         @Key,
         @Status,
         @Type,
-        @AccessAllCollections,
+        @AccessAll,
         @CreationDate,
         @RevisionDate
     )

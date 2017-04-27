@@ -570,7 +570,7 @@ namespace Bit.Core.Services
                     Key = signup.OwnerKey,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAllCollections = true,
+                    AccessAll = true,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 };
@@ -672,7 +672,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            OrganizationUserType type, bool accessAllCollections, IEnumerable<CollectionUser> collections)
+            OrganizationUserType type, bool accessAll, IEnumerable<CollectionUser> collections)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -705,13 +705,13 @@ namespace Bit.Core.Services
                 Key = null,
                 Type = type,
                 Status = OrganizationUserStatusType.Invited,
-                AccessAllCollections = accessAllCollections,
+                AccessAll = accessAll,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
 
             await _organizationUserRepository.CreateAsync(orgUser);
-            if(!orgUser.AccessAllCollections && collections.Any())
+            if(!orgUser.AccessAll && collections.Any())
             {
                 await SaveUserCollectionsAsync(orgUser, collections, true);
             }
@@ -835,7 +835,7 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.ReplaceAsync(user);
 
-            if(user.AccessAllCollections)
+            if(user.AccessAll)
             {
                 // We don't need any collections if we're flagged to have all access.
                 collections = new List<CollectionUser>();

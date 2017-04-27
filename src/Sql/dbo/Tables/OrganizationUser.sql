@@ -6,7 +6,7 @@
     [Key]                  VARCHAR (MAX)    NULL,
     [Status]               TINYINT          NOT NULL,
     [Type]                 TINYINT          NOT NULL,
-    [AccessAllCollections] BIT              NOT NULL,
+    [AccessAll]            BIT              NOT NULL,
     [CreationDate]         DATETIME2 (7)    NOT NULL,
     [RevisionDate]         DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),

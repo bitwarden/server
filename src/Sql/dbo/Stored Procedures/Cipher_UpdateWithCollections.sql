@@ -34,12 +34,12 @@ BEGIN
         INNER JOIN
             [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
         LEFT JOIN
-            [dbo].[CollectionUser] CU ON OU.[AccessAllCollections] = 0 AND CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
+            [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
         WHERE
             O.[Id] = @OrganizationId
             AND O.[Enabled] = 1
             AND OU.[Status] = 2 -- Confirmed
-            AND (OU.[AccessAllCollections] = 1 OR CU.[ReadOnly] = 0)
+            AND (OU.[AccessAll] = 1 OR CU.[ReadOnly] = 0)
     )
     INSERT INTO [dbo].[CollectionCipher]
     (

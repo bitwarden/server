@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Table
         public string Key { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }
-        public bool AccessAllCollections { get; set; }
+        public bool AccessAll { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

@@ -18,7 +18,7 @@ namespace Bit.Core.Models.Api
             Id = collectionUser.Id?.ToString();
             OrganizationUserId = collectionUser.OrganizationUserId.ToString();
             CollectionId = collectionUser.CollectionId?.ToString();
-            AccessAllCollections = collectionUser.AccessAllCollections;
+            AccessAll = collectionUser.AccessAll;
             Name = collectionUser.Name;
             Email = collectionUser.Email;
             Type = collectionUser.Type;
@@ -29,7 +29,7 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string OrganizationUserId { get; set; }
         public string CollectionId { get; set; }
-        public bool AccessAllCollections { get; set; }
+        public bool AccessAll { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public OrganizationUserType Type { get; set; }

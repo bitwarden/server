@@ -75,7 +75,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.InviteUserAsync(orgGuidId, userId.Value, model.Email, model.Type.Value,
-                model.AccessAllCollections, model.Collections?.Select(c => c.ToCollectionUser()));
+                model.AccessAll, model.Collections?.Select(c => c.ToCollectionUser()));
         }
 
         [HttpPut("{id}/reinvite")]

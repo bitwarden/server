@@ -9,6 +9,6 @@ BEGIN
     FROM
         [dbo].[CollectionUserUserDetailsView]
     WHERE
-        [AccessAllCollections] = 1 
+        [AccessAll] = 1 
         OR [CollectionId] = @CollectionId
 END

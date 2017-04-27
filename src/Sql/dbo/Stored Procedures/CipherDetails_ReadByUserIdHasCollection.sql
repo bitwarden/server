@@ -13,11 +13,11 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
     LEFT JOIN
-        [dbo].[CollectionCipher] CC ON C.[UserId] IS NULL AND OU.[AccessAllCollections] = 0 AND CC.[CipherId] = C.[Id]
+        [dbo].[CollectionCipher] CC ON C.[UserId] IS NULL AND OU.[AccessAll] = 0 AND CC.[CipherId] = C.[Id]
     LEFT JOIN
         [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id]
     WHERE
         OU.[Status] = 2 -- 2 = Confirmed
         AND O.[Enabled] = 1
-        AND (OU.[AccessAllCollections] = 1 OR CU.[CollectionId] IS NOT NULL)
+        AND (OU.[AccessAll] = 1 OR CU.[CollectionId] IS NOT NULL)
 END

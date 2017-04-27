@@ -21,7 +21,7 @@ namespace Bit.Core.Services
         Task EnableAsync(Guid organizationId);
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            Enums.OrganizationUserType type, bool accessAllCollections, IEnumerable<CollectionUser> collections);
+            OrganizationUserType type, bool accessAll, IEnumerable<CollectionUser> collections);
         Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
