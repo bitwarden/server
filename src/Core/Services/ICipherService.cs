@@ -8,7 +8,8 @@ namespace Bit.Core.Services
 {
     public interface ICipherService
     {
-        Task SaveAsync(CipherDetails cipher, Guid savingUserId);
+        Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false);
+        Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);

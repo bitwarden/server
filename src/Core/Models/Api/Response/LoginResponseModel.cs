@@ -1,11 +1,12 @@
 ﻿using System;
 using Core.Models.Data;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(CipherDetails cipher, string obj = "login")
+        public LoginResponseModel(Cipher cipher, string obj = "login")
             : base(obj)
         {
             if(cipher == null)
@@ -22,14 +23,19 @@ namespace Bit.Core.Models.Api
 
             Id = cipher.Id.ToString();
             OrganizationId = cipher.OrganizationId?.ToString();
-            FolderId = cipher.FolderId?.ToString();
-            Favorite = cipher.Favorite;
             Name = data.Name;
             Uri = data.Uri;
             Username = data.Username;
             Password = data.Password;
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
+        }
+
+        public LoginResponseModel(CipherDetails cipher, string obj = "login")
+            : this(cipher as Cipher, obj)
+        {
+            FolderId = cipher.FolderId?.ToString();
+            Favorite = cipher.Favorite;
         }
 
         public string Id { get; set; }

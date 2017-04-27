@@ -10,6 +10,8 @@ namespace Bit.Core.Models.Api
     public class LoginRequestModel
     {
         [StringLength(36)]
+        public string OrganizationId { get; set; }
+        [StringLength(36)]
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         [Required]
@@ -33,7 +35,21 @@ namespace Bit.Core.Models.Api
         {
             return ToCipherDetails(new CipherDetails
             {
-                UserId = userId
+                UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
+                OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)null : new Guid(OrganizationId)
+            });
+        }
+
+        public Cipher ToOrganizationCipher()
+        {
+            if(string.IsNullOrWhiteSpace(OrganizationId))
+            {
+                throw new ArgumentNullException(nameof(OrganizationId));
+            }
+
+            return ToCipher(new Cipher
+            {
+                OrganizationId = new Guid(OrganizationId)
             });
         }
 
@@ -42,6 +58,15 @@ namespace Bit.Core.Models.Api
             existingLogin.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingLogin.Favorite = Favorite;
 
+            existingLogin.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
+                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            existingLogin.Type = Enums.CipherType.Login;
+
+            return existingLogin;
+        }
+
+        public Cipher ToCipher(Cipher existingLogin)
+        {
             existingLogin.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
                 new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             existingLogin.Type = Enums.CipherType.Login;

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -19,15 +20,18 @@ namespace Bit.Api.Controllers
         private readonly ICipherRepository _cipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
+        private readonly CurrentContext _currentContext;
 
         public LoginsController(
             ICipherRepository cipherRepository,
             ICipherService cipherService,
-            IUserService userService)
+            IUserService userService,
+            CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
             _cipherService = cipherService;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         [HttpGet("{id}")]
@@ -41,6 +45,20 @@ namespace Bit.Api.Controllers
             }
 
             var response = new LoginDetailsResponseModel(login);
+            return response;
+        }
+
+        [HttpGet("{id}/admin")]
+        public async Task<LoginResponseModel> GetAdmin(string id)
+        {
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(login == null || !login.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            var response = new LoginResponseModel(login);
             return response;
         }
 
@@ -59,7 +77,23 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var login = model.ToCipherDetails(userId);
-            await _cipherService.SaveAsync(login, userId);
+            await _cipherService.SaveDetailsAsync(login, userId);
+
+            var response = new LoginResponseModel(login);
+            return response;
+        }
+
+        [HttpPost("admin")]
+        public async Task<LoginResponseModel> PostAdmin([FromBody]LoginRequestModel model)
+        {
+            var login = model.ToOrganizationCipher();
+            if(!_currentContext.OrganizationAdmin(login.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SaveAsync(login, userId, true);
 
             var response = new LoginResponseModel(login);
             return response;
@@ -76,7 +110,25 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveAsync(model.ToCipherDetails(login), userId);
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(login), userId);
+
+            var response = new LoginResponseModel(login);
+            return response;
+        }
+
+        [HttpPut("{id}/admin")]
+        [HttpPost("{id}/admin")]
+        public async Task<LoginResponseModel> PutAdmin(string id, [FromBody]LoginRequestModel model)
+        {
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(login == null || !login.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SaveAsync(model.ToCipher(login), userId, true);
 
             var response = new LoginResponseModel(login);
             return response;

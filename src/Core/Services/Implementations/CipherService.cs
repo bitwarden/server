@@ -40,7 +40,31 @@ namespace Bit.Core.Services
             _pushService = pushService;
         }
 
-        public async Task SaveAsync(CipherDetails cipher, Guid savingUserId)
+        public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
+        {
+            if(!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to edit this.");
+            }
+
+            if(cipher.Id == default(Guid))
+            {
+                await _cipherRepository.CreateAsync(cipher);
+
+                // push
+                await _pushService.PushSyncCipherCreateAsync(cipher);
+            }
+            else
+            {
+                cipher.RevisionDate = DateTime.UtcNow;
+                await _cipherRepository.ReplaceAsync(cipher);
+
+                // push
+                await _pushService.PushSyncCipherUpdateAsync(cipher);
+            }
+        }
+
+        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId)
         {
             if(!(await UserCanEditAsync(cipher, savingUserId)))
             {
