@@ -900,10 +900,10 @@ namespace Bit.Core.Services
             var currentUserCollections = newUser ? null : await _collectionUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
 
             // Let's make sure all these belong to this user and organization.
-            var filteredCollections = collections.Where(s => orgCollections.Any(os => os.Id == s.CollectionId));
+            var filteredCollections = collections.Where(c => orgCollections.Any(os => os.Id == c.CollectionId));
             foreach(var collection in filteredCollections)
             {
-                var existingCollectionUser = currentUserCollections?.FirstOrDefault(cs => cs.CollectionId == collection.CollectionId);
+                var existingCollectionUser = currentUserCollections?.FirstOrDefault(cu => cu.CollectionId == collection.CollectionId);
                 if(existingCollectionUser != null)
                 {
                     collection.Id = existingCollectionUser.Id;
@@ -916,8 +916,8 @@ namespace Bit.Core.Services
 
             if(!newUser)
             {
-                var collectionsToDelete = currentUserCollections.Where(cs =>
-                    !filteredCollections.Any(s => s.CollectionId == cs.CollectionId));
+                var collectionsToDelete = currentUserCollections.Where(cu =>
+                    !filteredCollections.Any(c => c.CollectionId == cu.CollectionId));
                 foreach(var collection in collectionsToDelete)
                 {
                     await _collectionUserRepository.DeleteAsync(collection);

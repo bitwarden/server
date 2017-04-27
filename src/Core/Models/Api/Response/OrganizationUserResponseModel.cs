@@ -41,7 +41,7 @@ namespace Bit.Core.Models.Api
             : base(organizationUser, "organizationUserDetails")
         {
             Collections = new ListResponseModel<OrganizationUserCollectionResponseModel>(
-                collections.Select(s => new OrganizationUserCollectionResponseModel(s)));
+                collections.Select(c => new OrganizationUserCollectionResponseModel(c)));
         }
 
         public ListResponseModel<OrganizationUserCollectionResponseModel> Collections { get; set; }

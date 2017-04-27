@@ -79,7 +79,7 @@ namespace Bit.Core.Models.Api
         {
             if(collectionCiphers.ContainsKey(cipher.Id))
             {
-                CollectionIds = collectionCiphers[cipher.Id].Select(s => s.CollectionId);
+                CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }
             else
             {
@@ -91,7 +91,7 @@ namespace Bit.Core.Models.Api
             string obj = "cipherDetails")
             : base(cipher, obj)
         {
-            CollectionIds = collectionCiphers.Select(s => s.CollectionId);
+            CollectionIds = collectionCiphers.Select(c => c.CollectionId);
         }
 
         public IEnumerable<Guid> CollectionIds { get; set; }
@@ -105,7 +105,7 @@ namespace Bit.Core.Models.Api
         {
             if(collectionCiphers.ContainsKey(cipher.Id))
             {
-                CollectionIds = collectionCiphers[cipher.Id].Select(s => s.CollectionId);
+                CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }
             else
             {

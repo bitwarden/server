@@ -12,11 +12,11 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<CollectionUser> ToCollectionUsers()
         {
-            return Collections.Select(s => new CollectionUser
+            return Collections.Select(c => new CollectionUser
             {
                 OrganizationUserId = new Guid(UserId),
-                CollectionId = new Guid(s.CollectionId),
-                ReadOnly = s.ReadOnly
+                CollectionId = new Guid(c.CollectionId),
+                ReadOnly = c.ReadOnly
             });
         }
 

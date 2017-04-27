@@ -50,7 +50,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
                 userId);
-            var responses = logins.Select(s => new LoginResponseModel(s)).ToList();
+            var responses = logins.Select(l => new LoginResponseModel(l)).ToList();
             return new ListResponseModel<LoginResponseModel>(responses);
         }
 

@@ -97,7 +97,7 @@ namespace Bit.Api.Controllers
             var ciphers = await _cipherRepository.GetManyByUserIdHasCollectionsAsync(userId);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
-            var collectionCiphersGroupDict = collectionCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+            var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
             var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, collectionCiphersGroupDict));
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
@@ -116,7 +116,7 @@ namespace Bit.Api.Controllers
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var collectionCiphersGroupDict = collectionCiphers.GroupBy(s => s.CipherId).ToDictionary(s => s.Key);
+            var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, collectionCiphersGroupDict));
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
@@ -134,7 +134,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folderCiphers = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-            var otherCiphers = model.Logins.Select(s => s.ToCipherDetails(userId)).ToList();
+            var otherCiphers = model.Logins.Select(l => l.ToCipherDetails(userId)).ToList();
 
             await _cipherService.ImportCiphersAsync(
                 folderCiphers,
@@ -179,7 +179,7 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.ShareAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
-                model.CollectionIds.Select(s => new Guid(s)), userId);
+                model.CollectionIds.Select(c => new Guid(c)), userId);
         }
 
         [HttpPut("{id}/collections")]
@@ -194,7 +194,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(s => new Guid(s)), userId, false);
+            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(c => new Guid(c)), userId, false);
         }
 
         [HttpPut("{id}/collections-admin")]
@@ -209,7 +209,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(s => new Guid(s)), userId, true);
+            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(c => new Guid(c)), userId, true);
         }
 
         [HttpDelete("{id}")]

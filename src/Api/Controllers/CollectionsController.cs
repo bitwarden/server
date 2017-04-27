@@ -54,7 +54,7 @@ namespace Bit.Api.Controllers
             }
 
             var collections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = collections.Select(s => new CollectionResponseModel(s));
+            var responses = collections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<CollectionResponseModel>> GetUser()
         {
             var collections = await _collectionRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-            var responses = collections.Select(s => new CollectionResponseModel(s));
+            var responses = collections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
 

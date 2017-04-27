@@ -43,7 +43,7 @@ namespace Bit.Api.Controllers
             }
 
             var collectionUsers = await _collectionUserRepository.GetManyDetailsByCollectionIdAsync(collectionIdGuid);
-            var responses = collectionUsers.Select(s => new CollectionUserResponseModel(s));
+            var responses = collectionUsers.Select(c => new CollectionUserResponseModel(c));
             return new ListResponseModel<CollectionUserResponseModel>(responses);
         }
 
