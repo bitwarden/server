@@ -50,6 +50,9 @@ namespace Bit.Billing
             // Repositories
             services.AddSqlServerRepositories();
 
+            // Context
+            services.AddScoped<CurrentContext>();
+
             // Services
             services.AddBaseServices();
             services.AddDefaultServices();

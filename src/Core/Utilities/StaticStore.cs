@@ -111,7 +111,8 @@ namespace Bit.Core.Utilities
                     Name = "Personal",
                     StripePlanId = "personal-org-annually",
                     StripeSeatPlanId = "personal-org-seat-annually",
-                    UpgradeSortOrder = 1
+                    UpgradeSortOrder = 1,
+                    TrialPeriodDays = 7
                 },
                 new Plan
                 {
@@ -123,7 +124,8 @@ namespace Bit.Core.Utilities
                     Name = "Teams (Monthly)",
                     StripePlanId = "teams-org-monthly",
                     StripeSeatPlanId = "teams-org-seat-monthly",
-                    UpgradeSortOrder = 2
+                    UpgradeSortOrder = 2,
+                    TrialPeriodDays = 7
                 },
                 new Plan
                 {
@@ -135,7 +137,8 @@ namespace Bit.Core.Utilities
                     Name = "Teams (Annually)",
                     StripePlanId = "teams-org-annually",
                     StripeSeatPlanId = "teams-org-seat-annually",
-                    UpgradeSortOrder = 2
+                    UpgradeSortOrder = 2,
+                    TrialPeriodDays = 7
                 }
             };
 

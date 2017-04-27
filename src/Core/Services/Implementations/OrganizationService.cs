@@ -287,6 +287,7 @@ namespace Bit.Core.Services
                 // They must have been on a free plan. Create new sub.
                 var subCreateOptions = new StripeSubscriptionCreateOptions
                 {
+                    TrialPeriodDays = newPlan.TrialPeriodDays,
                     Items = new List<StripeSubscriptionItemOption>
                     {
                         new StripeSubscriptionItemOption
@@ -504,6 +505,7 @@ namespace Bit.Core.Services
 
                 var subCreateOptions = new StripeSubscriptionCreateOptions
                 {
+                    TrialPeriodDays = plan.TrialPeriodDays,
                     Items = new List<StripeSubscriptionItemOption>
                     {
                         new StripeSubscriptionItemOption

@@ -16,5 +16,6 @@ namespace Bit.Core.Models.StaticStore
         public short? MaxSubvaults { get; set; }
         public int UpgradeSortOrder { get; set; }
         public bool Disabled { get; set; }
+        public int? TrialPeriodDays { get; set; }
     }
 }
