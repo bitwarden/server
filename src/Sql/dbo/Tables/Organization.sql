@@ -6,7 +6,7 @@
     [Plan]                 NVARCHAR (20)    NOT NULL,
     [PlanType]             TINYINT          NOT NULL,
     [Seats]                SMALLINT         NULL,
-    [MaxCollections]         SMALLINT         NULL,
+    [MaxCollections]       SMALLINT         NULL,
     [StripeCustomerId]     VARCHAR (50)     NULL,
     [StripeSubscriptionId] VARCHAR (50)     NULL,
     [Enabled]              BIT              NOT NULL,
