@@ -18,6 +18,7 @@ namespace Bit.Core.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IMailService _mailService;
         private readonly IPushService _pushService;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
@@ -29,6 +30,7 @@ namespace Bit.Core.Services
         public UserService(
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IMailService mailService,
             IPushService pushService,
             IUserStore<User> store,
@@ -54,6 +56,7 @@ namespace Bit.Core.Services
         {
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
+            _organizationUserRepository = organizationUserRepository;
             _mailService = mailService;
             _pushService = pushService;
             _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
@@ -133,6 +136,22 @@ namespace Bit.Core.Services
             await _pushService.PushSyncSettingsAsync(user.Id);
         }
 
+        public override async Task<IdentityResult> DeleteAsync(User user)
+        {
+            // Check if user is the owner of any organizations.
+            var organizationOwnerCount = await _organizationUserRepository.GetCountByOrganizationOwnerUserAsync(user.Id);
+            if(organizationOwnerCount > 0)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Description = "You must leave or delete any organizations that you are the owner of first."
+                });
+            }
+
+            await _userRepository.DeleteAsync(user);
+            return IdentityResult.Success;
+        }
+
         public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
         {
             var result = await base.CreateAsync(user, masterPassword);
@@ -184,7 +203,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
             }
 
-            if(!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider, 
+            if(!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
                 GetChangeEmailTokenPurpose(newEmail), token))
             {
                 return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
@@ -224,7 +243,7 @@ namespace Bit.Core.Services
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, 
+        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey)
         {
             if(user == null)
@@ -373,7 +392,7 @@ namespace Bit.Core.Services
 
             if(errors.Count > 0)
             {
-                Logger.LogWarning("User {userId} password validation failed: {errors}.", await GetUserIdAsync(user), 
+                Logger.LogWarning("User {userId} password validation failed: {errors}.", await GetUserIdAsync(user),
                     string.Join(";", errors.Select(e => e.Code)));
                 return IdentityResult.Failed(errors.ToArray());
             }

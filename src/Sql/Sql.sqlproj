@@ -179,5 +179,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationOwnerUser.sql" />
   </ItemGroup>
 </Project>

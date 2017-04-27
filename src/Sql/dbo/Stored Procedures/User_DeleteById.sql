@@ -6,6 +6,7 @@ BEGIN
     SET NOCOUNT ON
     DECLARE @BatchSize INT = 100
 
+    -- Delete ciphers
     WHILE @BatchSize > 0
     BEGIN
         BEGIN TRANSACTION User_DeleteById_Ciphers
@@ -23,12 +24,25 @@ BEGIN
 
     BEGIN TRANSACTION User_DeleteById
 
+    -- Delete collection users
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
+    WHERE
+        OU.[UserId] = @Id
+
+    -- Delete organization users
     DELETE
     FROM
-        [dbo].[Device]
+        [dbo].[OrganizationUser]
     WHERE
         [UserId] = @Id
+        AND [Type] != 0 -- 0 = owner
 
+    -- Finally, delete the user
     DELETE
     FROM
         [dbo].[User]

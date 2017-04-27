@@ -47,6 +47,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<int> GetCountByOrganizationOwnerUserAsync(Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteScalarAsync<int>(
+                    "[dbo].[OrganizationUser_ReadCountByOrganizationOwnerUser]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results;
+            }
+        }
+
         public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email)
         {
             using(var connection = new SqlConnection(ConnectionString))
