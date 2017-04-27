@@ -18,14 +18,14 @@ BEGIN
     LEFT JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
     LEFT JOIN
-        [dbo].[CollectionCipher] SC ON C.[UserId] IS NULL AND OU.[AccessAllCollections] = 0 AND SC.[CipherId] = C.[Id]
+        [dbo].[CollectionCipher] CC ON C.[UserId] IS NULL AND OU.[AccessAllCollections] = 0 AND CC.[CipherId] = C.[Id]
     LEFT JOIN
-        [dbo].[CollectionUser] SU ON SU.[CollectionId] = SC.[CollectionId] AND SU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id]
     WHERE
         C.[UserId] = @UserId
         OR (
             C.[UserId] IS NULL
-            AND (OU.[AccessAllCollections] = 1 OR SU.[CollectionId] IS NOT NULL)
+            AND (OU.[AccessAllCollections] = 1 OR CU.[CollectionId] IS NOT NULL)
         )
         AND C.[Folders] IS NOT NULL
         AND JSON_VALUE(C.[Folders], @UserIdPath) = @Id

@@ -1,12 +1,12 @@
 ﻿CREATE VIEW [dbo].[CollectionUserCollectionDetailsView]
 AS
 SELECT
-    SU.[Id],
-    SU.[OrganizationUserId],
+    CU.[Id],
+    CU.[OrganizationUserId],
     S.[Name],
     S.[Id] CollectionId,
-    SU.[ReadOnly]
+    CU.[ReadOnly]
 FROM
-    [dbo].[CollectionUser] SU
+    [dbo].[CollectionUser] CU
 INNER JOIN
-    [dbo].[Collection] S ON S.[Id] = SU.[CollectionId]
+    [dbo].[Collection] S ON S.[Id] = CU.[CollectionId]
