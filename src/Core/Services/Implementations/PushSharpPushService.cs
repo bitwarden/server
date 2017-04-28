@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Services
 {
@@ -21,20 +22,20 @@ namespace Bit.Core.Services
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILogger<IPushService> _logger;
-        private readonly CurrentContext _currentContext;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private GcmServiceBroker _gcmBroker;
         private ApnsServiceBroker _apnsBroker;
 
         public PushSharpPushService(
             IDeviceRepository deviceRepository,
+            IHttpContextAccessor httpContextAccessor,
             ILogger<IPushService> logger,
-            CurrentContext currentContext,
             IHostingEnvironment hostingEnvironment,
             GlobalSettings globalSettings)
         {
             _deviceRepository = deviceRepository;
+            _httpContextAccessor = httpContextAccessor;
             _logger = logger;
-            _currentContext = currentContext;
 
             InitGcmBroker(globalSettings);
             InitApnsBroker(globalSettings, hostingEnvironment);
@@ -96,9 +97,11 @@ namespace Bit.Core.Services
             };
 
             var excludedTokens = new List<string>();
-            if(!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+            var currentContext = _httpContextAccessor?.HttpContext?.
+                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+            if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
-                excludedTokens.Add(_currentContext.DeviceIdentifier);
+                excludedTokens.Add(currentContext.DeviceIdentifier);
             }
 
             await PushToAllUserDevicesAsync(cipher.UserId.Value, JObject.FromObject(message), excludedTokens);
@@ -116,9 +119,11 @@ namespace Bit.Core.Services
             };
 
             var excludedTokens = new List<string>();
-            if(!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+            var currentContext = _httpContextAccessor?.HttpContext?.
+                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+            if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
-                excludedTokens.Add(_currentContext.DeviceIdentifier);
+                excludedTokens.Add(currentContext.DeviceIdentifier);
             }
 
             await PushToAllUserDevicesAsync(folder.UserId, JObject.FromObject(message), excludedTokens);

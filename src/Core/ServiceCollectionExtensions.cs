@@ -25,23 +25,23 @@ namespace Bit.Core
         {
             services.AddSingleton<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IDeviceService, DeviceService>();
-            services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<ICollectionService, CollectionService>();
+            services.AddSingleton<IDeviceService, DeviceService>();
+            services.AddSingleton<IOrganizationService, OrganizationService>();
+            services.AddSingleton<ICollectionService, CollectionService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services)
         {
             services.AddSingleton<IMailService, SendGridMailService>();
-            services.AddScoped<IPushService, PushSharpPushService>();
-            services.AddScoped<IBlockIpService, AzureQueueBlockIpService>();
+            services.AddSingleton<IPushService, PushSharpPushService>();
+            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
         }
 
         public static void AddNoopServices(this IServiceCollection services)
         {
             services.AddSingleton<IMailService, NoopMailService>();
-            services.AddScoped<IPushService, NoopPushService>();
-            services.AddScoped<IBlockIpService, NoopBlockIpService>();
+            services.AddSingleton<IPushService, NoopPushService>();
+            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
         }
     }
 }
