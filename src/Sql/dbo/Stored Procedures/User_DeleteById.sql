@@ -24,6 +24,20 @@ BEGIN
 
     BEGIN TRANSACTION User_DeleteById
 
+    -- Delete folders
+    DELETE
+    FROM
+        [dbo].[Folder]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete devices
+    DELETE
+    FROM
+        [dbo].[Device]
+    WHERE
+        [UserId] = @Id
+
     -- Delete collection users
     DELETE
         CU
