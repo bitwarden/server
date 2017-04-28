@@ -192,7 +192,14 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.Parameters.Add("@EmailVerified", SqlDbType.NVarChar).Value = user.EmailVerified;
                             cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
-                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
+                            if(string.IsNullOrWhiteSpace(user.PrivateKey))
+                            {
+                                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
+                            }
+                            else
+                            {
+                                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
+                            }
                             cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
                             cmd.ExecuteNonQuery();
                         }
