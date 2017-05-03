@@ -15,6 +15,7 @@ namespace Bit.Core.Models.Api
         public string BusinessName { get; set; }
         [Required]
         [StringLength(50)]
+        [EmailAddress]
         public string BillingEmail { get; set; }
         public PlanType PlanType { get; set; }
         [Required]
