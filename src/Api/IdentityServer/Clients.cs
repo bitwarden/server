@@ -9,22 +9,30 @@ namespace Bit.Api.IdentityServer
         {
             return new List<Client>
             {
-                new ApiClient("mobile"),
-                new ApiClient("web"),
-                new ApiClient("browser"),
-                new ApiClient("desktop")
+                new ApiClient("mobile", 90, 1),
+                new ApiClient("web", 1, 1),
+                new ApiClient("browser", 30, 1),
+                new ApiClient("desktop", 30, 1)
             };
         }
 
         public class ApiClient : Client
         {
-            public ApiClient(string id, string[] additionalScopes = null)
+            public ApiClient(
+                string id,
+                int refreshTokenSlidingDays,
+                int accessTokenLifetimeHours,
+                string[] additionalScopes = null)
             {
                 ClientId = id;
                 RequireClientSecret = false;
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword;
+                RefreshTokenExpiration = TokenExpiration.Sliding;
+                RefreshTokenUsage = TokenUsage.ReUse;
+                SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
+                AbsoluteRefreshTokenLifetime = int.MaxValue; // forever
                 UpdateAccessTokenClaimsOnRefresh = true;
-                AccessTokenLifetime = 60 * 60; // 1 hour
+                AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;
 
                 var scopes = new List<string> { "api" };
