@@ -22,10 +22,12 @@ BEGIN
     LEFT JOIN
         [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id]
     WHERE
-        C.[UserId] = @UserId
-        OR (
-            C.[UserId] IS NULL
-            AND (OU.[AccessAll] = 1 OR CU.[CollectionId] IS NOT NULL)
+        (
+            C.[UserId] = @UserId
+            OR (
+                C.[UserId] IS NULL
+                AND (OU.[AccessAll] = 1 OR CU.[CollectionId] IS NOT NULL)
+            )
         )
         AND C.[Folders] IS NOT NULL
         AND JSON_VALUE(C.[Folders], @UserIdPath) = @Id
