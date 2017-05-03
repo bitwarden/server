@@ -59,17 +59,6 @@ namespace Bit.Core.Models.Api
 
             return existingCipher;
         }
-
-        [Obsolete]
-        public Folder ToFolder(Guid userId)
-        {
-            return new Folder
-            {
-                Id = new Guid(Id),
-                UserId = userId,
-                Name = Name
-            };
-        }
     }
 
     public class CipherShareRequestModel : IValidatableObject

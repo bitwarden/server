@@ -10,7 +10,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
-using System.Collections;
 
 namespace Bit.Api.Controllers
 {
@@ -76,32 +75,16 @@ namespace Bit.Api.Controllers
 
         [HttpPut("email")]
         [HttpPost("email")]
-        public async Task PutEmail([FromBody]EmailRequestModel_Old model)
+        public async Task PutEmail([FromBody]EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
 
-            //var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
-            //var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
+            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
+            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
 
-            //var result = await _userService.ChangeEmailAsync(
-            //    user,
-            //    model.MasterPasswordHash,
-            //    model.NewEmail,
-            //    model.NewMasterPasswordHash,
-            //    model.Token,
-            //    ciphers,
-            //    folders,
-            //    model.Data.PrivateKey);
-
-            //
-            // NOTE: Temporary backwards compat. Remove the below and uncomment the above whenever web vault v1.10.0 is released
-            //
-
-            var ciphers = model.Ciphers.Where(c => c.Type == CipherType.Login).Select(c => c.ToCipher(user.Id));
-            var folders = model.Ciphers.Where(c => c.Type == CipherType.Folder).Select(c => c.ToFolder(user.Id));
             var result = await _userService.ChangeEmailAsync(
                 user,
                 model.MasterPasswordHash,
@@ -110,7 +93,7 @@ namespace Bit.Api.Controllers
                 model.Token,
                 ciphers,
                 folders,
-                null);
+                model.Data.PrivateKey);
 
             if(result.Succeeded)
             {
@@ -128,37 +111,23 @@ namespace Bit.Api.Controllers
 
         [HttpPut("password")]
         [HttpPost("password")]
-        public async Task PutPassword([FromBody]PasswordRequestModel_Old model)
+        public async Task PutPassword([FromBody]PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
 
-            //var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
-            //var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
+            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
+            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
 
-            //var result = await _userService.ChangePasswordAsync(
-            //    user,
-            //    model.MasterPasswordHash,
-            //    model.NewMasterPasswordHash,
-            //    ciphers,
-            //    folders,
-            //    model.Data.PrivateKey);
-
-            //
-            // NOTE: Temporary backwards compat. Remove the below and uncomment the above whenever web vault v1.10.0 is released
-            //
-
-            var ciphers = model.Ciphers.Where(c => c.Type == CipherType.Login).Select(c => c.ToCipher(user.Id));
-            var folders = model.Ciphers.Where(c => c.Type == CipherType.Folder).Select(c => c.ToFolder(user.Id));
             var result = await _userService.ChangePasswordAsync(
                 user,
                 model.MasterPasswordHash,
                 model.NewMasterPasswordHash,
                 ciphers,
                 folders,
-                null);
+                model.Data.PrivateKey);
 
             if(result.Succeeded)
             {
