@@ -222,51 +222,67 @@ namespace Bit.Core.Repositories.SqlServer
 
                         // 3. Bulk bopy into temp tables.
 
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if(ciphers.Any())
                         {
-                            bulkCopy.DestinationTableName = "#TempCipher";
-                            var dataTable = BuildCiphersTable(ciphers);
-                            bulkCopy.WriteToServer(dataTable);
+                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "#TempCipher";
+                                var dataTable = BuildCiphersTable(ciphers);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
 
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if(folders.Any())
                         {
-                            bulkCopy.DestinationTableName = "#TempFolder";
-                            var dataTable = BuildFoldersTable(folders);
-                            bulkCopy.WriteToServer(dataTable);
+                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "#TempFolder";
+                                var dataTable = BuildFoldersTable(folders);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
 
                         // 4. Insert into real tables from temp tables and clean up.
 
-                        var sqlUpdate = @"
-                            UPDATE
-                                [dbo].[Cipher]
-                            SET
-                                [Data] = TC.[Data],
-                                [RevisionDate] = TC.[RevisionDate]
-                            FROM
-                                [dbo].[Cipher] C
-                            INNER JOIN
-                                #TempCipher TC ON C.Id = TC.Id
-                            WHERE
-                                C.[UserId] = @UserId
+                        var sql = string.Empty;
 
-                            UPDATE
-                                [dbo].[Folder]
-                            SET
-                                [Name] = TF.[Name],
-                                [RevisionDate] = TF.[RevisionDate]
-                            FROM
-                                [dbo].[Folder] F
-                            INNER JOIN
-                                #TempFolder TF ON F.Id = TF.Id
-                            WHERE
-                                F.[UserId] = @UserId
+                        if(ciphers.Any())
+                        {
+                            sql += @"
+                                UPDATE
+                                    [dbo].[Cipher]
+                                SET
+                                    [Data] = TC.[Data],
+                                    [RevisionDate] = TC.[RevisionDate]
+                                FROM
+                                    [dbo].[Cipher] C
+                                INNER JOIN
+                                    #TempCipher TC ON C.Id = TC.Id
+                                WHERE
+                                    C.[UserId] = @UserId";
+                        }
 
+                        if(folders.Any())
+                        {
+                            sql += @"
+                                UPDATE
+                                    [dbo].[Folder]
+                                SET
+                                    [Name] = TF.[Name],
+                                    [RevisionDate] = TF.[RevisionDate]
+                                FROM
+                                    [dbo].[Folder] F
+                                INNER JOIN
+                                    #TempFolder TF ON F.Id = TF.Id
+                                WHERE
+                                    F.[UserId] = @UserId";
+                        }
+
+                        sql += @"
                             DROP TABLE #TempCipher
                             DROP TABLE #TempFolder";
 
-                        using(var cmd = new SqlCommand(sqlUpdate, connection, transaction))
+                        using(var cmd = new SqlCommand(sql, connection, transaction))
                         {
                             cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = user.Id;
                             cmd.ExecuteNonQuery();
