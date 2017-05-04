@@ -42,7 +42,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var collectionUsers = await _collectionUserRepository.GetManyDetailsByCollectionIdAsync(collectionIdGuid);
+            var collectionUsers = await _collectionUserRepository.GetManyDetailsByCollectionIdAsync(collection.OrganizationId,
+                collection.Id);
             var responses = collectionUsers.Select(c => new CollectionUserResponseModel(c));
             return new ListResponseModel<CollectionUserResponseModel>(responses);
         }

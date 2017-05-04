@@ -1,10 +1,9 @@
 ﻿CREATE PROCEDURE [dbo].[CollectionUserUserDetails_ReadByCollectionId]
-    @CollectionId UNIQUEIDENTIFIER
+    @CollectionId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
-
-    DECLARE @OrganizationId UNIQUEIDENTIFIER = (SELECT [OrganizationId] FROM [dbo].[Collection] WHERE [Id] = @CollectionId)
 
     SELECT
         *

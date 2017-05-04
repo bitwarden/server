@@ -46,13 +46,14 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid collectionId)
+        public async Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid organizationId,
+            Guid collectionId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CollectionUserUserDetails>(
                     $"[{Schema}].[CollectionUserUserDetails_ReadByCollectionId]",
-                    new { CollectionId = collectionId },
+                    new { OrganizationId = organizationId, CollectionId = collectionId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
