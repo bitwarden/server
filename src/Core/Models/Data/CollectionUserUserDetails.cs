@@ -6,6 +6,7 @@ namespace Bit.Core.Models.Data
     {
         public Guid? Id { get; set; }
         public Guid OrganizationUserId { get; set; }
+        public Guid? OrganizationId { get; set; }
         public Guid? CollectionId { get; set; }
         public bool AccessAll { get; set; }
         public string Name { get; set; }

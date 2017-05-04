@@ -2,6 +2,7 @@
 AS
 SELECT
     OU.[Id] AS [OrganizationUserId],
+    OU.[OrganizationId],
     OU.[AccessAll],
     CU.[Id],
     CU.[CollectionId],

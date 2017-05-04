@@ -4,11 +4,17 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @OrganizationId UNIQUEIDENTIFIER = (SELECT [OrganizationId] FROM [dbo].[Collection] WHERE [Id] = @CollectionId)
+
     SELECT
         *
     FROM
         [dbo].[CollectionUserUserDetailsView]
     WHERE
-        [AccessAll] = 1 
-        OR [CollectionId] = @CollectionId
+        [CollectionId] = @CollectionId
+        OR
+        (
+            [OrganizationId] = @OrganizationId
+            AND [AccessAll] = 1
+        )
 END
