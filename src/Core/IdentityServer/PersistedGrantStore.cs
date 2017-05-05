@@ -7,7 +7,7 @@ using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 
-namespace Bit.Api.IdentityServer
+namespace Bit.Core.IdentityServer
 {
     public class PersistedGrantStore : IPersistedGrantStore
     {

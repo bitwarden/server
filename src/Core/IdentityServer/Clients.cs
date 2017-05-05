@@ -1,7 +1,7 @@
 ﻿using IdentityServer4.Models;
 using System.Collections.Generic;
 
-namespace Bit.Api.IdentityServer
+namespace Bit.Core.IdentityServer
 {
     public class Clients
     {

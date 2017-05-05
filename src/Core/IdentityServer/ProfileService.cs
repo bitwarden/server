@@ -10,7 +10,7 @@ using System.Linq;
 using Microsoft.Extensions.Options;
 using System;
 
-namespace Bit.Api.IdentityServer
+namespace Bit.Core.IdentityServer
 {
     public class ProfileService : IProfileService
     {

@@ -1,7 +1,7 @@
 ﻿using IdentityServer4.Services;
 using System.Threading.Tasks;
 
-namespace Bit.Api.IdentityServer
+namespace Bit.Core.IdentityServer
 {
     public class AllowAllCorsPolicyService : ICorsPolicyService
     {

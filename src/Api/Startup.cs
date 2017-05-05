@@ -26,7 +26,7 @@ using IdentityServer4.Stores;
 using Bit.Core.Utilities;
 using Serilog;
 using Serilog.Events;
-using Bit.Api.IdentityServer;
+using Bit.Core.IdentityServer;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.WindowsAzure.Storage;
