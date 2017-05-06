@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Bit.Core.Utilities
 {
     /// <summary>
-    /// Validates a string that is in encrypted form: "b64iv=|b64ct="
+    /// Validates a string that is in encrypted form: "head.b64iv=|b64ct=|b64mac="
     /// </summary>
     public class EncryptedStringAttribute : ValidationAttribute
     {
