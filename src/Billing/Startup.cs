@@ -29,6 +29,7 @@ namespace Bit.Billing
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
 
             // Stripe Billing
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
