@@ -89,14 +89,14 @@ namespace Bit.Api
             {
                 config.AddPolicy("Application", policy =>
                 {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2");
+                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2", "Bearer3");
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.AuthenticationMethod);
                 });
 
                 config.AddPolicy("TwoFactor", policy =>
                 {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2");
+                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2", "Bearer3");
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.TwoFactorAuthenticationMethod);
                 });
@@ -172,7 +172,10 @@ namespace Bit.Api
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
-            app.UseIdentityServerAuthentication(GetIdentityOptions(env));
+            app.UseIdentityServerAuthentication(
+                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4000"), "2"));
+            app.UseIdentityServerAuthentication(
+                GetIdentityOptions(env, IdentityServerAuthority(env, "identity", "33656"), "3"));
 
             // Add Jwt authentication to the request pipeline.
             app.UseJwtBearerIdentity();
@@ -184,35 +187,40 @@ namespace Bit.Api
             app.UseMvc();
         }
 
-        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env)
+        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env, 
+            string authority, string suffix)
         {
             var options = new IdentityServerAuthenticationOptions
             {
+                Authority = authority,
                 AllowedScopes = new string[] { "api" },
                 RequireHttpsMetadata = env.IsProduction(),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
-                // Version "2" until we retire the old jwt scheme and replace it with this one.
-                AuthenticationScheme = "Bearer2",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer2", "access_token2")
+                // Suffix until we retire the old jwt schemes.
+                AuthenticationScheme = $"Bearer{suffix}",
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString(
+                    $"Bearer{suffix}", $"access_token{suffix}")
             };
 
+            return options;
+        }
+
+        private string IdentityServerAuthority(IHostingEnvironment env, string subdomain, string port)
+        {
             if(env.IsProduction())
             {
-                options.Authority = "https://api.bitwarden.com";
+                return $"https://{subdomain}.bitwarden.com";
             }
             else if(env.IsEnvironment("Preview"))
             {
-                options.Authority = "https://preview-api.bitwarden.com";
+                return $"https://preview-{subdomain}.bitwarden.com";
             }
             else
             {
-                options.Authority = "http://localhost:4000";
-                //options.Authority = "http://169.254.80.80:4000"; // for VS Android Emulator
-                //options.Authority = "http://192.168.1.8:4000"; // Desktop external
+                return $"http://localhost:{port}";
+                //return $"http://192.168.1.8:{port}"; // Desktop external
             }
-
-            return options;
         }
     }
 }
