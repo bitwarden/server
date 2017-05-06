@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,26 +10,17 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.Models.Table;
 using Bit.Core.Identity;
-using System.Text;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Bit.Api.Middleware;
-using IdentityServer4.Validation;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
-using Bit.Core.Utilities;
-using Serilog;
 using Serilog.Events;
 using Bit.Core.IdentityServer;
-using Bit.Core.Enums;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.WindowsAzure.Storage;
 using Stripe;
+using Bit.Core.Utilities;
 
 namespace Bit.Api
 {
@@ -65,21 +55,12 @@ namespace Bit.Api
             services.AddOptions();
 
             // Settings
-            var globalSettings = new GlobalSettings();
-            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
-            services.AddSingleton(s => globalSettings);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration);
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
             services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
 
             // Data Protection
-            if(Environment.IsProduction())
-            {
-                var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                services.AddDataProtection()
-                    .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
-                    .ProtectKeysWithCertificate(dataProtectionCert);
-            }
+            services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
@@ -98,69 +79,10 @@ namespace Bit.Api
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
             // IdentityServer
-            var identityServerBuilder = services.AddIdentityServer(options =>
-            {
-                options.Endpoints.EnableAuthorizeEndpoint = false;
-                options.Endpoints.EnableIntrospectionEndpoint = false;
-                options.Endpoints.EnableEndSessionEndpoint = false;
-                options.Endpoints.EnableUserInfoEndpoint = false;
-                options.Endpoints.EnableCheckSessionEndpoint = false;
-                options.Endpoints.EnableTokenRevocationEndpoint = false;
-            })
-                .AddInMemoryApiResources(ApiResources.GetApiResources())
-                .AddInMemoryClients(Clients.GetClients());
-            services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
-
-            if(Environment.IsProduction())
-            {
-                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else
-            {
-                identityServerBuilder.AddTemporarySigningCredential();
-            }
-
-            services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
-            services.AddScoped<IProfileService, ProfileService>();
-            services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
+            services.AddCustomIdentityServerServices(Environment, globalSettings);
 
             // Identity
-            services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
-            services.AddJwtBearerIdentity(options =>
-            {
-                options.User = new UserOptions
-                {
-                    RequireUniqueEmail = true,
-                    AllowedUserNameCharacters = null // all
-                };
-                options.Password = new PasswordOptions
-                {
-                    RequireDigit = false,
-                    RequireLowercase = false,
-                    RequiredLength = 8,
-                    RequireNonAlphanumeric = false,
-                    RequireUppercase = false
-                };
-                options.ClaimsIdentity = new ClaimsIdentityOptions
-                {
-                    SecurityStampClaimType = "securitystamp",
-                    UserNameClaimType = ClaimTypes.Email
-                };
-                options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
-            }, jwtBearerOptions =>
-            {
-                jwtBearerOptions.Audience = "bitwarden";
-                jwtBearerOptions.Issuer = "bitwarden";
-                jwtBearerOptions.TokenLifetime = TimeSpan.FromDays(10 * 365);
-                jwtBearerOptions.TwoFactorTokenLifetime = TimeSpan.FromMinutes(10);
-                var keyBytes = Encoding.ASCII.GetBytes(globalSettings.JwtSigningKey);
-                jwtBearerOptions.SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256);
-            })
-            .AddUserStore<UserStore>()
-            .AddRoleStore<RoleStore>()
-            .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
-            .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
+            services.AddCustomIdentityServices(globalSettings);
 
             var jwtIdentityOptions = provider.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;
             services.AddAuthorization(config =>
@@ -215,9 +137,8 @@ namespace Bit.Api
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            if(env.IsProduction())
-            {
-                Func<LogEvent, bool> serilogFilter = (e) =>
+            loggerFactory
+                .AddSerilog(env, appLifetime, globalSettings, (e) =>
                 {
                     var context = e.Properties["SourceContext"].ToString();
                     if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
@@ -237,20 +158,8 @@ namespace Bit.Api
                     }
 
                     return e.Level >= LogEventLevel.Error;
-                };
-
-                var serilog = new LoggerConfiguration()
-                    .Enrich.FromLogContext()
-                    .Filter.ByIncludingOnly(serilogFilter)
-                    .WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
-                        timeToLive: TimeSpan.FromDays(7))
-                    .CreateLogger();
-
-                loggerFactory.AddSerilog(serilog);
-                appLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
-            }
-
-            loggerFactory.AddDebug();
+                })
+                .AddDebug();
 
             // Rate limiting
             app.UseMiddleware<CustomIpRateLimitMiddleware>();

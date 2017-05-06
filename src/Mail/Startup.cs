@@ -10,7 +10,6 @@ namespace Bit.Mail
         public void Configure(IApplicationBuilder app)
         {
             app.UseFileServer();
-            app.UseBrowserLink();
         }
     }
 }

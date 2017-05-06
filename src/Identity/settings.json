@@ -31,8 +31,5 @@
       "uri": "SECRET",
       "key": "SECRET"
     }
-  },
-  "billingSettings": {
-    "stripeWebhookKey": "SECRET"
   }
 }

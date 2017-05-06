@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Bit.Core;
 using Stripe;
+using Bit.Core.Utilities;
+using Serilog.Events;
 
 namespace Bit.Billing
 {
@@ -39,10 +38,7 @@ namespace Bit.Billing
             services.AddOptions();
 
             // Settings
-            var globalSettings = new GlobalSettings();
-            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), globalSettings);
-            services.AddSingleton(s => globalSettings);
-            services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
+            var globalSettings = services.AddGlobalSettingsServices(Configuration);
 
             // Stripe Billing
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
@@ -61,10 +57,17 @@ namespace Bit.Billing
             services.AddMvc();
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(
+            IApplicationBuilder app,
+            IHostingEnvironment env,
+            IApplicationLifetime appLifetime,
+            GlobalSettings globalSettings,
+            ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
+            loggerFactory
+                .AddSerilog(env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error)
+                .AddConsole()
+                .AddDebug();
 
             app.UseMvc();
         }
