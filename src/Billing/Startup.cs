@@ -16,17 +16,7 @@ namespace Bit.Billing
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("settings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true);
-
-            if(env.IsDevelopment())
-            {
-                builder.AddUserSecrets<Startup>();
-            }
-
-            builder.AddEnvironmentVariables();
-
+                .AddSettingsConfiguration<Startup>(env);
             Configuration = builder.Build();
         }
 

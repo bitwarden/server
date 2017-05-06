@@ -29,17 +29,7 @@ namespace Bit.Api
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("settings.json")
-                .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true);
-
-            if(env.IsDevelopment())
-            {
-                builder.AddUserSecrets<Startup>();
-            }
-
-            builder.AddEnvironmentVariables();
-
+                .AddSettingsConfiguration<Startup>(env);
             Configuration = builder.Build();
             Environment = env;
         }

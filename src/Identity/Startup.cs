@@ -1,7 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
@@ -16,17 +15,7 @@ namespace Bit.Identity
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("settings.json")
-                .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true);
-
-            if(env.IsDevelopment())
-            {
-                builder.AddUserSecrets<Startup>();
-            }
-
-            builder.AddEnvironmentVariables();
-
+                .AddSettingsConfiguration<Startup>(env);
             Configuration = builder.Build();
             Environment = env;
         }
@@ -74,18 +63,8 @@ namespace Bit.Identity
                 .AddConsole()
                 .AddDebug();
 
-            if(env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
-
-            app.Run(async (context) =>
-            {
-                await context.Response.WriteAsync("Hello World!");
-            });
         }
     }
 }
