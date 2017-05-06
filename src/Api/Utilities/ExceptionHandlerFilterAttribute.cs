@@ -15,7 +15,7 @@ namespace Bit.Api.Utilities
     {
         public override void OnException(ExceptionContext context)
         {
-            var errorModel = new ErrorResponseModel("An error has occured.");
+            var errorModel = new ErrorResponseModel("An error has occurred.");
 
             var exception = context.Exception;
             if(exception == null)
@@ -63,7 +63,7 @@ namespace Bit.Api.Utilities
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
                 logger.LogError(0, exception, exception.Message);
 
-                errorModel.Message = "An unhandled server error has occured.";
+                errorModel.Message = "An unhandled server error has occurred.";
                 context.HttpContext.Response.StatusCode = 500;
             }
 

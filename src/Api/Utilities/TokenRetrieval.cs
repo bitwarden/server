@@ -7,7 +7,7 @@ namespace Bit.Api.Utilities
     public static class TokenRetrieval
     {
         public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString(string headerScheme = "Bearer",
-            string qsName = "account_token")
+            string qsName = "access_token")
         {
             return (request) =>
             {
