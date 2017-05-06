@@ -6,7 +6,6 @@
     <AssemblyName>Billing</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Billing</PackageId>
-    <UserSecretsId>bitwarden-Billing</UserSecretsId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -25,6 +24,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="1.1.1" />
+    <PackageReference Include="System.Net.Http" Version="4.3.1" />
   </ItemGroup>
   
   <ItemGroup>

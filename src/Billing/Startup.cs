@@ -16,7 +16,7 @@ namespace Bit.Billing
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration<Startup>(env);
+                .AddSettingsConfiguration(env, "bitwarden-Billing");
             Configuration = builder.Build();
         }
 

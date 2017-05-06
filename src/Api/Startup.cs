@@ -29,7 +29,7 @@ namespace Bit.Api
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration<Startup>(env);
+                .AddSettingsConfiguration(env, "aspnet5-bitwarden-Api");
             Configuration = builder.Build();
             Environment = env;
         }

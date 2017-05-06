@@ -7,7 +7,6 @@
     <AssemblyName>Api</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Api</PackageId>
-    <UserSecretsId>aspnet5-bitwarden-Api</UserSecretsId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

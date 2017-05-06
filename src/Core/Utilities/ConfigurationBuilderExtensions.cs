@@ -5,9 +5,10 @@ namespace Bit.Core.Utilities
 {
     public static class ConfigurationBuilderExtensions
     {
-        public static IConfigurationBuilder AddSettingsConfiguration<T>(
+        public static IConfigurationBuilder AddSettingsConfiguration(
             this ConfigurationBuilder builder,
-            IHostingEnvironment env) where T : class
+            IHostingEnvironment env,
+            string userSecretsId)
         {
             builder.SetBasePath(env.ContentRootPath)
                 .AddJsonFile("settings.json")
@@ -15,7 +16,7 @@ namespace Bit.Core.Utilities
 
             if(env.IsDevelopment())
             {
-                builder.AddUserSecrets<T>();
+                builder.AddUserSecrets(userSecretsId);
             }
 
             builder.AddEnvironmentVariables();

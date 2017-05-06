@@ -15,7 +15,7 @@ namespace Bit.Identity
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration<Startup>(env);
+                .AddSettingsConfiguration(env, "527b1fab-a4b5-465b-881a-f44f08c42899");
             Configuration = builder.Build();
             Environment = env;
         }
