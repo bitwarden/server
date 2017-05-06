@@ -163,9 +163,9 @@ namespace Bit.Api
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
             app.UseIdentityServerAuthentication(
-                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4000"), "2"));
-            app.UseIdentityServerAuthentication(
                 GetIdentityOptions(env, IdentityServerAuthority(env, "identity", "33656"), "3"));
+            app.UseIdentityServerAuthentication(
+                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4000"), "2"));
 
             // Add Jwt authentication to the request pipeline.
             app.UseJwtBearerIdentity();
