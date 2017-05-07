@@ -117,6 +117,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? (Guid?)null : new Guid(model.OrganizationId);
+            if(login.OrganizationId != modelOrgId)
+            {
+                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this login, " +
+                    "then try again.");
+            }
+
             await _cipherService.SaveDetailsAsync(model.ToCipherDetails(login), userId);
 
             var response = new LoginResponseModel(login);
