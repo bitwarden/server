@@ -35,16 +35,16 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<CipherFullDetails> GetFullDetailsByIdAsync(Guid id, Guid userId)
+        public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<CipherFullDetails>(
-                    $"[{Schema}].[CipherFullDetails_ReadByIdUserId]",
-                    new { Id = id, UserId = userId },
+                var result = await connection.QueryFirstOrDefaultAsync<bool>(
+                    $"[{Schema}].[Cipher_ReadCanEditByIdUserId]",
+                    new { UserId = userId, CipherId = cipherId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.FirstOrDefault();
+                return result;
             }
         }
 
@@ -57,8 +57,11 @@ namespace Bit.Core.Repositories.SqlServer
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                // Return distinct Id results
-                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
+                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
+                return results
+                    .GroupBy(c => c.Id)
+                    .Select(g => g.OrderByDescending(og => og.Edit).First())
+                    .ToList();
             }
         }
 
@@ -71,8 +74,11 @@ namespace Bit.Core.Repositories.SqlServer
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                // Return distinct Id results
-                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
+                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
+                return results
+                    .GroupBy(c => c.Id)
+                    .Select(g => g.OrderByDescending(og => og.Edit).First())
+                    .ToList();
             }
         }
 
@@ -102,8 +108,11 @@ namespace Bit.Core.Repositories.SqlServer
                     },
                     commandType: CommandType.StoredProcedure);
 
-                // Return distinct Id results
-                return results.GroupBy(c => c.Id).Select(g => g.First()).ToList();
+                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
+                return results
+                    .GroupBy(c => c.Id)
+                    .Select(g => g.OrderByDescending(og => og.Edit).First())
+                    .ToList();
             }
         }
 

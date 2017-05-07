@@ -16,7 +16,6 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushService _pushService;
 
@@ -26,7 +25,6 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            ICollectionUserRepository collectionUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IPushService pushService)
         {
@@ -35,7 +33,6 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _collectionUserRepository = collectionUserRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
         }
@@ -237,7 +234,7 @@ namespace Bit.Core.Services
                 return true;
             }
 
-            return await _collectionUserRepository.GetCanEditByUserIdCipherIdAsync(userId, cipher.Id);
+            return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
         }
     }
 }

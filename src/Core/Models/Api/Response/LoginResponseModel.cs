@@ -36,12 +36,14 @@ namespace Bit.Core.Models.Api
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
+            Edit = cipher.Edit;
         }
 
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
+        public bool Edit { get; set; }
         public string Name { get; set; }
         public string Uri { get; set; }
         public string Username { get; set; }
@@ -51,16 +53,5 @@ namespace Bit.Core.Models.Api
 
         [Obsolete]
         public FolderResponseModel Folder { get; set; }
-    }
-
-    public class LoginDetailsResponseModel : LoginResponseModel
-    {
-        public LoginDetailsResponseModel(CipherFullDetails cipher)
-            : base(cipher, "loginDetails")
-        {
-            Edit = cipher.Edit;
-        }
-
-        public bool Edit { get; set; }
     }
 }

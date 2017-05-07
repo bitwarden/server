@@ -7,5 +7,6 @@ namespace Core.Models.Data
     {
         public Guid? FolderId { get; set; }
         public bool Favorite { get; set; }
+        public bool Edit { get; set; }
     }
 }

@@ -60,6 +60,7 @@ namespace Bit.Core.Models.Api
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
+            Edit = cipher.Edit;
         }
 
         [Obsolete]
@@ -69,6 +70,7 @@ namespace Bit.Core.Models.Api
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
+        public bool Edit { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel
@@ -114,16 +116,5 @@ namespace Bit.Core.Models.Api
         }
 
         public IEnumerable<Guid> CollectionIds { get; set; }
-    }
-
-    public class CipherFullDetailsResponseModel : CipherDetailsResponseModel
-    {
-        public CipherFullDetailsResponseModel(CipherFullDetails cipher, IEnumerable<CollectionCipher> collectionCiphers)
-            : base(cipher, collectionCiphers, "cipherFullDetails")
-        {
-            Edit = cipher.Edit;
-        }
-
-        public bool Edit { get; set; }
     }
 }

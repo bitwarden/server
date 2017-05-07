@@ -41,16 +41,16 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<LoginDetailsResponseModel> Get(string id)
+        public async Task<LoginResponseModel> Get(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var login = await _cipherRepository.GetFullDetailsByIdAsync(new Guid(id), userId);
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(login == null || login.Type != Core.Enums.CipherType.Login)
             {
                 throw new NotFoundException();
             }
 
-            var response = new LoginDetailsResponseModel(login);
+            var response = new LoginResponseModel(login);
             return response;
         }
 

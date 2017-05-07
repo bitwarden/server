@@ -5,7 +5,11 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        C.*
+        C.*,
+        CASE 
+            WHEN OU.[AccessAll] = 1 OR CU.[ReadOnly] = 0 THEN 1
+            ELSE 0
+        END [Edit]
     FROM
         [dbo].[CipherDetails](@UserId) C
     INNER JOIN

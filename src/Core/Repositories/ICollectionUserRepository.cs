@@ -11,6 +11,5 @@ namespace Bit.Core.Repositories
         Task<ICollection<CollectionUser>> GetManyByOrganizationUserIdAsync(Guid orgUserId);
         Task<ICollection<CollectionUserCollectionDetails>> GetManyDetailsByUserIdAsync(Guid userId);
         Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid organizationId, Guid collectionId);
-        Task<bool> GetCanEditByUserIdCipherIdAsync(Guid userId, Guid cipherId);
     }
 }

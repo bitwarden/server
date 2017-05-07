@@ -93,7 +93,6 @@
     <Build Include="dbo\Views\OrganizationUserUserDetailsView.sql" />
     <Build Include="dbo\Views\OrganizationUserView.sql" />
     <Build Include="dbo\Views\OrganizationView.sql" />
-    <Build Include="dbo\Functions\UserCanEditCipher.sql" />
     <Build Include="dbo\Functions\CipherDetails.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
@@ -136,7 +135,6 @@
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_ReadByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_ReadCanEditByCipherIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUserCollectionDetails_ReadByUserId.sql" />
@@ -159,7 +157,6 @@
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByTypeUserId.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CipherFullDetails_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Create.sql" />
@@ -180,5 +177,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationOwnerUser.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_ReadCanEditByIdUserId.sql" />
   </ItemGroup>
 </Project>

@@ -52,18 +52,19 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/full-details")]
-        public async Task<CipherFullDetailsResponseModel> GetDetails(string id)
+        [HttpGet("{id}/details")]
+        public async Task<CipherDetailsResponseModel> GetDetails(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipherId = new Guid(id);
-            var cipher = await _cipherRepository.GetFullDetailsByIdAsync(cipherId, userId);
+            var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
             if(cipher == null)
             {
                 throw new NotFoundException();
             }
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
-            return new CipherFullDetailsResponseModel(cipher, collectionCiphers);
+            return new CipherDetailsResponseModel(cipher, collectionCiphers);
         }
 
         [HttpGet("")]
