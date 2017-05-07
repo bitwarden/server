@@ -9,7 +9,8 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
-    @Favorite BIT
+    @Favorite BIT,
+    @Edit BIT -- not used
 AS
 BEGIN
     SET NOCOUNT ON

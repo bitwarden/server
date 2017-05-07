@@ -134,12 +134,12 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var folderCiphers = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-            var otherCiphers = model.Logins.Select(l => l.ToCipherDetails(userId)).ToList();
+            var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
+            var ciphers = model.Logins.Select(l => l.ToCipherDetails(userId)).ToList();
 
             await _cipherService.ImportCiphersAsync(
-                folderCiphers,
-                otherCiphers,
+                folders,
+                ciphers,
                 model.FolderRelationships);
         }
 
