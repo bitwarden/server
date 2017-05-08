@@ -5,6 +5,9 @@ SELECT
     OU.[OrganizationId],
     O.[Name],
     O.[Enabled],
+    O.[UseGroups],
+    O.[Seats],
+    O.[MaxCollections],
     OU.[Key],
     OU.[Status],
     OU.[Type]

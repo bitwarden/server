@@ -14,6 +14,7 @@ namespace Bit.Core.Models.Table
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
+        public bool UseGroups { get; set; }
         public string StripeCustomerId { get; set; }
         public string StripeSubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
