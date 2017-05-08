@@ -13,6 +13,7 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <RootNamespace>Bit.Billing</RootNamespace>
+    <UserSecretsId>bitwarden-Billing</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,7 @@
     <TargetFramework>net461</TargetFramework>
     <AssemblyName>Identity</AssemblyName>
     <RootNamespace>Bit.Identity</RootNamespace>
+    <UserSecretsId>bitwarden-Identity</UserSecretsId>
   </PropertyGroup>
   
   <ItemGroup>

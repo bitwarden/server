@@ -18,7 +18,6 @@ using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Bit.Api.Middleware;
 using Serilog.Events;
-using Bit.Core.IdentityServer;
 using Stripe;
 using Bit.Core.Utilities;
 
@@ -29,7 +28,7 @@ namespace Bit.Api
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "aspnet5-bitwarden-Api");
+                .AddSettingsConfiguration(env, "bitwarden-Api");
             Configuration = builder.Build();
             Environment = env;
         }
