@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Collection_ReadByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[Group_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[CollectionView]
+        [dbo].[GroupView]
     WHERE
         [OrganizationId] = @OrganizationId
 END

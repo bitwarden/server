@@ -5,15 +5,15 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        S.*
+        C.*
     FROM
-        [dbo].[CollectionView] S
+        [dbo].[CollectionView] C
     INNER JOIN
-        [Organization] O ON O.[Id] = S.[OrganizationId]
+        [Organization] O ON O.[Id] = C.[OrganizationId]
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
     LEFT JOIN
-        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = OU.[Id]
     WHERE
         OU.[Status] = 2 -- Confirmed
         AND O.[Enabled] = 1

@@ -178,5 +178,11 @@
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationOwnerUser.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadCanEditByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Group_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Group_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Group_Update.sql" />
+    <Build Include="dbo\Views\GroupView.sql" />
   </ItemGroup>
 </Project>
