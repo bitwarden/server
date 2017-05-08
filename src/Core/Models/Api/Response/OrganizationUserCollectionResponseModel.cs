@@ -16,13 +16,11 @@ namespace Bit.Core.Models.Api
 
             Id = details.Id.ToString();
             Name = details.Name;
-            CollectionId = details.CollectionId.ToString();
             ReadOnly = details.ReadOnly;
         }
 
         public string Id { get; set; }
         public string Name { get; set; }
-        public string CollectionId { get; set; }
         public bool ReadOnly { get; set; }
     }
 }

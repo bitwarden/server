@@ -5,11 +5,9 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        CU.*
+        *
     FROM
-        [dbo].[CollectionUserCollectionDetailsView] CU
-    INNER JOIN
-        [OrganizationUser] OU ON CU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUserCollectionDetailsView]
     WHERE
-        OU.[UserId] = @UserId
+        [UserId] = @UserId
 END

@@ -16,17 +16,20 @@ namespace Bit.Api.Controllers
     public class CollectionsController : Controller
     {
         private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly ICollectionService _collectionService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public CollectionsController(
             ICollectionRepository collectionRepository,
+            ICollectionUserRepository collectionUserRepository,
             ICollectionService collectionService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _collectionRepository = collectionRepository;
+            _collectionUserRepository = collectionUserRepository;
             _collectionService = collectionService;
             _userService = userService;
             _currentContext = currentContext;
@@ -59,11 +62,12 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("~/collections")]
-        public async Task<ListResponseModel<CollectionResponseModel>> GetUser()
+        public async Task<ListResponseModel<CollectionUserDetailsResponseModel>> GetUser()
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-            var responses = collections.Select(c => new CollectionResponseModel(c));
-            return new ListResponseModel<CollectionResponseModel>(responses);
+            var collections = await _collectionUserRepository.GetManyDetailsByUserIdAsync(
+                _userService.GetProperUserId(User).Value);
+            var responses = collections.Select(c => new CollectionUserDetailsResponseModel(c));
+            return new ListResponseModel<CollectionUserDetailsResponseModel>(responses);
         }
 
         [HttpPost("")]

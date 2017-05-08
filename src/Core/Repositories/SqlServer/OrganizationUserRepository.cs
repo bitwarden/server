@@ -113,7 +113,8 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionUserCollectionDetails>>> GetDetailsByIdAsync(Guid id)
+        public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionUserCollectionDetails>>>
+            GetDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {

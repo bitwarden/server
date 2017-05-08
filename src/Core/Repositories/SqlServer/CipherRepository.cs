@@ -41,7 +41,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var result = await connection.QueryFirstOrDefaultAsync<bool>(
                     $"[{Schema}].[Cipher_ReadCanEditByIdUserId]",
-                    new { UserId = userId, CipherId = cipherId },
+                    new { UserId = userId, Id = cipherId },
                     commandType: CommandType.StoredProcedure);
 
                 return result;
