@@ -347,7 +347,7 @@ namespace Bit.Core.Repositories.SqlServer
                         await connection.ExecuteAsync(
                                 $"[{Schema}].[User_BumpAccountRevisionDate]",
                                 new { Id = ciphers.First().UserId },
-                                commandType: CommandType.StoredProcedure);
+                                commandType: CommandType.StoredProcedure, transaction: transaction);
 
                         transaction.Commit();
                     }
