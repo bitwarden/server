@@ -59,7 +59,16 @@ namespace Bit.Identity
             GlobalSettings globalSettings)
         {
             loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error)
+                .AddSerilog(env, appLifetime, globalSettings, (e) =>
+                {
+                    var context = e.Properties["SourceContext"].ToString();
+                    if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
+                    {
+                        return e.Level > LogEventLevel.Error;
+                    }
+
+                    return e.Level >= LogEventLevel.Error;
+                })
                 .AddConsole()
                 .AddDebug();
 
