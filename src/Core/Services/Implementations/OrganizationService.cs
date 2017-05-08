@@ -281,6 +281,8 @@ namespace Bit.Core.Services
                 }
             }
 
+            // TODO: Groups?
+
             var subscriptionService = new StripeSubscriptionService();
             if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
             {
@@ -288,20 +290,22 @@ namespace Bit.Core.Services
                 var subCreateOptions = new StripeSubscriptionCreateOptions
                 {
                     TrialPeriodDays = newPlan.TrialPeriodDays,
-                    Items = new List<StripeSubscriptionItemOption>
-                    {
-                        new StripeSubscriptionItemOption
-                        {
-                            PlanId = newPlan.StripePlanId,
-                            Quantity = 1
-                        }
-                    },
+                    Items = new List<StripeSubscriptionItemOption>(),
                     Metadata = new Dictionary<string, string> {
                         { "organizationId", organization.Id.ToString() }
                     }
                 };
 
-                if(additionalSeats > 0)
+                if(newPlan.StripePlanId != null)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = newPlan.StripePlanId,
+                        Quantity = 1
+                    });
+                }
+
+                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
@@ -317,17 +321,19 @@ namespace Bit.Core.Services
                 // Update existing sub.
                 var subUpdateOptions = new StripeSubscriptionUpdateOptions
                 {
-                    Items = new List<StripeSubscriptionItemUpdateOption>
-                    {
-                        new StripeSubscriptionItemUpdateOption
-                        {
-                            PlanId = newPlan.StripePlanId,
-                            Quantity = 1
-                        }
-                    }
+                    Items = new List<StripeSubscriptionItemUpdateOption>()
                 };
 
-                if(additionalSeats > 0)
+                if(newPlan.StripePlanId != null)
+                {
+                    subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
+                    {
+                        PlanId = newPlan.StripePlanId,
+                        Quantity = 1
+                    });
+                }
+
+                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
                 {
                     subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
                     {
@@ -338,6 +344,8 @@ namespace Bit.Core.Services
 
                 await subscriptionService.UpdateAsync(organization.StripeSubscriptionId, subUpdateOptions);
             }
+
+            // TODO: Update organization
         }
 
         public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
@@ -506,20 +514,22 @@ namespace Bit.Core.Services
                 var subCreateOptions = new StripeSubscriptionCreateOptions
                 {
                     TrialPeriodDays = plan.TrialPeriodDays,
-                    Items = new List<StripeSubscriptionItemOption>
-                    {
-                        new StripeSubscriptionItemOption
-                        {
-                            PlanId = plan.StripePlanId,
-                            Quantity = 1
-                        }
-                    },
+                    Items = new List<StripeSubscriptionItemOption>(),
                     Metadata = new Dictionary<string, string> {
                         { "organizationId", newOrgId.ToString() }
                     }
                 };
 
-                if(signup.AdditionalSeats > 0)
+                if(plan.StripePlanId != null)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = plan.StripePlanId,
+                        Quantity = 1
+                    });
+                }
+
+                if(signup.AdditionalSeats > 0 && plan.StripeSeatPlanId != null)
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
@@ -552,6 +562,7 @@ namespace Bit.Core.Services
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,
+                UseGroups = plan.UseGroups,
                 Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,

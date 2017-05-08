@@ -139,6 +139,34 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "teams-org-seat-annually",
                     UpgradeSortOrder = 2,
                     TrialPeriodDays = 7
+                },
+                new Plan
+                {
+                    Type = PlanType.EnterpriseMonthly,
+                    BaseSeats = 0,
+                    BasePrice = 0,
+                    SeatPrice = 4M,
+                    CanBuyAdditionalSeats = true,
+                    Name = "Enterprise (Monthly)",
+                    StripePlanId = null,
+                    StripeSeatPlanId = "enterprise-org-seat-monthly",
+                    UpgradeSortOrder = 3,
+                    TrialPeriodDays = 7,
+                    UseGroups = true
+                },
+                new Plan
+                {
+                    Type = PlanType.EnterpriseAnnually,
+                    BaseSeats = 0,
+                    BasePrice = 0,
+                    SeatPrice = 36,
+                    CanBuyAdditionalSeats = true,
+                    Name = "Enterprise (Annually)",
+                    StripePlanId = null,
+                    StripeSeatPlanId = "enterprise-org-seat-annually",
+                    UpgradeSortOrder = 3,
+                    TrialPeriodDays = 7,
+                    UseGroups = true
                 }
             };
 
