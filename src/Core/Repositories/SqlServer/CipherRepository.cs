@@ -229,7 +229,7 @@ namespace Bit.Core.Repositories.SqlServer
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 3. Bulk bopy into temp tables.
+                        // 3. Bulk copy into temp tables.
 
                         if(ciphers.Any())
                         {
@@ -310,11 +310,11 @@ namespace Bit.Core.Repositories.SqlServer
             return Task.FromResult(0);
         }
 
-        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             if(!ciphers.Any())
             {
-                return Task.FromResult(0);
+                return;
             }
 
             using(var connection = new SqlConnection(ConnectionString))
@@ -344,6 +344,11 @@ namespace Bit.Core.Repositories.SqlServer
                             bulkCopy.WriteToServer(dataTable);
                         }
 
+                        await connection.ExecuteAsync(
+                                $"[{Schema}].[User_BumpAccountRevisionDate]",
+                                new { Id = ciphers.First().UserId },
+                                commandType: CommandType.StoredProcedure);
+
                         transaction.Commit();
                     }
                     catch
@@ -353,8 +358,6 @@ namespace Bit.Core.Repositories.SqlServer
                     }
                 }
             }
-
-            return Task.FromResult(0);
         }
 
         private DataTable BuildCiphersTable(IEnumerable<Cipher> ciphers)
