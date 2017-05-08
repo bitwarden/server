@@ -8,6 +8,8 @@ using Bit.Core;
 using Stripe;
 using Bit.Core.Utilities;
 using Serilog.Events;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Billing
 {
@@ -44,6 +46,8 @@ namespace Bit.Billing
             services.AddBaseServices();
             services.AddDefaultServices();
 
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
             // Mvc
             services.AddMvc();
         }
@@ -59,6 +63,11 @@ namespace Bit.Billing
                 .AddSerilog(env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error)
                 .AddConsole()
                 .AddDebug();
+
+            if(env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
 
             app.UseMvc();
         }

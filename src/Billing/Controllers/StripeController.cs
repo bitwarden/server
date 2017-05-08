@@ -33,7 +33,7 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var parsedEvent = StripeEventUtility.ParseEventDataItem<StripeEvent>(body) as StripeEvent;
+            var parsedEvent = StripeEventUtility.ParseEventDataItem<StripeEvent>(body);
             if(string.IsNullOrWhiteSpace(parsedEvent?.Id))
             {
                 return new BadRequestResult();
