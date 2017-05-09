@@ -16,16 +16,16 @@ namespace Bit.Api.Controllers
     public class GroupsController : Controller
     {
         private readonly IGroupRepository _groupRepository;
-        private readonly IUserService _userService;
+        private readonly IGroupService _groupService;
         private readonly CurrentContext _currentContext;
 
         public GroupsController(
             IGroupRepository groupRepository,
-            IUserService userService,
+            IGroupService groupService,
             CurrentContext currentContext)
         {
             _groupRepository = groupRepository;
-            _userService = userService;
+            _groupService = groupService;
             _currentContext = currentContext;
         }
 
@@ -77,15 +77,7 @@ namespace Bit.Api.Controllers
             }
 
             var group = model.ToGroup(orgIdGuid);
-            if(model.CollectionIds == null)
-            {
-                await _groupRepository.CreateAsync(group);
-            }
-            else
-            {
-                await _groupRepository.CreateAsync(group, model.CollectionIds.Select(c => new Guid(c)));
-            }
-
+            await _groupService.SaveAsync(group, model.CollectionIds?.Select(c => new Guid(c)));
             return new GroupResponseModel(group);
         }
 
@@ -99,15 +91,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if(model.CollectionIds == null)
-            {
-                await _groupRepository.ReplaceAsync(model.ToGroup(group));
-            }
-            else
-            {
-                await _groupRepository.ReplaceAsync(model.ToGroup(group), model.CollectionIds.Select(c => new Guid(c)));
-            }
-
+            await _groupService.SaveAsync(model.ToGroup(group), model.CollectionIds?.Select(c => new Guid(c)));
             return new GroupResponseModel(group);
         }
 

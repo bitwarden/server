@@ -45,6 +45,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IOrganizationService, OrganizationService>();
             services.AddSingleton<ICollectionService, CollectionService>();
+            services.AddSingleton<IGroupService, GroupService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services)
