@@ -34,14 +34,14 @@ namespace Bit.Core.Services
 
         public async Task SaveAsync(Collection collection, IEnumerable<Guid> groupIds = null)
         {
+            var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
+            if(org == null)
+            {
+                throw new BadRequestException("Organization not found");
+            }
+
             if(collection.Id == default(Guid))
             {
-                var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
-                if(org == null)
-                {
-                    throw new BadRequestException("Org not found");
-                }
-
                 if(org.MaxCollections.HasValue)
                 {
                     var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
@@ -52,7 +52,7 @@ namespace Bit.Core.Services
                     }
                 }
 
-                if(groupIds == null)
+                if(groupIds == null || !org.UseGroups)
                 {
                     await _collectionRepository.CreateAsync(collection);
                 }
@@ -63,7 +63,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(groupIds == null)
+                if(groupIds == null || !org.UseGroups)
                 {
                     await _collectionRepository.ReplaceAsync(collection);
                 }
