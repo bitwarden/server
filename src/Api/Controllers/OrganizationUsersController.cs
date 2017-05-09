@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -19,6 +20,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly ICollectionRepository _collectionRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
@@ -27,6 +29,7 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             ICollectionRepository collectionRepository,
+            IGroupRepository groupRepository,
             IUserService userService,
             CurrentContext currentContext)
         {
@@ -34,6 +37,7 @@ namespace Bit.Api.Controllers
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _collectionRepository = collectionRepository;
+            _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -62,6 +66,20 @@ namespace Bit.Api.Controllers
             var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId);
             var responses = organizationUsers.Select(o => new OrganizationUserResponseModel(o));
             return new ListResponseModel<OrganizationUserResponseModel>(responses);
+        }
+
+        [HttpGet("{id}/groups")]
+        public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
+        {
+            var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if(organizationUser == null || !_currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
+            var responses = groupIds.Select(g => g.ToString());
+            return responses;
         }
 
         [HttpPost("invite")]
@@ -133,6 +151,25 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
                 model.Collections?.Select(c => c.ToCollectionUser()));
+        }
+
+        [HttpPut("{id}/groups")]
+        [HttpPost("{id}/groups")]
+        public async Task PutGroups(string orgId, string id, [FromBody]OrganizationUserUpdateGroupsRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if(!_currentContext.OrganizationAdmin(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if(organizationUser == null || organizationUser.OrganizationId != orgGuidId)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, model.GroupIds.Select(g => new Guid(g)));
         }
 
         [HttpDelete("{id}")]

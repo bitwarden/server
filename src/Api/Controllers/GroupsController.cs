@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -65,6 +66,21 @@ namespace Bit.Api.Controllers
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             var responses = groups.Select(g => new GroupResponseModel(g));
             return new ListResponseModel<GroupResponseModel>(responses);
+        }
+
+        [HttpGet("{id}/users")]
+        public async Task<ListResponseModel<GroupUserResponseModel>> GetUsers(string orgId, string id)
+        {
+            var idGuid = new Guid(id);
+            var group = await _groupRepository.GetByIdAsync(idGuid);
+            if(group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var groups = await _groupRepository.GetManyUserDetailsByIdAsync(idGuid);
+            var responses = groups.Select(g => new GroupUserResponseModel(g));
+            return new ListResponseModel<GroupUserResponseModel>(responses);
         }
 
         [HttpPost("")]

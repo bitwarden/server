@@ -190,5 +190,12 @@
     <Build Include="dbo\Stored Procedures\Collection_UpdateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
+    <Build Include="dbo\Views\GroupUserUserDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUserUserDetails_ReadByGroupId.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="Sql.refactorlog" />
   </ItemGroup>
 </Project>

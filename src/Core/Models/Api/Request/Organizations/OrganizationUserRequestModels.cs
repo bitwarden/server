@@ -43,6 +43,12 @@ namespace Bit.Core.Models.Api
         }
     }
 
+    public class OrganizationUserUpdateGroupsRequestModel
+    {
+        [Required]
+        public IEnumerable<string> GroupIds { get; set; }
+    }
+
     public class OrganizationUserCollectionRequestModel
     {
         [Required]

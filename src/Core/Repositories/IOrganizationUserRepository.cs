@@ -20,5 +20,6 @@ namespace Bit.Core.Repositories
         Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId);
         Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
             OrganizationUserStatusType? status = null);
+        Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
     }
 }

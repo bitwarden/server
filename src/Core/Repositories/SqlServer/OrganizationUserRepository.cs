@@ -8,6 +8,7 @@ using System.Linq;
 using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -153,6 +154,17 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
+            }
+        }
+
+        public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[GroupUser_UpdateGroups]",
+                    new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

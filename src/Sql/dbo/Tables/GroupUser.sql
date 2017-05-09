@@ -1,8 +1,8 @@
 ﻿CREATE TABLE [dbo].[GroupUser] (
     [GroupId] UNIQUEIDENTIFIER NOT NULL,
-    [UserId]  UNIQUEIDENTIFIER NOT NULL,
-    CONSTRAINT [PK_GroupUser] PRIMARY KEY CLUSTERED ([GroupId] ASC, [UserId] ASC),
+    [OrganizationUserId]  UNIQUEIDENTIFIER NOT NULL,
+    CONSTRAINT [PK_GroupUser] PRIMARY KEY CLUSTERED ([GroupId] ASC, [OrganizationUserId] ASC),
     CONSTRAINT [FK_GroupUser_Group] FOREIGN KEY ([GroupId]) REFERENCES [dbo].[Group] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_GroupUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [FK_GroupUser_OrganizationUser] FOREIGN KEY ([OrganizationUserId]) REFERENCES [dbo].[OrganizationUser] ([Id])
 );
 

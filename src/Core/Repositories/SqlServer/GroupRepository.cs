@@ -8,6 +8,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using Newtonsoft.Json;
 using Bit.Core.Utilities;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -44,6 +45,32 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<Group>(
                     $"[{Schema}].[Group_ReadByOrganizationId]",
                     new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<GroupUserUserDetails>> GetManyUserDetailsByIdAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<GroupUserUserDetails>(
+                    $"[{Schema}].[GroupUserUserDetails_ReadByGroupId]",
+                    new { GroupId = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Guid>(
+                    $"[{Schema}].[GroupUser_ReadGroupIdsByOrganizationUserId]",
+                    new { OrganizationUserId = organizationUserId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
