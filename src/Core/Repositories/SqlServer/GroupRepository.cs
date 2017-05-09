@@ -106,6 +106,17 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[GroupUser_Delete]",
+                    new { GroupId = groupId, OrganizationUserId = organizationUserId  },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public class GroupWithCollections : Group
         {
             public DataTable CollectionIds { get; set; }

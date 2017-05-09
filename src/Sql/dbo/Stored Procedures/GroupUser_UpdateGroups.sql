@@ -41,4 +41,6 @@ BEGIN
     AND [Target].[GroupId] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
         DELETE
     ;
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @OrganizationUserId
 END

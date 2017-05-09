@@ -194,6 +194,7 @@
     <Build Include="dbo\Stored Procedures\GroupUserUserDetails_ReadByGroupId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="Sql.refactorlog" />

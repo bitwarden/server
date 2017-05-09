@@ -14,5 +14,6 @@ namespace Bit.Core.Repositories
         Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
         Task CreateAsync(Group obj, IEnumerable<Guid> collectionIds);
         Task ReplaceAsync(Group obj, IEnumerable<Guid> collectionIds);
+        Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
     }
 }

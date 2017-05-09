@@ -123,5 +123,18 @@ namespace Bit.Api.Controllers
 
             await _groupRepository.DeleteAsync(group);
         }
+
+        [HttpDelete("{id}/user/{orgUserId}")]
+        [HttpPost("{id}/delete-user/{orgUserId}")]
+        public async Task Delete(string orgId, string id, string orgUserId)
+        {
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if(group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            await _groupRepository.DeleteUserAsync(group.Id, new Guid(orgUserId));
+        }
     }
 }

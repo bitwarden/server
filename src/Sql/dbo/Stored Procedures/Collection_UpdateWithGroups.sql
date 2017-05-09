@@ -37,4 +37,6 @@ BEGIN
     AND [Target].[CollectionId] = @Id THEN
         DELETE
     ;
+
+    -- TODO: Update user revision date times that this affects
 END
