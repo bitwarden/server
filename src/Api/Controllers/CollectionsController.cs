@@ -92,7 +92,7 @@ namespace Bit.Api.Controllers
             }
 
             var collection = model.ToCollection(orgIdGuid);
-            await _collectionService.SaveAsync(collection, model?.GroupIds.Select(g => new Guid(g)));
+            await _collectionService.SaveAsync(collection, model.GroupIds?.Select(g => new Guid(g)));
             return new CollectionResponseModel(collection);
         }
 
@@ -106,7 +106,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _collectionService.SaveAsync(model.ToCollection(collection), model?.GroupIds.Select(g => new Guid(g)));
+            await _collectionService.SaveAsync(model.ToCollection(collection), model.GroupIds?.Select(g => new Guid(g)));
             return new CollectionResponseModel(collection);
         }
 

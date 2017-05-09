@@ -40,13 +40,13 @@ namespace Bit.Core.Models.Api
 
     public class CollectionDetailsResponseModel : CollectionResponseModel
     {
-        public CollectionDetailsResponseModel(Collection collection, IEnumerable<Guid> collectionIds)
+        public CollectionDetailsResponseModel(Collection collection, IEnumerable<Guid> groupIds)
             : base(collection, "collectionDetails")
         {
-            CollectionIds = collectionIds;
+            GroupIds = groupIds;
         }
 
-        public IEnumerable<Guid> CollectionIds { get; set; }
+        public IEnumerable<Guid> GroupIds { get; set; }
     }
 
     public class CollectionUserDetailsResponseModel : CollectionResponseModel
