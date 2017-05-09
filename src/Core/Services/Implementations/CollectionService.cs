@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
@@ -31,7 +32,7 @@ namespace Bit.Core.Services
             _mailService = mailService;
         }
 
-        public async Task SaveAsync(Collection collection)
+        public async Task SaveAsync(Collection collection, IEnumerable<Guid> groupIds = null)
         {
             if(collection.Id == default(Guid))
             {
@@ -51,11 +52,25 @@ namespace Bit.Core.Services
                     }
                 }
 
-                await _collectionRepository.CreateAsync(collection);
+                if(groupIds == null)
+                {
+                    await _collectionRepository.CreateAsync(collection);
+                }
+                else
+                {
+                    await _collectionRepository.CreateAsync(collection, groupIds);
+                }
             }
             else
             {
-                await _collectionRepository.ReplaceAsync(collection);
+                if(groupIds == null)
+                {
+                    await _collectionRepository.ReplaceAsync(collection);
+                }
+                else
+                {
+                    await _collectionRepository.ReplaceAsync(collection, groupIds);
+                }
             }
         }
     }

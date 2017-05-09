@@ -187,5 +187,8 @@
     <Build Include="dbo\Stored Procedures\Group_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Group_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadWithCollectionsById.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_UpdateWithGroups.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
   </ItemGroup>
 </Project>

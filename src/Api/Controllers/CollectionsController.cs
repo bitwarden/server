@@ -47,6 +47,18 @@ namespace Bit.Api.Controllers
             return new CollectionResponseModel(collection);
         }
 
+        [HttpGet("{id}/details")]
+        public async Task<CollectionDetailsResponseModel> GetDetails(string orgId, string id)
+        {
+            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(new Guid(id));
+            if(collectionDetails?.Item1 == null || !_currentContext.OrganizationAdmin(collectionDetails.Item1.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            return new CollectionDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+        }
+
         [HttpGet("")]
         public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
         {
@@ -80,7 +92,7 @@ namespace Bit.Api.Controllers
             }
 
             var collection = model.ToCollection(orgIdGuid);
-            await _collectionService.SaveAsync(collection);
+            await _collectionService.SaveAsync(collection, model?.GroupIds.Select(g => new Guid(g)));
             return new CollectionResponseModel(collection);
         }
 
@@ -94,7 +106,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _collectionService.SaveAsync(model.ToCollection(collection));
+            await _collectionService.SaveAsync(model.ToCollection(collection), model?.GroupIds.Select(g => new Guid(g)));
             return new CollectionResponseModel(collection);
         }
 

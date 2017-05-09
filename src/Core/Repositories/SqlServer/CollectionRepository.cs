@@ -6,6 +6,8 @@ using System.Data.SqlClient;
 using System.Data;
 using Dapper;
 using System.Linq;
+using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -29,6 +31,22 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results;
+            }
+        }
+
+        public async Task<Tuple<Collection, ICollection<Guid>>> GetByIdWithGroupsAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryMultipleAsync(
+                    $"[{Schema}].[Collection_ReadWithGroupsById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                var collection = await results.ReadFirstOrDefaultAsync<Collection>();
+                var groupIds = (await results.ReadAsync<Guid>()).ToList();
+
+                return new Tuple<Collection, ICollection<Guid>>(collection, groupIds);
             }
         }
 
@@ -56,6 +74,40 @@ namespace Bit.Core.Repositories.SqlServer
 
                 return results.ToList();
             }
+        }
+
+        public async Task CreateAsync(Collection obj, IEnumerable<Guid> groupIds)
+        {
+            obj.SetNewId();
+            var objWithGroups = JsonConvert.DeserializeObject<CollectionWithGroups>(JsonConvert.SerializeObject(obj));
+            objWithGroups.GroupIds = groupIds.ToGuidIdArrayTVP();
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_CreateWithGroups]",
+                    objWithGroups,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceAsync(Collection obj, IEnumerable<Guid> groupIds)
+        {
+            var objWithGroups = JsonConvert.DeserializeObject<CollectionWithGroups>(JsonConvert.SerializeObject(obj));
+            objWithGroups.GroupIds = groupIds.ToGuidIdArrayTVP();
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithGroups]",
+                    objWithGroups,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public class CollectionWithGroups : Collection
+        {
+            public DataTable GroupIds { get; set; }
         }
     }
 }

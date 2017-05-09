@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Table;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Bit.Core.Models.Api
 {
@@ -12,6 +13,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(300)]
         public string Name { get; set; }
+        public IEnumerable<string> GroupIds { get; set; }
 
         public Collection ToCollection(Guid orgId)
         {
