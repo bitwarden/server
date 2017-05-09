@@ -41,6 +41,18 @@ namespace Bit.Api.Controllers
             return new GroupResponseModel(group);
         }
 
+        [HttpGet("{id}/details")]
+        public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
+        {
+            var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
+            if(groupDetails?.Item1 == null || !_currentContext.OrganizationAdmin(groupDetails.Item1.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
+        }
+
         [HttpGet("")]
         public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
         {
@@ -65,7 +77,15 @@ namespace Bit.Api.Controllers
             }
 
             var group = model.ToGroup(orgIdGuid);
-            await _groupRepository.CreateAsync(group);
+            if(model.CollectionIds == null)
+            {
+                await _groupRepository.CreateAsync(group);
+            }
+            else
+            {
+                await _groupRepository.CreateAsync(group, model.CollectionIds.Select(c => new Guid(c)));
+            }
+
             return new GroupResponseModel(group);
         }
 
@@ -79,7 +99,15 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _groupRepository.ReplaceAsync(model.ToGroup(group));
+            if(model.CollectionIds == null)
+            {
+                await _groupRepository.ReplaceAsync(model.ToGroup(group));
+            }
+            else
+            {
+                await _groupRepository.ReplaceAsync(model.ToGroup(group), model.CollectionIds.Select(c => new Guid(c)));
+            }
+
             return new GroupResponseModel(group);
         }
 

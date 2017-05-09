@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Core.Models.Api
 {
@@ -21,5 +22,16 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public string Name { get; set; }
+    }
+
+    public class GroupDetailsResponseModel : GroupResponseModel
+    {
+        public GroupDetailsResponseModel(Group group, IEnumerable<Guid> collectionIds)
+            : base(group, "groupDetails")
+        {
+            CollectionIds = collectionIds;
+        }
+
+        public IEnumerable<Guid> CollectionIds { get; set; }
     }
 }
