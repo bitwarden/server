@@ -712,7 +712,7 @@ namespace Bit.Core.Services
             {
                 OrganizationId = organizationId,
                 UserId = null,
-                Email = email,
+                Email = email.ToLowerInvariant(),
                 Key = null,
                 Type = type,
                 Status = OrganizationUserStatusType.Invited,
@@ -755,7 +755,7 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if(orgUser == null || orgUser.Email != user.Email)
+            if(orgUser == null || !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadRequestException("User invalid.");
             }
@@ -776,8 +776,10 @@ namespace Bit.Core.Services
             {
                 var unprotectedData = _dataProtector.Unprotect(token);
                 var dataParts = unprotectedData.Split(' ');
-                if(dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
-                    new Guid(dataParts[1]) == orgUser.Id && dataParts[2] == user.Email)
+                if(dataParts.Length == 4 &&
+                    dataParts[0] == "OrganizationUserInvite" &&
+                    new Guid(dataParts[1]) == orgUser.Id &&
+                    dataParts[2].Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
                 {
                     var creationTime = CoreHelpers.FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
                     tokenValidationFailed = creationTime.AddDays(5) < DateTime.UtcNow;
