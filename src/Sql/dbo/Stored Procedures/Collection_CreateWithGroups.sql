@@ -22,11 +22,13 @@ BEGIN
     INSERT INTO [dbo].[CollectionGroup]
     (
         [CollectionId],
-        [GroupId]
+        [GroupId],
+        [ReadOnly]
     )
     SELECT
         @Id,
-        [Id]
+        [Id],
+        0
     FROM
         @GroupIds
     WHERE

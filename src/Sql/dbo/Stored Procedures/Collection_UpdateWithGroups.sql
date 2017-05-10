@@ -31,7 +31,8 @@ BEGIN
         INSERT VALUES
         (
             @Id,
-            [Source].[Id]
+            [Source].[Id],
+            0
         )
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CollectionId] = @Id THEN
