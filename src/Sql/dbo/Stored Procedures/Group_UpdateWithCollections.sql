@@ -2,6 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
+    @AccessAll BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
@@ -9,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Group_Update] @Id, @OrganizationId, @Name, @CreationDate, @RevisionDate
+    EXEC [dbo].[Group_Update] @Id, @OrganizationId, @Name, @AccessAll, @CreationDate, @RevisionDate
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
@@ -31,7 +32,8 @@ BEGIN
         INSERT VALUES
         (
             [Source].[Id],
-            @Id
+            @Id,
+            0
         )
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[GroupId] = @Id THEN

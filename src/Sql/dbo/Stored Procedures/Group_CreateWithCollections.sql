@@ -2,6 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
+    @AccessAll BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
@@ -9,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @CreationDate, @RevisionDate
+    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @AccessAll, @CreationDate, @RevisionDate
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
@@ -22,11 +23,13 @@ BEGIN
     INSERT INTO [dbo].[CollectionGroup]
     (
         [CollectionId],
-        [GroupId]
+        [GroupId],
+        [ReadOnly]
     )
     SELECT
         [Id],
-        @Id
+        @Id,
+        0
     FROM
         @CollectionIds
     WHERE

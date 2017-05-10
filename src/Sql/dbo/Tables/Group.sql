@@ -2,6 +2,7 @@
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
     [Name]           NVARCHAR (50)    NOT NULL,
+    [AccessAll]      BIT              NOT NULL,
     [CreationDate]   DATETIME         NOT NULL,
     [RevisionDate]   DATETIME         NOT NULL,
     CONSTRAINT [PK_Group] PRIMARY KEY CLUSTERED ([Id] ASC),

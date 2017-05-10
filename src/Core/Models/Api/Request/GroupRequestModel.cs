@@ -11,6 +11,8 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(300)]
         public string Name { get; set; }
+        [Required]
+        public bool? AccessAll { get; set; }
         public IEnumerable<string> CollectionIds { get; set; }
 
         public Group ToGroup(Guid orgId)
@@ -24,6 +26,7 @@ namespace Bit.Core.Models.Api
         public Group ToGroup(Group existingGroup)
         {
             existingGroup.Name = Name;
+            existingGroup.AccessAll = AccessAll.Value;
             return existingGroup;
         }
     }

@@ -17,11 +17,13 @@ namespace Bit.Core.Models.Api
             Id = group.Id.ToString();
             OrganizationId = group.OrganizationId.ToString();
             Name = group.Name;
+            AccessAll = group.AccessAll;
         }
 
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public string Name { get; set; }
+        public bool AccessAll { get; set; }
     }
 
     public class GroupDetailsResponseModel : GroupResponseModel
