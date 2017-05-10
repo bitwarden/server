@@ -29,6 +29,7 @@ namespace Bit.Core.Models.Api
             Password = data.Password;
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
+            Edit = true;
         }
 
         public LoginResponseModel(CipherDetails cipher, string obj = "login")
