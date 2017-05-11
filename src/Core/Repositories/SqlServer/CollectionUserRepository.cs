@@ -33,19 +33,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CollectionUserCollectionDetails>> GetManyDetailsByUserIdAsync(Guid userId)
-        {
-            using(var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<CollectionUserCollectionDetails>(
-                    $"[{Schema}].[CollectionUserCollectionDetails_ReadByUserId]",
-                    new { UserId = userId },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.ToList();
-            }
-        }
-
         public async Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid organizationId,
             Guid collectionId)
         {
@@ -56,7 +43,11 @@ namespace Bit.Core.Repositories.SqlServer
                     new { OrganizationId = organizationId, CollectionId = collectionId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                // Return distinct Id results. If at least one of the grouped results is not ReadOnly, that we return it.
+                return results
+                    .GroupBy(c => c.Id)
+                    .Select(g => g.OrderBy(og => og.ReadOnly).First())
+                    .ToList();
             }
         }
     }

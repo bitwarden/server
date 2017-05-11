@@ -9,7 +9,6 @@ namespace Bit.Core.Repositories
     public interface ICollectionUserRepository : IRepository<CollectionUser, Guid>
     {
         Task<ICollection<CollectionUser>> GetManyByOrganizationUserIdAsync(Guid orgUserId);
-        Task<ICollection<CollectionUserCollectionDetails>> GetManyDetailsByUserIdAsync(Guid userId);
         Task<ICollection<CollectionUserUserDetails>> GetManyDetailsByCollectionIdAsync(Guid organizationId, Guid collectionId);
     }
 }

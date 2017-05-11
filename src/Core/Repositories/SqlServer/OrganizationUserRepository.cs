@@ -114,19 +114,18 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionUserCollectionDetails>>>
-            GetDetailsByIdAsync(Guid id)
+        public async Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryMultipleAsync(
-                    "[dbo].[OrganizationUserUserDetails_ReadById]",
+                    "[dbo].[OrganizationUser_ReadWithCollectionsById]",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
 
-                var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
-                var collections = (await results.ReadAsync<CollectionUserCollectionDetails>()).ToList();
-                return new Tuple<OrganizationUserUserDetails, ICollection<CollectionUserCollectionDetails>>(user, collections);
+                var user = (await results.ReadAsync<OrganizationUser>()).SingleOrDefault();
+                var collections = (await results.ReadAsync<SelectionReadOnly>()).ToList();
+                return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(user, collections);
             }
         }
 

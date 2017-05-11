@@ -45,7 +45,7 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}")]
         public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
         {
-            var organizationUser = await _organizationUserRepository.GetDetailsByIdAsync(new Guid(id));
+            var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
             if(organizationUser == null || !_currentContext.OrganizationAdmin(organizationUser.Item1.OrganizationId))
             {
                 throw new NotFoundException();
@@ -55,7 +55,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<OrganizationUserResponseModel>> Get(string orgId)
+        public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
         {
             var orgGuidId = new Guid(orgId);
             if(!_currentContext.OrganizationAdmin(orgGuidId))
@@ -64,8 +64,8 @@ namespace Bit.Api.Controllers
             }
 
             var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId);
-            var responses = organizationUsers.Select(o => new OrganizationUserResponseModel(o));
-            return new ListResponseModel<OrganizationUserResponseModel>(responses);
+            var responses = organizationUsers.Select(o => new OrganizationUserUserDetailsResponseModel(o));
+            return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
         }
 
         [HttpGet("{id}/groups")]

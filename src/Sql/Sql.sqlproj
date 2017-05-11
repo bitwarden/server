@@ -82,7 +82,6 @@
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
-    <Build Include="dbo\Views\CollectionUserCollectionDetailsView.sql" />
     <Build Include="dbo\Views\CollectionUserUserDetailsView.sql" />
     <Build Include="dbo\Views\CollectionUserView.sql" />
     <Build Include="dbo\Views\CollectionView.sql" />
@@ -119,7 +118,6 @@
     <Build Include="dbo\Stored Procedures\Collection_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Update.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_Create.sql" />
@@ -137,7 +135,7 @@
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Update.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUserCollectionDetails_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUserUserDetails_ReadByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Update.sql" />
     <Build Include="dbo\Stored Procedures\Device_Create.sql" />
@@ -174,7 +172,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadWithCollectionsById.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationOwnerUser.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadCanEditByIdUserId.sql" />

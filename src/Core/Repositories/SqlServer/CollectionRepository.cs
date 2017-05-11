@@ -68,11 +68,15 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Collection>(
-                    $"[{Schema}].[{Table}_ReadByUserId]",
+                    $"[{Schema}].[Collection_ReadByUserId]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                // Return distinct Id results.
+                return results
+                    .GroupBy(c => c.Id)
+                    .Select(c => c.First())
+                    .ToList();
             }
         }
 

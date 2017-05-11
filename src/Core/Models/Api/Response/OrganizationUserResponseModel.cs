@@ -3,11 +3,27 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
     public class OrganizationUserResponseModel : ResponseModel
     {
+        public OrganizationUserResponseModel(OrganizationUser organizationUser, string obj = "organizationUser")
+            : base(obj)
+        {
+            if(organizationUser == null)
+            {
+                throw new ArgumentNullException(nameof(organizationUser));
+            }
+
+            Id = organizationUser.Id.ToString();
+            UserId = organizationUser.UserId?.ToString();
+            Type = organizationUser.Type;
+            Status = organizationUser.Status;
+            AccessAll = organizationUser.AccessAll;
+        }
+
         public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
             : base(obj)
         {
@@ -18,8 +34,6 @@ namespace Bit.Core.Models.Api
 
             Id = organizationUser.Id.ToString();
             UserId = organizationUser.UserId?.ToString();
-            Name = organizationUser.Name;
-            Email = organizationUser.Email;
             Type = organizationUser.Type;
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
@@ -27,8 +41,6 @@ namespace Bit.Core.Models.Api
 
         public string Id { get; set; }
         public string UserId { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public bool AccessAll { get; set; }
@@ -36,14 +48,48 @@ namespace Bit.Core.Models.Api
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
     {
-        public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-            IEnumerable<CollectionUserCollectionDetails> collections)
+        public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+            IEnumerable<SelectionReadOnly> collections)
             : base(organizationUser, "organizationUserDetails")
         {
-            Collections = new ListResponseModel<OrganizationUserCollectionResponseModel>(
-                collections.Select(c => new OrganizationUserCollectionResponseModel(c)));
+            Collections = collections.Select(c => new CollectionSelection(c));
         }
 
-        public ListResponseModel<OrganizationUserCollectionResponseModel> Collections { get; set; }
+        public IEnumerable<CollectionSelection> Collections { get; set; }
+
+        public class CollectionSelection
+        {
+            public CollectionSelection(Data.SelectionReadOnly selection)
+            {
+                if(selection == null)
+                {
+                    throw new ArgumentNullException(nameof(selection));
+                }
+
+                Id = selection.Id.ToString();
+                ReadOnly = selection.ReadOnly;
+            }
+
+            public string Id { get; set; }
+            public bool ReadOnly { get; set; }
+        }
+    }
+    public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
+    {
+        public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+            string obj = "organizationUserUserDetails")
+            : base(organizationUser, obj)
+        {
+            if(organizationUser == null)
+            {
+                throw new ArgumentNullException(nameof(organizationUser));
+            }
+
+            Name = organizationUser.Name;
+            Email = organizationUser.Email;
+        }
+
+        public string Name { get; set; }
+        public string Email { get; set; }
     }
 }
