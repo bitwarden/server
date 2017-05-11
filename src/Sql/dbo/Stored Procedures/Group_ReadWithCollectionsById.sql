@@ -7,7 +7,8 @@ BEGIN
     EXEC [dbo].[Group_ReadById] @Id
 
     SELECT
-        [CollectionId]
+        [CollectionId] [Id],
+        [ReadOnly]
     FROM
         [dbo].[CollectionGroup]
     WHERE

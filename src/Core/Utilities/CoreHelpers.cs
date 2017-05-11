@@ -1,4 +1,6 @@
-﻿using Dapper;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Dapper;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -59,6 +61,30 @@ namespace Bit.Core.Utilities
                 foreach(var value in values)
                 {
                     table.Rows.Add(value);
+                }
+            }
+
+            return table;
+        }
+
+        public static DataTable ToArrayTVP(this IEnumerable<SelectionReadOnly> values)
+        {
+            var table = new DataTable();
+            table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
+
+            var idColumn = new DataColumn("Id", typeof(Guid));
+            table.Columns.Add(idColumn);
+            var readOnlyColumn = new DataColumn("ReadOnly", typeof(bool));
+            table.Columns.Add(readOnlyColumn);
+
+            if(values != null)
+            {
+                foreach(var value in values)
+                {
+                    var row = table.NewRow();
+                    row[idColumn] = value.Id;
+                    row[readOnlyColumn] = value.ReadOnly;
+                    table.Rows.Add(row);
                 }
             }
 

@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [Required]
         public bool? AccessAll { get; set; }
-        public IEnumerable<string> CollectionIds { get; set; }
+        public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public Group ToGroup(Guid orgId)
         {

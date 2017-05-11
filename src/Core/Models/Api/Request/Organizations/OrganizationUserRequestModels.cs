@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.Table;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -13,7 +12,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
         public bool AccessAll { get; set; }
-        public IEnumerable<OrganizationUserCollectionRequestModel> Collections { get; set; }
+        public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     }
 
     public class OrganizationUserAcceptRequestModel
@@ -33,7 +32,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
         public bool AccessAll { get; set; }
-        public IEnumerable<OrganizationUserCollectionRequestModel> Collections { get; set; }
+        public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
@@ -47,23 +46,5 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public IEnumerable<string> GroupIds { get; set; }
-    }
-
-    public class OrganizationUserCollectionRequestModel
-    {
-        [Required]
-        public string CollectionId { get; set; }
-        public bool ReadOnly { get; set; }
-
-        public CollectionUser ToCollectionUser()
-        {
-            var collection = new CollectionUser
-            {
-                ReadOnly = ReadOnly,
-                CollectionId = new Guid(CollectionId)
-            };
-
-            return collection;
-        }
     }
 }

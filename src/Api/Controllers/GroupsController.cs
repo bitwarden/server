@@ -93,7 +93,7 @@ namespace Bit.Api.Controllers
             }
 
             var group = model.ToGroup(orgIdGuid);
-            await _groupService.SaveAsync(group, model.CollectionIds?.Select(c => new Guid(c)));
+            await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
             return new GroupResponseModel(group);
         }
 
@@ -107,7 +107,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _groupService.SaveAsync(model.ToGroup(group), model.CollectionIds?.Select(c => new Guid(c)));
+            await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
             return new GroupResponseModel(group);
         }
 

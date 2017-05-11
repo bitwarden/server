@@ -5,7 +5,7 @@
     @AccessAll BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -29,9 +29,9 @@ BEGIN
     SELECT
         [Id],
         @Id,
-        0
+        [ReadOnly]
     FROM
-        @CollectionIds
+        @Collections
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 END

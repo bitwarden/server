@@ -52,27 +52,10 @@ namespace Bit.Core.Models.Api
             IEnumerable<SelectionReadOnly> collections)
             : base(organizationUser, "organizationUserDetails")
         {
-            Collections = collections.Select(c => new CollectionSelection(c));
+            Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
         }
 
-        public IEnumerable<CollectionSelection> Collections { get; set; }
-
-        public class CollectionSelection
-        {
-            public CollectionSelection(Data.SelectionReadOnly selection)
-            {
-                if(selection == null)
-                {
-                    throw new ArgumentNullException(nameof(selection));
-                }
-
-                Id = selection.Id.ToString();
-                ReadOnly = selection.ReadOnly;
-            }
-
-            public string Id { get; set; }
-            public bool ReadOnly { get; set; }
-        }
+        public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     }
     public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
     {

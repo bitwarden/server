@@ -1,6 +1,8 @@
 ﻿using System;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
+using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -28,12 +30,12 @@ namespace Bit.Core.Models.Api
 
     public class GroupDetailsResponseModel : GroupResponseModel
     {
-        public GroupDetailsResponseModel(Group group, IEnumerable<Guid> collectionIds)
+        public GroupDetailsResponseModel(Group group, IEnumerable<SelectionReadOnly> collections)
             : base(group, "groupDetails")
         {
-            CollectionIds = collectionIds;
+            Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
         }
 
-        public IEnumerable<Guid> CollectionIds { get; set; }
+        public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     }
 }

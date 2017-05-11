@@ -5,7 +5,7 @@
     @AccessAll BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -23,7 +23,7 @@ BEGIN
     MERGE
         [dbo].[CollectionGroup] AS [Target]
     USING 
-        @CollectionIds AS [Source]
+        @Collections AS [Source]
     ON
         [Target].[CollectionId] = [Source].[Id]
         AND [Target].[GroupId] = @Id
@@ -33,8 +33,10 @@ BEGIN
         (
             [Source].[Id],
             @Id,
-            0
+            [Source].[ReadOnly]
         )
+    WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
+        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[GroupId] = @Id THEN
         DELETE
