@@ -22,7 +22,7 @@ BEGIN
         OU.[UserId] = @UserId
         AND (
             OU.[AccessAll] = 1
-            OR CU.[Id] IS NOT NULL
+            OR CU.[CollectionId] IS NOT NULL
             OR G.[AccessAll] = 1
             OR CG.[CollectionId] IS NOT NULL
         )

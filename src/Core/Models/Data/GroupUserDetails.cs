@@ -2,11 +2,9 @@
 
 namespace Bit.Core.Models.Data
 {
-    public class GroupUserUserDetails
+    public class GroupUserDetails
     {
         public Guid OrganizationUserId { get; set; }
-        public Guid OrganizationId { get; set; }
-        public Guid GroupId { get; set; }
         public bool AccessAll { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

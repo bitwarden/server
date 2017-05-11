@@ -82,8 +82,6 @@
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
-    <Build Include="dbo\Views\CollectionUserUserDetailsView.sql" />
-    <Build Include="dbo\Views\CollectionUserView.sql" />
     <Build Include="dbo\Views\CollectionView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
@@ -127,16 +125,11 @@
     <Build Include="dbo\Stored Procedures\CollectionCipher_ReadByUserIdCipherId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsAdmin.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_Create.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_ReadByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUserUserDetails_ReadByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUserDetails_ReadByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Update.sql" />
     <Build Include="dbo\Stored Procedures\Device_Create.sql" />
     <Build Include="dbo\Stored Procedures\Device_DeleteById.sql" />
@@ -188,11 +181,13 @@
     <Build Include="dbo\Stored Procedures\Collection_UpdateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
-    <Build Include="dbo\Views\GroupUserUserDetailsView.sql" />
-    <Build Include="dbo\Stored Procedures\GroupUserUserDetails_ReadByGroupId.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUserDetails_ReadByGroupId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_CreateWithCollections.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateWithCollections.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
   </ItemGroup>
 </Project>

@@ -12,15 +12,6 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public bool ReadOnly { get; set; }
 
-        public CollectionUser ToCollectionUser()
-        {
-            return new CollectionUser
-            {
-                ReadOnly = ReadOnly,
-                CollectionId = new Guid(Id)
-            };
-        }
-
         public SelectionReadOnly ToSelectionReadOnly()
         {
             return new SelectionReadOnly

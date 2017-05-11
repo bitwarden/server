@@ -1,5 +1,4 @@
 ﻿using System;
-using Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
 using Bit.Core.Enums;
 
@@ -7,7 +6,7 @@ namespace Bit.Core.Models.Api
 {
     public class CollectionUserResponseModel : ResponseModel
     {
-        public CollectionUserResponseModel(CollectionUserUserDetails collectionUser)
+        public CollectionUserResponseModel(CollectionUserDetails collectionUser)
             : base("collectionUser")
         {
             if(collectionUser == null)
@@ -15,9 +14,7 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(collectionUser));
             }
 
-            Id = collectionUser.Id?.ToString();
             OrganizationUserId = collectionUser.OrganizationUserId.ToString();
-            CollectionId = collectionUser.CollectionId?.ToString();
             AccessAll = collectionUser.AccessAll;
             Name = collectionUser.Name;
             Email = collectionUser.Email;
@@ -26,9 +23,7 @@ namespace Bit.Core.Models.Api
             ReadOnly = collectionUser.ReadOnly;
         }
 
-        public string Id { get; set; }
         public string OrganizationUserId { get; set; }
-        public string CollectionId { get; set; }
         public bool AccessAll { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

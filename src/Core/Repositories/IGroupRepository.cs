@@ -10,7 +10,7 @@ namespace Bit.Core.Repositories
     {
         Task<Tuple<Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id);
         Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<ICollection<GroupUserUserDetails>> GetManyUserDetailsByIdAsync(Guid id);
+        Task<ICollection<GroupUserDetails>> GetManyUserDetailsByIdAsync(Guid id);
         Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
         Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections);

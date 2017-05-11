@@ -27,4 +27,6 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
+
+    EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 END

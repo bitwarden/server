@@ -81,6 +81,24 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<CollectionUserDetails>> GetManyUserDetailsByIdAsync(Guid organizationId,
+            Guid collectionId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CollectionUserDetails>(
+                    $"[{Schema}].[CollectionUserDetails_ReadByCollectionId]",
+                    new { OrganizationId = organizationId, CollectionId = collectionId },
+                    commandType: CommandType.StoredProcedure);
+
+                // Return distinct Id results. If at least one of the grouped results is not ReadOnly, that we return it.
+                return results
+                    .GroupBy(c => c.OrganizationUserId)
+                    .Select(g => g.OrderBy(og => og.ReadOnly).First())
+                    .ToList();
+            }
+        }
+
         public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             obj.SetNewId();
@@ -106,6 +124,17 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Collection_UpdateWithGroups]",
                     objWithGroups,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task DeleteUserAsync(Guid collectionId, Guid organizationUserId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[CollectionUser_Delete]",
+                    new { CollectionId = collectionId, OrganizationUserId = organizationUserId },
                     commandType: CommandType.StoredProcedure);
             }
         }

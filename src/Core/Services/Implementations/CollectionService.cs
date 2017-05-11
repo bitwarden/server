@@ -13,7 +13,6 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionRepository _collectionRepository;
-        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
 
@@ -21,14 +20,12 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
-            ICollectionUserRepository collectionUserRepository,
             IUserRepository userRepository,
             IMailService mailService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _collectionRepository = collectionRepository;
-            _collectionUserRepository = collectionUserRepository;
             _userRepository = userRepository;
             _mailService = mailService;
         }

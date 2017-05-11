@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
@@ -19,7 +20,6 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionRepository _collectionRepository;
-        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
@@ -29,7 +29,6 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
-            ICollectionUserRepository collectionUserRepository,
             IUserRepository userRepository,
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
@@ -38,7 +37,6 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _collectionRepository = collectionRepository;
-            _collectionUserRepository = collectionUserRepository;
             _userRepository = userRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
@@ -683,7 +681,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            OrganizationUserType type, bool accessAll, IEnumerable<CollectionUser> collections)
+            OrganizationUserType type, bool accessAll, IEnumerable<SelectionReadOnly> collections)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -721,13 +719,16 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow
             };
 
-            await _organizationUserRepository.CreateAsync(orgUser);
             if(!orgUser.AccessAll && collections.Any())
             {
-                await SaveUserCollectionsAsync(orgUser, collections, true);
+                await _organizationUserRepository.CreateAsync(orgUser, collections);
             }
-            await SendInviteAsync(orgUser);
+            else
+            {
+                await _organizationUserRepository.CreateAsync(orgUser);
+            }
 
+            await SendInviteAsync(orgUser);
             return orgUser;
         }
 
@@ -833,7 +834,7 @@ namespace Bit.Core.Services
             return orgUser;
         }
 
-        public async Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<CollectionUser> collections)
+        public async Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SelectionReadOnly> collections)
         {
             if(user.Id.Equals(default(Guid)))
             {
@@ -846,14 +847,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            await _organizationUserRepository.ReplaceAsync(user);
 
             if(user.AccessAll)
             {
                 // We don't need any collections if we're flagged to have all access.
-                collections = new List<CollectionUser>();
+                collections = new List<SelectionReadOnly>();
             }
-            await SaveUserCollectionsAsync(user, collections, false);
+            await _organizationUserRepository.ReplaceAsync(user, collections);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -900,42 +900,6 @@ namespace Bit.Core.Services
             var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
                 Enums.OrganizationUserType.Owner);
             return owners.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed);
-        }
-
-        private async Task SaveUserCollectionsAsync(OrganizationUser user, IEnumerable<CollectionUser> collections, bool newUser)
-        {
-            if(collections == null)
-            {
-                collections = new List<CollectionUser>();
-            }
-
-            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-            var currentUserCollections = newUser ? null : await _collectionUserRepository.GetManyByOrganizationUserIdAsync(user.Id);
-
-            // Let's make sure all these belong to this user and organization.
-            var filteredCollections = collections.Where(c => orgCollections.Any(os => os.Id == c.CollectionId));
-            foreach(var collection in filteredCollections)
-            {
-                var existingCollectionUser = currentUserCollections?.FirstOrDefault(cu => cu.CollectionId == collection.CollectionId);
-                if(existingCollectionUser != null)
-                {
-                    collection.Id = existingCollectionUser.Id;
-                    collection.CreationDate = existingCollectionUser.CreationDate;
-                }
-
-                collection.OrganizationUserId = user.Id;
-                await _collectionUserRepository.UpsertAsync(collection);
-            }
-
-            if(!newUser)
-            {
-                var collectionsToDelete = currentUserCollections.Where(cu =>
-                    !filteredCollections.Any(c => c.CollectionId == cu.CollectionId));
-                foreach(var collection in collectionsToDelete)
-                {
-                    await _collectionUserRepository.DeleteAsync(collection);
-                }
-            }
         }
     }
 }

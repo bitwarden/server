@@ -32,7 +32,6 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
             services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
             services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
-            services.AddSingleton<ICollectionUserRepository, SqlServerRepos.CollectionUserRepository>();
             services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
             services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
             services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();

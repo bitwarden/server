@@ -17,20 +17,17 @@ namespace Bit.Api.Controllers
     public class CollectionsController : Controller
     {
         private readonly ICollectionRepository _collectionRepository;
-        private readonly ICollectionUserRepository _collectionUserRepository;
         private readonly ICollectionService _collectionService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public CollectionsController(
             ICollectionRepository collectionRepository,
-            ICollectionUserRepository collectionUserRepository,
             ICollectionService collectionService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _collectionRepository = collectionRepository;
-            _collectionUserRepository = collectionUserRepository;
             _collectionService = collectionService;
             _userService = userService;
             _currentContext = currentContext;
@@ -82,6 +79,24 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
+
+
+        [HttpGet("{id}/users")]
+        public async Task<ListResponseModel<CollectionUserResponseModel>> GetUsers(string orgId, string id)
+        {
+            var idGuid = new Guid(id);
+            var collection = await _collectionRepository.GetByIdAsync(idGuid);
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var collectionUsers = await _collectionRepository.GetManyUserDetailsByIdAsync(collection.OrganizationId,
+                collection.Id);
+            var responses = collectionUsers.Select(c => new CollectionUserResponseModel(c));
+            return new ListResponseModel<CollectionUserResponseModel>(responses);
+        }
+
         [HttpPost("")]
         public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
         {
@@ -122,6 +137,19 @@ namespace Bit.Api.Controllers
             }
 
             await _collectionRepository.DeleteAsync(collection);
+        }
+
+        [HttpDelete("{id}/user/{orgUserId}")]
+        [HttpPost("{id}/delete-user/{orgUserId}")]
+        public async Task Delete(string orgId, string id, string orgUserId)
+        {
+            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
+            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            await _collectionRepository.DeleteUserAsync(collection.Id, new Guid(orgUserId));
         }
     }
 }

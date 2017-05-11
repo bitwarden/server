@@ -6,7 +6,7 @@ namespace Bit.Core.Models.Api
 {
     public class GroupUserResponseModel : ResponseModel
     {
-        public GroupUserResponseModel(GroupUserUserDetails groupUser)
+        public GroupUserResponseModel(GroupUserDetails groupUser)
             : base("groupUser")
         {
             if(groupUser == null)
@@ -15,7 +15,6 @@ namespace Bit.Core.Models.Api
             }
 
             OrganizationUserId = groupUser.OrganizationUserId.ToString();
-            GroupId = groupUser.GroupId.ToString();
             AccessAll = groupUser.AccessAll;
             Name = groupUser.Name;
             Email = groupUser.Email;
@@ -24,7 +23,6 @@ namespace Bit.Core.Models.Api
         }
 
         public string OrganizationUserId { get; set; }
-        public string GroupId { get; set; }
         public bool AccessAll { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

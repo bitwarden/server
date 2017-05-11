@@ -9,6 +9,7 @@ using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -165,6 +166,42 @@ namespace Bit.Core.Repositories.SqlServer
                     new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
                     commandType: CommandType.StoredProcedure);
             }
+        }
+
+        public async Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        {
+            obj.SetNewId();
+            var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
+                JsonConvert.SerializeObject(obj));
+            objWithCollections.Collections = collections.ToArrayTVP();
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[OrganizationUser_CreateWithCollections]",
+                    objWithCollections,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        {
+            var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
+                JsonConvert.SerializeObject(obj));
+            objWithCollections.Collections = collections.ToArrayTVP();
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[OrganizationUser_UpdateWithCollections]",
+                    objWithCollections,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public class OrganizationUserWithCollections : OrganizationUser
+        {
+            public DataTable Collections { get; set; }
         }
     }
 }

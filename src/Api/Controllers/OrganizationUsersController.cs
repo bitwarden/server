@@ -93,7 +93,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.InviteUserAsync(orgGuidId, userId.Value, model.Email, model.Type.Value,
-                model.AccessAll, model.Collections?.Select(c => c.ToCollectionUser()));
+                model.AccessAll, model.Collections?.Select(c => c.ToSelectionReadOnly()));
         }
 
         [HttpPut("{id}/reinvite")]
@@ -150,7 +150,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-                model.Collections?.Select(c => c.ToCollectionUser()));
+                model.Collections?.Select(c => c.ToSelectionReadOnly()));
         }
 
         [HttpPut("{id}/groups")]
