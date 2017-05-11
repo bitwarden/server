@@ -8,6 +8,7 @@ using Dapper;
 using System.Linq;
 using Newtonsoft.Json;
 using Bit.Core.Utilities;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -34,7 +35,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<Tuple<Collection, ICollection<Guid>>> GetByIdWithGroupsAsync(Guid id)
+        public async Task<Tuple<Collection, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -44,9 +45,9 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 var collection = await results.ReadFirstOrDefaultAsync<Collection>();
-                var groupIds = (await results.ReadAsync<Guid>()).ToList();
+                var groups = (await results.ReadAsync<SelectionReadOnly>()).ToList();
 
-                return new Tuple<Collection, ICollection<Guid>>(collection, groupIds);
+                return new Tuple<Collection, ICollection<SelectionReadOnly>>(collection, groups);
             }
         }
 
@@ -80,11 +81,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task CreateAsync(Collection obj, IEnumerable<Guid> groupIds)
+        public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             obj.SetNewId();
             var objWithGroups = JsonConvert.DeserializeObject<CollectionWithGroups>(JsonConvert.SerializeObject(obj));
-            objWithGroups.GroupIds = groupIds.ToGuidIdArrayTVP();
+            objWithGroups.Groups = groups.ToArrayTVP();
 
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -95,10 +96,10 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task ReplaceAsync(Collection obj, IEnumerable<Guid> groupIds)
+        public async Task ReplaceAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             var objWithGroups = JsonConvert.DeserializeObject<CollectionWithGroups>(JsonConvert.SerializeObject(obj));
-            objWithGroups.GroupIds = groupIds.ToGuidIdArrayTVP();
+            objWithGroups.Groups = groups.ToArrayTVP();
 
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -111,7 +112,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public class CollectionWithGroups : Collection
         {
-            public DataTable GroupIds { get; set; }
+            public DataTable Groups { get; set; }
         }
     }
 }

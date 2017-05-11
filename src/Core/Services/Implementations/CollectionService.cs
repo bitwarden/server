@@ -4,6 +4,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
@@ -32,7 +33,7 @@ namespace Bit.Core.Services
             _mailService = mailService;
         }
 
-        public async Task SaveAsync(Collection collection, IEnumerable<Guid> groupIds = null)
+        public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null)
         {
             var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
             if(org == null)
@@ -52,24 +53,24 @@ namespace Bit.Core.Services
                     }
                 }
 
-                if(groupIds == null || !org.UseGroups)
+                if(groups == null || !org.UseGroups)
                 {
                     await _collectionRepository.CreateAsync(collection);
                 }
                 else
                 {
-                    await _collectionRepository.CreateAsync(collection, groupIds);
+                    await _collectionRepository.CreateAsync(collection, groups);
                 }
             }
             else
             {
-                if(groupIds == null || !org.UseGroups)
+                if(groups == null || !org.UseGroups)
                 {
                     await _collectionRepository.ReplaceAsync(collection);
                 }
                 else
                 {
-                    await _collectionRepository.ReplaceAsync(collection, groupIds);
+                    await _collectionRepository.ReplaceAsync(collection, groups);
                 }
             }
         }

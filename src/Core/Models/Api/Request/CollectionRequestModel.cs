@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(300)]
         public string Name { get; set; }
-        public IEnumerable<string> GroupIds { get; set; }
+        public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
 
         public Collection ToCollection(Guid orgId)
         {
