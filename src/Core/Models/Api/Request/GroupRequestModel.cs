@@ -13,6 +13,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [Required]
         public bool? AccessAll { get; set; }
+        public string ExternalId { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public Group ToGroup(Guid orgId)
@@ -27,6 +28,7 @@ namespace Bit.Core.Models.Api
         {
             existingGroup.Name = Name;
             existingGroup.AccessAll = AccessAll.Value;
+            existingGroup.ExternalId = ExternalId;
             return existingGroup;
         }
     }

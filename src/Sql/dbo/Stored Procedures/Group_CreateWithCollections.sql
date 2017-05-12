@@ -3,6 +3,7 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @AccessAll BIT,
+    @ExternalId NVARCHAR(50),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
@@ -10,7 +11,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @AccessAll, @CreationDate, @RevisionDate
+    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @AccessAll, @ExternalId, @CreationDate, @RevisionDate
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

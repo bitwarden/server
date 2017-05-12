@@ -3,6 +3,7 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @AccessAll BIT,
+    @ExternalId NVARCHAR(50),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -15,6 +16,7 @@ BEGIN
         [OrganizationId],
         [Name],
         [AccessAll],
+        [ExternalId],
         [CreationDate],
         [RevisionDate]
     )
@@ -24,6 +26,7 @@ BEGIN
         @OrganizationId,
         @Name,
         @AccessAll,
+        @ExternalId,
         @CreationDate,
         @RevisionDate
     )
