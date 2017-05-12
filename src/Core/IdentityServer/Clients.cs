@@ -12,7 +12,8 @@ namespace Bit.Core.IdentityServer
                 new ApiClient("mobile", 90, 1),
                 new ApiClient("web", 1, 1),
                 new ApiClient("browser", 30, 1),
-                new ApiClient("desktop", 30, 1)
+                new ApiClient("desktop", 30, 1),
+                new ApiClient("connector", 30, 24)
             };
         }
 
@@ -22,7 +23,7 @@ namespace Bit.Core.IdentityServer
                 string id,
                 int refreshTokenSlidingDays,
                 int accessTokenLifetimeHours,
-                string[] additionalScopes = null)
+                string[] scopes = null)
             {
                 ClientId = id;
                 RequireClientSecret = false;
@@ -35,10 +36,9 @@ namespace Bit.Core.IdentityServer
                 AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;
 
-                var scopes = new List<string> { "api" };
-                if(additionalScopes != null)
+                if(scopes == null)
                 {
-                    scopes.AddRange(additionalScopes);
+                    scopes = new string[] { "api" };
                 }
                 AllowedScopes = scopes;
             }
