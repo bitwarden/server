@@ -77,6 +77,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<GroupUser>(
+                    $"[{Schema}].[GroupUser_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();

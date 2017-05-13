@@ -12,6 +12,7 @@ namespace Bit.Core.Repositories
         Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<ICollection<GroupUserDetails>> GetManyUserDetailsByIdAsync(Guid id);
         Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
+        Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
         Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid groupId, Guid organizationUserId);

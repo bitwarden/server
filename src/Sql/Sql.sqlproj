@@ -189,5 +189,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationId.sql" />
   </ItemGroup>
 </Project>

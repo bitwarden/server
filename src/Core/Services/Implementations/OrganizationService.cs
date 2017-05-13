@@ -916,27 +916,35 @@ namespace Bit.Core.Services
             var existingGroups = (await _groupRepository.GetManyByOrganizationIdAsync(organizationId)).ToList();
             var existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
 
-            var newGroups = groups.Where(g => !existingGroupsDict.ContainsKey(g.ExternalId));
-            var updateGroups = existingGroups.Where(eg => groups.Any(g => g.ExternalId == eg.ExternalId && g.Name != eg.Name));
-
-            foreach(var group in newGroups)
+            if(groups?.Any() ?? false)
             {
-                group.CreationDate = group.RevisionDate = DateTime.UtcNow;
-                await _groupRepository.CreateAsync(group);
-            }
+                var newGroups = groups.Where(g => !existingGroupsDict.ContainsKey(g.ExternalId));
+                var updateGroups = existingGroups.Where(eg => groups.Any(g => g.ExternalId == eg.ExternalId && g.Name != eg.Name));
 
-            foreach(var group in updateGroups)
-            {
-                group.RevisionDate = DateTime.UtcNow;
-                group.Name = existingGroupsDict[group.ExternalId].Name;
-                await _groupRepository.ReplaceAsync(group);
-            }
+                foreach(var group in newGroups)
+                {
+                    group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+                    await _groupRepository.CreateAsync(group);
+                }
 
-            // Add the newly created groups to existing groups so that we have a complete list to reference below for users.
-            existingGroups.AddRange(newGroups);
-            existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
+                foreach(var group in updateGroups)
+                {
+                    group.RevisionDate = DateTime.UtcNow;
+                    group.Name = existingGroupsDict[group.ExternalId].Name;
+                    await _groupRepository.ReplaceAsync(group);
+                }
+
+                // Add the newly created groups to existing groups so that we have a complete list to reference below for users.
+                existingGroups.AddRange(newGroups);
+                existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
+            }
 
             // Users
+            if(users?.Any() ?? false)
+            {
+                return;
+            }
+
             var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
             var existingUsersDict = existingUsers.ToDictionary(u => u.Email);
 
@@ -975,6 +983,7 @@ namespace Bit.Core.Services
                 }
             }
 
+            var existingGroupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId);
             foreach(var user in updateUsers)
             {
                 if(!existingUsersDict.ContainsKey(user.Key))
@@ -983,11 +992,16 @@ namespace Bit.Core.Services
                 }
 
                 var existingUser = existingUsersDict[user.Key];
-                var groupsIdsForUser = user.Value.Where(id => existingGroupsDict.ContainsKey(id))
-                        .Select(id => existingGroupsDict[id].Id).ToList();
-                if(groupsIdsForUser.Any())
+                var existingGroupIdsForUser = new HashSet<Guid>(existingGroupUsers
+                    .Where(gu => gu.OrganizationUserId == existingUser.Id)
+                    .Select(gu => gu.GroupId));
+                var newGroupsIdsForUser = new HashSet<Guid>(user.Value
+                    .Where(id => existingGroupsDict.ContainsKey(id))
+                    .Select(id => existingGroupsDict[id].Id));
+
+                if(!existingGroupIdsForUser.SetEquals(newGroupsIdsForUser))
                 {
-                    await _organizationUserRepository.UpdateGroupsAsync(existingUser.Id, groupsIdsForUser);
+                    await _organizationUserRepository.UpdateGroupsAsync(existingUser.Id, newGroupsIdsForUser);
                 }
             }
         }
