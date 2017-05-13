@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Models.Api
 {
-    public class ImportRequestModel
+    public class ImportPasswordsRequestModel
     {
         private LoginRequestModel[] _logins;
 

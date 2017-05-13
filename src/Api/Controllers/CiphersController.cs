@@ -131,7 +131,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("import")]
-        public async Task PostImport([FromBody]ImportRequestModel model)
+        public async Task PostImport([FromBody]ImportPasswordsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();

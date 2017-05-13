@@ -36,6 +36,8 @@ namespace Bit.Core.Services
 
             if(group.Id == default(Guid))
             {
+                group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+
                 if(collections == null)
                 {
                     await _groupRepository.CreateAsync(group);
@@ -47,6 +49,8 @@ namespace Bit.Core.Services
             }
             else
             {
+                group.RevisionDate = DateTime.UtcNow;
+
                 if(collections == null)
                 {
                     await _groupRepository.ReplaceAsync(group);

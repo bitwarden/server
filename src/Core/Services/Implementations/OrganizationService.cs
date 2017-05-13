@@ -21,6 +21,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
         private readonly IPushService _pushService;
@@ -30,6 +31,7 @@ namespace Bit.Core.Services
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
+            IGroupRepository groupRepository,
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
             IPushService pushService)
@@ -38,6 +40,7 @@ namespace Bit.Core.Services
             _organizationUserRepository = organizationUserRepository;
             _collectionRepository = collectionRepository;
             _userRepository = userRepository;
+            _groupRepository = groupRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
             _pushService = pushService;
@@ -895,11 +898,105 @@ namespace Bit.Core.Services
             await _organizationUserRepository.DeleteAsync(orgUser);
         }
 
+        public async Task ImportAsync(Guid organizationId, Guid importingUserId, IEnumerable<Group> groups,
+            IEnumerable<KeyValuePair<string, IEnumerable<string>>> users)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(!organization.UseGroups)
+            {
+                throw new BadRequestException("Organization cannot use groups.");
+            }
+
+            // Groups
+            var existingGroups = (await _groupRepository.GetManyByOrganizationIdAsync(organizationId)).ToList();
+            var existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
+
+            var newGroups = groups.Where(g => !existingGroupsDict.ContainsKey(g.ExternalId));
+            var updateGroups = existingGroups.Where(eg => groups.Any(g => g.ExternalId == eg.ExternalId && g.Name != eg.Name));
+
+            foreach(var group in newGroups)
+            {
+                group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+                await _groupRepository.CreateAsync(group);
+            }
+
+            foreach(var group in updateGroups)
+            {
+                group.RevisionDate = DateTime.UtcNow;
+                group.Name = existingGroupsDict[group.ExternalId].Name;
+                await _groupRepository.ReplaceAsync(group);
+            }
+
+            // Add the newly created groups to existing groups so that we have a complete list to reference below for users.
+            existingGroups.AddRange(newGroups);
+            existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
+
+            // Users
+            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+            var existingUsersDict = existingUsers.ToDictionary(u => u.Email);
+
+            var newUsers = users.Where(u => !existingUsersDict.ContainsKey(u.Key)).ToList();
+            var updateUsers = users.Where(u => existingUsersDict.ContainsKey(u.Key));
+
+            var seatsAvailable = int.MaxValue;
+            if(organization.Seats.HasValue)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+                seatsAvailable = organization.Seats.Value - userCount;
+                if(seatsAvailable < newUsers.Count)
+                {
+                    // throw exception?
+                    return;
+                }
+            }
+
+            foreach(var user in newUsers)
+            {
+                try
+                {
+                    var newUser = await InviteUserAsync(organizationId, importingUserId, user.Key, OrganizationUserType.User,
+                        false, new List<SelectionReadOnly>());
+
+                    var groupsIdsForUser = user.Value.Where(id => existingGroupsDict.ContainsKey(id))
+                        .Select(id => existingGroupsDict[id].Id).ToList();
+                    if(groupsIdsForUser.Any())
+                    {
+                        await _organizationUserRepository.UpdateGroupsAsync(newUser.Id, groupsIdsForUser);
+                    }
+                }
+                catch(BadRequestException)
+                {
+                    continue;
+                }
+            }
+
+            foreach(var user in updateUsers)
+            {
+                if(!existingUsersDict.ContainsKey(user.Key))
+                {
+                    continue;
+                }
+
+                var existingUser = existingUsersDict[user.Key];
+                var groupsIdsForUser = user.Value.Where(id => existingGroupsDict.ContainsKey(id))
+                        .Select(id => existingGroupsDict[id].Id).ToList();
+                if(groupsIdsForUser.Any())
+                {
+                    await _organizationUserRepository.UpdateGroupsAsync(existingUser.Id, groupsIdsForUser);
+                }
+            }
+        }
+
         private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
         {
             var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
-                Enums.OrganizationUserType.Owner);
-            return owners.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed);
+                OrganizationUserType.Owner);
+            return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
         }
     }
 }

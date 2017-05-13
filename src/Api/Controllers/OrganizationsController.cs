@@ -228,5 +228,17 @@ namespace Bit.Api.Controllers
                 await _organizationService.DeleteAsync(organization);
             }
         }
+
+        [HttpPost("{id}/import")]
+        public Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            return Task.FromResult(0);
+        }
     }
 }
