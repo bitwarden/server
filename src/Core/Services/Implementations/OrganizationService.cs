@@ -921,10 +921,12 @@ namespace Bit.Core.Services
                 var newGroups = groups.Where(g => !existingGroupsDict.ContainsKey(g.ExternalId));
                 var updateGroups = existingGroups.Where(eg => groups.Any(g => g.ExternalId == eg.ExternalId && g.Name != eg.Name));
 
+                var createdGroups = new List<Group>();
                 foreach(var group in newGroups)
                 {
                     group.CreationDate = group.RevisionDate = DateTime.UtcNow;
                     await _groupRepository.CreateAsync(group);
+                    createdGroups.Add(group);
                 }
 
                 foreach(var group in updateGroups)
@@ -935,12 +937,12 @@ namespace Bit.Core.Services
                 }
 
                 // Add the newly created groups to existing groups so that we have a complete list to reference below for users.
-                existingGroups.AddRange(newGroups);
+                existingGroups.AddRange(createdGroups);
                 existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
             }
 
             // Users
-            if(users?.Any() ?? false)
+            if(!users?.Any() ?? true)
             {
                 return;
             }

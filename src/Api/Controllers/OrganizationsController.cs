@@ -230,7 +230,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/import")]
-        public Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
+        public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationAdmin(orgIdGuid))
@@ -238,7 +238,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return Task.FromResult(0);
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.ImportAsync(orgIdGuid, userId.Value, model.Groups.Select(g => g.ToGroup(orgIdGuid)),
+                model.Users.Select(u => u.ToKvp()));
         }
     }
 }
