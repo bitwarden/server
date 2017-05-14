@@ -12,6 +12,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[GroupUser]
+    WHERE
+        [OrganizationUserId] = @Id
+
+    DELETE
+    FROM
         [dbo].[OrganizationUser]
     WHERE
         [Id] = @Id

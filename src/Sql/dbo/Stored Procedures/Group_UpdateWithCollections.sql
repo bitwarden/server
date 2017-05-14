@@ -3,7 +3,7 @@
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @AccessAll BIT,
-    @ExternalId NVARCHAR(50),
+    @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY

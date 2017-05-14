@@ -3,7 +3,7 @@
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
     [Name]           NVARCHAR (50)    NOT NULL,
     [AccessAll]      BIT              NOT NULL,
-    [ExternalId]     NVARCHAR (50)    NULL,
+    [ExternalId]     NVARCHAR (300)   NULL,
     [CreationDate]   DATETIME         NOT NULL,
     [RevisionDate]   DATETIME         NOT NULL,
     CONSTRAINT [PK_Group] PRIMARY KEY CLUSTERED ([Id] ASC),
