@@ -813,7 +813,7 @@ namespace Bit.Core.Services
             Guid confirmingUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if(orgUser == null || orgUser.Status != Enums.OrganizationUserStatusType.Accepted ||
+            if(orgUser == null || orgUser.Status != OrganizationUserStatusType.Accepted ||
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
@@ -898,8 +898,11 @@ namespace Bit.Core.Services
             await _organizationUserRepository.DeleteAsync(orgUser);
         }
 
-        public async Task ImportAsync(Guid organizationId, Guid importingUserId, IEnumerable<Group> groups,
-            IEnumerable<KeyValuePair<string, IEnumerable<string>>> users)
+        public async Task ImportAsync(Guid organizationId,
+            Guid importingUserId,
+            IEnumerable<Tuple<Group, HashSet<string>>> groups,
+            IEnumerable<string> newUsers,
+            IEnumerable<string> removeUsers)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -912,100 +915,100 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization cannot use groups.");
             }
 
-            // Groups
-            var existingGroups = (await _groupRepository.GetManyByOrganizationIdAsync(organizationId)).ToList();
-            var existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
+            var newUsersSet = new HashSet<string>(newUsers);
+            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+            var existingUsersIdDict = existingUsers.ToDictionary(u => u.Email, u => u.Id);
 
+            // Users
+            // Remove Users
+            if(removeUsers.Any())
+            {
+                var removeUsersSet = new HashSet<string>(removeUsers);
+                var existingUsersDict = existingUsers.ToDictionary(u => u.Email);
+
+                var usersToRemove = removeUsersSet
+                    .Except(newUsersSet)
+                    .Where(ru => existingUsersDict.ContainsKey(ru))
+                    .Select(ru => existingUsersDict[ru]);
+
+                foreach(var user in usersToRemove)
+                {
+                    await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
+                    existingUsersIdDict.Remove(user.Email);
+                }
+            }
+
+            // Add new users
+            if(newUsers.Any())
+            {
+                var existingUsersSet = new HashSet<string>(existingUsers.Select(u => u.Email));
+                var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
+
+                var seatsAvailable = int.MaxValue;
+                if(organization.Seats.HasValue)
+                {
+                    var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+                    seatsAvailable = organization.Seats.Value - userCount;
+                    if(seatsAvailable < usersToAdd.Count)
+                    {
+                        // throw exception?
+                        return;
+                    }
+                }
+
+                foreach(var user in usersToAdd)
+                {
+                    try
+                    {
+                        var newUser = await InviteUserAsync(organizationId, importingUserId, user, OrganizationUserType.User,
+                            false, new List<SelectionReadOnly>());
+                        existingUsersIdDict.Add(newUser.Email, newUser.Id);
+                    }
+                    catch(BadRequestException)
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            // Groups
             if(groups?.Any() ?? false)
             {
-                var newGroups = groups.Where(g => !existingGroupsDict.ContainsKey(g.ExternalId));
-                var updateGroups = existingGroups.Where(eg => groups.Any(g => g.ExternalId == eg.ExternalId && g.Name != eg.Name));
+                var groupsDict = groups.ToDictionary(g => g.Item1.ExternalId);
+                var existingGroups = (await _groupRepository.GetManyByOrganizationIdAsync(organizationId)).ToList();
+                var existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
 
-                var createdGroups = new List<Group>();
+                var newGroups = groups
+                    .Where(g => !existingGroupsDict.ContainsKey(g.Item1.ExternalId))
+                    .Select(g => g.Item1);
+                var updateGroups = existingGroups
+                    .Where(eg => groups.Any(g => g.Item1.ExternalId == eg.ExternalId && g.Item1.Name != eg.Name))
+                    .ToList();
+
                 foreach(var group in newGroups)
                 {
                     group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+
                     await _groupRepository.CreateAsync(group);
-                    createdGroups.Add(group);
+                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
                 }
 
                 foreach(var group in updateGroups)
                 {
                     group.RevisionDate = DateTime.UtcNow;
                     group.Name = existingGroupsDict[group.ExternalId].Name;
+
                     await _groupRepository.ReplaceAsync(group);
-                }
-
-                // Add the newly created groups to existing groups so that we have a complete list to reference below for users.
-                existingGroups.AddRange(createdGroups);
-                existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
-            }
-
-            // Users
-            if(!users?.Any() ?? true)
-            {
-                return;
-            }
-
-            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-            var existingUsersDict = existingUsers.ToDictionary(u => u.Email);
-
-            var newUsers = users.Where(u => !existingUsersDict.ContainsKey(u.Key)).ToList();
-            var updateUsers = users.Where(u => existingUsersDict.ContainsKey(u.Key));
-
-            var seatsAvailable = int.MaxValue;
-            if(organization.Seats.HasValue)
-            {
-                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
-                seatsAvailable = organization.Seats.Value - userCount;
-                if(seatsAvailable < newUsers.Count)
-                {
-                    // throw exception?
-                    return;
+                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
                 }
             }
+        }
 
-            foreach(var user in newUsers)
-            {
-                try
-                {
-                    var newUser = await InviteUserAsync(organizationId, importingUserId, user.Key, OrganizationUserType.User,
-                        false, new List<SelectionReadOnly>());
-
-                    var groupsIdsForUser = user.Value.Where(id => existingGroupsDict.ContainsKey(id))
-                        .Select(id => existingGroupsDict[id].Id).ToList();
-                    if(groupsIdsForUser.Any())
-                    {
-                        await _organizationUserRepository.UpdateGroupsAsync(newUser.Id, groupsIdsForUser);
-                    }
-                }
-                catch(BadRequestException)
-                {
-                    continue;
-                }
-            }
-
-            var existingGroupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId);
-            foreach(var user in updateUsers)
-            {
-                if(!existingUsersDict.ContainsKey(user.Key))
-                {
-                    continue;
-                }
-
-                var existingUser = existingUsersDict[user.Key];
-                var existingGroupIdsForUser = new HashSet<Guid>(existingGroupUsers
-                    .Where(gu => gu.OrganizationUserId == existingUser.Id)
-                    .Select(gu => gu.GroupId));
-                var newGroupsIdsForUser = new HashSet<Guid>(user.Value
-                    .Where(id => existingGroupsDict.ContainsKey(id))
-                    .Select(id => existingGroupsDict[id].Id));
-
-                if(!existingGroupIdsForUser.SetEquals(newGroupsIdsForUser))
-                {
-                    await _organizationUserRepository.UpdateGroupsAsync(existingUser.Id, newGroupsIdsForUser);
-                }
-            }
+        private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
+            Dictionary<string, Guid> existingUsersIdDict)
+        {
+            var users = groupUsers.Union(existingUsersIdDict.Keys).Select(u => existingUsersIdDict[u]);
+            await _groupRepository.UpdateUsersAsync(group.Id, users);
         }
 
         private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)

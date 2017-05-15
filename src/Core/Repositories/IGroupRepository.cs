@@ -16,5 +16,6 @@ namespace Bit.Core.Repositories
         Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
+        Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
     }
 }

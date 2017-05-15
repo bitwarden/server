@@ -29,7 +29,7 @@ namespace Bit.Core.Services
         Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
-        Task ImportAsync(Guid organizationId, Guid importingUserId, IEnumerable<Group> groups,
-            IEnumerable<KeyValuePair<string, IEnumerable<string>>> users);
+        Task ImportAsync(Guid organizationId, Guid importingUserId, IEnumerable<Tuple<Group, HashSet<string>>> groups,
+            IEnumerable<string> newUsers, IEnumerable<string> removeUsers);
     }
 }

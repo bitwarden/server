@@ -239,8 +239,8 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.ImportAsync(orgIdGuid, userId.Value, model.Groups.Select(g => g.ToGroup(orgIdGuid)),
-                model.Users.Select(u => u.ToKvp()));
+            await _organizationService.ImportAsync(orgIdGuid, userId.Value, model.Groups.Select(g => g.ToGroupTuple(orgIdGuid)),
+                model.NewUsers.Select(u => u.Email), model.RemoveUsers.Select(u => u.Email));
         }
     }
 }

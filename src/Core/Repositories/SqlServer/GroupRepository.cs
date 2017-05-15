@@ -130,6 +130,17 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[GroupUser_UpdateUsers]",
+                    new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public class GroupWithCollections : Group
         {
             public DataTable Collections { get; set; }

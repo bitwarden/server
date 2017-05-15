@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bit.Core.Models.Table;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -7,7 +8,8 @@ namespace Bit.Core.Models.Api
     public class ImportOrganizationUsersRequestModel
     {
         public Group[] Groups { get; set; }
-        public User[] Users { get; set; }
+        public User[] NewUsers { get; set; }
+        public User[] RemoveUsers { get; set; }
 
         public class Group
         {
@@ -15,15 +17,18 @@ namespace Bit.Core.Models.Api
             public string Name { get; set; }
             [Required]
             public string ExternalId { get; set; }
-            
-            public Table.Group ToGroup(Guid organizationId)
+            public IEnumerable<string> Users { get; set; }
+
+            public Tuple<Table.Group, HashSet<string>> ToGroupTuple(Guid organizationId)
             {
-                return new Table.Group
+                var group = new Table.Group
                 {
                     OrganizationId = organizationId,
                     Name = Name,
                     ExternalId = ExternalId
                 };
+
+                return new Tuple<Table.Group, HashSet<string>>(group, new HashSet<string>(Users));
             }
         }
 
@@ -32,12 +37,6 @@ namespace Bit.Core.Models.Api
             [Required]
             [EmailAddress]
             public string Email { get; set; }
-            public IEnumerable<string> ExternalGroupIds { get; set; }
-
-            public KeyValuePair<string, IEnumerable<string>> ToKvp()
-            {
-                return new KeyValuePair<string, IEnumerable<string>>(Email, ExternalGroupIds);
-            }
         }
     }
 }
