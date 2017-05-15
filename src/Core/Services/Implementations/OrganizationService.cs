@@ -981,9 +981,6 @@ namespace Bit.Core.Services
                 var newGroups = groups
                     .Where(g => !existingGroupsDict.ContainsKey(g.Item1.ExternalId))
                     .Select(g => g.Item1);
-                var updateGroups = existingGroups
-                    .Where(eg => groups.Any(g => g.Item1.ExternalId == eg.ExternalId && g.Item1.Name != eg.Name))
-                    .ToList();
 
                 foreach(var group in newGroups)
                 {
@@ -993,20 +990,30 @@ namespace Bit.Core.Services
                     await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
                 }
 
+                var updateGroups = existingGroups
+                    .Where(g => groupsDict.ContainsKey(g.ExternalId))
+                    .ToList();
+
                 if(updateGroups.Any())
                 {
-                    var existingGroupUsers = (await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId))
+                    var groupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId);
+                    var existingGroupUsers = groupUsers
                         .GroupBy(gu => gu.GroupId)
-                        .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(g => g.OrganizationUserId)));
+                        .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(gr => gr.OrganizationUserId)));
 
                     foreach(var group in updateGroups)
                     {
-                        group.RevisionDate = DateTime.UtcNow;
-                        group.Name = existingGroupsDict[group.ExternalId].Name;
+                        var updatedGroup = groupsDict[group.ExternalId].Item1;
+                        if(group.Name != updatedGroup.Name)
+                        {
+                            group.RevisionDate = DateTime.UtcNow;
+                            group.Name = updatedGroup.Name;
 
-                        await _groupRepository.ReplaceAsync(group);
+                            await _groupRepository.ReplaceAsync(group);
+                        }
+
                         await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict,
-                            existingGroupUsers[group.Id]);
+                            existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
                     }
                 }
             }
@@ -1015,7 +1022,8 @@ namespace Bit.Core.Services
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
             Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
         {
-            var users = new HashSet<Guid>(groupUsers.Union(existingUsersIdDict.Keys).Select(u => existingUsersIdDict[u]));
+            var availableUsers = groupUsers.Intersect(existingUsersIdDict.Keys);
+            var users = new HashSet<Guid>(availableUsers.Select(u => existingUsersIdDict[u]));
             if(existingUsers != null && existingUsers.Count == users.Count && users.SetEquals(existingUsers))
             {
                 return;

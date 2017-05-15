@@ -8,8 +8,7 @@ namespace Bit.Core.Models.Api
     public class ImportOrganizationUsersRequestModel
     {
         public Group[] Groups { get; set; }
-        public User[] NewUsers { get; set; }
-        public User[] RemoveUsers { get; set; }
+        public User[] Users { get; set; }
 
         public class Group
         {
@@ -37,6 +36,7 @@ namespace Bit.Core.Models.Api
             [Required]
             [EmailAddress]
             public string Email { get; set; }
+            public bool Disabled { get; set; }
         }
     }
 }
