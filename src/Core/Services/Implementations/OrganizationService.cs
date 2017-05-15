@@ -993,21 +993,34 @@ namespace Bit.Core.Services
                     await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
                 }
 
-                foreach(var group in updateGroups)
+                if(updateGroups.Any())
                 {
-                    group.RevisionDate = DateTime.UtcNow;
-                    group.Name = existingGroupsDict[group.ExternalId].Name;
+                    var existingGroupUsers = (await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId))
+                        .GroupBy(gu => gu.GroupId)
+                        .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(g => g.OrganizationUserId)));
 
-                    await _groupRepository.ReplaceAsync(group);
-                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
+                    foreach(var group in updateGroups)
+                    {
+                        group.RevisionDate = DateTime.UtcNow;
+                        group.Name = existingGroupsDict[group.ExternalId].Name;
+
+                        await _groupRepository.ReplaceAsync(group);
+                        await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict,
+                            existingGroupUsers[group.Id]);
+                    }
                 }
             }
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
-            Dictionary<string, Guid> existingUsersIdDict)
+            Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
         {
-            var users = groupUsers.Union(existingUsersIdDict.Keys).Select(u => existingUsersIdDict[u]);
+            var users = new HashSet<Guid>(groupUsers.Union(existingUsersIdDict.Keys).Select(u => existingUsersIdDict[u]));
+            if(existingUsers != null && existingUsers.Count == users.Count && users.SetEquals(existingUsers))
+            {
+                return;
+            }
+
             await _groupRepository.UpdateUsersAsync(group.Id, users);
         }
 
