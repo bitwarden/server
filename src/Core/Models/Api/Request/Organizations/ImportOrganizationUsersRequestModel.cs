@@ -40,7 +40,7 @@ namespace Bit.Core.Models.Api
         {
             [EmailAddress]
             public string Email { get; set; }
-            public bool Disabled { get; set; }
+            public bool Deleted { get; set; }
             [Required]
             public string ExternalId { get; set; }
 
@@ -57,7 +57,7 @@ namespace Bit.Core.Models.Api
 
             public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
             {
-                if(string.IsNullOrWhiteSpace(Email) && !Disabled)
+                if(string.IsNullOrWhiteSpace(Email) && !Deleted)
                 {
                     yield return new ValidationResult("Email is required for enabled users.", new string[] { nameof(Email) });
                 }

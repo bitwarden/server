@@ -243,8 +243,8 @@ namespace Bit.Api.Controllers
                 orgIdGuid, 
                 userId.Value, 
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
-                model.Users.Where(u => !u.Disabled).Select(u => u.ToImportedOrganizationUser()), 
-                model.Users.Where(u => u.Disabled).Select(u => u.ExternalId));
+                model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()), 
+                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
         }
     }
 }
