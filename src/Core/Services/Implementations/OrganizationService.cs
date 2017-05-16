@@ -684,7 +684,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
-            OrganizationUserType type, bool accessAll, IEnumerable<SelectionReadOnly> collections)
+            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -718,6 +718,7 @@ namespace Bit.Core.Services
                 Type = type,
                 Status = OrganizationUserStatusType.Invited,
                 AccessAll = accessAll,
+                ExternalId = externalId,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -900,9 +901,9 @@ namespace Bit.Core.Services
 
         public async Task ImportAsync(Guid organizationId,
             Guid importingUserId,
-            IEnumerable<Tuple<Group, HashSet<string>>> groups,
-            IEnumerable<string> newUsers,
-            IEnumerable<string> removeUsers)
+            IEnumerable<ImportedGroup> groups,
+            IEnumerable<ImportedOrganizationUser> newUsers,
+            IEnumerable<string> removeUserExternalIds)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
@@ -915,16 +916,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization cannot use groups.");
             }
 
-            var newUsersSet = new HashSet<string>(newUsers);
-            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-            var existingUsersIdDict = existingUsers.ToDictionary(u => u.Email, u => u.Id);
+            var newUsersSet = new HashSet<string>(newUsers.Select(u => u.ExternalId));
+            var existingUsersOriginal = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+            var existingUsers = existingUsersOriginal.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
+            var existingUsersIdDict = existingUsers.ToDictionary(u => u.ExternalId, u => u.Id);
 
             // Users
             // Remove Users
-            if(removeUsers.Any())
+            if(removeUserExternalIds.Any())
             {
-                var removeUsersSet = new HashSet<string>(removeUsers);
-                var existingUsersDict = existingUsers.ToDictionary(u => u.Email);
+                var removeUsersSet = new HashSet<string>(removeUserExternalIds);
+                var existingUsersDict = existingUsers.ToDictionary(u => u.ExternalId);
 
                 var usersToRemove = removeUsersSet
                     .Except(newUsersSet)
@@ -934,14 +936,14 @@ namespace Bit.Core.Services
                 foreach(var user in usersToRemove)
                 {
                     await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
-                    existingUsersIdDict.Remove(user.Email);
+                    existingUsersIdDict.Remove(user.ExternalId);
                 }
             }
 
             // Add new users
             if(newUsers.Any())
             {
-                var existingUsersSet = new HashSet<string>(existingUsers.Select(u => u.Email));
+                var existingUsersSet = new HashSet<string>(existingUsers.Select(u => u.ExternalId));
                 var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
 
                 var seatsAvailable = int.MaxValue;
@@ -956,17 +958,39 @@ namespace Bit.Core.Services
                     }
                 }
 
-                foreach(var user in usersToAdd)
+                foreach(var user in newUsers)
                 {
+                    if(!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        continue;
+                    }
+
                     try
                     {
-                        var newUser = await InviteUserAsync(organizationId, importingUserId, user, OrganizationUserType.User,
-                            false, new List<SelectionReadOnly>());
-                        existingUsersIdDict.Add(newUser.Email, newUser.Id);
+                        var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email,
+                            OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                        existingUsersIdDict.Add(newUser.ExternalId, newUser.Id);
                     }
                     catch(BadRequestException)
                     {
                         continue;
+                    }
+                }
+
+                var existingUsersEmailsDict = existingUsersOriginal
+                    .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
+                    .ToDictionary(u => u.Email);
+                var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
+                var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
+                foreach(var user in usersToAttach)
+                {
+                    var orgUserDetails = existingUsersEmailsDict[user];
+                    var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserDetails.Id);
+                    if(orgUser != null)
+                    {
+                        orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
+                        await _organizationUserRepository.UpsertAsync(orgUser);
+                        existingUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
                     }
                 }
             }
@@ -974,20 +998,20 @@ namespace Bit.Core.Services
             // Groups
             if(groups?.Any() ?? false)
             {
-                var groupsDict = groups.ToDictionary(g => g.Item1.ExternalId);
+                var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
                 var existingGroups = (await _groupRepository.GetManyByOrganizationIdAsync(organizationId)).ToList();
                 var existingGroupsDict = existingGroups.ToDictionary(g => g.ExternalId);
 
                 var newGroups = groups
-                    .Where(g => !existingGroupsDict.ContainsKey(g.Item1.ExternalId))
-                    .Select(g => g.Item1);
+                    .Where(g => !existingGroupsDict.ContainsKey(g.Group.ExternalId))
+                    .Select(g => g.Group);
 
                 foreach(var group in newGroups)
                 {
                     group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
                     await _groupRepository.CreateAsync(group);
-                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict);
+                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds, existingUsersIdDict);
                 }
 
                 var updateGroups = existingGroups
@@ -1003,7 +1027,7 @@ namespace Bit.Core.Services
 
                     foreach(var group in updateGroups)
                     {
-                        var updatedGroup = groupsDict[group.ExternalId].Item1;
+                        var updatedGroup = groupsDict[group.ExternalId].Group;
                         if(group.Name != updatedGroup.Name)
                         {
                             group.RevisionDate = DateTime.UtcNow;
@@ -1012,7 +1036,7 @@ namespace Bit.Core.Services
                             await _groupRepository.ReplaceAsync(group);
                         }
 
-                        await UpdateUsersAsync(group, groupsDict[group.ExternalId].Item2, existingUsersIdDict,
+                        await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds, existingUsersIdDict,
                             existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
                     }
                 }

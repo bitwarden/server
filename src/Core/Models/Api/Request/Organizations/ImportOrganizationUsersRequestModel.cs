@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Business;
+using Bit.Core.Models.Table;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -18,25 +19,49 @@ namespace Bit.Core.Models.Api
             public string ExternalId { get; set; }
             public IEnumerable<string> Users { get; set; }
 
-            public Tuple<Table.Group, HashSet<string>> ToGroupTuple(Guid organizationId)
+            public ImportedGroup ToImportedGroup(Guid organizationId)
             {
-                var group = new Table.Group
+                var importedGroup = new ImportedGroup
                 {
-                    OrganizationId = organizationId,
-                    Name = Name,
-                    ExternalId = ExternalId
+                    Group = new Table.Group
+                    {
+                        OrganizationId = organizationId,
+                        Name = Name,
+                        ExternalId = ExternalId
+                    },
+                    ExternalUserIds = new HashSet<string>(Users)
                 };
 
-                return new Tuple<Table.Group, HashSet<string>>(group, new HashSet<string>(Users));
+                return importedGroup;
             }
         }
 
-        public class User
+        public class User : IValidatableObject
         {
-            [Required]
             [EmailAddress]
             public string Email { get; set; }
             public bool Disabled { get; set; }
+            [Required]
+            public string ExternalId { get; set; }
+
+            public ImportedOrganizationUser ToImportedOrganizationUser()
+            {
+                var importedUser = new ImportedOrganizationUser
+                {
+                    Email = Email,
+                    ExternalId = ExternalId
+                };
+
+                return importedUser;
+            }
+
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                if(string.IsNullOrWhiteSpace(Email) && !Disabled)
+                {
+                    yield return new ValidationResult("Email is required for enabled users.", new string[] { nameof(Email) });
+                }
+            }
         }
     }
 }

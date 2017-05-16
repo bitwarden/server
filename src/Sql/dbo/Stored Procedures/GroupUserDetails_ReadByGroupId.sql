@@ -15,7 +15,7 @@ BEGIN
         [dbo].[OrganizationUser] OU
     INNER JOIN
         [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id]
-    INNER JOIN
+    LEFT JOIN
         [dbo].[User] U ON U.[Id] = OU.[UserId]
     WHERE
         GU.[GroupId] = @GroupId

@@ -242,9 +242,9 @@ namespace Bit.Api.Controllers
             await _organizationService.ImportAsync(
                 orgIdGuid, 
                 userId.Value, 
-                model.Groups.Select(g => g.ToGroupTuple(orgIdGuid)),
-                model.Users.Where(u => !u.Disabled).Select(u => u.Email), 
-                model.Users.Where(u => u.Disabled).Select(u => u.Email));
+                model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
+                model.Users.Where(u => !u.Disabled).Select(u => u.ToImportedOrganizationUser()), 
+                model.Users.Where(u => u.Disabled).Select(u => u.ExternalId));
         }
     }
 }
