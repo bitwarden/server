@@ -7,6 +7,7 @@
     @Status TINYINT,
     @Type TINYINT,
     @AccessAll BIT,
+    @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -23,6 +24,7 @@ BEGIN
         [Status] = @Status,
         [Type] = @Type,
         [AccessAll] = @AccessAll,
+        [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
