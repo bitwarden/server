@@ -11,7 +11,7 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationUser] OU ON C.[OrganizationId] = OU.[OrganizationId]
     INNER JOIN
-        [dbo].[Organization] O ON C.[OrganizationId] = O.[Id]
+        [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
     LEFT JOIN
         [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = [OU].[Id]
     LEFT JOIN
