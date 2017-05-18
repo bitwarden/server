@@ -947,33 +947,33 @@ namespace Bit.Core.Services
                 var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
 
                 var seatsAvailable = int.MaxValue;
+                var enoughSeatsAvailable = true;
                 if(organization.Seats.HasValue)
                 {
                     var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                     seatsAvailable = organization.Seats.Value - userCount;
-                    if(seatsAvailable < usersToAdd.Count)
-                    {
-                        // throw exception?
-                        return;
-                    }
+                    enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
                 }
 
-                foreach(var user in newUsers)
+                if(enoughSeatsAvailable)
                 {
-                    if(!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+                    foreach(var user in newUsers)
                     {
-                        continue;
-                    }
+                        if(!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+                        {
+                            continue;
+                        }
 
-                    try
-                    {
-                        var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email,
-                            OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
-                        existingUsersIdDict.Add(newUser.ExternalId, newUser.Id);
-                    }
-                    catch(BadRequestException)
-                    {
-                        continue;
+                        try
+                        {
+                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email,
+                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                            existingUsersIdDict.Add(newUser.ExternalId, newUser.Id);
+                        }
+                        catch(BadRequestException)
+                        {
+                            continue;
+                        }
                     }
                 }
 
