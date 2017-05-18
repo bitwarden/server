@@ -95,7 +95,7 @@ namespace Bit.Api
 
             // Services
             services.AddBaseServices();
-            services.AddNoopServices();
+            services.AddDefaultServices();
 
             // Cors
             services.AddCors(config =>
