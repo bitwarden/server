@@ -705,7 +705,7 @@ namespace Bit.Core.Services
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
-                if(availableSeats >= emails.Count())
+                if(availableSeats < emails.Count())
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
