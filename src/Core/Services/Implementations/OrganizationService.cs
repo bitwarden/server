@@ -686,6 +686,15 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {
+            var result = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email }, type, accessAll,
+                externalId, collections);
+            return result.FirstOrDefault();
+        }
+
+        public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid invitingUserId,
+            IEnumerable<string> emails, OrganizationUserType type, bool accessAll, string externalId,
+            IEnumerable<SelectionReadOnly> collections)
+        {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             if(organization == null)
             {
@@ -695,45 +704,52 @@ namespace Bit.Core.Services
             if(organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
-                if(userCount >= organization.Seats.Value)
+                var availableSeats = organization.Seats.Value - userCount;
+                if(availableSeats >= emails.Count())
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
                 }
             }
 
-            // Make sure user is not already invited
-            var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
-            if(existingOrgUser != null)
+            var orgUsers = new List<OrganizationUser>();
+            foreach(var email in emails)
             {
-                throw new BadRequestException("User already invited.");
+                // Make sure user is not already invited
+                var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
+                if(existingOrgUser != null)
+                {
+                    throw new BadRequestException("User already invited.");
+                }
+
+                var orgUser = new OrganizationUser
+                {
+                    OrganizationId = organizationId,
+                    UserId = null,
+                    Email = email.ToLowerInvariant(),
+                    Key = null,
+                    Type = type,
+                    Status = OrganizationUserStatusType.Invited,
+                    AccessAll = accessAll,
+                    ExternalId = externalId,
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow
+                };
+
+                if(!orgUser.AccessAll && collections.Any())
+                {
+                    await _organizationUserRepository.CreateAsync(orgUser, collections);
+                }
+                else
+                {
+                    await _organizationUserRepository.CreateAsync(orgUser);
+                }
+
+                await SendInviteAsync(orgUser);
+                orgUsers.Add(orgUser);
             }
 
-            var orgUser = new OrganizationUser
-            {
-                OrganizationId = organizationId,
-                UserId = null,
-                Email = email.ToLowerInvariant(),
-                Key = null,
-                Type = type,
-                Status = OrganizationUserStatusType.Invited,
-                AccessAll = accessAll,
-                ExternalId = externalId,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow
-            };
-
-            if(!orgUser.AccessAll && collections.Any())
-            {
-                await _organizationUserRepository.CreateAsync(orgUser, collections);
-            }
-            else
-            {
-                await _organizationUserRepository.CreateAsync(orgUser);
-            }
-
-            await SendInviteAsync(orgUser);
-            return orgUser;
+            return orgUsers;
         }
 
         public async Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId)
