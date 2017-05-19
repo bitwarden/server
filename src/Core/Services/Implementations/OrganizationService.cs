@@ -401,7 +401,6 @@ namespace Bit.Core.Services
                 }
             }
 
-            var invoiceService = new StripeInvoiceService();
             var subscriptionItemService = new StripeSubscriptionItemService();
             var subscriptionService = new StripeSubscriptionService();
             var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
@@ -421,7 +420,7 @@ namespace Bit.Core.Services
                     SubscriptionId = sub.Id
                 });
 
-                await PreviewUpcomingAndPayAsync(invoiceService, organization, plan);
+                await PreviewUpcomingAndPayAsync(organization, plan);
             }
             else if(additionalSeats > 0)
             {
@@ -432,7 +431,7 @@ namespace Bit.Core.Services
                     Prorate = true
                 });
 
-                await PreviewUpcomingAndPayAsync(invoiceService, organization, plan);
+                await PreviewUpcomingAndPayAsync(organization, plan);
             }
             else if(additionalSeats == 0)
             {
@@ -443,8 +442,9 @@ namespace Bit.Core.Services
             await _organizationRepository.ReplaceAsync(organization);
         }
 
-        private async Task PreviewUpcomingAndPayAsync(StripeInvoiceService invoiceService, Organization org, Plan plan)
+        private async Task PreviewUpcomingAndPayAsync(Organization org, Plan plan)
         {
+            var invoiceService = new StripeInvoiceService();
             var upcomingPreview = await invoiceService.UpcomingAsync(org.StripeCustomerId,
                 new StripeUpcomingInvoiceOptions
                 {
@@ -452,17 +452,24 @@ namespace Bit.Core.Services
                 });
 
             var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
-                .TakeWhile(i => i.Plan.Id == plan.StripeSeatPlanId).Sum(i => i.Amount);
+                .TakeWhile(i => i.Plan.Id == plan.StripeSeatPlanId && i.Proration).Sum(i => i.Amount);
             if(prorationAmount.GetValueOrDefault() >= 500)
             {
-                // Owes more than $5.00 on next invoice. Invoice them and pay now instead of waiting until next month.
-                var invoice = await invoiceService.CreateAsync(org.StripeCustomerId,
-                    new StripeInvoiceCreateOptions
-                    {
-                        SubscriptionId = org.StripeSubscriptionId
-                    });
+                try
+                {
+                    // Owes more than $5.00 on next invoice. Invoice them and pay now instead of waiting until next month.
+                    var invoice = await invoiceService.CreateAsync(org.StripeCustomerId,
+                        new StripeInvoiceCreateOptions
+                        {
+                            SubscriptionId = org.StripeSubscriptionId
+                        });
 
-                await invoiceService.PayAsync(invoice.Id);
+                    if(invoice.AmountDue > 0)
+                    {
+                        await invoiceService.PayAsync(invoice.Id);
+                    }
+                }
+                catch(StripeException) { }
             }
         }
 
