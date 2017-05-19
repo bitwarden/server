@@ -11,7 +11,8 @@ The core infrastructure is written in C# using .NET with ASP.NET Core. The datab
 
 **Requirements**
 
-- [Visual Studio](https://www.visualstudio.com/)
+- [ASP.NET Core](https://dot.net)
+- Recommended: [Visual Studio](https://www.visualstudio.com/)
 
 Open `bitwarden-core.sln`. After restoring the nuget packages, you can build and run the `Api` project.
 
