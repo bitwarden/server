@@ -7,8 +7,16 @@ The bitwarden Core project contains the APIs, database, and other infrastructure
 
 The core infrastructure is written in C# using .NET with ASP.NET Core. The database is SQL Server.
 
+# Build/Run
+
+**Requirements**
+
+- [Visual Studio](https://www.visualstudio.com/)
+
+Open `bitwarden-core.sln`. After restoring the nuget packages, you can build and run the `Api` project.
+
 # Contribute
 
 Code contributions are welcome! Visual Studio or VS Code is required to work on this project. Please commit any pull requests against the `master` branch.
 
-Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature.
+Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file.
