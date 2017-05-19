@@ -11,6 +11,8 @@ notify us. We welcome working with you to resolve the issue promptly. Thanks in 
 - Make a good faith effort to avoid privacy violations, destruction of data, and interruption or
   degradation of our service. Only interact with accounts you own or with explicit permission of the
   account holder.
+- If you would like to encrypt your report, please use the PGP key with long ID
+  `0xDE6887086F892325FEC04CC0D847525B6931381F` (available in the public keyserver pool).
 
 # In-scope
 
