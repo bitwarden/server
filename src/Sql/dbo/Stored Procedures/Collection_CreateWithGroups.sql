@@ -4,7 +4,7 @@
     @Name VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @GroupIds AS [dbo].[GuidIdArray] READONLY
+    @Groups AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,9 +28,9 @@ BEGIN
     SELECT
         @Id,
         [Id],
-        0
+        [ReadOnly]
     FROM
-        @GroupIds
+        @Groups
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableGroupsCTE])
 END

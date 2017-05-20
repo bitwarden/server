@@ -48,6 +48,16 @@ BEGIN
     WHERE
         OU.[UserId] = @Id
 
+    -- Delete group users
+    DELETE
+        GU
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = GU.[OrganizationUserId]
+    WHERE
+        OU.[UserId] = @Id
+
     -- Delete organization users
     DELETE
     FROM

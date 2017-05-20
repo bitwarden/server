@@ -6,6 +6,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[CollectionGroup]
+    WHERE
+        [CollectionId] = @Id
+
+    DELETE
+    FROM
         [dbo].[Collection]
     WHERE
         [Id] = @Id
