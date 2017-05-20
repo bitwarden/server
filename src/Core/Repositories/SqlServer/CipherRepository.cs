@@ -178,11 +178,6 @@ namespace Bit.Core.Repositories.SqlServer
 
         public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            if(ciphers.Count() == 0)
-            {
-                return Task.FromResult(0);
-            }
-
             using(var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();

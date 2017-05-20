@@ -5,7 +5,6 @@ namespace Bit.Core.Models.Api
 {
     public class UpdateProfileRequestModel
     {
-        [Required]
         [StringLength(50)]
         public string Name { get; set; }
         [StringLength(50)]
