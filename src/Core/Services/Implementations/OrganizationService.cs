@@ -486,6 +486,11 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
+            if(plan.BaseSeats + signup.AdditionalSeats <= 0)
+            {
+                throw new BadRequestException("You do not have any seats!");
+            }
+
             if(!plan.CanBuyAdditionalSeats && signup.AdditionalSeats > 0)
             {
                 throw new BadRequestException("Plan does not allow additional users.");
