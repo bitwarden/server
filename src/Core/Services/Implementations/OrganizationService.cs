@@ -384,6 +384,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} seats.");
             }
 
+            if(newSeatTotal <= 0)
+            {
+                throw new BadRequestException("You must have at least 1 seat.");
+            }
+
             var additionalSeats = newSeatTotal - plan.BaseSeats;
             if(plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
             {
