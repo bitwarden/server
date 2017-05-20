@@ -152,7 +152,8 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "enterprise-org-seat-monthly",
                     UpgradeSortOrder = 3,
                     TrialPeriodDays = 7,
-                    UseGroups = true
+                    UseGroups = true,
+                    UseDirectory = true
                 },
                 new Plan
                 {
@@ -166,7 +167,8 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "enterprise-org-seat-annually",
                     UpgradeSortOrder = 3,
                     TrialPeriodDays = 7,
-                    UseGroups = true
+                    UseGroups = true,
+                    UseDirectory = true
                 }
             };
 

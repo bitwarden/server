@@ -11,6 +11,7 @@ namespace Bit.Core.Models.Api
             Id = organization.OrganizationId.ToString();
             Name = organization.Name;
             UseGroups = organization.UseGroups;
+            UseDirectory = organization.UseDirectory;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
             Key = organization.Key;
@@ -22,6 +23,7 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string Name { get; set; }
         public bool UseGroups { get; set; }
+        public bool UseDirectory { get; set; }
         public int Seats { get; set; }
         public int MaxCollections { get; set; }
         public string Key { get; set; }

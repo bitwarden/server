@@ -12,6 +12,7 @@ namespace Bit.Core.Models.StaticStore
         public bool CanBuyAdditionalSeats { get; set; }
         public short? MaxAdditionalSeats { get; set; }
         public bool UseGroups { get; set; }
+        public bool UseDirectory { get; set; }
         public decimal BasePrice { get; set; }
         public decimal SeatPrice { get; set; }
         public short? MaxCollections { get; set; }

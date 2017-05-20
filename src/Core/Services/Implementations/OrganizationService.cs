@@ -576,9 +576,11 @@ namespace Bit.Core.Services
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,
                 UseGroups = plan.UseGroups,
+                UseDirectory = plan.UseDirectory,
                 Plan = plan.Name,
                 StripeCustomerId = customer?.Id,
                 StripeSubscriptionId = subscription?.Id,
+                Enabled = true,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -939,19 +941,19 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(!organization.UseGroups)
+            if(!organization.UseDirectory)
             {
-                throw new BadRequestException("Organization cannot use groups.");
+                throw new BadRequestException("Organization cannot use directory syncing.");
             }
 
-            var newUsersSet = new HashSet<string>(newUsers.Select(u => u.ExternalId));
+            var newUsersSet = new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>());
             var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
             var existingExternalUsers = existingUsers.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
             var existingExternalUsersIdDict = existingExternalUsers.ToDictionary(u => u.ExternalId, u => u.Id);
 
             // Users
             // Remove Users
-            if(removeUserExternalIds.Any())
+            if(removeUserExternalIds?.Any() ?? false)
             {
                 var removeUsersSet = new HashSet<string>(removeUserExternalIds);
                 var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
@@ -969,7 +971,7 @@ namespace Bit.Core.Services
             }
 
             // Add new users
-            if(newUsers.Any())
+            if(newUsers?.Any() ?? false)
             {
                 var existingUsersSet = new HashSet<string>(existingExternalUsers.Select(u => u.ExternalId));
                 var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
@@ -1026,6 +1028,11 @@ namespace Bit.Core.Services
             // Groups
             if(groups?.Any() ?? false)
             {
+                if(!organization.UseGroups)
+                {
+                    throw new BadRequestException("Organization cannot use groups.");
+                }
+
                 var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
                 var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
                 var existingExternalGroups = existingGroups.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();

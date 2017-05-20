@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Data
         public Guid? UserId { get; set; }
         public string Name { get; set; }
         public bool UseGroups { get; set; }
+        public bool UseDirectory { get; set; }
         public int Seats { get; set; }
         public int MaxCollections { get; set; }
         public string Key { get; set; }

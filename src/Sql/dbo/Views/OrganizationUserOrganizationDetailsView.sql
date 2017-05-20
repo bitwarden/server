@@ -6,6 +6,7 @@ SELECT
     O.[Name],
     O.[Enabled],
     O.[UseGroups],
+    O.[UseDirectory],
     O.[Seats],
     O.[MaxCollections],
     OU.[Key],
