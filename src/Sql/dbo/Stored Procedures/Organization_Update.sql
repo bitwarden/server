@@ -3,7 +3,7 @@
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BillingEmail NVARCHAR(50),
-    @Plan NVARCHAR(20),
+    @Plan NVARCHAR(50),
     @PlanType TINYINT,
     @Seats SMALLINT,
     @MaxCollections SMALLINT,

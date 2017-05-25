@@ -3,7 +3,7 @@
     [Name]                 NVARCHAR (50)    NOT NULL,
     [BusinessName]         NVARCHAR (50)    NULL,
     [BillingEmail]         NVARCHAR (50)    NOT NULL,
-    [Plan]                 NVARCHAR (20)    NOT NULL,
+    [Plan]                 NVARCHAR (50)    NOT NULL,
     [PlanType]             TINYINT          NOT NULL,
     [Seats]                SMALLINT         NULL,
     [MaxCollections]       SMALLINT         NULL,
