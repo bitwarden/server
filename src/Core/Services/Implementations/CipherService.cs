@@ -17,7 +17,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
-        private readonly IPushService _pushService;
+        private readonly IPushNotificationService _pushService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -26,7 +26,7 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
-            IPushService pushService)
+            IPushNotificationService pushService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;

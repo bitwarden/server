@@ -18,18 +18,18 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Services
 {
-    public class PushSharpPushService : IPushService
+    public class PushSharpPushNotificationService : IPushNotificationService
     {
         private readonly IDeviceRepository _deviceRepository;
-        private readonly ILogger<IPushService> _logger;
+        private readonly ILogger<IPushNotificationService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private GcmServiceBroker _gcmBroker;
         private ApnsServiceBroker _apnsBroker;
 
-        public PushSharpPushService(
+        public PushSharpPushNotificationService(
             IDeviceRepository deviceRepository,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<IPushService> logger,
+            ILogger<IPushNotificationService> logger,
             IHostingEnvironment hostingEnvironment,
             GlobalSettings globalSettings)
         {

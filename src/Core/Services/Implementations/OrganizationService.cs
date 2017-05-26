@@ -24,7 +24,7 @@ namespace Bit.Core.Services
         private readonly IGroupRepository _groupRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
-        private readonly IPushService _pushService;
+        private readonly IPushNotificationService _pushService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -34,7 +34,7 @@ namespace Bit.Core.Services
             IGroupRepository groupRepository,
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
-            IPushService pushService)
+            IPushNotificationService pushService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;

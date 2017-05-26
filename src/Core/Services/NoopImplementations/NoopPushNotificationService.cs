@@ -4,7 +4,7 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
-    public class NoopPushService : IPushService
+    public class NoopPushNotificationService : IPushNotificationService
     {
         public Task PushSyncCipherCreateAsync(Cipher cipher)
         {

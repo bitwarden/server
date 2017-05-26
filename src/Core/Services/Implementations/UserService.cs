@@ -20,7 +20,7 @@ namespace Bit.Core.Services
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IMailService _mailService;
-        private readonly IPushService _pushService;
+        private readonly IPushNotificationService _pushService;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -32,7 +32,7 @@ namespace Bit.Core.Services
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
             IMailService mailService,
-            IPushService pushService,
+            IPushNotificationService pushService,
             IUserStore<User> store,
             IOptions<IdentityOptions> optionsAccessor,
             IPasswordHasher<User> passwordHasher,
