@@ -10,12 +10,14 @@ using Bit.Core.Models.Table;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.IdentityModel.Tokens;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class JwtBearerSignInManager
     {
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IDeviceService _deviceService;
 
         public JwtBearerSignInManager(
             UserManager<User> userManager,
@@ -25,7 +27,8 @@ namespace Bit.Core.Identity
             IOptions<JwtBearerIdentityOptions> jwtIdentityOptionsAccessor,
             IOptions<JwtBearerOptions> jwtOptionsAccessor,
             ILogger<JwtBearerSignInManager> logger,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            IDeviceService deviceService)
         {
             UserManager = userManager;
             Context = contextAccessor.HttpContext;
@@ -34,6 +37,7 @@ namespace Bit.Core.Identity
             JwtIdentityOptions = jwtIdentityOptionsAccessor?.Value ?? new JwtBearerIdentityOptions();
             JwtBearerOptions = jwtOptionsAccessor?.Value ?? new JwtBearerOptions();
             _deviceRepository = deviceRepository;
+            _deviceService = deviceService;
         }
 
         internal UserManager<User> UserManager { get; set; }
@@ -75,7 +79,7 @@ namespace Bit.Core.Identity
                     if(existingDevice == null)
                     {
                         device.UserId = user.Id;
-                        await _deviceRepository.CreateAsync(device);
+                        await _deviceService.SaveAsync(device);
                     }
                 }
 
@@ -117,7 +121,7 @@ namespace Bit.Core.Identity
                     if(existingDevice == null)
                     {
                         device.UserId = user.Id;
-                        await _deviceRepository.CreateAsync(device);
+                        await _deviceService.SaveAsync(device);
                     }
                 }
 

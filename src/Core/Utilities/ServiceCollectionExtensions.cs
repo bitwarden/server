@@ -52,6 +52,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IMailService, SendGridMailService>();
             services.AddSingleton<IPushService, PushSharpPushService>();
             services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
+            services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
         }
 
         public static void AddNoopServices(this IServiceCollection services)
@@ -59,6 +60,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IMailService, NoopMailService>();
             services.AddSingleton<IPushService, NoopPushService>();
             services.AddSingleton<IBlockIpService, NoopBlockIpService>();
+            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         }
 
         public static IdentityBuilder AddCustomIdentityServices(

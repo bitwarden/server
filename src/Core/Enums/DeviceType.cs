@@ -16,6 +16,7 @@
         OperaBrowser = 11,
         EdgeBrowser = 12,
         IEBrowser = 13,
-        UnknownBrowser = 14
+        UnknownBrowser = 14,
+        AndroidAmazon = 15
     }
 }

@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Services;
 
 namespace Bit.Core.IdentityServer
 {
@@ -26,18 +27,21 @@ namespace Bit.Core.IdentityServer
         private JwtBearerOptions _jwtBearerOptions;
         private JwtBearerIdentityOptions _jwtBearerIdentityOptions;
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IDeviceService _deviceService;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IOptions<IdentityOptions> identityOptionsAccessor,
             IOptions<JwtBearerIdentityOptions> jwtIdentityOptionsAccessor,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            IDeviceService deviceService)
         {
             _userManager = userManager;
             _identityOptions = identityOptionsAccessor?.Value ?? new IdentityOptions();
             _jwtBearerIdentityOptions = jwtIdentityOptionsAccessor?.Value;
-            _jwtBearerOptions = Core.Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
+            _jwtBearerOptions = Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
             _deviceRepository = deviceRepository;
+            _deviceService = deviceService;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -222,7 +226,7 @@ namespace Bit.Core.IdentityServer
                 if(existingDevice == null)
                 {
                     device.UserId = user.Id;
-                    await _deviceRepository.CreateAsync(device);
+                    await _deviceService.SaveAsync(device);
                     return device;
                 }
 

@@ -13,6 +13,7 @@
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
+        public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
 
         public class SqlServerSettings
         {
@@ -53,6 +54,12 @@
         {
             public string Uri { get; set; }
             public string Key { get; set; }
+        }
+
+        public class NotificationHubSettings
+        {
+            public string ConnectionString { get; set; }
+            public string HubName { get; set; }
         }
     }
 }

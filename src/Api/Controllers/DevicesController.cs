@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
-using Microsoft.AspNetCore.Identity;
 using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
@@ -109,7 +108,13 @@ namespace Bit.Api.Controllers
         [HttpPost("identifier/{identifier}/clear-token")]
         public async Task PutClearToken(string identifier)
         {
-            await _deviceRepository.ClearPushTokenByIdentifierAsync(identifier);
+            var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+            if(device == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _deviceService.ClearTokenAsync(device);
         }
 
         [HttpDelete("{id}")]
@@ -122,7 +127,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _deviceRepository.DeleteAsync(device);
+            await _deviceService.DeleteAsync(device);
         }
     }
 }
