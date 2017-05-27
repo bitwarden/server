@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Services
 {
+    [Obsolete]
     public class PushSharpPushNotificationService : IPushNotificationService
     {
         private readonly IDeviceRepository _deviceRepository;
