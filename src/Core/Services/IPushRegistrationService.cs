@@ -8,5 +8,7 @@ namespace Bit.Core.Services
     {
         Task CreateOrUpdateRegistrationAsync(Device device);
         Task DeleteRegistrationAsync(Guid deviceId);
+        Task AddUserRegistrationOrganizationAsync(Guid userId, Guid organizationId);
+        Task DeleteUserRegistrationOrganizationAsync(Guid userId, Guid organizationId);
     }
 }

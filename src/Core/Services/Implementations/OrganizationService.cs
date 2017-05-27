@@ -24,7 +24,8 @@ namespace Bit.Core.Services
         private readonly IGroupRepository _groupRepository;
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
-        private readonly IPushNotificationService _pushService;
+        private readonly IPushNotificationService _pushNotificationService;
+        private readonly IPushRegistrationService _pushRegistrationService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -34,7 +35,8 @@ namespace Bit.Core.Services
             IGroupRepository groupRepository,
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
-            IPushNotificationService pushService)
+            IPushNotificationService pushNotificationService,
+            IPushRegistrationService pushRegistrationService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -43,7 +45,8 @@ namespace Bit.Core.Services
             _groupRepository = groupRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _mailService = mailService;
-            _pushService = pushService;
+            _pushNotificationService = pushNotificationService;
+            _pushRegistrationService = pushRegistrationService;
         }
         public async Task<OrganizationBilling> GetBillingAsync(Organization organization)
         {
@@ -609,7 +612,9 @@ namespace Bit.Core.Services
                 await _organizationUserRepository.CreateAsync(orgUser);
 
                 // push
-                await _pushService.PushSyncOrgKeysAsync(signup.Owner.Id);
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(orgUser.UserId.Value,
+                    organization.Id);
+                await _pushNotificationService.PushSyncOrgKeysAsync(signup.Owner.Id);
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
             }
@@ -868,7 +873,8 @@ namespace Bit.Core.Services
             }
 
             // push
-            await _pushService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+            await _pushRegistrationService.AddUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
 
             return orgUser;
         }
@@ -915,6 +921,9 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.DeleteAsync(orgUser);
+
+            // push
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid userId)
@@ -932,6 +941,9 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.DeleteAsync(orgUser);
+
+            // push
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
         }
 
         public async Task ImportAsync(Guid organizationId,

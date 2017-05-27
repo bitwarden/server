@@ -1,0 +1,183 @@
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Models.Table;
+using Microsoft.Azure.NotificationHubs;
+using Bit.Core.Enums;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
+
+namespace Bit.Core.Services
+{
+    public class NotificationHubPushNotificationService : IPushNotificationService
+    {
+        private readonly NotificationHubClient _client;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public NotificationHubPushNotificationService(
+            GlobalSettings globalSettings,
+            IHttpContextAccessor httpContextAccessor)
+        {
+            _client = NotificationHubClient.CreateClientFromConnectionString(globalSettings.NotificationHub.ConnectionString,
+                globalSettings.NotificationHub.HubName);
+
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        public async Task PushSyncCipherCreateAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncCipherCreate);
+        }
+
+        public async Task PushSyncCipherUpdateAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncCipherUpdate);
+        }
+
+        public async Task PushSyncCipherDeleteAsync(Cipher cipher)
+        {
+            await PushCipherAsync(cipher, PushType.SyncLoginDelete);
+        }
+
+        private async Task PushCipherAsync(Cipher cipher, PushType type)
+        {
+            if(cipher.OrganizationId.HasValue)
+            {
+                // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
+                // to the organization. Potentially we could blindly send to just users that have the access all permission
+                // device registration needs to be more granular to handle that appropriately. A more brute force approach could
+                // me to send "full sync" push to all org users, but that has the potential to DDOS the API in bursts.
+
+                // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
+            }
+            else if(cipher.UserId.HasValue)
+            {
+                var message = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                };
+
+                await SendPayloadToUserAsync(cipher.UserId.Value, type, message, true);
+            }
+        }
+
+        public async Task PushSyncFolderCreateAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncFolderCreate);
+        }
+
+        public async Task PushSyncFolderUpdateAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncFolderUpdate);
+        }
+
+        public async Task PushSyncFolderDeleteAsync(Folder folder)
+        {
+            await PushFolderAsync(folder, PushType.SyncFolderDelete);
+        }
+
+        private async Task PushFolderAsync(Folder folder, PushType type)
+        {
+            var message = new SyncFolderPushNotification
+            {
+                Id = folder.Id,
+                UserId = folder.UserId,
+                RevisionDate = folder.RevisionDate
+            };
+
+            await SendPayloadToUserAsync(folder.UserId, type, message, true);
+        }
+
+        public async Task PushSyncCiphersAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncCiphers);
+        }
+
+        public async Task PushSyncVaultAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncVault);
+        }
+
+        public async Task PushSyncOrgKeysAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncOrgKeys);
+        }
+
+        public async Task PushSyncSettingsAsync(Guid userId)
+        {
+            await PushSyncUserAsync(userId, PushType.SyncSettings);
+        }
+
+        private async Task PushSyncUserAsync(Guid userId, PushType type)
+        {
+            var message = new SyncUserPushNotification
+            {
+                UserId = userId,
+                Date = DateTime.UtcNow
+            };
+
+            await SendPayloadToUserAsync(userId, type, message, false);
+        }
+
+        private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+        {
+            var tag = BuildTag($"template:payload_userId:{userId}", excludeCurrentContext);
+            await SendPayloadAsync(tag, type, payload);
+        }
+
+        private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
+        {
+            var tag = BuildTag($"template:payload && organizationId:{orgId}", excludeCurrentContext);
+            await SendPayloadAsync(tag, type, payload);
+        }
+
+        private string BuildTag(string tag, bool excludeCurrentContext)
+        {
+            if(excludeCurrentContext)
+            {
+                var currentContext = _httpContextAccessor?.HttpContext?.
+                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+                if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
+                {
+                    tag += $" && !deviceIdentifier:{currentContext.DeviceIdentifier}";
+                }
+            }
+
+            return $"({tag})";
+        }
+
+        private async Task SendPayloadAsync(string tag, PushType type, object payload)
+        {
+            await _client.SendTemplateNotificationAsync(
+                new Dictionary<string, string>
+                {
+                    { "type",  ((byte)type).ToString() },
+                    { "payload", JsonConvert.SerializeObject(payload) }
+                }, tag);
+        }
+
+        private class SyncCipherPushNotification
+        {
+            public Guid Id { get; set; }
+            public Guid? UserId { get; set; }
+            public Guid? OrganizationId { get; set; }
+            public DateTime RevisionDate { get; set; }
+        }
+
+        private class SyncFolderPushNotification
+        {
+            public Guid Id { get; set; }
+            public Guid UserId { get; set; }
+            public DateTime RevisionDate { get; set; }
+        }
+
+        private class SyncUserPushNotification
+        {
+            public Guid UserId { get; set; }
+            public DateTime Date { get; set; }
+        }
+    }
+}
