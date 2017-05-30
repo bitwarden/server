@@ -49,7 +49,9 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services)
         {
-            services.AddSingleton<IMailService, SendGridMailService>();
+            //services.AddSingleton<IMailService, SendGridTemplateMailService>();
+            services.AddSingleton<IMailService, RazorMailService>();
+            services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
             services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
             services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
