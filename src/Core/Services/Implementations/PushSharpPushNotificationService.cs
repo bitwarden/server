@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
+using Bit.Core.Models;
 
 namespace Bit.Core.Services
 {
@@ -89,12 +90,10 @@ namespace Bit.Core.Services
 
             var message = new SyncCipherPushNotification
             {
-                Type = type,
                 Id = cipher.Id,
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
-                RevisionDate = cipher.RevisionDate,
-                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
+                RevisionDate = cipher.RevisionDate
             };
 
             var excludedTokens = new List<string>();
@@ -105,18 +104,16 @@ namespace Bit.Core.Services
                 excludedTokens.Add(currentContext.DeviceIdentifier);
             }
 
-            await PushToAllUserDevicesAsync(cipher.UserId.Value, JObject.FromObject(message), excludedTokens);
+            await PushToAllUserDevicesAsync(cipher.UserId.Value, type, message, excludedTokens);
         }
 
         private async Task PushFolderAsync(Folder folder, PushType type)
         {
             var message = new SyncFolderPushNotification
             {
-                Type = type,
                 Id = folder.Id,
                 UserId = folder.UserId,
-                RevisionDate = folder.RevisionDate,
-                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
+                RevisionDate = folder.RevisionDate
             };
 
             var excludedTokens = new List<string>();
@@ -127,7 +124,7 @@ namespace Bit.Core.Services
                 excludedTokens.Add(currentContext.DeviceIdentifier);
             }
 
-            await PushToAllUserDevicesAsync(folder.UserId, JObject.FromObject(message), excludedTokens);
+            await PushToAllUserDevicesAsync(folder.UserId, type, message, excludedTokens);
         }
 
         public async Task PushSyncCiphersAsync(Guid userId)
@@ -154,13 +151,11 @@ namespace Bit.Core.Services
         {
             var message = new SyncUserPushNotification
             {
-                Type = type,
                 UserId = userId,
-                Date = DateTime.UtcNow,
-                Aps = new PushNotification.AppleData { ContentAvailable = 1 }
+                Date = DateTime.UtcNow
             };
 
-            await PushToAllUserDevicesAsync(userId, JObject.FromObject(message), null);
+            await PushToAllUserDevicesAsync(userId, type, message, null);
         }
 
         private void InitGcmBroker(GlobalSettings globalSettings)
@@ -310,7 +305,7 @@ namespace Bit.Core.Services
             // timestamp is the time the token was reported as expired
         }
 
-        private async Task PushToAllUserDevicesAsync(Guid userId, JObject message, IEnumerable<string> tokensToSkip)
+        private async Task PushToAllUserDevicesAsync(Guid userId, PushType type, object message, IEnumerable<string> tokensToSkip)
         {
             var devices = (await _deviceRepository.GetManyByUserIdAsync(userId))
                 .Where(d => !string.IsNullOrWhiteSpace(d.PushToken) && (!tokensToSkip?.Contains(d.PushToken) ?? true));
@@ -321,13 +316,20 @@ namespace Bit.Core.Services
 
             if(_apnsBroker != null)
             {
+                var appleNotification = new ApplePayloadPushNotification
+                {
+                    Data = new PayloadPushNotification.DataObj(type, JsonConvert.SerializeObject(message))
+                };
+
+                var obj = JObject.FromObject(appleNotification);
+
                 // Send to each iOS device
                 foreach(var device in devices.Where(d => d.Type == DeviceType.iOS))
                 {
                     _apnsBroker.QueueNotification(new ApnsNotification
                     {
                         DeviceToken = device.PushToken,
-                        Payload = message
+                        Payload = obj
                     });
                 }
             }
@@ -336,50 +338,15 @@ namespace Bit.Core.Services
             var androidDevices = devices.Where(d => d.Type == DeviceType.Android);
             if(_gcmBroker != null && androidDevices.Count() > 0)
             {
+                var gcmData = new PayloadPushNotification.DataObj(type, JsonConvert.SerializeObject(message));
+                var obj = JObject.FromObject(gcmData);
+
                 _gcmBroker.QueueNotification(new GcmNotification
                 {
                     RegistrationIds = androidDevices.Select(d => d.PushToken).ToList(),
-                    Data = message
+                    Data = obj
                 });
             }
-        }
-
-        private class PushNotification
-        {
-            public PushType Type { get; set; }
-            [JsonProperty(PropertyName = "aps")]
-            public AppleData Aps { get; set; }
-
-            public class AppleData
-            {
-                [JsonProperty(PropertyName = "badge")]
-                public dynamic Badge { get; set; } = null;
-                [JsonProperty(PropertyName = "alert")]
-                public string Alert { get; set; }
-                [JsonProperty(PropertyName = "content-available")]
-                public int ContentAvailable { get; set; }
-            }
-        }
-
-        private class SyncCipherPushNotification : PushNotification
-        {
-            public Guid Id { get; set; }
-            public Guid? UserId { get; set; }
-            public Guid? OrganizationId { get; set; }
-            public DateTime RevisionDate { get; set; }
-        }
-
-        private class SyncFolderPushNotification : PushNotification
-        {
-            public Guid Id { get; set; }
-            public Guid UserId { get; set; }
-            public DateTime RevisionDate { get; set; }
-        }
-
-        private class SyncUserPushNotification : PushNotification
-        {
-            public Guid UserId { get; set; }
-            public DateTime Date { get; set; }
         }
     }
 }

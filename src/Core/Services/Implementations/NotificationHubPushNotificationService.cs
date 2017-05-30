@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Bit.Core.Models;
 
 namespace Bit.Core.Services
 {
@@ -157,27 +158,6 @@ namespace Bit.Core.Services
                     { "type",  ((byte)type).ToString() },
                     { "payload", JsonConvert.SerializeObject(payload) }
                 }, tag);
-        }
-
-        private class SyncCipherPushNotification
-        {
-            public Guid Id { get; set; }
-            public Guid? UserId { get; set; }
-            public Guid? OrganizationId { get; set; }
-            public DateTime RevisionDate { get; set; }
-        }
-
-        private class SyncFolderPushNotification
-        {
-            public Guid Id { get; set; }
-            public Guid UserId { get; set; }
-            public DateTime RevisionDate { get; set; }
-        }
-
-        private class SyncUserPushNotification
-        {
-            public Guid UserId { get; set; }
-            public DateTime Date { get; set; }
         }
     }
 }
