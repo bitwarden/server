@@ -160,7 +160,8 @@ namespace Bit.Core.Services
             return new MailMessage
             {
                 ToEmails = toEmails,
-                Subject = subject
+                Subject = subject,
+                MetaData = new Dictionary<string, object>()
             };
         }
 
