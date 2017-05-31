@@ -1,4 +1,4 @@
 ﻿CREATE TYPE [dbo].[SelectionReadOnlyArray] AS TABLE (
-    [Id] UNIQUEIDENTIFIER NOT NULL,
-    [ReadOnly] BIT NOT NULL);
+    [Id]       UNIQUEIDENTIFIER NOT NULL,
+    [ReadOnly] BIT              NOT NULL);
 
