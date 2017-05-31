@@ -128,6 +128,11 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("PrivateKey", user.PrivateKey);
             }
 
+            if(!string.IsNullOrWhiteSpace(user.Key))
+            {
+                customResponse.Add("Key", user.Key);
+            }
+
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
                 identityProvider: "bitwarden",
                 claims: claims.Count > 0 ? claims : null,
