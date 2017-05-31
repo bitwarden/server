@@ -1,9 +1,7 @@
-﻿CREATE PROCEDURE [dbo].[User_UpdateEmailPassword]
+﻿CREATE PROCEDURE [dbo].[User_UpdateKeys]
     @Id UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50),
-    @EmailVerified BIT,
-    @MasterPassword NVARCHAR(300),
     @SecurityStamp NVARCHAR(50),
+    @Key NVARCHAR(MAX),
     @PrivateKey VARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
@@ -13,10 +11,8 @@ BEGIN
     UPDATE
         [dbo].[User]
     SET
-        [Email] = @Email,
-        [EmailVerified] = @EmailVerified,
-        [MasterPassword] = @MasterPassword,
         [SecurityStamp] = @SecurityStamp,
+        [Key] = @Key,
         [PrivateKey] = @PrivateKey,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @RevisionDate

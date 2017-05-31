@@ -18,6 +18,6 @@ namespace Bit.Core.Models.Api
         [Required]
         public string Token { get; set; }
         [Required]
-        public DataReloadRequestModel Data { get; set; }
+        public string Key { get; set; }
     }
 }

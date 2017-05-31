@@ -18,14 +18,15 @@ namespace Bit.Core.Services
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
         Task SendMasterPasswordHintAsync(string email);
         Task InitiateEmailChangeAsync(User user, string newEmail);
-        Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword, 
-            string token, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey);
-        Task<IdentityResult> ChangePasswordAsync(User user, string currentMasterPasswordHash, string newMasterPasswordHash, 
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey);
+        Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
+            string token, string key);
+        Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
+        Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
         Task GetTwoFactorAsync(User user, Enums.TwoFactorProviderType provider);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
-       Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
+        Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
         Task<IdentityResult> DeleteAsync(User user);
     }
 }

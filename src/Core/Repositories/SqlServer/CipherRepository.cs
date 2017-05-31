@@ -176,7 +176,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public Task UpdateUserEmailPasswordAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
@@ -188,14 +188,13 @@ namespace Bit.Core.Repositories.SqlServer
                     {
                         // 1. Update user.
 
-                        using(var cmd = new SqlCommand("[dbo].[User_UpdateEmailPassword]", connection, transaction))
+                        using(var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
                             cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
-                            cmd.Parameters.Add("@Email", SqlDbType.NVarChar).Value = user.Email;
-                            cmd.Parameters.Add("@EmailVerified", SqlDbType.NVarChar).Value = user.EmailVerified;
-                            cmd.Parameters.Add("@MasterPassword", SqlDbType.NVarChar).Value = user.MasterPassword;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                            cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
+
                             if(string.IsNullOrWhiteSpace(user.PrivateKey))
                             {
                                 cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
@@ -204,6 +203,7 @@ namespace Bit.Core.Repositories.SqlServer
                             {
                                 cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
                             }
+
                             cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
                             cmd.ExecuteNonQuery();
                         }

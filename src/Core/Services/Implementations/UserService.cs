@@ -195,7 +195,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail,
-            string newMasterPassword, string token, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey)
+            string newMasterPassword, string token, string key)
         {
             var verifyPasswordResult = _passwordHasher.VerifyHashedPassword(user, user.MasterPassword, masterPassword);
             if(verifyPasswordResult == PasswordVerificationResult.Failed)
@@ -221,19 +221,11 @@ namespace Bit.Core.Services
                 return result;
             }
 
+            user.Key = key;
             user.Email = newEmail;
             user.EmailVerified = true;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-            user.PrivateKey = privateKey;
-
-            if(ciphers.Any() || folders.Any())
-            {
-                await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
-            }
-            else
-            {
-                await _userRepository.ReplaceAsync(user);
-            }
+            await _userRepository.ReplaceAsync(user);
 
             return IdentityResult.Success;
         }
@@ -244,7 +236,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, string privateKey)
+            string key)
         {
             if(user == null)
             {
@@ -260,10 +252,33 @@ namespace Bit.Core.Services
                 }
 
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                user.Key = key;
+                await _userRepository.ReplaceAsync(user);
+
+                return IdentityResult.Success;
+            }
+
+            Logger.LogWarning("Change password failed for user {userId}.", user.Id);
+            return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
+        }
+
+        public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            if(await base.CheckPasswordAsync(user, masterPassword))
+            {
+                user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                user.SecurityStamp = Guid.NewGuid().ToString();
+                user.Key = key;
                 user.PrivateKey = privateKey;
                 if(ciphers.Any() || folders.Any())
                 {
-                    await _cipherRepository.UpdateUserEmailPasswordAndCiphersAsync(user, ciphers, folders);
+                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders);
                 }
                 else
                 {
@@ -273,7 +288,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Success;
             }
 
-            Logger.LogWarning("Change password failed for user {userId}.", user.Id);
+            Logger.LogWarning("Update key for user {userId}.", user.Id);
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 

@@ -78,23 +78,8 @@ namespace Bit.Api.Controllers
         public async Task PutEmail([FromBody]EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-
-            // NOTE: It is assumed that the eventual repository call will make sure the updated
-            // ciphers belong to user making this call. Therefore, no check is done here.
-
-            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
-            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
-
-            var result = await _userService.ChangeEmailAsync(
-                user,
-                model.MasterPasswordHash,
-                model.NewEmail,
-                model.NewMasterPasswordHash,
-                model.Token,
-                ciphers,
-                folders,
-                model.Data.PrivateKey);
-
+            var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
+                model.NewMasterPasswordHash, model.Token, model.Key);
             if(result.Succeeded)
             {
                 return;
@@ -114,20 +99,41 @@ namespace Bit.Api.Controllers
         public async Task PutPassword([FromBody]PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
+                model.NewMasterPasswordHash, model.Key);
+            if(result.Succeeded)
+            {
+                return;
+            }
+
+            foreach(var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+        }
+
+        [HttpPut("key")]
+        [HttpPost("key")]
+        public async Task PutKey([FromBody]UpdateKeyRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
 
-            var ciphers = model.Data.Ciphers.Select(c => c.ToCipher(user.Id));
-            var folders = model.Data.Folders.Select(c => c.ToFolder(user.Id));
+            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
+            var folders = model.Folders.Select(c => c.ToFolder(user.Id));
 
-            var result = await _userService.ChangePasswordAsync(
+            var result = await _userService.UpdateKeyAsync(
                 user,
                 model.MasterPasswordHash,
-                model.NewMasterPasswordHash,
+                model.Key,
+                model.PrivateKey,
                 ciphers,
-                folders,
-                model.Data.PrivateKey);
+                folders);
 
             if(result.Succeeded)
             {

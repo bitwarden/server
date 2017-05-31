@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Api
         public string MasterPasswordHash { get; set; }
         [StringLength(50)]
         public string MasterPasswordHint { get; set; }
+        public string Key { get; set; }
         public KeysRequestModel Keys { get; set; }
 
         public User ToUser()
@@ -26,6 +27,11 @@ namespace Bit.Core.Models.Api
                 Email = Email,
                 MasterPasswordHint = MasterPasswordHint
             };
+
+            if(Key != null)
+            {
+                user.Key = Key;
+            }
 
             if(Keys != null)
             {

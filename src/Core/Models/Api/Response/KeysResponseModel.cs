@@ -13,10 +13,12 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(user));
             }
 
+            Key = user.Key;
             PublicKey = user.PublicKey;
             PrivateKey = user.PrivateKey;
         }
 
+        public string Key { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
     }

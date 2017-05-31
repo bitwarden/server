@@ -14,6 +14,7 @@
     [EquivalentDomains]               NVARCHAR (MAX)   NULL,
     [ExcludedGlobalEquivalentDomains] NVARCHAR (MAX)   NULL,
     [AccountRevisionDate]             DATETIME2 (7)    NOT NULL,
+    [Key]                             VARCHAR (MAX)    NULL,
     [PublicKey]                       VARCHAR (MAX)    NULL,
     [PrivateKey]                      VARCHAR (MAX)    NULL,
     [CreationDate]                    DATETIME2 (7)    NOT NULL,

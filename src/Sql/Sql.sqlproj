@@ -148,7 +148,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadByEmail.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_Update.sql" />
-    <Build Include="dbo\Stored Procedures\User_UpdateEmailPassword.sql" />
+    <Build Include="dbo\Stored Procedures\User_UpdateKeys.sql" />
     <Build Include="dbo\Stored Procedures\Device_ClearPushTokenByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
