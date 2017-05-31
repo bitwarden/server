@@ -112,7 +112,7 @@ namespace Bit.Core.IdentityServer
         {
             var claims = new List<Claim>
             {
-                // Deprecated claims for backwards compatability
+                // Deprecated claims for backwards compatibility
                 new Claim(ClaimTypes.AuthenticationMethod, "Application"),
                 new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString())
             };
