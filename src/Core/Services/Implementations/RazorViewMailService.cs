@@ -139,7 +139,15 @@ namespace Bit.Core.Services
 
         public async Task SendWelcomeEmailAsync(User user)
         {
-            throw new NotImplementedException();
+            var message = CreateDefaultMessage("Welcome", user.Email);
+            var model = new BaseMailModel
+            {
+                WebVaultUrl = _globalSettings.BaseVaultUri,
+                SiteName = _globalSettings.SiteName
+            };
+            message.HtmlContent = _engine.Parse("Welcome", model);
+            message.TextContent = _engine.Parse("Welcome.text", model);
+            await _mailDeliveryService.SendEmailAsync(message);
         }
 
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
