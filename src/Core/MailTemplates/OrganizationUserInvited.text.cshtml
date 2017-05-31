@@ -1,0 +1,14 @@
+﻿@model Bit.Core.Models.Mail.OrganizationUserInvitedViewModel
+@{
+    Layout = "_BasicMailLayout.text";
+}
+You have been invited to join the
+@Model.OrganizationName organization.
+To accept this invite, click the
+following link:
+
+@Model.Url
+
+If you do not wish to join this
+organization, you can safely ignore
+this email.

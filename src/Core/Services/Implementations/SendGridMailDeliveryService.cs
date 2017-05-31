@@ -36,26 +36,26 @@ namespace Bit.Core.Services
 
             sendGridMessage.AddTos(message.ToEmails.Select(e => new EmailAddress(e)).ToList());
 
-            if(message.MetaData.ContainsKey("SendGridTemplateId"))
+            if(message.MetaData?.ContainsKey("SendGridTemplateId") ?? false)
             {
                 sendGridMessage.HtmlContent = " ";
                 sendGridMessage.PlainTextContent = " ";
                 sendGridMessage.TemplateId = message.MetaData["SendGridTemplateId"].ToString();
             }
 
-            if(message.MetaData.ContainsKey("SendGridSubstitutions"))
+            if(message.MetaData?.ContainsKey("SendGridSubstitutions") ?? false)
             {
                 var subs = message.MetaData["SendGridSubstitutions"] as Dictionary<string, string>;
                 sendGridMessage.AddSubstitutions(subs);
             }
 
-            if(message.MetaData.ContainsKey("SendGridCategories"))
+            if(message.MetaData?.ContainsKey("SendGridCategories") ?? false)
             {
                 var cats = message.MetaData["SendGridCategories"] as List<string>;
                 sendGridMessage.AddCategories(cats);
             }
 
-            if(message.MetaData.ContainsKey("SendGridBypassListManagement"))
+            if(message.MetaData?.ContainsKey("SendGridBypassListManagement") ?? false)
             {
                 var bypass = message.MetaData["SendGridBypassListManagement"] as bool?;
                 sendGridMessage.SetBypassListManagement(bypass.GetValueOrDefault(false));
