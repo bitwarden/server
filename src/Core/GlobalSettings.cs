@@ -27,8 +27,18 @@
 
         public class MailSettings
         {
-            public string ApiKey { get; set; }
             public string ReplyToEmail { get; set; }
+            public string SendGridApiKey { get; set; }
+            public SmtpSettings Smtp { get; set; } = new SmtpSettings();
+
+            public class SmtpSettings
+            {
+                public string Host { get; set; }
+                public int Port { get; set; }
+                public bool Ssl { get; set; }
+                public string Username { get; set; }
+                public string Password { get; set; }
+            }
         }
 
         public class PushSettings

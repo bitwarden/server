@@ -15,8 +15,13 @@ namespace Bit.Core.Services
 
         public SendGridMailDeliveryService(GlobalSettings globalSettings)
         {
+            if(globalSettings.Mail?.SendGridApiKey == null)
+            {
+                throw new ArgumentNullException(nameof(globalSettings.Mail.SendGridApiKey));
+            }
+
             _globalSettings = globalSettings;
-            _client = new SendGridClient(_globalSettings.Mail.ApiKey);
+            _client = new SendGridClient(_globalSettings.Mail.SendGridApiKey);
         }
 
         public async Task SendEmailAsync(MailMessage message)

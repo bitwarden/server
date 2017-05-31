@@ -202,3 +202,4 @@ project.lock.json
 mail_dist/
 *.refactorlog
 *.scmp
+src/Core/Properties/launchSettings.json
