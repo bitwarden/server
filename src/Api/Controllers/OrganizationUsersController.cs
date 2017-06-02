@@ -115,6 +115,11 @@ namespace Bit.Api.Controllers
         public async Task Accept(string orgId, string id, [FromBody]OrganizationUserAcceptRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token);
         }
 

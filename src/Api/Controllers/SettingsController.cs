@@ -23,6 +23,11 @@ namespace Bit.Api.Controllers
         public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var response = new DomainsResponseModel(user, excluded);
             return response;
         }
@@ -32,6 +37,11 @@ namespace Bit.Api.Controllers
         public async Task<DomainsResponseModel> PutDomains([FromBody]UpdateDomainsRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             await _userService.SaveUserAsync(model.ToUser(user));
 
             var response = new DomainsResponseModel(user);

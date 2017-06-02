@@ -64,6 +64,11 @@ namespace Bit.Api.Controllers
         public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -78,6 +83,11 @@ namespace Bit.Api.Controllers
         public async Task PutEmail([FromBody]EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
                 model.NewMasterPasswordHash, model.Token, model.Key);
             if(result.Succeeded)
@@ -99,6 +109,11 @@ namespace Bit.Api.Controllers
         public async Task PutPassword([FromBody]PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
                 model.NewMasterPasswordHash, model.Key);
             if(result.Succeeded)
@@ -120,6 +135,10 @@ namespace Bit.Api.Controllers
         public async Task PutKey([FromBody]UpdateKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
 
             // NOTE: It is assumed that the eventual repository call will make sure the updated
             // ciphers belong to user making this call. Therefore, no check is done here.
@@ -154,6 +173,11 @@ namespace Bit.Api.Controllers
         public async Task PutSecurityStamp([FromBody]SecurityStampRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var result = await _userService.RefreshSecurityStampAsync(user, model.MasterPasswordHash);
             if(result.Succeeded)
             {
@@ -173,6 +197,11 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> GetProfile()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
             var response = new ProfileResponseModel(user, organizationUserDetails);
@@ -194,6 +223,11 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             await _userService.SaveUserAsync(model.ToUser(user));
             var response = new ProfileResponseModel(user, null);
             return response;
@@ -217,6 +251,11 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -234,6 +273,11 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorResponseModel> PutTwoFactor([FromBody]UpdateTwoFactorRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -271,6 +315,11 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorResponseModel> PutTwoFactorRegenerate([FromBody]RegenerateTwoFactorRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -298,6 +347,11 @@ namespace Bit.Api.Controllers
         public async Task<KeysResponseModel> PutKeys([FromBody]KeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             await _userService.SaveUserAsync(model.ToUser(user));
             return new KeysResponseModel(user);
         }
@@ -306,6 +360,11 @@ namespace Bit.Api.Controllers
         public async Task<KeysResponseModel> GetKeys()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             return new KeysResponseModel(user);
         }
 
@@ -313,6 +372,11 @@ namespace Bit.Api.Controllers
         public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");

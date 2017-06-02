@@ -48,6 +48,11 @@ namespace Bit.Api.Controllers
         public async Task<AuthTokenResponseModel> PostTokenTwoFactor([FromBody]AuthTokenTwoFactorRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var result = await _signInManager.TwoFactorSignInAsync(user, model.Provider, model.Code, model.Device?.ToDevice());
             if(result == JwtBearerSignInResult.Success)
             {

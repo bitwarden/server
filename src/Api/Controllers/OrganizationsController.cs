@@ -95,6 +95,11 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
@@ -218,6 +223,11 @@ namespace Bit.Api.Controllers
             }
 
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");

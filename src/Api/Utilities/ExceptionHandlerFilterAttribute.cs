@@ -58,6 +58,11 @@ namespace Bit.Api.Utilities
                 errorModel.Message = "Invalid token.";
                 context.HttpContext.Response.StatusCode = 403;
             }
+            else if(exception is UnauthorizedAccessException)
+            {
+                errorModel.Message = "Unauthorized.";
+                context.HttpContext.Response.StatusCode = 401;
+            }
             else
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
