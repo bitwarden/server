@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
         [HttpPost("identifier/{identifier}/clear-token")]
         public async Task PutClearToken(string identifier)
         {
-            var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+            var device = await _deviceRepository.GetByIdentifierAsync(identifier);
             if(device == null)
             {
                 throw new NotFoundException();

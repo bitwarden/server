@@ -35,7 +35,7 @@ namespace Bit.Core.Services
 
         public async Task ClearTokenAsync(Device device)
         {
-            await _deviceRepository.ClearPushTokenByIdentifierAsync(device.Identifier);
+            await _deviceRepository.ClearPushTokenAsync(device.Id);
             await _pushRegistrationService.DeleteRegistrationAsync(device.Id);
         }
 

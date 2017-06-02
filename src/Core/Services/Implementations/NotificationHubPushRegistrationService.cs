@@ -50,9 +50,9 @@ namespace Bit.Core.Services
             switch(device.Type)
             {
                 case Enums.DeviceType.Android:
-                    payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}";
-                    messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}";
+                    payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                    messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
 
                     installation.Platform = NotificationPlatform.Gcm;
                     break;
