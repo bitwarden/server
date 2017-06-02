@@ -126,7 +126,7 @@ namespace Bit.Core.Services
                 OrganizationName = organizationName,
                 Email = WebUtility.UrlEncode(orgUser.Email),
                 OrganizationId = orgUser.OrganizationId.ToString(),
-                OrganizationUserId = orgUser.UserId.ToString(),
+                OrganizationUserId = orgUser.Id.ToString(),
                 Token = token,
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseVaultUri,
