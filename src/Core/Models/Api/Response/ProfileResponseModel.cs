@@ -25,6 +25,7 @@ namespace Bit.Core.Models.Api
             TwoFactorEnabled = user.TwoFactorEnabled;
             Key = user.Key;
             PrivateKey = user.PrivateKey;
+            SecurityStamp = user.SecurityStamp;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
         }
 
@@ -36,6 +37,7 @@ namespace Bit.Core.Models.Api
         public bool TwoFactorEnabled { get; set; }
         public string Key { get; set; }
         public string PrivateKey { get; set; }
+        public string SecurityStamp { get; set; }
         public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
     }
 }
