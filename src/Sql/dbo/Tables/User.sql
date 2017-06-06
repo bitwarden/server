@@ -10,6 +10,7 @@
     [TwoFactorEnabled]                BIT              NOT NULL,
     [TwoFactorProvider]               TINYINT          NULL,
     [AuthenticatorKey]                NVARCHAR (50)    NULL,
+    [TwoFactorProviders]            NVARCHAR (MAX)   NULL,
     [TwoFactorRecoveryCode]           NVARCHAR (32)    NULL,
     [EquivalentDomains]               NVARCHAR (MAX)   NULL,
     [ExcludedGlobalEquivalentDomains] NVARCHAR (MAX)   NULL,
