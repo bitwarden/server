@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
@@ -20,6 +18,7 @@ using Bit.Api.Middleware;
 using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
+using IdentityModel;
 
 namespace Bit.Api
 {
@@ -73,21 +72,13 @@ namespace Bit.Api
             // Identity
             services.AddCustomIdentityServices(globalSettings);
 
-            var jwtIdentityOptions = provider.GetRequiredService<IOptions<JwtBearerIdentityOptions>>().Value;
             services.AddAuthorization(config =>
             {
                 config.AddPolicy("Application", policy =>
                 {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2", "Bearer3");
+                    policy.AddAuthenticationSchemes("Bearer2", "Bearer3");
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.AuthenticationMethod);
-                });
-
-                config.AddPolicy("TwoFactor", policy =>
-                {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "Bearer2", "Bearer3");
-                    policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(ClaimTypes.AuthenticationMethod, jwtIdentityOptions.TwoFactorAuthenticationMethod);
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
                 });
             });
 
@@ -166,9 +157,6 @@ namespace Bit.Api
             app.UseIdentityServerAuthentication(
                 GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4000"), "2"));
 
-            // Add Jwt authentication to the request pipeline.
-            app.UseJwtBearerIdentity();
-
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
@@ -208,7 +196,7 @@ namespace Bit.Api
             else
             {
                 return $"http://localhost:{port}";
-                //return $"http://192.168.1.8:{port}"; // Desktop external
+                //return $"http://192.168.1.6:{port}"; // Desktop external
             }
         }
     }

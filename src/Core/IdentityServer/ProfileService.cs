@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using System.Linq;
 using Microsoft.Extensions.Options;
 using System;
+using IdentityModel;
 
 namespace Bit.Core.IdentityServer
 {
@@ -42,43 +43,40 @@ namespace Bit.Core.IdentityServer
                 newClaims.AddRange(new List<Claim>
                 {
                     new Claim("plan", "0"), // free plan hard coded for now
-                    new Claim("sstamp", user.SecurityStamp),
-                    new Claim("email", user.Email),
-
-                    // Deprecated claims for backwards compatability
-                    new Claim(_identityOptions.ClaimsIdentity.UserNameClaimType, user.Email),
+                    new Claim(JwtClaimTypes.Email, user.Email),
+                    new Claim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
                     new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
                 });
 
                 if(!string.IsNullOrWhiteSpace(user.Name))
                 {
-                    newClaims.Add(new Claim("name", user.Name));
+                    newClaims.Add(new Claim(JwtClaimTypes.Name, user.Name));
                 }
 
                 // Orgs that this user belongs to
                 var orgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
                 if(orgs.Any())
                 {
-                    var groupedOrgs = orgs.Where(o => o.Status == Core.Enums.OrganizationUserStatusType.Confirmed)
+                    var groupedOrgs = orgs.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed)
                         .GroupBy(o => o.Type);
 
                     foreach(var group in groupedOrgs)
                     {
                         switch(group.Key)
                         {
-                            case Core.Enums.OrganizationUserType.Owner:
+                            case Enums.OrganizationUserType.Owner:
                                 foreach(var org in group)
                                 {
                                     newClaims.Add(new Claim("orgowner", org.OrganizationId.ToString()));
                                 }
                                 break;
-                            case Core.Enums.OrganizationUserType.Admin:
+                            case Enums.OrganizationUserType.Admin:
                                 foreach(var org in group)
                                 {
                                     newClaims.Add(new Claim("orgadmin", org.OrganizationId.ToString()));
                                 }
                                 break;
-                            case Core.Enums.OrganizationUserType.User:
+                            case Enums.OrganizationUserType.User:
                                 foreach(var org in group)
                                 {
                                     newClaims.Add(new Claim("orguser", org.OrganizationId.ToString()));

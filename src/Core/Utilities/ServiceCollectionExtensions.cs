@@ -4,6 +4,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using IdentityModel;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using IdentityServer4.Validation;
@@ -12,11 +13,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.WindowsAzure.Storage;
-using System;
 using System.Security.Claims;
-using System.Text;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Utilities
@@ -70,7 +68,7 @@ namespace Bit.Core.Utilities
         {
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
 
-            var identityBuilder = services.AddJwtBearerIdentity(options =>
+            var identityBuilder = services.AddIdentity<User, Role>(options =>
             {
                 options.User = new UserOptions
                 {
@@ -87,18 +85,11 @@ namespace Bit.Core.Utilities
                 };
                 options.ClaimsIdentity = new ClaimsIdentityOptions
                 {
-                    SecurityStampClaimType = "securitystamp",
-                    UserNameClaimType = ClaimTypes.Email
+                    SecurityStampClaimType = "sstamp",
+                    UserNameClaimType = JwtClaimTypes.Email,
+                    UserIdClaimType = JwtClaimTypes.Subject,
                 };
                 options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
-            }, jwtBearerOptions =>
-            {
-                jwtBearerOptions.Audience = "bitwarden";
-                jwtBearerOptions.Issuer = "bitwarden";
-                jwtBearerOptions.TokenLifetime = TimeSpan.FromDays(10 * 365);
-                jwtBearerOptions.TwoFactorTokenLifetime = TimeSpan.FromMinutes(10);
-                var keyBytes = Encoding.ASCII.GetBytes(globalSettings.JwtSigningKey);
-                jwtBearerOptions.SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256);
             });
 
             identityBuilder

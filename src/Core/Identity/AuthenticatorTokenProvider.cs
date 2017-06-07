@@ -15,7 +15,7 @@ namespace Bit.Core.Identity
                 && user.TwoFactorProvider.HasValue
                 && user.TwoFactorProvider.Value == TwoFactorProviderType.Authenticator
                 && !string.IsNullOrWhiteSpace(user.AuthenticatorKey);
-
+            
             return Task.FromResult(canGenerate);
         }
 

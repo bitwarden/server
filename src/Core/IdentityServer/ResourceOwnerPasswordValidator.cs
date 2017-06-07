@@ -1,19 +1,12 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
@@ -23,57 +16,26 @@ namespace Bit.Core.IdentityServer
     public class ResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
         private UserManager<User> _userManager;
-        private IdentityOptions _identityOptions;
-        private JwtBearerOptions _jwtBearerOptions;
-        private JwtBearerIdentityOptions _jwtBearerIdentityOptions;
         private readonly IDeviceRepository _deviceRepository;
         private readonly IDeviceService _deviceService;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
-            IOptions<IdentityOptions> identityOptionsAccessor,
-            IOptions<JwtBearerIdentityOptions> jwtIdentityOptionsAccessor,
             IDeviceRepository deviceRepository,
             IDeviceService deviceService)
         {
             _userManager = userManager;
-            _identityOptions = identityOptionsAccessor?.Value ?? new IdentityOptions();
-            _jwtBearerIdentityOptions = jwtIdentityOptionsAccessor?.Value;
-            _jwtBearerOptions = Identity.JwtBearerAppBuilderExtensions.BuildJwtBearerOptions(_jwtBearerIdentityOptions);
             _deviceRepository = deviceRepository;
             _deviceService = deviceService;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
-            var oldAuthBearer = context.Request.Raw["OldAuthBearer"]?.ToString();
             var twoFactorToken = context.Request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
             var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
 
-            if(!string.IsNullOrWhiteSpace(oldAuthBearer) && _jwtBearerOptions != null)
-            {
-                // support transferring the old auth bearer token
-                var ticket = ValidateOldAuthBearer(oldAuthBearer);
-                if(ticket != null && ticket.Principal != null)
-                {
-                    var idClaim = ticket.Principal.Claims
-                        .FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.UserIdClaimType);
-                    var securityTokenClaim = ticket.Principal.Claims
-                        .FirstOrDefault(c => c.Type == _identityOptions.ClaimsIdentity.SecurityStampClaimType);
-                    if(idClaim != null && securityTokenClaim != null)
-                    {
-                        var user = await _userManager.FindByIdAsync(idClaim.Value);
-                        if(user != null && user.SecurityStamp == securityTokenClaim.Value)
-                        {
-                            var device = await SaveDeviceAsync(user, context);
-                            BuildSuccessResult(user, context, device);
-                            return;
-                        }
-                    }
-                }
-            }
-            else if(!string.IsNullOrWhiteSpace(context.UserName))
+            if(!string.IsNullOrWhiteSpace(context.UserName))
             {
                 var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 if(user != null)
@@ -110,12 +72,7 @@ namespace Bit.Core.IdentityServer
 
         private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
         {
-            var claims = new List<Claim>
-            {
-                // Deprecated claims for backwards compatibility
-                new Claim(ClaimTypes.AuthenticationMethod, "Application"),
-                new Claim(_identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString())
-            };
+            var claims = new List<Claim>();
 
             if(device != null)
             {
@@ -162,34 +119,6 @@ namespace Bit.Core.IdentityServer
                     "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
                         "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
                 }});
-        }
-
-        private AuthenticationTicket ValidateOldAuthBearer(string token)
-        {
-            SecurityToken validatedToken;
-            foreach(var validator in _jwtBearerOptions.SecurityTokenValidators)
-            {
-                if(validator.CanReadToken(token))
-                {
-                    ClaimsPrincipal principal;
-                    try
-                    {
-                        principal = validator.ValidateToken(token,
-                            _jwtBearerOptions.TokenValidationParameters, out validatedToken);
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-
-                    var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(),
-                        _jwtBearerOptions.AuthenticationScheme);
-
-                    return ticket;
-                }
-            }
-
-            return null;
         }
 
         private async Task<bool> TwoFactorRequiredAsync(User user)
