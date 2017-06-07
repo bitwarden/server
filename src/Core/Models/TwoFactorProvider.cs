@@ -7,6 +7,6 @@ namespace Bit.Core.Models
     {
         public bool Enabled { get; set; }
         public bool Remember { get; set; }
-        public Dictionary<string, object> MetaData { get; set; }
+        public Dictionary<string, string> MetaData { get; set; } = new Dictionary<string, string>();
     }
 }

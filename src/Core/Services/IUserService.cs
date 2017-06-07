@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using System.Security.Claims;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 
 namespace Bit.Core.Services
 {
@@ -24,7 +26,8 @@ namespace Bit.Core.Services
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
-        Task GetTwoFactorAsync(User user, Enums.TwoFactorProviderType provider);
+        Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider);
+        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
         Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
         Task<IdentityResult> DeleteAsync(User user);

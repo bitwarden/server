@@ -14,8 +14,25 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(user));
             }
 
-            TwoFactorEnabled = user.TwoFactorEnabled;
-            AuthenticatorKey = user.AuthenticatorKey;
+            var providers = user.GetTwoFactorProviders();
+            if(user.TwoFactorProvider.HasValue && providers.ContainsKey(user.TwoFactorProvider.Value))
+            {
+                var provider = providers[user.TwoFactorProvider.Value];
+                switch(user.TwoFactorProvider.Value)
+                {
+                    case TwoFactorProviderType.Authenticator:
+                        AuthenticatorKey = provider.MetaData["Key"];
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else
+            {
+                TwoFactorEnabled = false;
+            }
+
+            TwoFactorEnabled = user.TwoFactorIsEnabled();
             TwoFactorProvider = user.TwoFactorProvider;
             TwoFactorRecoveryCode = user.TwoFactorRecoveryCode;
         }

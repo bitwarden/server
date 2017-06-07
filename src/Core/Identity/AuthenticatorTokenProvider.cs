@@ -11,10 +11,12 @@ namespace Bit.Core.Identity
     {
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            var canGenerate = user.TwoFactorEnabled
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
+
+            var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Authenticator)
                 && user.TwoFactorProvider.HasValue
                 && user.TwoFactorProvider.Value == TwoFactorProviderType.Authenticator
-                && !string.IsNullOrWhiteSpace(user.AuthenticatorKey);
+                && !string.IsNullOrWhiteSpace(provider.MetaData["Key"]);
             
             return Task.FromResult(canGenerate);
         }
@@ -31,7 +33,8 @@ namespace Bit.Core.Identity
 
         public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            var otp = new Totp(Base32Encoding.ToBytes(user.AuthenticatorKey));
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
+            var otp = new Totp(Base32Encoding.ToBytes(provider.MetaData["Key"]));
 
             long timeStepMatched;
             var valid = otp.VerifyTotp(token, out timeStepMatched, new VerificationWindow(1, 1));

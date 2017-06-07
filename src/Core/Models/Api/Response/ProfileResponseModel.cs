@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Api
             Email = user.Email;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
-            TwoFactorEnabled = user.TwoFactorEnabled;
+            TwoFactorEnabled = user.TwoFactorIsEnabled();
             Key = user.Key;
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;

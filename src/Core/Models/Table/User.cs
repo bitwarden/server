@@ -1,11 +1,15 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
     public class User : IDataObject<Guid>
     {
+        private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
@@ -31,6 +35,70 @@ namespace Bit.Core.Models.Table
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+        {
+            if(string.IsNullOrWhiteSpace(TwoFactorProviders))
+            {
+                return null;
+            }
+
+            try
+            {
+                if(_twoFactorProviders == null)
+                {
+                    _twoFactorProviders =
+                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(TwoFactorProviders);
+                }
+
+                return _twoFactorProviders;
+            }
+            catch(JsonSerializationException)
+            {
+                return null;
+            }
+        }
+
+        public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
+        {
+            TwoFactorProviders = JsonConvert.SerializeObject(providers, new JsonSerializerSettings
+            {
+                ContractResolver = new EnumKeyResolver<byte>()
+            });
+            _twoFactorProviders = providers;
+        }
+
+        public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
+        {
+            var providers = GetTwoFactorProviders();
+            if(providers == null || !providers.ContainsKey(provider))
+            {
+                return false;
+            }
+
+            return providers[provider].Enabled;
+        }
+
+        public bool TwoFactorIsEnabled(TwoFactorProviderType provider)
+        {
+            return TwoFactorEnabled && TwoFactorProviderIsEnabled(provider);
+        }
+
+        public bool TwoFactorIsEnabled()
+        {
+            return TwoFactorEnabled && TwoFactorProvider.HasValue && TwoFactorProviderIsEnabled(TwoFactorProvider.Value);
+        }
+
+        public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
+        {
+            var providers = GetTwoFactorProviders();
+            if(providers == null || !providers.ContainsKey(provider))
+            {
+                return null;
+            }
+
+            return providers[provider];
         }
     }
 }

@@ -168,7 +168,7 @@ namespace Bit.Core.Identity
 
         public Task<bool> GetTwoFactorEnabledAsync(User user, CancellationToken cancellationToken)
         {
-            return Task.FromResult(user.TwoFactorEnabled && user.TwoFactorProvider.HasValue);
+            return Task.FromResult(user.TwoFactorIsEnabled());
         }
 
         public Task SetSecurityStampAsync(User user, string stamp, CancellationToken cancellationToken)

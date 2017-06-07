@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Bit.Core.Enums;
 using OtpNet;
 using System.Security.Claims;
+using Bit.Core.Models;
 
 namespace Bit.Core.Services
 {
@@ -315,14 +316,16 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task GetTwoFactorAsync(User user, TwoFactorProviderType provider)
+        public async Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider)
         {
-            if(user.TwoFactorEnabled && user.TwoFactorProvider.HasValue && user.TwoFactorProvider.Value == provider)
+            var providers = user.GetTwoFactorProviders();
+            if(providers != null && providers.ContainsKey(provider) && providers[provider].Enabled &&
+                user.TwoFactorProvider.HasValue && user.TwoFactorProvider.Value == provider)
             {
                 switch(provider)
                 {
                     case TwoFactorProviderType.Authenticator:
-                        if(!string.IsNullOrWhiteSpace(user.AuthenticatorKey))
+                        if(!string.IsNullOrWhiteSpace(providers[provider].MetaData["Key"]))
                         {
                             return;
                         }
@@ -332,20 +335,51 @@ namespace Bit.Core.Services
                 }
             }
 
-            user.TwoFactorProvider = provider;
-            // Reset authenticator key.
-            user.AuthenticatorKey = null;
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+
+            TwoFactorProvider providerInfo = null;
+            if(!providers.ContainsKey(provider))
+            {
+                providerInfo = new TwoFactorProvider();
+                providers.Add(provider, providerInfo);
+            }
+            else
+            {
+                providerInfo = providers[provider];
+            }
 
             switch(provider)
             {
                 case TwoFactorProviderType.Authenticator:
                     var key = KeyGeneration.GenerateRandomKey(20);
-                    user.AuthenticatorKey = Base32Encoding.ToString(key);
+                    providerInfo.MetaData["Key"] = Base32Encoding.ToString(key);
+                    providerInfo.Remember = true;
                     break;
                 default:
                     throw new ArgumentException(nameof(provider));
             }
 
+            user.TwoFactorProvider = provider;
+            user.SetTwoFactorProviders(providers);
+            await SaveUserAsync(user);
+        }
+
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(!providers?.ContainsKey(type) ?? true)
+            {
+                return;
+            }
+
+            providers[type].Enabled = user.TwoFactorEnabled;
+            user.SetTwoFactorProviders(providers);
+
+            user.TwoFactorProvider = type;
+            user.TwoFactorRecoveryCode = user.TwoFactorIsEnabled() ? Guid.NewGuid().ToString("N") : null;
             await SaveUserAsync(user);
         }
 
@@ -368,7 +402,6 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            user.TwoFactorProvider = TwoFactorProviderType.Authenticator;
             user.TwoFactorEnabled = false;
             user.TwoFactorRecoveryCode = null;
             await SaveUserAsync(user);

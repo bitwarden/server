@@ -10,6 +10,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -262,12 +263,13 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            await _userService.GetTwoFactorAsync(user, provider);
+            await _userService.SetupTwoFactorAsync(user, provider);
 
             var response = new TwoFactorResponseModel(user);
             return response;
         }
 
+        [Obsolete]
         [HttpPut("two-factor")]
         [HttpPost("two-factor")]
         public async Task<TwoFactorResponseModel> PutTwoFactor([FromBody]UpdateTwoFactorRequestModel model)
@@ -290,10 +292,8 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Token", "Invalid token.");
             }
 
-            user.TwoFactorProvider = TwoFactorProviderType.Authenticator;
             user.TwoFactorEnabled = model.Enabled.Value;
-            user.TwoFactorRecoveryCode = user.TwoFactorEnabled ? Guid.NewGuid().ToString("N") : null;
-            await _userService.SaveUserAsync(user);
+            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
 
             var response = new TwoFactorResponseModel(user);
             return response;
@@ -308,38 +308,6 @@ namespace Bit.Api.Controllers
                 await Task.Delay(2000);
                 throw new BadRequestException(string.Empty, "Invalid information. Try again.");
             }
-        }
-
-        [HttpPut("two-factor-regenerate")]
-        [HttpPost("two-factor-regenerate")]
-        public async Task<TwoFactorResponseModel> PutTwoFactorRegenerate([FromBody]RegenerateTwoFactorRequestModel model)
-        {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("Token", "Invalid token.");
-            }
-
-            if(user.TwoFactorEnabled)
-            {
-                user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
-                await _userService.SaveUserAsync(user);
-            }
-
-            var response = new TwoFactorResponseModel(user);
-            return response;
         }
 
         [HttpPut("keys")]
