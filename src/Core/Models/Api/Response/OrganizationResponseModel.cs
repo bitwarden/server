@@ -24,6 +24,9 @@ namespace Bit.Core.Models.Api
             Plan = organization.Plan;
             PlanType = organization.PlanType;
             Seats = organization.Seats;
+            MaxCollections = organization.MaxCollections;
+            UseGroups = organization.UseGroups;
+            UseDirectory = organization.UseDirectory;
         }
 
         public string Id { get; set; }
@@ -33,6 +36,9 @@ namespace Bit.Core.Models.Api
         public string Plan { get; set; }
         public Enums.PlanType PlanType { get; set; }
         public short? Seats { get; set; }
+        public short? MaxCollections { get; set; }
+        public bool UseGroups { get; set; }
+        public bool UseDirectory { get; set; }
     }
 
     public class OrganizationBillingResponseModel : OrganizationResponseModel

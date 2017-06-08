@@ -230,8 +230,8 @@ namespace Bit.Api.Controllers
 
             if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
-                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
                 await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
             else
             {
