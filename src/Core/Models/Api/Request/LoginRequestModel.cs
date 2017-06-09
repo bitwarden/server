@@ -36,7 +36,8 @@ namespace Bit.Core.Models.Api
             return ToCipherDetails(new CipherDetails
             {
                 UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
-                OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)null : new Guid(OrganizationId)
+                OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)null : new Guid(OrganizationId),
+                Edit = true
             });
         }
 
