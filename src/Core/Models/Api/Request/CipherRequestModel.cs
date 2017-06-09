@@ -100,7 +100,6 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public IEnumerable<string> Ids { get; set; }
-        [Required]
         public string FolderId { get; set; }
     }
 }

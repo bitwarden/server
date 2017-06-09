@@ -187,7 +187,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task MoveAsync(IEnumerable<Guid> ids, Guid folderId, Guid userId)
+        public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {

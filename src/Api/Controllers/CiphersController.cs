@@ -255,7 +255,8 @@ namespace Bit.Api.Controllers
         public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.MoveManyAsync(model.Ids.Select(i => new Guid(i)), new Guid(model.FolderId), userId);
+            await _cipherService.MoveManyAsync(model.Ids.Select(i => new Guid(i)),
+                string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
         }
     }
 }

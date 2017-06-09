@@ -106,8 +106,17 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCiphersAsync(deletingUserId);
         }
 
-        public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid destinationFolderId, Guid movingUserId)
+        public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
         {
+            if(destinationFolderId.HasValue)
+            {
+                var folder = await _folderRepository.GetByIdAsync(destinationFolderId.Value);
+                if(folder == null || folder.UserId != movingUserId)
+                {
+                    throw new BadRequestException("Invalid folder.");
+                }
+            }
+
             await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
             // push
             await _pushService.PushSyncCiphersAsync(movingUserId);
