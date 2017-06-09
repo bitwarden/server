@@ -5,19 +5,20 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    ;WITH [CTE] AS (
+    ;WITH [IdsToDeleteCTE] AS (
         SELECT
-            [Id],
-            [Edit]
+            [Id]
         FROM
             [dbo].[UserCipherDetails](@UserId)
+        WHERE
+            [Edit] = 1
+            AND [Id] IN (SELECT * FROM @Ids)
     )
     DELETE
     FROM
-        [CTE]
+        [dbo].[Cipher]
     WHERE
-        [Edit] = 1
-        AND [Id] IN (@Ids)
+        [Id] IN (SELECT * FROM [IdsToDeleteCTE])
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     -- TODO: What if some that were deleted were organization ciphers? Then bump by org ids.

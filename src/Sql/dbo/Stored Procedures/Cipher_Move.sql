@@ -6,21 +6,32 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    ;WITH [CTE] AS (
+    DECLARE @UserIdKey VARCHAR(50) = CONCAT('"', @UserId, '"')
+    DECLARE @UserIdPath VARCHAR(50) = CONCAT('$.', @UserIdKey)
+
+    ;WITH [IdsToMoveCTE] AS (
         SELECT
-            [Id],
-            [Edit],
-            [FolderId]
+            [Id]
         FROM
             [dbo].[UserCipherDetails](@UserId)
+        WHERE
+            [Edit] = 1
+            AND [Id] IN (SELECT * FROM @Ids)
     )
     UPDATE
-        [CTE]
+        [dbo].[Cipher]
     SET
-        [FolderId] = @FolderId
+        [Folders] = 
+            CASE
+            WHEN @FolderId IS NOT NULL AND [Folders] IS NULL THEN
+                CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}')
+            WHEN @FolderId IS NOT NULL THEN
+                JSON_MODIFY([Folders], @UserIdPath, CAST(@FolderId AS VARCHAR(50)))
+            ELSE
+                JSON_MODIFY([Folders], @UserIdPath, NULL)
+            END
     WHERE
-        [Edit] = 1
-        AND [Id] IN (@Ids)
+        [Id] IN (SELECT * FROM [IdsToMoveCTE])
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     -- TODO: What if some that were updated were organization ciphers? Then bump by org ids.
