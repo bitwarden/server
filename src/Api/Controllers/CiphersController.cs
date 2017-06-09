@@ -241,5 +241,21 @@ namespace Bit.Api.Controllers
 
             await _cipherService.DeleteAsync(cipher, userId, true);
         }
+
+        [HttpDelete("")]
+        [HttpPost("delete")]
+        public async Task DeleteMany([FromBody]CipherBulkDeleteRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+        }
+
+        [HttpPut("move")]
+        [HttpPost("move")]
+        public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.MoveManyAsync(model.Ids.Select(i => new Guid(i)), new Guid(model.FolderId), userId);
+        }
     }
 }

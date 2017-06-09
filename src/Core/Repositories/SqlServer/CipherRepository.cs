@@ -176,6 +176,28 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_Delete]",
+                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task MoveAsync(IEnumerable<Guid> ids, Guid folderId, Guid userId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_Move]",
+                    new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             using(var connection = new SqlConnection(ConnectionString))

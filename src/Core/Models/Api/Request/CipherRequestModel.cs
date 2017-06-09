@@ -89,4 +89,18 @@ namespace Bit.Core.Models.Api
         [Required]
         public IEnumerable<string> CollectionIds { get; set; }
     }
+
+    public class CipherBulkDeleteRequestModel
+    {
+        [Required]
+        public IEnumerable<string> Ids { get; set; }
+    }
+
+    public class CipherBulkMoveRequestModel
+    {
+        [Required]
+        public IEnumerable<string> Ids { get; set; }
+        [Required]
+        public string FolderId { get; set; }
+    }
 }

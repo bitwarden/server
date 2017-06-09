@@ -99,6 +99,20 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
+        public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
+        {
+            await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
+            // push
+            await _pushService.PushSyncCiphersAsync(deletingUserId);
+        }
+
+        public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid destinationFolderId, Guid movingUserId)
+        {
+            await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
+            // push
+            await _pushService.PushSyncCiphersAsync(movingUserId);
+        }
+
         public async Task SaveFolderAsync(Folder folder)
         {
             if(folder.Id == default(Guid))
