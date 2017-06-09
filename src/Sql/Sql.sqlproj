@@ -193,5 +193,8 @@
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
     <Build Include="dbo\Stored Procedures\Device_ReadByIdentifier.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_Delete.sql" />
+    <Build Include="dbo\Functions\UserCipherDetails.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_Move.sql" />
   </ItemGroup>
 </Project>
