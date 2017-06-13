@@ -31,21 +31,6 @@ namespace Bit.Core.Models.Api
             }
         }
 
-        [Obsolete]
-        public CipherMiniResponseModel(Folder folder, string obj = "cipherMini")
-            : base(obj)
-        {
-            if(folder == null)
-            {
-                throw new ArgumentNullException(nameof(folder));
-            }
-
-            Id = folder.Id.ToString();
-            Type = Enums.CipherType.Folder;
-            RevisionDate = folder.RevisionDate;
-            Data = new FolderDataModel(folder);
-        }
-
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public Enums.CipherType Type { get; set; }
@@ -62,11 +47,6 @@ namespace Bit.Core.Models.Api
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
         }
-
-        [Obsolete]
-        public CipherResponseModel(Folder folder, string obj = "cipher")
-            : base(folder, obj)
-        { }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }

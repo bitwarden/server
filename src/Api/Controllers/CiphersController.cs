@@ -16,7 +16,6 @@ namespace Bit.Api.Controllers
     public class CiphersController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
-        private readonly IFolderRepository _folderRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
@@ -24,14 +23,12 @@ namespace Bit.Api.Controllers
 
         public CiphersController(
             ICipherRepository cipherRepository,
-            IFolderRepository folderRepository,
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
-            _folderRepository = folderRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
@@ -68,26 +65,11 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherResponseModel>> Get(bool includeFolders = true, bool includeShared = false)
+        public async Task<ListResponseModel<CipherResponseModel>> Get()
         {
             var userId = _userService.GetProperUserId(User).Value;
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-
-            // For backwards compat, do not include shared ciphers. Can be removed in a future release.
-            if(!includeShared)
-            {
-                ciphers = ciphers.Where(c => !c.OrganizationId.HasValue).ToList();
-            }
-
             var responses = ciphers.Select(c => new CipherResponseModel(c)).ToList();
-
-            // Folders are included for backwards compat. Can be removed in a future release.
-            if(includeFolders)
-            {
-                var folders = await _folderRepository.GetManyByUserIdAsync(userId);
-                responses.AddRange(folders.Select(f => new CipherResponseModel(f)));
-            }
-
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
@@ -123,39 +105,13 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
-        [Obsolete]
-        [HttpGet("history")]
-        public Task<CipherHistoryResponseModel> Get(DateTime since)
-        {
-            return Task.FromResult(new CipherHistoryResponseModel());
-        }
-
         [HttpPost("import")]
         public async Task PostImport([FromBody]ImportPasswordsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
             var ciphers = model.Logins.Select(l => l.ToCipherDetails(userId)).ToList();
-
-            await _cipherService.ImportCiphersAsync(
-                folders,
-                ciphers,
-                model.FolderRelationships);
-        }
-
-        [Obsolete]
-        [HttpPut("{id}/favorite")]
-        [HttpPost("{id}/favorite")]
-        public async Task Favorite(string id)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(cipher == null)
-            {
-                throw new NotFoundException();
-            }
-
-            await _cipherRepository.UpdatePartialAsync(new Guid(id), userId, cipher.FolderId, !cipher.Favorite);
+            await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
         }
 
         [HttpPut("{id}/partial")]

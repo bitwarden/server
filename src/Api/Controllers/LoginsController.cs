@@ -8,9 +8,6 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
-using System.Collections.Generic;
-using Core.Models.Data;
-using Bit.Core.Models.Table;
 
 namespace Bit.Api.Controllers
 {
@@ -21,20 +18,17 @@ namespace Bit.Api.Controllers
     public class LoginsController : Controller
     {
         private readonly ICipherRepository _cipherRepository;
-        private readonly IFolderRepository _folderRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public LoginsController(
             ICipherRepository cipherRepository,
-            IFolderRepository folderRepository,
             ICipherService cipherService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
-            _folderRepository = folderRepository;
             _cipherService = cipherService;
             _userService = userService;
             _currentContext = currentContext;
@@ -72,10 +66,8 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login,
-                userId);
+            var logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login, userId);
             var responses = logins.Select(l => new LoginResponseModel(l)).ToList();
-            await ExpandManyAsync(logins, responses, expand, userId);
             return new ListResponseModel<LoginResponseModel>(responses);
         }
 
@@ -160,40 +152,6 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.DeleteAsync(login, userId);
-        }
-
-        [Obsolete]
-        private async Task ExpandManyAsync(IEnumerable<CipherDetails> logins, ICollection<LoginResponseModel> responses,
-            string[] expand, Guid userId)
-        {
-            if(expand == null || expand.Count() == 0)
-            {
-                return;
-            }
-
-            if(expand.Any(e => e.ToLower() == "folder"))
-            {
-                var folders = await _folderRepository.GetManyByUserIdAsync(userId);
-                if(folders != null && folders.Count() > 0)
-                {
-                    foreach(var response in responses)
-                    {
-                        var login = logins.SingleOrDefault(s => s.Id.ToString() == response.Id);
-                        if(login == null)
-                        {
-                            continue;
-                        }
-
-                        var folder = folders.SingleOrDefault(f => f.Id == login.FolderId);
-                        if(folder == null)
-                        {
-                            continue;
-                        }
-
-                        response.Folder = new FolderResponseModel(folder);
-                    }
-                }
-            }
         }
     }
 }

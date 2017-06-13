@@ -51,8 +51,5 @@ namespace Bit.Core.Models.Api
         public string Password { get; set; }
         public string Notes { get; set; }
         public DateTime RevisionDate { get; set; }
-
-        [Obsolete]
-        public FolderResponseModel Folder { get; set; }
     }
 }
