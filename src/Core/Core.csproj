@@ -57,6 +57,7 @@
     <PackageReference Include="Stripe.net" Version="7.8.0" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.1.1" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
+    <PackageReference Include="YubicoDotNetClient" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
