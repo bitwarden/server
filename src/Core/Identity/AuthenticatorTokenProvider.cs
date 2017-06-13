@@ -21,11 +21,6 @@ namespace Bit.Core.Identity
             return Task.FromResult(canGenerate);
         }
 
-        public Task<string> GetUserModifierAsync(string purpose, UserManager<User> manager, User user)
-        {
-            return Task.FromResult<string>(null);
-        }
-
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
             return Task.FromResult<string>(null);
