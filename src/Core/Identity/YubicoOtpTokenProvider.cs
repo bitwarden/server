@@ -9,6 +9,13 @@ namespace Bit.Core.Identity
 {
     public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     {
+        private readonly GlobalSettings _globalSettings;
+
+        public YubicoOtpTokenProvider(GlobalSettings globalSettings)
+        {
+            _globalSettings = globalSettings;
+        }
+
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
@@ -41,7 +48,7 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
-            var client = new YubicoClient("TODO", "TODO");
+            var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.ClientId);
             var response = client.Verify(token);
             return Task.FromResult(response.Status == YubicoResponseStatus.Ok);
         }

@@ -14,6 +14,7 @@
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
+        public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
 
         public class SqlServerSettings
         {
@@ -70,6 +71,12 @@
         {
             public string ConnectionString { get; set; }
             public string HubName { get; set; }
+        }
+
+        public class YubicoSettings
+        {
+            public string ClientId { get; set; }
+            public string Key { get; set; }
         }
     }
 }

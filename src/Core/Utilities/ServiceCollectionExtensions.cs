@@ -96,6 +96,8 @@ namespace Bit.Core.Utilities
                 .AddUserStore<UserStore>()
                 .AddRoleStore<RoleStore>()
                 .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
+                .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
+                .AddTokenProvider<DuoTokenProvider>(TwoFactorProviderType.Duo.ToString())
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             return identityBuilder;
