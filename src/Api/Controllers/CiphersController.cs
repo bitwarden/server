@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Api.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -19,6 +20,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
+        private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly CurrentContext _currentContext;
 
         public CiphersController(
@@ -26,12 +28,14 @@ namespace Bit.Api.Controllers
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
+            IAttachmentStorageService attachmentStorageService,
             CurrentContext currentContext)
         {
             _cipherRepository = cipherRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
+            _attachmentStorageService = attachmentStorageService;
             _currentContext = currentContext;
         }
 
@@ -213,6 +217,58 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.MoveManyAsync(model.Ids.Select(i => new Guid(i)),
                 string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
+        }
+
+        [HttpPost("attachment")]
+        [DisableFormValueModelBinding]
+        public async Task Post(string id)
+        {
+            // throw for now
+            throw new NotImplementedException();
+
+            if(!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            var idGuid = new Guid(id);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await Request.GetFilesAsync(async (stream, fileName) =>
+            {
+                var attachmentId = Guid.NewGuid();
+                // TODO: store attachmentId + fileName reference in database
+                var storedFilename = $"{idGuid}_{attachmentId}";
+                await _attachmentStorageService.UploadAttachmentAsync(stream, storedFilename);
+            });
+        }
+
+        [HttpDelete("{id}/attachment/{attachmentId}")]
+        [HttpPost("{id}/attachment/{attachmentId}/delete")]
+        public async Task Delete(string id, string attachmentId)
+        {
+            // throw for now
+            throw new NotImplementedException();
+
+            var idGuid = new Guid(id);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var attachmentIdGuid = new Guid(attachmentId);
+
+            // TODO: check and remove attachmentId from cipher in database
+
+            var storedFilename = $"{idGuid}_{attachmentId}";
+            await _attachmentStorageService.DeleteAttachmentAsync(storedFilename);
         }
     }
 }

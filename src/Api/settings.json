@@ -27,6 +27,10 @@
     "storage": {
       "connectionString": "SECRET"
     },
+    "attachment": {
+      "connectionString": "SECRET",
+      "baseUrl": "http://localhost:4000/"
+    },
     "documentDb": {
       "uri": "SECRET",
       "key": "SECRET"

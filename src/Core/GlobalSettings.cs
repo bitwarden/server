@@ -10,6 +10,7 @@
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual PushSettings Push { get; set; } = new PushSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
+        public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
@@ -24,6 +25,12 @@
         public class StorageSettings
         {
             public string ConnectionString { get; set; }
+        }
+
+        public class AttachmentSettings
+        {
+            public string ConnectionString { get; set; }
+            public string BaseUrl { get; set; }
         }
 
         public class MailSettings
