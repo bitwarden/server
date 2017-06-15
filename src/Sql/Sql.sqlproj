@@ -65,7 +65,6 @@
     <Folder Include="dbo\Functions\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
-    <Folder Include="pg" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Grant.sql" />
