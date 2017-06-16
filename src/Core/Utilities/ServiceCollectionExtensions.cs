@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.WindowsAzure.Storage;
-using System.Security.Claims;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Utilities
@@ -47,8 +46,7 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services)
         {
-            //services.AddSingleton<IMailService, SendGridTemplateMailService>();
-            services.AddSingleton<IMailService, RazorViewMailService>();
+            services.AddSingleton<IMailService, SendGridTemplateMailService>();
             services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
             services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
             services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
@@ -60,6 +58,7 @@ namespace Bit.Core.Utilities
         public static void AddNoopServices(this IServiceCollection services)
         {
             services.AddSingleton<IMailService, NoopMailService>();
+            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
             services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
             services.AddSingleton<IBlockIpService, NoopBlockIpService>();
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
