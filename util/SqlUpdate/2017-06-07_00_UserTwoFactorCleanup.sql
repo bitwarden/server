@@ -1,3 +1,6 @@
+alter table [user] add [TwoFactorProviders] NVARCHAR (MAX)   NULL
+go
+
 update [user]
 set twofactorproviders = '{"0":{"Enabled":'+ (case when twofactorenabled = 1 then 'true' else 'false' end) +',"Remember":true,"MetaData":{"Key":"'+ authenticatorkey +'"}}}'
 where twofactorprovider is not null and twofactorprovider = 0
