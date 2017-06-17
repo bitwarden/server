@@ -62,6 +62,11 @@ namespace Bit.AnhMigrator
             {
                 i++;
 
+                if(string.IsNullOrWhiteSpace(device.PushToken))
+                {
+                    return;
+                }
+
                 var installation = new Installation
                 {
                     InstallationId = device.Id.ToString(),
@@ -70,9 +75,9 @@ namespace Bit.AnhMigrator
                 };
 
                 installation.Tags = new List<string>
-                {
-                    $"userId:{device.UserId}"
-                };
+            {
+                $"userId:{device.UserId}"
+            };
 
                 if(!string.IsNullOrWhiteSpace(device.Identifier))
                 {
@@ -91,9 +96,9 @@ namespace Bit.AnhMigrator
                 switch(device.Type)
                 {
                     case DeviceType.Android:
-                        payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}";
-                        messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                            "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}";
+                        payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                        messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                            "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
 
                         installation.Platform = NotificationPlatform.Gcm;
                         break;
