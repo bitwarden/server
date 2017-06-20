@@ -319,8 +319,7 @@ namespace Bit.Core.Services
         public async Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider)
         {
             var providers = user.GetTwoFactorProviders();
-            if(providers != null && providers.ContainsKey(provider) && providers[provider].Enabled &&
-                user.TwoFactorProvider.HasValue && user.TwoFactorProvider.Value == provider)
+            if(providers != null && providers.ContainsKey(provider) && providers[provider].MetaData != null)
             {
                 switch(provider)
                 {
@@ -355,8 +354,7 @@ namespace Bit.Core.Services
             {
                 case TwoFactorProviderType.Authenticator:
                     var key = KeyGeneration.GenerateRandomKey(20);
-                    providerInfo.MetaData["Key"] = Base32Encoding.ToString(key);
-                    providerInfo.Remember = true;
+                    providerInfo.MetaData = new Dictionary<string, string> { ["Key"] = Base32Encoding.ToString(key) };
                     break;
                 default:
                     throw new ArgumentException(nameof(provider));
@@ -375,11 +373,26 @@ namespace Bit.Core.Services
                 return;
             }
 
-            providers[type].Enabled = user.TwoFactorEnabled;
+            providers[type].Enabled = true;
             user.SetTwoFactorProviders(providers);
 
-            user.TwoFactorProvider = type;
-            user.TwoFactorRecoveryCode = user.TwoFactorIsEnabled() ? Guid.NewGuid().ToString("N") : null;
+            if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
+            {
+                user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
+            }
+            await SaveUserAsync(user);
+        }
+
+        public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(!providers?.ContainsKey(type) ?? true)
+            {
+                return;
+            }
+
+            providers.Remove(type);
+            user.SetTwoFactorProviders(providers);
             await SaveUserAsync(user);
         }
 

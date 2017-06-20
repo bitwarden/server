@@ -28,6 +28,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
         Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider);
         Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type);
+        Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
         Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
         Task<IdentityResult> DeleteAsync(User user);

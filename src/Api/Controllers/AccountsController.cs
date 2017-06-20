@@ -248,68 +248,6 @@ namespace Bit.Api.Controllers
             return revisionDate;
         }
 
-        [HttpGet("two-factor")]
-        public async Task<TwoFactorResponseModel> GetTwoFactor(string masterPasswordHash, TwoFactorProviderType provider)
-        {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
-            await _userService.SetupTwoFactorAsync(user, provider);
-
-            var response = new TwoFactorResponseModel(user);
-            return response;
-        }
-
-        [Obsolete]
-        [HttpPut("two-factor")]
-        [HttpPost("two-factor")]
-        public async Task<TwoFactorResponseModel> PutTwoFactor([FromBody]UpdateTwoFactorRequestModel model)
-        {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("Token", "Invalid token.");
-            }
-
-            user.TwoFactorEnabled = model.Enabled.Value;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
-
-            var response = new TwoFactorResponseModel(user);
-            return response;
-        }
-
-        [HttpPost("two-factor-recover")]
-        [AllowAnonymous]
-        public async Task PostTwoFactorRecover([FromBody]RecoverTwoFactorRequestModel model)
-        {
-            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException(string.Empty, "Invalid information. Try again.");
-            }
-        }
-
         [HttpPut("keys")]
         [HttpPost("keys")]
         public async Task<KeysResponseModel> PutKeys([FromBody]KeysRequestModel model)
