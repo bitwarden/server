@@ -43,7 +43,7 @@ namespace Bit.Api.Controllers
         [HttpPost("get-authenticator")]
         public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator([FromBody]TwoFactorRequestModel model)
         {
-            var user = await GetProviderAsync(model, TwoFactorProviderType.Authenticator);
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
             var response = new TwoFactorAuthenticatorResponseModel(user);
             return response;
         }
@@ -53,17 +53,8 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
             [FromBody]UpdateTwoFactorAuthenticatorRequestModel model)
         {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
 
             if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
             {
@@ -79,7 +70,7 @@ namespace Bit.Api.Controllers
         [HttpPost("get-email")]
         public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody]TwoFactorRequestModel model)
         {
-            var user = await GetProviderAsync(model, TwoFactorProviderType.Email);
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
             var response = new TwoFactorEmailResponseModel(user);
             return response;
         }
@@ -87,51 +78,25 @@ namespace Bit.Api.Controllers
         [HttpPost("send-email")]
         public async Task SendEmail([FromBody]TwoFactorEmailRequestModel model)
         {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
-            await _userService.SendTwoFactorEmailAsync(user, model.Email);
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
+            await _userService.SendTwoFactorEmailAsync(user);
         }
 
         [HttpPut("email")]
         [HttpPost("email")]
         public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody]UpdateTwoFactorEmailRequestModel model)
         {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
-            if(!await _userService.VerifyTwoFactorEmailAsync(user, model.Token, model.Email))
+            if(!await _userService.VerifyTwoFactorEmailAsync(user, model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
             }
 
-            var providers = user.GetTwoFactorProviders();
-            providers[TwoFactorProviderType.Email] = new Core.Models.TwoFactorProvider
-            {
-                MetaData = new System.Collections.Generic.Dictionary<string, string> { ["Email"] = model.Email }
-            };
-            user.SetTwoFactorProviders(providers);
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-
             var response = new TwoFactorEmailResponseModel(user);
             return response;
         }
@@ -140,18 +105,7 @@ namespace Bit.Api.Controllers
         [HttpPost("disable")]
         public async Task<TwoFactorEmailResponseModel> PutDisable([FromBody]TwoFactorProviderRequestModel model)
         {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
             await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
 
             var response = new TwoFactorEmailResponseModel(user);
@@ -169,7 +123,7 @@ namespace Bit.Api.Controllers
             }
         }
 
-        private async Task<User> GetProviderAsync(TwoFactorRequestModel model, TwoFactorProviderType type)
+        private async Task<User> CheckPasswordAsync(string masterPasswordHash)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -177,13 +131,12 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
-
-            await _userService.SetupTwoFactorAsync(user, type);
+            
             return user;
         }
     }

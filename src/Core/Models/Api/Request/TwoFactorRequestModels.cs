@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -9,6 +10,30 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(50)]
         public string Token { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Key { get; set; }
+
+        public User ToUser(User extistingUser)
+        {
+            var providers = extistingUser.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.Authenticator))
+            {
+                providers.Remove(TwoFactorProviderType.Authenticator);
+            }
+
+            providers.Add(TwoFactorProviderType.Authenticator, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, string> { ["Key"] = Key },
+                Enabled = true
+            });
+            extistingUser.SetTwoFactorProviders(providers);
+            return extistingUser;
+        }
     }
 
     public class UpdateTwoFactorDuoRequestModel : TwoFactorRequestModel
@@ -48,6 +73,27 @@ namespace Bit.Core.Models.Api
         [EmailAddress]
         [StringLength(50)]
         public string Email { get; set; }
+
+        public User ToUser(User extistingUser)
+        {
+            var providers = extistingUser.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.Email))
+            {
+                providers.Remove(TwoFactorProviderType.Email);
+            }
+
+            providers.Add(TwoFactorProviderType.Email, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, string> { ["Email"] = Email },
+                Enabled = true
+            });
+            extistingUser.SetTwoFactorProviders(providers);
+            return extistingUser;
+        }
     }
 
     public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel

@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using OtpNet;
 
 namespace Bit.Core.Models.Api
 {
@@ -22,6 +23,8 @@ namespace Bit.Core.Models.Api
             }
             else
             {
+                var key = KeyGeneration.GenerateRandomKey(20);
+                Key = Base32Encoding.ToString(key);
                 Enabled = false;
             }
         }

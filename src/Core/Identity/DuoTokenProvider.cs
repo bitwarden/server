@@ -13,10 +13,7 @@ namespace Bit.Core.Identity
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo)
-                && user.TwoFactorProvider.HasValue
-                && user.TwoFactorProvider.Value == TwoFactorProviderType.Duo
                 && !string.IsNullOrWhiteSpace(provider?.MetaData["UserId"]);
 
             return Task.FromResult(canGenerate);

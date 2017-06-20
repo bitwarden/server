@@ -19,10 +19,7 @@ namespace Bit.Core.Identity
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.YubiKey)
-                && user.TwoFactorProvider.HasValue
-                && user.TwoFactorProvider.Value == TwoFactorProviderType.YubiKey
                 && (provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace(v)) ?? false);
 
             return Task.FromResult(canGenerate);

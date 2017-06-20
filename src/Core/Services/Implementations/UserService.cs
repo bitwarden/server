@@ -182,43 +182,29 @@ namespace Bit.Core.Services
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
         }
 
-        public async Task SendTwoFactorEmailAsync(User user, string email = null)
+        public async Task SendTwoFactorEmailAsync(User user)
         {
-            if(string.IsNullOrWhiteSpace(email))
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+            if(provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
             {
-                var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-                if(provider != null && provider.MetaData != null && provider.MetaData.ContainsKey("Email"))
-                {
-                    email = provider.MetaData["Email"];
-                }
+                throw new ArgumentNullException("No email.");
             }
 
-            if(string.IsNullOrWhiteSpace(email))
-            {
-                throw new ArgumentNullException(nameof(email));
-            }
-
-            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "2faEmail:" + email);
-            await _mailService.SendChangeEmailEmailAsync(email, token);
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+                "2faEmail:" + provider.MetaData["Email"]);
+            await _mailService.SendChangeEmailEmailAsync(provider.MetaData["Email"], token);
         }
 
-        public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token, string email = null)
+        public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
         {
-            if(string.IsNullOrWhiteSpace(email))
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+            if(provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
             {
-                var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-                if(provider != null && provider.MetaData != null && provider.MetaData.ContainsKey("Email"))
-                {
-                    email = provider.MetaData["Email"];
-                }
+                throw new ArgumentNullException("No email.");
             }
 
-            if(string.IsNullOrWhiteSpace(email))
-            {
-                throw new ArgumentNullException(nameof(email));
-            }
-
-            return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "2faEmail:" + email, token);
+            return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+                "2faEmail:" + provider.MetaData["Email"], token);
         }
 
         public async Task InitiateEmailChangeAsync(User user, string newEmail)
@@ -353,65 +339,6 @@ namespace Bit.Core.Services
 
             Logger.LogWarning("Refresh security stamp failed for user {userId}.", user.Id);
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-        }
-
-        public async Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider)
-        {
-            var providers = user.GetTwoFactorProviders();
-            if(providers != null && providers.ContainsKey(provider) && providers[provider].MetaData != null)
-            {
-                switch(provider)
-                {
-                    case TwoFactorProviderType.Authenticator:
-                        if(!string.IsNullOrWhiteSpace(providers[provider].MetaData["Key"]))
-                        {
-                            return;
-                        }
-                        break;
-                    case TwoFactorProviderType.Email:
-                    case TwoFactorProviderType.U2F:
-                    case TwoFactorProviderType.YubiKey:
-                    case TwoFactorProviderType.Duo:
-                        break;
-                    default:
-                        throw new ArgumentException(nameof(provider));
-                }
-            }
-
-            if(providers == null)
-            {
-                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-            }
-
-            TwoFactorProvider providerInfo = null;
-            if(!providers.ContainsKey(provider))
-            {
-                providerInfo = new TwoFactorProvider();
-                providers.Add(provider, providerInfo);
-            }
-            else
-            {
-                providerInfo = providers[provider];
-            }
-
-            switch(provider)
-            {
-                case TwoFactorProviderType.Authenticator:
-                    var key = KeyGeneration.GenerateRandomKey(20);
-                    providerInfo.MetaData = new Dictionary<string, string> { ["Key"] = Base32Encoding.ToString(key) };
-                    break;
-                case TwoFactorProviderType.Email:
-                case TwoFactorProviderType.U2F:
-                case TwoFactorProviderType.YubiKey:
-                case TwoFactorProviderType.Duo:
-                    break;
-                default:
-                    throw new ArgumentException(nameof(provider));
-            }
-
-            user.TwoFactorProvider = provider;
-            user.SetTwoFactorProviders(providers);
-            await SaveUserAsync(user);
         }
 
         public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type)

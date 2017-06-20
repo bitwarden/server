@@ -14,8 +14,6 @@ namespace Bit.Core.Identity
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
 
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Authenticator)
-                && user.TwoFactorProvider.HasValue
-                && user.TwoFactorProvider.Value == TwoFactorProviderType.Authenticator
                 && !string.IsNullOrWhiteSpace(provider.MetaData["Key"]);
             
             return Task.FromResult(canGenerate);

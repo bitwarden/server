@@ -19,8 +19,8 @@ namespace Bit.Core.Services
         Task SaveUserAsync(User user);
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
         Task SendMasterPasswordHintAsync(string email);
-        Task SendTwoFactorEmailAsync(User user, string email = null);
-        Task<bool> VerifyTwoFactorEmailAsync(User user, string token, string email = null);
+        Task SendTwoFactorEmailAsync(User user);
+        Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
             string token, string key);
@@ -28,7 +28,6 @@ namespace Bit.Core.Services
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
-        Task SetupTwoFactorAsync(User user, TwoFactorProviderType provider);
         Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
