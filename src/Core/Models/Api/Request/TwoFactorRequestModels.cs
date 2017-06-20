@@ -42,12 +42,16 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class UpdateTwoFactorEmailRequestModel : TwoFactorRequestModel
+    public class TwoFactorEmailRequestModel : TwoFactorRequestModel
     {
         [Required]
         [EmailAddress]
         [StringLength(50)]
         public string Email { get; set; }
+    }
+
+    public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel
+    {
         [Required]
         [StringLength(50)]
         public string Token { get; set; }

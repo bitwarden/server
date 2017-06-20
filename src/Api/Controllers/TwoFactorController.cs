@@ -83,6 +83,24 @@ namespace Bit.Api.Controllers
             var response = new TwoFactorEmailResponseModel(user);
             return response;
         }
+        
+        [HttpPost("send-email")]
+        public async Task SendEmail([FromBody]TwoFactorEmailRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+
+            await _userService.SendTwoFactorEmailAsync(user, model.Email);
+        }
 
         [HttpPut("email")]
         [HttpPost("email")]
@@ -100,12 +118,18 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Email.ToString(), model.Token))
+            if(!await _userService.VerifyTwoFactorEmailAsync(user, model.Token, model.Email))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
             }
 
+            var providers = user.GetTwoFactorProviders();
+            providers[TwoFactorProviderType.Email] = new Core.Models.TwoFactorProvider
+            {
+                MetaData = new System.Collections.Generic.Dictionary<string, string> { ["Email"] = model.Email }
+            };
+            user.SetTwoFactorProviders(providers);
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
 
             var response = new TwoFactorEmailResponseModel(user);

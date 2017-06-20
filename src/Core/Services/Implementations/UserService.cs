@@ -182,6 +182,45 @@ namespace Bit.Core.Services
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
         }
 
+        public async Task SendTwoFactorEmailAsync(User user, string email = null)
+        {
+            if(string.IsNullOrWhiteSpace(email))
+            {
+                var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+                if(provider != null && provider.MetaData != null && provider.MetaData.ContainsKey("Email"))
+                {
+                    email = provider.MetaData["Email"];
+                }
+            }
+
+            if(string.IsNullOrWhiteSpace(email))
+            {
+                throw new ArgumentNullException(nameof(email));
+            }
+
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "2faEmail:" + email);
+            await _mailService.SendChangeEmailEmailAsync(email, token);
+        }
+
+        public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token, string email = null)
+        {
+            if(string.IsNullOrWhiteSpace(email))
+            {
+                var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+                if(provider != null && provider.MetaData != null && provider.MetaData.ContainsKey("Email"))
+                {
+                    email = provider.MetaData["Email"];
+                }
+            }
+
+            if(string.IsNullOrWhiteSpace(email))
+            {
+                throw new ArgumentNullException(nameof(email));
+            }
+
+            return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "2faEmail:" + email, token);
+        }
+
         public async Task InitiateEmailChangeAsync(User user, string newEmail)
         {
             var existingUser = await _userRepository.GetByEmailAsync(newEmail);
@@ -329,6 +368,11 @@ namespace Bit.Core.Services
                             return;
                         }
                         break;
+                    case TwoFactorProviderType.Email:
+                    case TwoFactorProviderType.U2F:
+                    case TwoFactorProviderType.YubiKey:
+                    case TwoFactorProviderType.Duo:
+                        break;
                     default:
                         throw new ArgumentException(nameof(provider));
                 }
@@ -355,6 +399,11 @@ namespace Bit.Core.Services
                 case TwoFactorProviderType.Authenticator:
                     var key = KeyGeneration.GenerateRandomKey(20);
                     providerInfo.MetaData = new Dictionary<string, string> { ["Key"] = Base32Encoding.ToString(key) };
+                    break;
+                case TwoFactorProviderType.Email:
+                case TwoFactorProviderType.U2F:
+                case TwoFactorProviderType.YubiKey:
+                case TwoFactorProviderType.Duo:
                     break;
                 default:
                     throw new ArgumentException(nameof(provider));

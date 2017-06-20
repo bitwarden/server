@@ -19,6 +19,8 @@ namespace Bit.Core.Services
         Task SaveUserAsync(User user);
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
         Task SendMasterPasswordHintAsync(string email);
+        Task SendTwoFactorEmailAsync(User user, string email = null);
+        Task<bool> VerifyTwoFactorEmailAsync(User user, string token, string email = null);
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
             string token, string key);
