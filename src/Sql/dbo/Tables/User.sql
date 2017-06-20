@@ -7,7 +7,6 @@
     [MasterPasswordHint]              NVARCHAR (50)    NULL,
     [Culture]                         NVARCHAR (10)    NOT NULL,
     [SecurityStamp]                   NVARCHAR (50)    NOT NULL,
-    [TwoFactorEnabled]                BIT              NOT NULL,
     [TwoFactorProvider]               TINYINT          NULL,
     [TwoFactorProviders]              NVARCHAR (MAX)   NULL,
     [TwoFactorRecoveryCode]           NVARCHAR (32)    NULL,

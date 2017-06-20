@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace Bit.Core.Models.Table
 {
@@ -18,7 +19,6 @@ namespace Bit.Core.Models.Table
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; } = "en-US";
         public string SecurityStamp { get; set; }
-        public bool TwoFactorEnabled { get; set; }
         public TwoFactorProviderType? TwoFactorProvider { get; set; }
         public string TwoFactorProviders { get; set; }
         public string TwoFactorRecoveryCode { get; set; }
@@ -79,14 +79,15 @@ namespace Bit.Core.Models.Table
             return providers[provider].Enabled;
         }
 
-        public bool TwoFactorIsEnabled(TwoFactorProviderType provider)
-        {
-            return TwoFactorEnabled && TwoFactorProviderIsEnabled(provider);
-        }
-
         public bool TwoFactorIsEnabled()
         {
-            return TwoFactorEnabled && TwoFactorProvider.HasValue && TwoFactorProviderIsEnabled(TwoFactorProvider.Value);
+            var providers = GetTwoFactorProviders();
+            if(providers == null)
+            {
+                return false;
+            }
+
+            return providers.Any(p => p.Value?.Enabled ?? false);
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)

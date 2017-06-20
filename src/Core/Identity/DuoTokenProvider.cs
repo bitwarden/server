@@ -14,7 +14,7 @@ namespace Bit.Core.Identity
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
 
-            var canGenerate = user.TwoFactorIsEnabled(TwoFactorProviderType.Duo)
+            var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo)
                 && user.TwoFactorProvider.HasValue
                 && user.TwoFactorProvider.Value == TwoFactorProviderType.Duo
                 && !string.IsNullOrWhiteSpace(provider?.MetaData["UserId"]);

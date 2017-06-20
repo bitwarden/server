@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
@@ -162,7 +158,7 @@ namespace Bit.Core.Identity
 
         public Task SetTwoFactorEnabledAsync(User user, bool enabled, CancellationToken cancellationToken)
         {
-            user.TwoFactorEnabled = enabled;
+            // Do nothing...
             return Task.FromResult(0);
         }
 

@@ -415,7 +415,8 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            user.TwoFactorEnabled = false;
+            user.TwoFactorProviders = null;
+            user.TwoFactorProvider = null;
             user.TwoFactorRecoveryCode = null;
             await SaveUserAsync(user);
 
