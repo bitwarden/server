@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
+using System.Linq;
 
 namespace Bit.Core.IdentityServer
 {
@@ -18,15 +19,18 @@ namespace Bit.Core.IdentityServer
         private UserManager<User> _userManager;
         private readonly IDeviceRepository _deviceRepository;
         private readonly IDeviceService _deviceService;
+        private readonly IUserService _userService;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
-            IDeviceService deviceService)
+            IDeviceService deviceService,
+            IUserService userService)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
             _deviceService = deviceService;
+            _userService = userService;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -55,8 +59,7 @@ namespace Bit.Core.IdentityServer
                             return;
                         }
 
-                        if(!twoFactorRequest ||
-                            await _userManager.VerifyTwoFactorTokenAsync(user, twoFactorProviderType.ToString(), twoFactorToken))
+                        if(!twoFactorRequest || await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken))
                         {
                             var device = await SaveDeviceAsync(user, context);
                             BuildSuccessResult(user, context, device);
@@ -98,17 +101,19 @@ namespace Bit.Core.IdentityServer
 
         private void BuildTwoFactorResult(User user, ResourceOwnerPasswordValidationContext context)
         {
-            var providers = new List<byte>();
-            if(user.TwoFactorProvider.HasValue)
+            var providerKeys = new List<byte>();
+            var providers = new Dictionary<byte, Dictionary<string, object>>();
+            foreach(var provider in user.GetTwoFactorProviders().Where(p => p.Value.Enabled))
             {
-                providers.Add((byte)user.TwoFactorProvider.Value);
+                providerKeys.Add((byte)provider.Key);
+                providers.Add((byte)provider.Key, null);
             }
 
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
                 new Dictionary<string, object>
                 {
-                    { "TwoFactorProviders", providers },
-                    { "TwoFactorProvider", (byte)user.TwoFactorProvider.Value }
+                    { "TwoFactorProviders", providers.Keys },
+                    { "TwoFactorProviders2", providers }
                 });
         }
 
@@ -150,6 +155,22 @@ namespace Bit.Core.IdentityServer
                 Type = type,
                 PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
             };
+        }
+
+        private async Task<bool> VerifyTwoFactor(User user, TwoFactorProviderType type, string token)
+        {
+            switch(type)
+            {
+                case TwoFactorProviderType.Authenticator:
+                case TwoFactorProviderType.Duo:
+                case TwoFactorProviderType.YubiKey:
+                case TwoFactorProviderType.U2F:
+                    return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
+                case TwoFactorProviderType.Email:
+                    return await _userService.VerifyTwoFactorEmailAsync(user, token);
+                default:
+                    return false;
+            }
         }
 
         private async Task<Device> SaveDeviceAsync(User user, ResourceOwnerPasswordValidationContext context)
