@@ -67,6 +67,51 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpPost("get-yubikey")]
+        public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            var response = new TwoFactorYubiKeyResponseModel(user);
+            return response;
+        }
+
+        [HttpPut("yubikey")]
+        [HttpPost("yubikey")]
+        public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey(
+            [FromBody]UpdateTwoFactorYubicoOtpRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
+
+            await ValidateYubiKeyAsync(user, nameof(model.Key1), model.Key1);
+            await ValidateYubiKeyAsync(user, nameof(model.Key2), model.Key2);
+            await ValidateYubiKeyAsync(user, nameof(model.Key3), model.Key3);
+            await ValidateYubiKeyAsync(user, nameof(model.Key4), model.Key4);
+            await ValidateYubiKeyAsync(user, nameof(model.Key5), model.Key5);
+
+            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
+            var response = new TwoFactorYubiKeyResponseModel(user);
+            return response;
+        }
+
+        public async Task ValidateYubiKeyAsync(User user, string name, string value)
+        {
+            if(string.IsNullOrWhiteSpace(value) || value.Length == 12)
+            {
+                return;
+            }
+
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.YubiKey.ToString(), value))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException(name, $"{name} is invalid.");
+            }
+            else
+            {
+                await Task.Delay(500);
+            }
+        }
+
         [HttpPost("get-email")]
         public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody]TwoFactorRequestModel model)
         {
@@ -74,7 +119,7 @@ namespace Bit.Api.Controllers
             var response = new TwoFactorEmailResponseModel(user);
             return response;
         }
-        
+
         [HttpPost("send-email")]
         public async Task SendEmail([FromBody]TwoFactorEmailRequestModel model)
         {
@@ -136,7 +181,7 @@ namespace Bit.Api.Controllers
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
-            
+
             return user;
         }
     }

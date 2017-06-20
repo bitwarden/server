@@ -32,7 +32,7 @@ namespace Bit.Core.Identity
 
         public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(token.Length != 44)
+            if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
             {
                 return Task.FromResult(false);
             }
@@ -45,7 +45,7 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
-            var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.ClientId);
+            var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
             var response = client.Verify(token);
             return Task.FromResult(response.Status == YubicoResponseStatus.Ok);
         }

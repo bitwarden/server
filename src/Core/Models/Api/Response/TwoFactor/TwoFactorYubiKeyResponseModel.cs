@@ -14,7 +14,7 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(user));
             }
 
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
             if(provider?.MetaData != null && provider.MetaData.Count > 0)
             {
                 Enabled = provider.Enabled;
@@ -29,7 +29,7 @@ namespace Bit.Core.Models.Api
                 }
                 if(provider.MetaData.ContainsKey("Key3"))
                 {
-                    Key1 = provider.MetaData["Key3"];
+                    Key3 = provider.MetaData["Key3"];
                 }
                 if(provider.MetaData.ContainsKey("Key4"))
                 {
