@@ -195,5 +195,10 @@
     <Build Include="dbo\Stored Procedures\Cipher_Delete.sql" />
     <Build Include="dbo\Functions\UserCipherDetails.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Move.sql" />
+    <Build Include="dbo\Tables\U2f.sql" />
+    <Build Include="dbo\Stored Procedures\U2f_Create.sql" />
+    <Build Include="dbo\Stored Procedures\U2f_DeleteByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\U2f_ReadByUserId.sql" />
+    <Build Include="dbo\Views\U2fView.sql" />
   </ItemGroup>
 </Project>
