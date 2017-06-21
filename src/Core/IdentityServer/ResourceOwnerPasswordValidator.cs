@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
 using System.Linq;
+using Bit.Core.Models;
 
 namespace Bit.Core.IdentityServer
 {
@@ -49,13 +50,13 @@ namespace Bit.Core.IdentityServer
                         TwoFactorProviderType twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
                         if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
                         {
-                            BuildTwoFactorResult(user, context);
+                            await BuildTwoFactorResultAsync(user, context);
                             return;
                         }
 
                         if(twoFactorRequest && !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
                         {
-                            BuildTwoFactorResult(user, context);
+                            await BuildTwoFactorResultAsync(user, context);
                             return;
                         }
 
@@ -99,14 +100,15 @@ namespace Bit.Core.IdentityServer
                 customResponse: customResponse);
         }
 
-        private void BuildTwoFactorResult(User user, ResourceOwnerPasswordValidationContext context)
+        private async Task BuildTwoFactorResultAsync(User user, ResourceOwnerPasswordValidationContext context)
         {
             var providerKeys = new List<byte>();
             var providers = new Dictionary<byte, Dictionary<string, object>>();
             foreach(var provider in user.GetTwoFactorProviders().Where(p => p.Value.Enabled))
             {
                 providerKeys.Add((byte)provider.Key);
-                providers.Add((byte)provider.Key, null);
+                var infoDict = await BuildTwoFactorParams(user, provider.Key, provider.Value);
+                providers.Add((byte)provider.Key, infoDict);
             }
 
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
@@ -170,6 +172,33 @@ namespace Bit.Core.IdentityServer
                     return await _userService.VerifyTwoFactorEmailAsync(user, token);
                 default:
                     return false;
+            }
+        }
+
+        private async Task<Dictionary<string, object>> BuildTwoFactorParams(User user, TwoFactorProviderType type,
+            TwoFactorProvider provider)
+        {
+            switch(type)
+            {
+                case TwoFactorProviderType.Duo:
+                case TwoFactorProviderType.U2F:
+                    var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
+                    if(type == TwoFactorProviderType.Duo)
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Signature"] = token
+                        };
+                    }
+                    else if(type == TwoFactorProviderType.U2F)
+                    {
+                        // TODO: U2F challenge
+                        return new Dictionary<string, object> { };
+                    }
+                    return null;
+                default:
+                    return null;
             }
         }
 
