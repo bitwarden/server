@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
@@ -14,6 +15,19 @@ namespace Bit.Core.Models.Api
             }
 
             Enabled = provider.Enabled;
+            Type = type;
+        }
+
+        public TwoFactorProviderResponseModel(TwoFactorProviderType type, User user)
+            : base("twoFactorProvider")
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            var provider = user.GetTwoFactorProvider(type);
+            Enabled = provider?.Enabled ?? false;
             Type = type;
         }
 

@@ -77,8 +77,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("yubikey")]
         [HttpPost("yubikey")]
-        public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey(
-            [FromBody]UpdateTwoFactorYubicoOtpRequestModel model)
+        public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey([FromBody]UpdateTwoFactorYubicoOtpRequestModel model)
         {
             var user = await CheckPasswordAsync(model.MasterPasswordHash);
             model.ToUser(user);
@@ -91,6 +90,25 @@ namespace Bit.Api.Controllers
 
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
             var response = new TwoFactorYubiKeyResponseModel(user);
+            return response;
+        }
+
+        [HttpPost("get-duo")]
+        public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            var response = new TwoFactorDuoResponseModel(user);
+            return response;
+        }
+
+        [HttpPut("duo")]
+        [HttpPost("duo")]
+        public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody]UpdateTwoFactorDuoRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
+            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
+            var response = new TwoFactorDuoResponseModel(user);
             return response;
         }
 
@@ -148,12 +166,11 @@ namespace Bit.Api.Controllers
 
         [HttpPut("disable")]
         [HttpPost("disable")]
-        public async Task<TwoFactorEmailResponseModel> PutDisable([FromBody]TwoFactorProviderRequestModel model)
+        public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody]TwoFactorProviderRequestModel model)
         {
             var user = await CheckPasswordAsync(model.MasterPasswordHash);
             await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
-
-            var response = new TwoFactorEmailResponseModel(user);
+            var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
             return response;
         }
 

@@ -2,6 +2,8 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System;
+using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -36,7 +38,7 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class UpdateTwoFactorDuoRequestModel : TwoFactorRequestModel
+    public class UpdateTwoFactorDuoRequestModel : TwoFactorRequestModel, IValidatableObject
     {
         [Required]
         [StringLength(50)]
@@ -47,6 +49,40 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(50)]
         public string Host { get; set; }
+
+        public User ToUser(User extistingUser)
+        {
+            var providers = extistingUser.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.Duo))
+            {
+                providers.Remove(TwoFactorProviderType.Duo);
+            }
+
+            providers.Add(TwoFactorProviderType.Duo, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, string>
+                {
+                    ["SKey"] = SecretKey,
+                    ["IKey"] = IntegrationKey,
+                    ["Host"] = Host
+                },
+                Enabled = true
+            });
+            extistingUser.SetTwoFactorProviders(providers);
+            return extistingUser;
+        }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(!Host.StartsWith("api-") || !Host.EndsWith(".duosecurity.com") || Host.Count(s => s == '.') != 2)
+            {
+                yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
+            }
+        }
     }
 
     public class UpdateTwoFactorYubicoOtpRequestModel : TwoFactorRequestModel, IValidatableObject
