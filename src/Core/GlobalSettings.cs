@@ -16,6 +16,7 @@
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
+        public virtual DuoSettings Duo { get; set; } = new DuoSettings();
 
         public class SqlServerSettings
         {
@@ -84,6 +85,11 @@
         {
             public string ClientId { get; set; }
             public string Key { get; set; }
+        }
+
+        public class DuoSettings
+        {
+            public string AKey { get; set; }
         }
     }
 }

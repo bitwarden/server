@@ -42,6 +42,9 @@
     "yubico": {
       "clientid": "SECRET",
       "key": "SECRET"
+    },
+    "duo": {
+      "aKey": "SECRET"
     }
   },
   "IpRateLimitOptions": {
