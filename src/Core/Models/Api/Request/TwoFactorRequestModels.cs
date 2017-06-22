@@ -30,7 +30,7 @@ namespace Bit.Core.Models.Api
 
             providers.Add(TwoFactorProviderType.Authenticator, new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, string> { ["Key"] = Key },
+                MetaData = new Dictionary<string, object> { ["Key"] = Key },
                 Enabled = true
             });
             extistingUser.SetTwoFactorProviders(providers);
@@ -64,7 +64,7 @@ namespace Bit.Core.Models.Api
 
             providers.Add(TwoFactorProviderType.Duo, new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, string>
+                MetaData = new Dictionary<string, object>
                 {
                     ["SKey"] = SecretKey,
                     ["IKey"] = IntegrationKey,
@@ -107,7 +107,7 @@ namespace Bit.Core.Models.Api
 
             providers.Add(TwoFactorProviderType.YubiKey, new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, string>
+                MetaData = new Dictionary<string, object>
                 {
                     ["Key1"] = FormatKey(Key1),
                     ["Key2"] = FormatKey(Key2),
@@ -187,7 +187,40 @@ namespace Bit.Core.Models.Api
 
             providers.Add(TwoFactorProviderType.Email, new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, string> { ["Email"] = Email },
+                MetaData = new Dictionary<string, object> { ["Email"] = Email },
+                Enabled = true
+            });
+            extistingUser.SetTwoFactorProviders(providers);
+            return extistingUser;
+        }
+    }
+
+    public class TwoFactorU2fRequestModel : TwoFactorRequestModel
+    {
+        [Required]
+        public string DeviceResponse { get; set; }
+
+        public User ToUser(User extistingUser)
+        {
+            var providers = extistingUser.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.U2f))
+            {
+                providers.Remove(TwoFactorProviderType.U2f);
+            }
+
+            providers.Add(TwoFactorProviderType.U2f, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object>
+                {
+                    ["Key1"] = new TwoFactorProvider.U2fMetaData
+                    {
+                        // TODO
+                    }
+                },
                 Enabled = true
             });
             extistingUser.SetTwoFactorProviders(providers);

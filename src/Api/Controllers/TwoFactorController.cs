@@ -112,6 +112,25 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpPost("get-u2f")]
+        public async Task<TwoFactorU2fResponseModel> GetU2f([FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            var response = new TwoFactorU2fResponseModel(user);
+            return response;
+        }
+
+        [HttpPut("u2f")]
+        [HttpPost("u2f")]
+        public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            model.ToUser(user);
+            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
+            var response = new TwoFactorU2fResponseModel(user);
+            return response;
+        }
+
         public async Task ValidateYubiKeyAsync(User user, string name, string value)
         {
             if(string.IsNullOrWhiteSpace(value) || value.Length == 12)

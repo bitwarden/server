@@ -21,15 +21,15 @@ namespace Bit.Core.Models.Api
 
                 if(provider.MetaData.ContainsKey("Host"))
                 {
-                    Host = provider.MetaData["Host"];
+                    Host = (string)provider.MetaData["Host"];
                 }
                 if(provider.MetaData.ContainsKey("SKey"))
                 {
-                    SecretKey = provider.MetaData["SKey"];
+                    SecretKey = (string)provider.MetaData["SKey"];
                 }
                 if(provider.MetaData.ContainsKey("IKey"))
                 {
-                    IntegrationKey = provider.MetaData["IKey"];
+                    IntegrationKey = (string)provider.MetaData["IKey"];
                 }
             }
             else

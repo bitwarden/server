@@ -32,7 +32,7 @@ namespace Bit.Core.Identity
                 return Task.FromResult<string>(null);
             }
 
-            var signatureRequest = DuoWeb.SignRequest(provider.MetaData["IKey"], provider.MetaData["SKey"],
+            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
                 _globalSettings.Duo.AKey, user.Id.ToString());
             return Task.FromResult(signatureRequest);
         }
@@ -45,7 +45,7 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
-            var response = DuoWeb.VerifyResponse(provider.MetaData["IKey"], provider.MetaData["SKey"],
+            var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
                 _globalSettings.Duo.AKey, token);
 
             Guid userId;

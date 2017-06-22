@@ -14,7 +14,7 @@ namespace Bit.Core.Identity
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo)
-                && !string.IsNullOrWhiteSpace(provider?.MetaData["UserId"]);
+                && !string.IsNullOrWhiteSpace((string)provider?.MetaData["UserId"]);
 
             return Task.FromResult(canGenerate);
         }
@@ -23,13 +23,14 @@ namespace Bit.Core.Identity
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            var duoClient = new DuoApi(provider.MetaData["IKey"], provider.MetaData["SKey"], provider.MetaData["Host"]);
+            var duoClient = new DuoApi((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"], 
+                (string)provider.MetaData["Host"]);
             var parts = purpose.Split(':');
 
             var parameters = new Dictionary<string, string>
             {
                 ["async"] = "1",
-                ["user_id"] = provider.MetaData["UserId"],
+                ["user_id"] = (string)provider.MetaData["UserId"],
                 ["factor"] = parts[0]
             };
 
@@ -61,7 +62,8 @@ namespace Bit.Core.Identity
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            var duoClient = new DuoApi(provider.MetaData["IKey"], provider.MetaData["SKey"], provider.MetaData["Host"]);
+            var duoClient = new DuoApi((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"], 
+                (string)provider.MetaData["Host"]);
 
             var parameters = new Dictionary<string, string>
             {

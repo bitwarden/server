@@ -166,7 +166,7 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.Authenticator:
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
-                case TwoFactorProviderType.U2F:
+                case TwoFactorProviderType.U2f:
                     return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
                 case TwoFactorProviderType.Email:
                     return await _userService.VerifyTwoFactorEmailAsync(user, token);
@@ -181,7 +181,7 @@ namespace Bit.Core.IdentityServer
             switch(type)
             {
                 case TwoFactorProviderType.Duo:
-                case TwoFactorProviderType.U2F:
+                case TwoFactorProviderType.U2f:
                     var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
                     if(type == TwoFactorProviderType.Duo)
                     {
@@ -191,7 +191,7 @@ namespace Bit.Core.IdentityServer
                             ["Signature"] = token
                         };
                     }
-                    else if(type == TwoFactorProviderType.U2F)
+                    else if(type == TwoFactorProviderType.U2f)
                     {
                         // TODO: U2F challenge
                         return new Dictionary<string, object> { };

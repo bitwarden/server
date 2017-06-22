@@ -14,7 +14,7 @@ namespace Bit.Core.Identity
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
 
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Authenticator)
-                && !string.IsNullOrWhiteSpace(provider.MetaData["Key"]);
+                && !string.IsNullOrWhiteSpace((string)provider.MetaData["Key"]);
             
             return Task.FromResult(canGenerate);
         }
@@ -27,7 +27,7 @@ namespace Bit.Core.Identity
         public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-            var otp = new Totp(Base32Encoding.ToBytes(provider.MetaData["Key"]));
+            var otp = new Totp(Base32Encoding.ToBytes((string)provider.MetaData["Key"]));
 
             long timeStepMatched;
             var valid = otp.VerifyTotp(token, out timeStepMatched, new VerificationWindow(1, 1));

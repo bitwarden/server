@@ -21,23 +21,23 @@ namespace Bit.Core.Models.Api
 
                 if(provider.MetaData.ContainsKey("Key1"))
                 {
-                    Key1 = provider.MetaData["Key1"];
+                    Key1 = (string)provider.MetaData["Key1"];
                 }
                 if(provider.MetaData.ContainsKey("Key2"))
                 {
-                    Key2 = provider.MetaData["Key2"];
+                    Key2 = (string)provider.MetaData["Key2"];
                 }
                 if(provider.MetaData.ContainsKey("Key3"))
                 {
-                    Key3 = provider.MetaData["Key3"];
+                    Key3 = (string)provider.MetaData["Key3"];
                 }
                 if(provider.MetaData.ContainsKey("Key4"))
                 {
-                    Key4 = provider.MetaData["Key4"];
+                    Key4 = (string)provider.MetaData["Key4"];
                 }
                 if(provider.MetaData.ContainsKey("Key5"))
                 {
-                    Key5 = provider.MetaData["Key5"];
+                    Key5 = (string)provider.MetaData["Key5"];
                 }
             }
             else

@@ -18,7 +18,7 @@ namespace Bit.Core.Models.Api
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
             if(provider?.MetaData?.ContainsKey("Key") ?? false)
             {
-                Key = provider.MetaData["Key"];
+                Key = (string)provider.MetaData["Key"];
                 Enabled = provider.Enabled;
             }
             else

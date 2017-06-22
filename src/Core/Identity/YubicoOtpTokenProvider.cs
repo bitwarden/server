@@ -20,7 +20,7 @@ namespace Bit.Core.Identity
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.YubiKey)
-                && (provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace(v)) ?? false);
+                && (provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? false);
 
             return Task.FromResult(canGenerate);
         }

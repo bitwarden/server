@@ -17,7 +17,7 @@ namespace Bit.Core.Models.Api
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
             if(provider?.MetaData?.ContainsKey("Email") ?? false)
             {
-                Email = provider.MetaData["Email"];
+                Email = (string)provider.MetaData["Email"];
                 Enabled = provider.Enabled;
             }
             else
