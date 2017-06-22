@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
+using Bit.Core;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -17,13 +19,16 @@ namespace Bit.Api.Controllers
     public class TwoFactorController : Controller
     {
         private readonly IUserService _userService;
+        private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
 
         public TwoFactorController(
             IUserService userService,
+            GlobalSettings globalSettings,
             UserManager<User> userManager)
         {
             _userService = userService;
+            _globalSettings = globalSettings;
             _userManager = userManager;
         }
 
@@ -117,7 +122,7 @@ namespace Bit.Api.Controllers
         {
             var user = await CheckPasswordAsync(model.MasterPasswordHash);
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if(!provider.Enabled || (provider?.MetaData != null && provider.MetaData.Count > 0))
+            if(provider == null || !provider.Enabled || (provider.MetaData?.Count ?? 0) > 0)
             {
                 var reg = await _userService.StartU2fRegistrationAsync(user);
                 var response = new TwoFactorU2fResponseModel(user, provider, reg);
@@ -128,6 +133,34 @@ namespace Bit.Api.Controllers
                 var response = new TwoFactorU2fResponseModel(user, provider);
                 return response;
             }
+        }
+
+        [HttpGet("~/app-id.json")]
+        //[Produces("application/fido.trusted-apps+json")]
+        [AllowAnonymous]
+        public string GetU2fAppId()
+        {
+            return JsonConvert.SerializeObject(new
+            {
+                trustedFacets = new object[]
+                {
+                    new
+                    {
+                        version = new
+                        {
+                            major = 1,
+                            minor = 1
+                        },
+                        ids = new string[]
+                        {
+                            _globalSettings.U2f.AppId,
+                            //"ios:bundle-id:com.8bit.bitwarden",
+                            //"android:apk-key-hash:585215fd5153209a7e246f53286035838a0be227",
+                            //"chrome-extension://nngceckbapebfimnlniiiahkandclblb"
+                        }
+                    }
+                }
+            });
         }
 
         [HttpPut("u2f")]

@@ -119,5 +119,11 @@ namespace Bit.Core.Utilities
         {
             return _epoc.AddMilliseconds(milliseconds);
         }
+
+        public static string U2fAppIdUrl(GlobalSettings globalSettings)
+        {
+            //return $"{globalSettings.BaseApiUri}app-id.json";
+            return globalSettings.U2f.AppId;
+        }
     }
 }

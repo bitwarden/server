@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using U2F.Core.Utils;
+using u2flib.Util;
 
 namespace Bit.Core.Models
 {

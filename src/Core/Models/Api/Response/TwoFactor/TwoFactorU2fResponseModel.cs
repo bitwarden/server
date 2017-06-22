@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
             {
                 Challenge = new ChallengeModel(user, registration);
             }
-            Enabled = provider.Enabled;
+            Enabled = provider?.Enabled ?? false;
         }
 
         public TwoFactorU2fResponseModel(User user)

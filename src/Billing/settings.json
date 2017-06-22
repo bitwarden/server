@@ -2,6 +2,7 @@
   "globalSettings": {
     "siteName": "bitwarden",
     "baseVaultUri": "http://localhost:4001/#",
+    "baseApiUri": "http://localhost:4000/",
     "jwtSigningKey": "THIS IS A SECRET. IT KEEPS YOUR TOKEN SAFE. :)",
     "stripeApiKey": "SECRET",
     "sqlServer": {

@@ -12,7 +12,6 @@ BEGIN
 
     INSERT INTO [dbo].[U2f]
     (
-        [Id],
         [UserId],
         [KeyHandle],
         [Challenge],
@@ -22,7 +21,6 @@ BEGIN
     )
     VALUES
     (
-        @Id,
         @UserId,
         @KeyHandle,
         @Challenge,
