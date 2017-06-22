@@ -199,33 +199,6 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public string DeviceResponse { get; set; }
-
-        public User ToUser(User extistingUser)
-        {
-            var providers = extistingUser.GetTwoFactorProviders();
-            if(providers == null)
-            {
-                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-            }
-            else if(providers.ContainsKey(TwoFactorProviderType.U2f))
-            {
-                providers.Remove(TwoFactorProviderType.U2f);
-            }
-
-            providers.Add(TwoFactorProviderType.U2f, new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object>
-                {
-                    ["Key1"] = new TwoFactorProvider.U2fMetaData
-                    {
-                        // TODO
-                    }
-                },
-                Enabled = true
-            });
-            extistingUser.SetTwoFactorProviders(providers);
-            return extistingUser;
-        }
     }
 
     public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel

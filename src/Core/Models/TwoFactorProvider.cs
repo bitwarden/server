@@ -12,7 +12,7 @@ namespace Bit.Core.Models
             public string KeyHandle { get; set; }
             public string PublicKey { get; set; }
             public string Certificate { get; set; }
-            public int Counter { get; set; }
+            public uint Counter { get; set; }
             public bool Compromised { get; set; }
         }
     }

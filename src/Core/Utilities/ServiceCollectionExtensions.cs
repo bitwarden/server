@@ -32,6 +32,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
             services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
             services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
+            services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
         }
 
         public static void AddBaseServices(this IServiceCollection services)

@@ -45,6 +45,9 @@
     },
     "duo": {
       "aKey": "SECRET"
+    },
+    "u2f": {
+      "appId": "https://bitwarden.com"
     }
   },
   "IpRateLimitOptions": {

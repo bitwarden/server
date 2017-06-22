@@ -17,6 +17,7 @@
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
+        public virtual U2fSettings U2f { get; set; } = new U2fSettings();
 
         public class SqlServerSettings
         {
@@ -90,6 +91,11 @@
         public class DuoSettings
         {
             public string AKey { get; set; }
+        }
+
+        public class U2fSettings
+        {
+            public string AppId { get; set; }
         }
     }
 }

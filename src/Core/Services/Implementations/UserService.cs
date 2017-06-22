@@ -9,9 +9,11 @@ using Bit.Core.Repositories;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Bit.Core.Enums;
-using OtpNet;
 using System.Security.Claims;
+using U2fLib = U2F.Core.Crypto.U2F;
+using U2F.Core.Models;
 using Bit.Core.Models;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -20,6 +22,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
@@ -27,11 +30,13 @@ namespace Bit.Core.Services
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
         private readonly CurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
 
         public UserService(
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IU2fRepository u2fRepository,
             IMailService mailService,
             IPushNotificationService pushService,
             IUserStore<User> store,
@@ -43,7 +48,8 @@ namespace Bit.Core.Services
             IdentityErrorDescriber errors,
             IServiceProvider services,
             ILogger<UserManager<User>> logger,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            GlobalSettings globalSettings)
             : base(
                   store,
                   optionsAccessor,
@@ -58,6 +64,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _organizationUserRepository = organizationUserRepository;
+            _u2fRepository = u2fRepository;
             _mailService = mailService;
             _pushService = pushService;
             _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
@@ -65,6 +72,7 @@ namespace Bit.Core.Services
             _passwordHasher = passwordHasher;
             _passwordValidators = passwordValidators;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -205,6 +213,79 @@ namespace Bit.Core.Services
 
             return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + provider.MetaData["Email"], token);
+        }
+
+        public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
+        {
+            await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
+            var reg = U2fLib.StartRegistration(_globalSettings.U2f.AppId);
+            await _u2fRepository.CreateAsync(new U2f
+            {
+                AppId = reg.AppId,
+                Challenge = reg.Challenge,
+                Version = reg.Version,
+                UserId = user.Id
+            });
+
+            return new U2fRegistration
+            {
+                AppId = reg.AppId,
+                Challenge = reg.Challenge,
+                Version = reg.Version
+            };
+        }
+
+        public async Task<bool> CompleteU2fRegistrationAsync(User user, string deviceResponse)
+        {
+            if(string.IsNullOrWhiteSpace(deviceResponse))
+            {
+                return false;
+            }
+
+            var challenges = await _u2fRepository.GetManyByUserIdAsync(user.Id);
+            if(!challenges?.Any() ?? true)
+            {
+                return false;
+            }
+
+            var registerResponse = BaseModel.FromJson<RegisterResponse>(deviceResponse);
+
+            var challenge = challenges.OrderBy(i => i.Id).Last(i => i.KeyHandle == null);
+            var statedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
+            var reg = U2fLib.FinishRegistration(statedReg, registerResponse);
+
+            await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
+
+            // Add device
+            var providers = user.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.U2f))
+            {
+                providers.Remove(TwoFactorProviderType.U2f);
+            }
+
+            providers.Add(TwoFactorProviderType.U2f, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object>
+                {
+                    ["Key1"] = new TwoFactorProvider.U2fMetaData
+                    {
+                        KeyHandle = reg.KeyHandle == null ? null : Convert.ToBase64String(reg.KeyHandle),
+                        PublicKey = reg.PublicKey == null ? null : Convert.ToBase64String(reg.PublicKey),
+                        Certificate = reg.AttestationCert == null ? null : Convert.ToBase64String(reg.AttestationCert),
+                        Compromised = false,
+                        Counter = reg.Counter
+                    }
+                },
+                Enabled = true
+            });
+            user.SetTwoFactorProviders(providers);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
+
+            return true;
         }
 
         public async Task InitiateEmailChangeAsync(User user, string newEmail)

@@ -6,6 +6,7 @@ using Bit.Core.Models.Table;
 using System.Security.Claims;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -21,6 +22,8 @@ namespace Bit.Core.Services
         Task SendMasterPasswordHintAsync(string email);
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
+        Task<U2fRegistration> StartU2fRegistrationAsync(User user);
+        Task<bool> CompleteU2fRegistrationAsync(User user, string deviceResponse);
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
             string token, string key);

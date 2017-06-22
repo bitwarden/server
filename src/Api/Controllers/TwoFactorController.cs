@@ -116,8 +116,18 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorU2fResponseModel> GetU2f([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckPasswordAsync(model.MasterPasswordHash);
-            var response = new TwoFactorU2fResponseModel(user);
-            return response;
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
+            if(!provider.Enabled || (provider?.MetaData != null && provider.MetaData.Count > 0))
+            {
+                var reg = await _userService.StartU2fRegistrationAsync(user);
+                var response = new TwoFactorU2fResponseModel(user, provider, reg);
+                return response;
+            }
+            else
+            {
+                var response = new TwoFactorU2fResponseModel(user, provider);
+                return response;
+            }
         }
 
         [HttpPut("u2f")]
@@ -125,8 +135,7 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
         {
             var user = await CheckPasswordAsync(model.MasterPasswordHash);
-            model.ToUser(user);
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
+            await _userService.CompleteU2fRegistrationAsync(user, model.DeviceResponse);
             var response = new TwoFactorU2fResponseModel(user);
             return response;
         }
