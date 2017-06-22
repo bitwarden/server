@@ -14,6 +14,7 @@ using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using U2F.Core.Utils;
 
 namespace Bit.Core.Services
 {
@@ -273,9 +274,9 @@ namespace Bit.Core.Services
                 {
                     ["Key1"] = new TwoFactorProvider.U2fMetaData
                     {
-                        KeyHandle = reg.KeyHandle == null ? null : Convert.ToBase64String(reg.KeyHandle),
-                        PublicKey = reg.PublicKey == null ? null : Convert.ToBase64String(reg.PublicKey),
-                        Certificate = reg.AttestationCert == null ? null : Convert.ToBase64String(reg.AttestationCert),
+                        KeyHandle = reg.KeyHandle == null ? null : Utils.ByteArrayToBase64String(reg.KeyHandle),
+                        PublicKey = reg.PublicKey == null ? null : Utils.ByteArrayToBase64String(reg.PublicKey),
+                        Certificate = reg.AttestationCert == null ? null : Utils.ByteArrayToBase64String(reg.AttestationCert),
                         Compromised = false,
                         Counter = reg.Counter
                     }

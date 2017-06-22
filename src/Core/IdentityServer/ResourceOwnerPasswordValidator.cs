@@ -193,8 +193,10 @@ namespace Bit.Core.IdentityServer
                     }
                     else if(type == TwoFactorProviderType.U2f)
                     {
-                        // TODO: U2F challenge
-                        return new Dictionary<string, object> { };
+                        return new Dictionary<string, object>
+                        {
+                            ["Challenges"] = token
+                        };
                     }
                     return null;
                 default:
