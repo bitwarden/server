@@ -68,6 +68,13 @@ namespace Bit.Core.IdentityServer
                                 twoFactorProviderType, twoFactorRemember);
                             return;
                         }
+
+                        if(twoFactorRequest && twoFactorProviderType == TwoFactorProviderType.Remember)
+                        {
+                            await Task.Delay(2000); // Delay for brute force.
+                            await BuildTwoFactorResultAsync(user, context);
+                            return;
+                        }
                     }
                 }
             }
