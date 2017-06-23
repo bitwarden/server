@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.WindowsAzure.Storage;
+using System;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Utilities
@@ -71,6 +72,11 @@ namespace Bit.Core.Utilities
         {
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
 
+            services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
+            {
+                options.TokenLifespan = TimeSpan.FromDays(30);
+            });
+
             var identityBuilder = services.AddIdentity<User, Role>(options =>
             {
                 options.User = new UserOptions
@@ -102,6 +108,7 @@ namespace Bit.Core.Utilities
                 .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
                 .AddTokenProvider<DuoWebTokenProvider>(TwoFactorProviderType.Duo.ToString())
                 .AddTokenProvider<U2fTokenProvider>(TwoFactorProviderType.U2f.ToString())
+                .AddTokenProvider<TwoFactorRememberTokenProvider>(TwoFactorProviderType.Remember.ToString())
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             return identityBuilder;

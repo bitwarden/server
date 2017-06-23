@@ -38,6 +38,7 @@ namespace Bit.Core.IdentityServer
         {
             var twoFactorToken = context.Request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
+            var twoFactorRemember = context.Request.Raw["TwoFactorRemember"]?.ToString() == "1";
             var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
 
             if(!string.IsNullOrWhiteSpace(context.UserName))
@@ -63,7 +64,8 @@ namespace Bit.Core.IdentityServer
                         if(!twoFactorRequest || await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken))
                         {
                             var device = await SaveDeviceAsync(user, context);
-                            BuildSuccessResult(user, context, device);
+                            await BuildSuccessResultAsync(user, context, device, twoFactorRequest,
+                                twoFactorProviderType, twoFactorRemember);
                             return;
                         }
                     }
@@ -74,7 +76,8 @@ namespace Bit.Core.IdentityServer
             BuildErrorResult(twoFactorRequest, context);
         }
 
-        private void BuildSuccessResult(User user, ResourceOwnerPasswordValidationContext context, Device device)
+        private async Task BuildSuccessResultAsync(User user, ResourceOwnerPasswordValidationContext context, Device device,
+            bool twoFactorRequest, TwoFactorProviderType twoFactorProviderType, bool twoFactorRemember)
         {
             var claims = new List<Claim>();
 
@@ -92,6 +95,12 @@ namespace Bit.Core.IdentityServer
             if(!string.IsNullOrWhiteSpace(user.Key))
             {
                 customResponse.Add("Key", user.Key);
+            }
+
+            if(twoFactorRequest && twoFactorRemember)
+            {
+                var token = await _userManager.GenerateTwoFactorTokenAsync(user, TwoFactorProviderType.Remember.ToString());
+                customResponse.Add("TwoFactorToken", token);
             }
 
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
@@ -167,6 +176,7 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
+                case TwoFactorProviderType.Remember:
                     return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
                 case TwoFactorProviderType.Email:
                     return await _userService.VerifyTwoFactorEmailAsync(user, token);
