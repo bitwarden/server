@@ -44,7 +44,7 @@
       "aKey": "SECRET"
     },
     "u2f": {
-      "appId": "https://bitwarden.com"
+      "appId": "https://localhost:4001"
     }
   }
 }

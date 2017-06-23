@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Services;
 using Bit.Core.Repositories;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -18,16 +17,13 @@ namespace Bit.Core.Identity
     public class U2fTokenProvider : IUserTwoFactorTokenProvider<User>
     {
         private readonly IU2fRepository _u2fRepository;
-        private readonly IUserService _userService;
         private readonly GlobalSettings _globalSettings;
 
         public U2fTokenProvider(
             IU2fRepository u2fRepository,
-            IUserService userService,
             GlobalSettings globalSettings)
         {
             _u2fRepository = u2fRepository;
-            _userService = userService;
             _globalSettings = globalSettings;
         }
 
@@ -48,7 +44,7 @@ namespace Bit.Core.Identity
 
             var keys = new List<TwoFactorProvider.U2fMetaData>();
 
-            var key1 = provider.MetaData["Key1"] as TwoFactorProvider.U2fMetaData;
+            var key1 = new TwoFactorProvider.U2fMetaData((dynamic)provider.MetaData["Key1"]);
             if(!key1?.Compromised ?? false)
             {
                 keys.Add(key1);
@@ -98,7 +94,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
             if(!HasProperMetaData(provider))
             {
                 return false;
@@ -106,7 +102,7 @@ namespace Bit.Core.Identity
 
             var keys = new List<TwoFactorProvider.U2fMetaData>();
 
-            var key1 = provider.MetaData["Key1"] as TwoFactorProvider.U2fMetaData;
+            var key1 = new TwoFactorProvider.U2fMetaData((dynamic)provider.MetaData["Key1"]);
             if(!key1?.Compromised ?? false)
             {
                 keys.Add(key1);
@@ -131,10 +127,15 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var success = true;
             // User will have a authentication request for each device they have registered so get the one that matches
             // the device key handle
-            var challenge = challenges.First(c => c.KeyHandle == authenticateResponse.KeyHandle);
+            var challenge = challenges.FirstOrDefault(c => c.KeyHandle == authenticateResponse.KeyHandle);
+            if(challenge == null)
+            {
+                return false;
+            }
+
+            var success = true;
             var registration = new DeviceRegistration(key.KeyHandleBytes, key.PublicKeyBytes, key.CertificateBytes,
                 key.Counter);
             try
@@ -155,7 +156,7 @@ namespace Bit.Core.Identity
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.U2f].MetaData["Key1"] = key;
             user.SetTwoFactorProviders(providers);
-            await _userService.SaveUserAsync(user);
+            await manager.UpdateAsync(user);
 
             return success;
         }

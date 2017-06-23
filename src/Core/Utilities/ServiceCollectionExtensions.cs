@@ -101,6 +101,7 @@ namespace Bit.Core.Utilities
                 .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
                 .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
                 .AddTokenProvider<DuoWebTokenProvider>(TwoFactorProviderType.Duo.ToString())
+                .AddTokenProvider<U2fTokenProvider>(TwoFactorProviderType.U2f.ToString())
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             return identityBuilder;
