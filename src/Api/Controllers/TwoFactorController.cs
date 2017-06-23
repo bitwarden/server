@@ -136,7 +136,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("~/app-id.json")]
-        //[Produces("application/fido.trusted-apps+json")]
+        [Produces("application/fido.trusted-apps+json")]
         [AllowAnonymous]
         public string GetU2fAppId()
         {
@@ -149,7 +149,7 @@ namespace Bit.Api.Controllers
                         version = new
                         {
                             major = 1,
-                            minor = 1
+                            minor = 0
                         },
                         ids = new string[]
                         {

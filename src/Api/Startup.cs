@@ -141,6 +141,8 @@ namespace Bit.Api
                 })
                 .AddDebug();
 
+            app.UseMiddleware<AdjustHeadersMiddleware>();
+
             // Rate limiting
             app.UseMiddleware<CustomIpRateLimitMiddleware>();
 
