@@ -19,7 +19,6 @@ namespace Bit.Core.Models.Table
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; } = "en-US";
         public string SecurityStamp { get; set; }
-        public TwoFactorProviderType? TwoFactorProvider { get; set; }
         public string TwoFactorProviders { get; set; }
         public string TwoFactorRecoveryCode { get; set; }
         public string EquivalentDomains { get; set; }

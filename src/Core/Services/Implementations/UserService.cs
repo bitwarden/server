@@ -474,7 +474,6 @@ namespace Bit.Core.Services
             }
 
             user.TwoFactorProviders = null;
-            user.TwoFactorProvider = null;
             user.TwoFactorRecoveryCode = null;
             await SaveUserAsync(user);
 

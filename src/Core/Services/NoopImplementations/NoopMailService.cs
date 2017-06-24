@@ -42,6 +42,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendTwoFactorEmailAsync(string email, string token)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendWelcomeEmailAsync(User user)
         {
             return Task.FromResult(0);
