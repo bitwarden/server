@@ -48,7 +48,7 @@ namespace Bit.Core.Services
         public async Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
         {
             var message = CreateDefaultMessage("Your Email Change", newEmailAddress);
-            var model = new ChangeEmailViewModel
+            var model = new EmailTokenViewModel
             {
                 Token = token,
                 WebVaultUrl = _globalSettings.BaseVaultUri,
@@ -56,6 +56,22 @@ namespace Bit.Core.Services
             };
             message.HtmlContent = _engine.Parse("ChangeEmail", model);
             message.TextContent = _engine.Parse("ChangeEmail.text", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendTwoFactorEmailAsync(string email, string token)
+        {
+            var message = CreateDefaultMessage("Your Two-step Login Verification Code", email);
+            var model = new EmailTokenViewModel
+            {
+                Token = token,
+                WebVaultUrl = _globalSettings.BaseVaultUri,
+                SiteName = _globalSettings.SiteName
+            };
+            message.HtmlContent = _engine.Parse("TwoFactorEmail", model);
+            message.TextContent = _engine.Parse("TwoFactorEmail.text", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);

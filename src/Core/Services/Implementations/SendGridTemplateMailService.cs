@@ -12,6 +12,7 @@ namespace Bit.Core.Services
         private const string WelcomeTemplateId = "045f8ad5-5547-4fa2-8d3d-6d46e401164d";
         private const string ChangeEmailAlreadyExistsTemplateId = "b69d2038-6ad9-4cf6-8f7f-7880921cba43";
         private const string ChangeEmailTemplateId = "ec2c1471-8292-4f17-b6b6-8223d514f86e";
+        private const string TwoFactorEmailTemplateId = "264cfe69-5258-4c89-8d90-76b4659de589";
         private const string NoMasterPasswordHintTemplateId = "136eb299-e102-495a-88bd-f96736eea159";
         private const string MasterPasswordHintTemplateId = "be77cfde-95dd-4cb9-b5e0-8286b53885f1";
         private const string OrganizationInviteTemplateId = "1eff5512-e36c-49a8-b9e2-2b215d6bbced";
@@ -67,6 +68,20 @@ namespace Bit.Core.Services
 
             AddSubstitution(message, "{{token}}", Uri.EscapeDataString(token));
             AddCategories(message, new List<string> { AdministrativeCategoryName, "Change Email" });
+            message.MetaData.Add("SendGridBypassListManagement", true);
+
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendTwoFactorEmailAsync(string email, string token)
+        {
+            var message = CreateDefaultMessage(
+               "Your Two-step Login Verification Code",
+               email,
+               TwoFactorEmailTemplateId);
+
+            AddSubstitution(message, "{{token}}", Uri.EscapeDataString(token));
+            AddCategories(message, new List<string> { AdministrativeCategoryName, "Two Factor Email" });
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);

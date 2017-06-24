@@ -14,6 +14,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="MailTemplates\TwoFactorEmail.cshtml" />
+    <EmbeddedResource Include="MailTemplates\TwoFactorEmail.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\ChangeEmailAlreadyExists.cshtml" />
     <EmbeddedResource Include="MailTemplates\ChangeEmailAlreadyExists.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\OrganizationUserInvited.cshtml" />

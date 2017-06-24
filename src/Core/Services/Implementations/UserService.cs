@@ -201,7 +201,7 @@ namespace Bit.Core.Services
 
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + provider.MetaData["Email"]);
-            await _mailService.SendChangeEmailEmailAsync((string)provider.MetaData["Email"], token);
+            await _mailService.SendTwoFactorEmailAsync((string)provider.MetaData["Email"], token);
         }
 
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)

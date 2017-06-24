@@ -9,6 +9,7 @@ namespace Bit.Core.Services
         Task SendWelcomeEmailAsync(User user);
         Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
         Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
+        Task SendTwoFactorEmailAsync(string email, string token);
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
         Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token);

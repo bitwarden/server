@@ -1,0 +1,10 @@
+﻿@model Bit.Core.Models.Mail.EmailTokenViewModel
+@{
+    Layout = "_BasicMailLayout";
+}
+<p>
+    Your two-step verification code is: @Model.Token
+</p>
+<p>
+    Use this code to complete logging in with bitwarden.
+</p>
