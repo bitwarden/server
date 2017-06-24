@@ -474,7 +474,7 @@ namespace Bit.Core.Services
             }
 
             user.TwoFactorProviders = null;
-            user.TwoFactorRecoveryCode = null;
+            user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
             await SaveUserAsync(user);
 
             return true;

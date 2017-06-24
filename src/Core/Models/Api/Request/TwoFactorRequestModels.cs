@@ -220,14 +220,8 @@ namespace Bit.Core.Models.Api
         public string MasterPasswordHash { get; set; }
     }
 
-    public class TwoFactorRecoveryRequestModel
+    public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     {
-        [Required]
-        [EmailAddress]
-        [StringLength(50)]
-        public string Email { get; set; }
-        [Required]
-        public string MasterPasswordHash { get; set; }
         [Required]
         [StringLength(32)]
         public string RecoveryCode { get; set; }
