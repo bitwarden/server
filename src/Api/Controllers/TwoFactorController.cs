@@ -253,9 +253,17 @@ namespace Bit.Api.Controllers
             return response;
         }
 
+        [HttpPost("get-recover")]
+        public async Task<TwoFactorRecoverResponseModel> GetRecover([FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckPasswordAsync(model.MasterPasswordHash);
+            var response = new TwoFactorRecoverResponseModel(user);
+            return response;
+        }
+
         [HttpPost("recover")]
         [AllowAnonymous]
-        public async Task PostTwoFactorRecover([FromBody]TwoFactorRecoveryRequestModel model)
+        public async Task PostRecover([FromBody]TwoFactorRecoveryRequestModel model)
         {
             if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
             {
