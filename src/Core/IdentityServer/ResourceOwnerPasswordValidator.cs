@@ -212,6 +212,7 @@ namespace Bit.Core.IdentityServer
             {
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.U2f:
+                case TwoFactorProviderType.Email:
                     var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
                     if(type == TwoFactorProviderType.Duo)
                     {
@@ -228,10 +229,48 @@ namespace Bit.Core.IdentityServer
                             ["Challenges"] = token
                         };
                     }
+                    else if(type == TwoFactorProviderType.Email)
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Email"] = RedactEmail((string)provider.MetaData["Email"])
+                        };
+                    }
                     return null;
                 default:
                     return null;
             }
+        }
+
+        private static string RedactEmail(string email)
+        {
+            var emailParts = email.Split('@');
+
+            string shownPart = null;
+            if(emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+            {
+                shownPart = emailParts[0].Substring(0, 1);
+            }
+            else if(emailParts[0].Length > 4)
+            {
+                shownPart = emailParts[0].Substring(0, 2);
+            }
+            else
+            {
+                shownPart = string.Empty;
+            }
+
+            string redactedPart = null;
+            if(emailParts[0].Length > 4)
+            {
+                redactedPart = new string('*', emailParts[0].Length - 2);
+            }
+            else
+            {
+                redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
+            }
+
+            return $"{shownPart}{redactedPart}@{emailParts[1]}";
         }
 
         private async Task<Device> SaveDeviceAsync(User user, ResourceOwnerPasswordValidationContext context)
