@@ -207,6 +207,24 @@ namespace Bit.Api.Controllers
             await _userService.SendTwoFactorEmailAsync(user);
         }
 
+        [AllowAnonymous]
+        [HttpPost("send-email-login")]
+        public async Task SendEmailLogin([FromBody]TwoFactorEmailRequestModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
+            if(user != null)
+            {
+                if(await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+                {
+                    await _userService.SendTwoFactorEmailAsync(user);
+                    return;
+                }
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException("Cannot send two-factor email.");
+        }
+
         [HttpPut("email")]
         [HttpPost("email")]
         public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody]UpdateTwoFactorEmailRequestModel model)

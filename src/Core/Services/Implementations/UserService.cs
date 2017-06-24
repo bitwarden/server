@@ -12,10 +12,9 @@ using Bit.Core.Enums;
 using System.Security.Claims;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
-using u2flib.Data.Messages;
-using u2flib.Util;
-using u2flib;
-using u2flib.Data;
+using U2fLib = U2F.Core.Crypto.U2F;
+using U2F.Core.Models;
+using U2F.Core.Utils;
 
 namespace Bit.Core.Services
 {
@@ -220,7 +219,7 @@ namespace Bit.Core.Services
         public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
         {
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-            var reg = U2F.StartRegistration(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings));
+            var reg = U2fLib.StartRegistration(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings));
             await _u2fRepository.CreateAsync(new U2f
             {
                 AppId = reg.AppId,
@@ -250,11 +249,11 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var registerResponse = DataObject.FromJson<RegisterResponse>(deviceResponse);
+            var registerResponse = BaseModel.FromJson<RegisterResponse>(deviceResponse);
 
             var challenge = challenges.OrderBy(i => i.Id).Last(i => i.KeyHandle == null);
             var statedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
-            var reg = U2F.FinishRegistration(statedReg, registerResponse);
+            var reg = U2fLib.FinishRegistration(statedReg, registerResponse);
 
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
 

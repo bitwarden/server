@@ -120,7 +120,14 @@ namespace Bit.Core.IdentityServer
         {
             var providerKeys = new List<byte>();
             var providers = new Dictionary<byte, Dictionary<string, object>>();
-            foreach(var provider in user.GetTwoFactorProviders().Where(p => p.Value.Enabled))
+            var enabledProviders = user.GetTwoFactorProviders()?.Where(p => p.Value.Enabled);
+            if(enabledProviders == null)
+            {
+                BuildErrorResult(false, context);
+                return;
+            }
+
+            foreach(var provider in enabledProviders)
             {
                 providerKeys.Add((byte)provider.Key);
                 var infoDict = await BuildTwoFactorParams(user, provider.Key, provider.Value);
@@ -133,6 +140,12 @@ namespace Bit.Core.IdentityServer
                     { "TwoFactorProviders", providers.Keys },
                     { "TwoFactorProviders2", providers }
                 });
+
+            if(enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
+            {
+                // Send email now if this is their only 2FA method
+                await _userService.SendTwoFactorEmailAsync(user);
+            }
         }
 
         private void BuildErrorResult(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)

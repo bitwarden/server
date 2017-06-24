@@ -7,10 +7,9 @@ using Bit.Core.Repositories;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
-using u2flib.Data;
-using u2flib;
-using u2flib.Data.Messages;
-using u2flib.Exceptions;
+using U2fLib = U2F.Core.Crypto.U2F;
+using U2F.Core.Models;
+using U2F.Core.Exceptions;
 
 namespace Bit.Core.Identity
 {
@@ -62,7 +61,7 @@ namespace Bit.Core.Identity
             {
                 var registration = new DeviceRegistration(key.KeyHandleBytes, key.PublicKeyBytes,
                     key.CertificateBytes, key.Counter);
-                var auth = U2F.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration);
+                var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration);
 
                 // Maybe move this to a bulk create when we support more than 1 key?
                 await _u2fRepository.CreateAsync(new U2f
@@ -113,7 +112,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var authenticateResponse = DataObject.FromJson<AuthenticateResponse>(token);
+            var authenticateResponse = BaseModel.FromJson<AuthenticateResponse>(token);
             var key = keys.FirstOrDefault(f => f.KeyHandle == authenticateResponse.KeyHandle);
 
             if(key == null)
@@ -141,7 +140,7 @@ namespace Bit.Core.Identity
             try
             {
                 var auth = new StartedAuthentication(challenge.Challenge, challenge.AppId, challenge.KeyHandle);
-                U2F.FinishAuthentication(auth, authenticateResponse, registration);
+                U2fLib.FinishAuthentication(auth, authenticateResponse, registration);
             }
             catch(U2fException)
             {

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using u2flib.Util;
+using U2F.Core.Utils;
 
 namespace Bit.Core.Models
 {
