@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 namespace Bit.Api.Controllers
 {
     [Route("two-factor")]
-    [Authorize("Application")]
+    [Authorize("Web")]
     public class TwoFactorController : Controller
     {
         private readonly IUserService _userService;

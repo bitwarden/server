@@ -79,6 +79,15 @@ namespace Bit.Api
                     policy.AddAuthenticationSchemes("Bearer2", "Bearer3");
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                });
+                config.AddPolicy("Web", policy =>
+                {
+                    policy.AddAuthenticationSchemes("Bearer2", "Bearer3");
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                    policy.RequireClaim(JwtClaimTypes.ClientId, "web");
                 });
             });
 
