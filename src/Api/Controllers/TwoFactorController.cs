@@ -155,8 +155,7 @@ namespace Bit.Api.Controllers
                         {
                             _globalSettings.U2f.AppId,
                             //"ios:bundle-id:com.8bit.bitwarden",
-                            //"android:apk-key-hash:585215fd5153209a7e246f53286035838a0be227",
-                            //"chrome-extension://nngceckbapebfimnlniiiahkandclblb"
+                            //"android:apk-key-hash:585215fd5153209a7e246f53286035838a0be227"
                         }
                     }
                 }
