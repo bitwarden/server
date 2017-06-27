@@ -135,33 +135,6 @@ namespace Bit.Api.Controllers
             }
         }
 
-        [HttpGet("~/app-id.json")]
-        [Produces("application/fido.trusted-apps+json")]
-        [AllowAnonymous]
-        public string GetU2fAppId()
-        {
-            return JsonConvert.SerializeObject(new
-            {
-                trustedFacets = new object[]
-                {
-                    new
-                    {
-                        version = new
-                        {
-                            major = 1,
-                            minor = 0
-                        },
-                        ids = new string[]
-                        {
-                            _globalSettings.U2f.AppId,
-                            //"ios:bundle-id:com.8bit.bitwarden",
-                            //"android:apk-key-hash:585215fd5153209a7e246f53286035838a0be227"
-                        }
-                    }
-                }
-            });
-        }
-
         [HttpPut("u2f")]
         [HttpPost("u2f")]
         public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)

@@ -122,8 +122,8 @@ namespace Bit.Core.Utilities
 
         public static string U2fAppIdUrl(GlobalSettings globalSettings)
         {
-            //return $"{globalSettings.BaseApiUri}app-id.json";
             return globalSettings.U2f.AppId;
+            //return "https://localhost:4001/app-id.fidou2f";
         }
     }
 }
