@@ -162,9 +162,9 @@ namespace Bit.Api
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
             app.UseIdentityServerAuthentication(
-                GetIdentityOptions(env, IdentityServerAuthority(env, "identity", "44392"), "3"));
+                GetIdentityOptions(env, IdentityServerAuthority(env, "identity", "33656"), "3"));
             app.UseIdentityServerAuthentication(
-                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "44377"), "2"));
+                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4001"), "2"));
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
@@ -204,7 +204,7 @@ namespace Bit.Api
             }
             else
             {
-                return $"https://localhost:{port}";
+                return $"http://localhost:{port}";
                 //return $"http://192.168.1.6:{port}"; // Desktop external
             }
         }
