@@ -1,9 +1,8 @@
 ﻿{
   "globalSettings": {
     "baseVaultUri": "https://preview-vault.bitwarden.com/#",
-    "baseApiUri": "https://preview-api.bitwarden.com/",
     "u2f": {
-      "appId": "https://preview-vault.bitwarden.com"
+      "appId": "https://preview-vault.bitwarden.com/app-id.json"
     }
   }
 }

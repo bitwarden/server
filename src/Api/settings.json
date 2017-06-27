@@ -47,7 +47,7 @@
       "aKey": "SECRET"
     },
     "u2f": {
-      "appId": "https://localhost:4001"
+      "appId": "https://localhost:4001/app-id.json"
     }
   },
   "IpRateLimitOptions": {

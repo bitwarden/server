@@ -1,5 +1,8 @@
 ﻿{
   "globalSettings": {
-    "baseVaultUri": "https://vault.bitwarden.com/#"
+    "baseVaultUri": "https://vault.bitwarden.com/#",
+    "u2f": {
+      "appId": "https://vault.bitwarden.com/app-id.json"
+    }
   }
 }
