@@ -39,6 +39,10 @@ namespace Bit.Core.Models.Api
                 {
                     Key5 = (string)provider.MetaData["Key5"];
                 }
+                if(provider.MetaData.ContainsKey("Nfc"))
+                {
+                    Nfc = (bool)provider.MetaData["Nfc"];
+                }
             }
             else
             {
@@ -52,5 +56,6 @@ namespace Bit.Core.Models.Api
         public string Key3 { get; set; }
         public string Key4 { get; set; }
         public string Key5 { get; set; }
+        public bool Nfc { get; set; }
     }
 }

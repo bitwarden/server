@@ -92,6 +92,8 @@ namespace Bit.Core.Models.Api
         public string Key3 { get; set; }
         public string Key4 { get; set; }
         public string Key5 { get; set; }
+        [Required]
+        public bool? Nfc { get; set; }
 
         public User ToUser(User extistingUser)
         {
@@ -113,7 +115,8 @@ namespace Bit.Core.Models.Api
                     ["Key2"] = FormatKey(Key2),
                     ["Key3"] = FormatKey(Key3),
                     ["Key4"] = FormatKey(Key4),
-                    ["Key5"] = FormatKey(Key5)
+                    ["Key5"] = FormatKey(Key5),
+                    ["Nfc"] = Nfc.Value
                 },
                 Enabled = true
             });

@@ -40,13 +40,15 @@ namespace Bit.Core.IdentityServer
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
             var twoFactorRemember = context.Request.Raw["TwoFactorRemember"]?.ToString() == "1";
             var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
+            var credentialsCorrect = false;
 
             if(!string.IsNullOrWhiteSpace(context.UserName))
             {
                 var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 if(user != null)
                 {
-                    if(await _userManager.CheckPasswordAsync(user, context.Password))
+                    credentialsCorrect = await _userManager.CheckPasswordAsync(user, context.Password);
+                    if(credentialsCorrect)
                     {
                         TwoFactorProviderType twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
                         if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
@@ -80,7 +82,7 @@ namespace Bit.Core.IdentityServer
             }
 
             await Task.Delay(2000); // Delay for brute force.
-            BuildErrorResult(twoFactorRequest, context);
+            BuildErrorResult(credentialsCorrect && twoFactorRequest, context);
         }
 
         private async Task BuildSuccessResultAsync(User user, ResourceOwnerPasswordValidationContext context, Device device,
@@ -154,7 +156,7 @@ namespace Bit.Core.IdentityServer
                 customResponse: new Dictionary<string, object>
                 {{
                     "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
-                        "Code is not correct. Try again." : "Username or password is incorrect. Try again.")
+                        "Two-step token is invalid. Try again." : "Username or password is incorrect. Try again.")
                 }});
         }
 
@@ -213,6 +215,7 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.Email:
+                case TwoFactorProviderType.YubiKey:
                     var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
                     if(type == TwoFactorProviderType.Duo)
                     {
@@ -234,6 +237,13 @@ namespace Bit.Core.IdentityServer
                         return new Dictionary<string, object>
                         {
                             ["Email"] = RedactEmail((string)provider.MetaData["Email"])
+                        };
+                    }
+                    else if(type == TwoFactorProviderType.YubiKey)
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Nfc"] = (bool)provider.MetaData["Nfc"]
                         };
                     }
                     return null;
