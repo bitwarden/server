@@ -436,7 +436,7 @@ namespace Bit.Core.Services
 
             if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
             {
-                user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
+                user.TwoFactorRecoveryCode = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
             }
             await SaveUserAsync(user);
         }
@@ -474,7 +474,7 @@ namespace Bit.Core.Services
             }
 
             user.TwoFactorProviders = null;
-            user.TwoFactorRecoveryCode = Guid.NewGuid().ToString("N");
+            user.TwoFactorRecoveryCode = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
             await SaveUserAsync(user);
 
             return true;
