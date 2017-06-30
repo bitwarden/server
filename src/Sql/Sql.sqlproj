@@ -200,5 +200,6 @@
     <Build Include="dbo\Stored Procedures\Organization_Create.sql" />
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_UpdateAttachment.sql" />
   </ItemGroup>
 </Project>

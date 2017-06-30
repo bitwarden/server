@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Core.Models.Data;
 using System;
+using System.IO;
 
 namespace Bit.Core.Services
 {
@@ -10,6 +11,8 @@ namespace Bit.Core.Services
     {
         Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false);
         Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId);
+        Task AttachAsync(Cipher cipher, Stream stream, string fileName, long requestLength, Guid savingUserId,
+            bool orgAdmin = false);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);
         Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId);

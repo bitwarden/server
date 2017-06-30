@@ -7,6 +7,7 @@ SELECT
     C.[OrganizationId],
     C.[Type],
     C.[Data],
+    C.[Attachments],
     C.[CreationDate],
     C.[RevisionDate],
     CASE WHEN

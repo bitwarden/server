@@ -9,6 +9,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
+using Bit.Core.Models.Data;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -219,13 +221,10 @@ namespace Bit.Api.Controllers
                 string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
         }
 
-        [HttpPost("attachment")]
+        [HttpPost("{id}/attachment")]
         [DisableFormValueModelBinding]
-        public async Task Post(string id)
+        public async Task PostAttachment(string id)
         {
-            // throw for now
-            throw new NotImplementedException();
-
             if(!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
@@ -239,22 +238,16 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFilesAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName) =>
             {
-                var attachmentId = Guid.NewGuid();
-                // TODO: store attachmentId + fileName reference in database
-                var storedFilename = $"{idGuid}_{attachmentId}";
-                await _attachmentStorageService.UploadAttachmentAsync(stream, storedFilename);
+                await _cipherService.AttachAsync(cipher, stream, fileName, Request.ContentLength.GetValueOrDefault(0), userId);
             });
         }
 
         [HttpDelete("{id}/attachment/{attachmentId}")]
         [HttpPost("{id}/attachment/{attachmentId}/delete")]
-        public async Task Delete(string id, string attachmentId)
+        public async Task DeleteAttachment(string id, string attachmentId)
         {
-            // throw for now
-            throw new NotImplementedException();
-
             var idGuid = new Guid(id);
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
@@ -263,11 +256,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var attachmentIdGuid = new Guid(attachmentId);
-
             // TODO: check and remove attachmentId from cipher in database
 
-            var storedFilename = $"{idGuid}_{attachmentId}";
+            var storedFilename = $"{idGuid}/{attachmentId}";
             await _attachmentStorageService.DeleteAttachmentAsync(storedFilename);
         }
     }

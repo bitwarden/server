@@ -6,6 +6,7 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX),
     @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
@@ -20,7 +21,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Data] = @Data,
         [RevisionDate] = @RevisionDate
-        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
+        -- No need to update Attachments, CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id
 

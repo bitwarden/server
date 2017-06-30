@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Core.Models.Data;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories
 {
@@ -19,6 +20,7 @@ namespace Bit.Core.Repositories
         Task UpsertAsync(CipherDetails cipher);
         Task ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
         Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
+        Task UpdateAttachmentAsync(CipherAttachment attachment);
         Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
         Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
         Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);

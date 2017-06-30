@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Table
         public string Data { get; set; }
         public string Favorites { get; set; }
         public string Folders { get; set; }
+        public string Attachments { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

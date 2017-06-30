@@ -6,6 +6,9 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Core.Models.Data;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace Bit.Core.Services
 {
@@ -18,6 +21,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushNotificationService _pushService;
+        private readonly IAttachmentStorageService _attachmentStorageService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -26,7 +30,8 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
-            IPushNotificationService pushService)
+            IPushNotificationService pushService,
+            IAttachmentStorageService attachmentStorageService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -35,6 +40,7 @@ namespace Bit.Core.Services
             _organizationUserRepository = organizationUserRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
+            _attachmentStorageService = attachmentStorageService;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
@@ -84,6 +90,45 @@ namespace Bit.Core.Services
                 // push
                 await _pushService.PushSyncCipherUpdateAsync(cipher);
             }
+        }
+
+        public async Task AttachAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
+            Guid savingUserId, bool orgAdmin = false)
+        {
+            if(!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to edit this.");
+            }
+
+            if(requestLength < 1)
+            {
+                throw new BadRequestException("No data.");
+            }
+
+            // TODO: check available space against requestLength
+
+            var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+            await _attachmentStorageService.UploadAttachmentAsync(stream, $"{cipher.Id}/{attachmentId}");
+
+            var data = new CipherAttachment.MetaData
+            {
+                FileName = fileName,
+                Size = stream.Length
+            };
+
+            var attachment = new CipherAttachment
+            {
+                Id = cipher.Id,
+                UserId = cipher.UserId,
+                OrganizationId = cipher.OrganizationId,
+                AttachmentId = attachmentId,
+                AttachmentData = JsonConvert.SerializeObject(data)
+            };
+
+            await _cipherRepository.UpdateAttachmentAsync(attachment);
+
+            // push
+            await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
         public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)

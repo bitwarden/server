@@ -53,8 +53,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
             services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-            // noop for now
-            services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
+            services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
         }
 
         public static void AddNoopServices(this IServiceCollection services)

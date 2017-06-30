@@ -9,6 +9,7 @@ using Dapper;
 using Core.Models.Data;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -172,6 +173,17 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_UpdatePartial]",
                     new { Id = id, UserId = userId, FolderId = folderId, Favorite = favorite },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpdateAttachmentAsync(CipherAttachment attachment)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_UpdateAttachment]",
+                    attachment,
                     commandType: CommandType.StoredProcedure);
             }
         }

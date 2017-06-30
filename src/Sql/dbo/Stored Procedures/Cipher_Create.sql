@@ -6,6 +6,7 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX),
     @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -21,6 +22,7 @@ BEGIN
         [Data],
         [Favorites],
         [Folders],
+        [Attachments],
         [CreationDate],
         [RevisionDate]
     )
@@ -33,6 +35,7 @@ BEGIN
         @Data,
         @Favorites,
         @Folders,
+        @Attachments,
         @CreationDate,
         @RevisionDate
     )

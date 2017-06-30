@@ -6,6 +6,7 @@
     [Data]           NVARCHAR (MAX)   NOT NULL,
     [Favorites]      NVARCHAR (MAX)   NULL,
     [Folders]        NVARCHAR (MAX)   NULL,
+    [Attachments]    NVARCHAR (MAX)   NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,
     [RevisionDate]   DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),

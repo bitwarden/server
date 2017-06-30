@@ -12,23 +12,38 @@ namespace Bit.Api.Utilities
     {
         private static readonly FormOptions _defaultFormOptions = new FormOptions();
 
-        public static async Task GetFilesAsync(this HttpRequest request, Func<Stream, string, Task> callback)
+        public static async Task GetFileAsync(this HttpRequest request, Func<Stream, string, Task> callback)
+        {
+            await request.GetFilesAsync(1, callback);
+        }
+
+        private static async Task GetFilesAsync(this HttpRequest request, int? fileCount, Func<Stream, string, Task> callback)
         {
             var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
                 _defaultFormOptions.MultipartBoundaryLengthLimit);
             var reader = new MultipartReader(boundary, request.Body);
 
             var section = await reader.ReadNextSectionAsync();
-            while(section != null)
+            var fileNumber = 1;
+            while(section != null && fileNumber <= fileCount)
             {
                 ContentDispositionHeaderValue content;
                 if(ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out content) &&
                     HasFileContentDisposition(content))
                 {
-                    await callback(section.Body, HeaderUtilities.RemoveQuotes(content.FileName));
+                    var fileName = HeaderUtilities.RemoveQuotes(content.FileName) ?? string.Empty;
+                    await callback(section.Body, fileName);
                 }
 
-                section = await reader.ReadNextSectionAsync();
+                if(fileNumber >= fileCount)
+                {
+                    section = null;
+                }
+                else
+                {
+                    section = await reader.ReadNextSectionAsync();
+                    fileNumber++;
+                }
             }
         }
 
