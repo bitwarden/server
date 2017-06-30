@@ -9,8 +9,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
-using Bit.Core.Models.Data;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -240,7 +238,7 @@ namespace Bit.Api.Controllers
 
             await Request.GetFileAsync(async (stream, fileName) =>
             {
-                await _cipherService.AttachAsync(cipher, stream, fileName, Request.ContentLength.GetValueOrDefault(0), userId);
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, Request.ContentLength.GetValueOrDefault(0), userId);
             });
         }
 

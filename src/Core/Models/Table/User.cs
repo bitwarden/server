@@ -27,6 +27,9 @@ namespace Bit.Core.Models.Table
         public string Key { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
+        public bool Premium { get; set; }
+        public long? Storage { get; set; }
+        public short? MaxStorageGb { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
@@ -98,6 +101,22 @@ namespace Bit.Core.Models.Table
             }
 
             return providers[provider];
+        }
+
+        public long StorageBytesRemaining()
+        {
+            if(!MaxStorageGb.HasValue)
+            {
+                return 0;
+            }
+
+            var maxStorageBytes = MaxStorageGb.Value * 1073741824L;
+            if(!Storage.HasValue)
+            {
+                return maxStorageBytes;
+            }
+
+            return maxStorageBytes - Storage.Value;
         }
     }
 }

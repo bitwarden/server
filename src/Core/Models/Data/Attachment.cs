@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace Bit.Core.Models.Data
 {
@@ -12,7 +13,23 @@ namespace Bit.Core.Models.Data
 
         public class MetaData
         {
-            public long Size { get; set; }
+            private long _size;
+
+            [JsonIgnore]
+            public long Size
+            {
+                get { return _size; }
+                set { _size = value; }
+            }
+
+            // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
+            [JsonProperty("Size")]
+            public string SizeString
+            {
+                get { return _size.ToString(); }
+                set { _size = Convert.ToInt64(value); }
+            }
+
             public string FileName { get; set; }
         }
     }

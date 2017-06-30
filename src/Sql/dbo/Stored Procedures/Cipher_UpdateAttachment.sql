@@ -10,6 +10,7 @@ BEGIN
 
     DECLARE @AttachmentIdKey VARCHAR(50) = CONCAT('"', @AttachmentId, '"')
     DECLARE @AttachmentIdPath VARCHAR(50) = CONCAT('$.', @AttachmentIdKey)
+    DECLARE @Size BIGINT = CAST(JSON_VALUE(@AttachmentData, '$.Size') AS BIGINT)
 
     UPDATE
         [dbo].[Cipher]
@@ -26,10 +27,12 @@ BEGIN
 
     IF @OrganizationId IS NOT NULL
     BEGIN
+        EXEC [dbo].[Organization_UpdateStorage] @OrganizationId, @Size
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
     END
     ELSE IF @UserId IS NOT NULL
     BEGIN
+        EXEC [dbo].[User_UpdateStorage] @UserId, @Size
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
 END

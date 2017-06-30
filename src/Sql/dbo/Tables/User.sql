@@ -15,6 +15,9 @@
     [Key]                             VARCHAR (MAX)    NULL,
     [PublicKey]                       VARCHAR (MAX)    NULL,
     [PrivateKey]                      VARCHAR (MAX)    NULL,
+    [Premium]                         BIT              NOT NULL,
+    [Storage]                         BIGINT           NULL,
+    [MaxStorageGb]                    SMALLINT         NULL,
     [CreationDate]                    DATETIME2 (7)    NOT NULL,
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)

@@ -16,6 +16,8 @@ namespace Bit.Core.Models.Table
         public short? MaxCollections { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
+        public long? Storage { get; set; }
+        public short? MaxStorageGb { get; set; }
         public string StripeCustomerId { get; set; }
         public string StripeSubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
@@ -28,6 +30,22 @@ namespace Bit.Core.Models.Table
             {
                 Id = CoreHelpers.GenerateComb();
             }
+        }
+
+        public long StorageBytesRemaining()
+        {
+            if(!MaxStorageGb.HasValue)
+            {
+                return 0;
+            }
+
+            var maxStorageBytes = MaxStorageGb.Value * 1073741824L;
+            if(!Storage.HasValue)
+            {
+                return maxStorageBytes;
+            }
+
+            return maxStorageBytes - Storage.Value;
         }
     }
 }

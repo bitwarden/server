@@ -15,6 +15,9 @@
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
+    @Premium BIT,
+    @Storage BIGINT,
+    @MaxStorageGb SMALLINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -39,6 +42,9 @@ BEGIN
         [Key],
         [PublicKey],
         [PrivateKey],
+        [Premium],
+        [Storage],
+        [MaxStorageGb],
         [CreationDate],
         [RevisionDate]
     )
@@ -60,6 +66,9 @@ BEGIN
         @Key,
         @PublicKey,
         @PrivateKey,
+        @Premium,
+        @Storage,
+        @MaxStorageGb,
         @CreationDate,
         @RevisionDate
     )

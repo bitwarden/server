@@ -9,6 +9,8 @@
     [MaxCollections]       SMALLINT         NULL,
     [UseGroups]            BIT              NOT NULL,
     [UseDirectory]         BIT              NOT NULL,
+    [Storage]              BIGINT           NULL,
+    [MaxStorageGb]         SMALLINT         NULL,
     [StripeCustomerId]     VARCHAR (50)     NULL,
     [StripeSubscriptionId] VARCHAR (50)     NULL,
     [Enabled]              BIT              NOT NULL,

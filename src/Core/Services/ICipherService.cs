@@ -11,7 +11,7 @@ namespace Bit.Core.Services
     {
         Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false);
         Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId);
-        Task AttachAsync(Cipher cipher, Stream stream, string fileName, long requestLength, Guid savingUserId,
+        Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, long requestLength, Guid savingUserId,
             bool orgAdmin = false);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);

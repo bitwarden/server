@@ -92,7 +92,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task AttachAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
+        public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
             Guid savingUserId, bool orgAdmin = false)
         {
             if(!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
@@ -102,30 +102,55 @@ namespace Bit.Core.Services
 
             if(requestLength < 1)
             {
-                throw new BadRequestException("No data.");
+                throw new BadRequestException("No data to attach.");
             }
 
-            // TODO: check available space against requestLength
+            var storageBytesRemaining = 0L;
+            if(cipher.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
+                storageBytesRemaining = user.StorageBytesRemaining();
+            }
+            else if(cipher.OrganizationId.HasValue)
+            {
+                var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
+                storageBytesRemaining = org.StorageBytesRemaining();
+            }
+
+            if(storageBytesRemaining < requestLength)
+            {
+                throw new BadRequestException("Not enough storage available.");
+            }
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            await _attachmentStorageService.UploadAttachmentAsync(stream, $"{cipher.Id}/{attachmentId}");
+            var storageId = $"{cipher.Id}/{attachmentId}";
+            await _attachmentStorageService.UploadAttachmentAsync(stream, storageId);
 
-            var data = new CipherAttachment.MetaData
+            try
             {
-                FileName = fileName,
-                Size = stream.Length
-            };
+                var data = new CipherAttachment.MetaData
+                {
+                    FileName = fileName,
+                    Size = stream.Length
+                };
 
-            var attachment = new CipherAttachment
+                var attachment = new CipherAttachment
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    AttachmentId = attachmentId,
+                    AttachmentData = JsonConvert.SerializeObject(data)
+                };
+
+                await _cipherRepository.UpdateAttachmentAsync(attachment);
+            }
+            catch
             {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                OrganizationId = cipher.OrganizationId,
-                AttachmentId = attachmentId,
-                AttachmentData = JsonConvert.SerializeObject(data)
-            };
-
-            await _cipherRepository.UpdateAttachmentAsync(attachment);
+                // Clean up since this is not transactional
+                await _attachmentStorageService.DeleteAttachmentAsync(storageId);
+                throw;
+            }
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);
