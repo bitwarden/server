@@ -204,5 +204,43 @@ namespace Bit.Core.Utilities
                 return sb.ToString();
             }
         }
+
+        // ref: https://stackoverflow.com/a/11124118/1090359
+        // Returns the human-readable file size for an arbitrary 64-bit file size .
+        // The format is "0.## XB", ex: "4.2 KB" or "1.43 GB"
+        public static string ReadableBytesSize(long size)
+        {
+            // Get absolute value
+            var absoluteSize = (size < 0 ? -size : size);
+
+            // Determine the suffix and readable value
+            string suffix;
+            double readable;
+            if(absoluteSize >= 0x40000000) // 1 Gigabyte
+            {
+                suffix = "GB";
+                readable = (size >> 20);
+            }
+            else if(absoluteSize >= 0x100000) // 1 Megabyte
+            {
+                suffix = "MB";
+                readable = (size >> 10);
+            }
+            else if(absoluteSize >= 0x400) // 1 Kilobyte
+            {
+                suffix = "KB";
+                readable = size;
+            }
+            else
+            {
+                return absoluteSize.ToString("0 Bytes"); // Byte
+            }
+
+            // Divide by 1024 to get fractional value
+            readable = (readable / 1024);
+
+            // Return formatted number with suffix
+            return readable.ToString("0.## ") + suffix;
+        }
     }
 }

@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
 {
     public class CipherMiniResponseModel : ResponseModel
     {
-        public CipherMiniResponseModel(Cipher cipher, string obj = "cipherMini")
+        public CipherMiniResponseModel(Cipher cipher, GlobalSettings globalSettings, string obj = "cipherMini")
             : base(obj)
         {
             if(cipher == null)
@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Api
             Type = cipher.Type;
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
+            Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
 
             switch(cipher.Type)
             {
@@ -35,13 +36,14 @@ namespace Bit.Core.Models.Api
         public string OrganizationId { get; set; }
         public Enums.CipherType Type { get; set; }
         public dynamic Data { get; set; }
+        public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 
     public class CipherResponseModel : CipherMiniResponseModel
     {
-        public CipherResponseModel(CipherDetails cipher, string obj = "cipher")
-            : base(cipher, obj)
+        public CipherResponseModel(CipherDetails cipher, GlobalSettings globalSettings, string obj = "cipher")
+            : base(cipher, globalSettings, obj)
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
@@ -55,9 +57,9 @@ namespace Bit.Core.Models.Api
 
     public class CipherDetailsResponseModel : CipherResponseModel
     {
-        public CipherDetailsResponseModel(CipherDetails cipher,
+        public CipherDetailsResponseModel(CipherDetails cipher, GlobalSettings globalSettings,
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-            : base(cipher, obj)
+            : base(cipher, globalSettings, obj)
         {
             if(collectionCiphers.ContainsKey(cipher.Id))
             {
@@ -69,9 +71,9 @@ namespace Bit.Core.Models.Api
             }
         }
 
-        public CipherDetailsResponseModel(CipherDetails cipher, IEnumerable<CollectionCipher> collectionCiphers,
-            string obj = "cipherDetails")
-            : base(cipher, obj)
+        public CipherDetailsResponseModel(CipherDetails cipher, GlobalSettings globalSettings,
+            IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
+            : base(cipher, globalSettings, obj)
         {
             CollectionIds = collectionCiphers.Select(c => c.CollectionId);
         }
@@ -81,9 +83,9 @@ namespace Bit.Core.Models.Api
 
     public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
     {
-        public CipherMiniDetailsResponseModel(Cipher cipher,
+        public CipherMiniDetailsResponseModel(Cipher cipher, GlobalSettings globalSettings,
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
-            : base(cipher, obj)
+            : base(cipher, globalSettings, obj)
         {
             if(collectionCiphers.ContainsKey(cipher.Id))
             {

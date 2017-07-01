@@ -1,12 +1,13 @@
 ﻿using System;
 using Core.Models.Data;
 using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Core.Models.Api
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(Cipher cipher, string obj = "login")
+        public LoginResponseModel(Cipher cipher, GlobalSettings globalSettings, string obj = "login")
             : base(obj)
         {
             if(cipher == null)
@@ -30,10 +31,11 @@ namespace Bit.Core.Models.Api
             Notes = data.Notes;
             RevisionDate = cipher.RevisionDate;
             Edit = true;
+            Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
         }
 
-        public LoginResponseModel(CipherDetails cipher, string obj = "login")
-            : this(cipher as Cipher, obj)
+        public LoginResponseModel(CipherDetails cipher, GlobalSettings globalSettings, string obj = "login")
+            : this(cipher as Cipher, globalSettings, obj)
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
@@ -50,6 +52,7 @@ namespace Bit.Core.Models.Api
         public string Username { get; set; }
         public string Password { get; set; }
         public string Notes { get; set; }
+        public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 }

@@ -21,17 +21,20 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
 
         public LoginsController(
             ICipherRepository cipherRepository,
             ICipherService cipherService,
             IUserService userService,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            GlobalSettings globalSettings)
         {
             _cipherRepository = cipherRepository;
             _cipherService = cipherService;
             _userService = userService;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("{id}")]
@@ -44,7 +47,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 
@@ -58,7 +61,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 
@@ -67,7 +70,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var logins = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login, userId);
-            var responses = logins.Select(l => new LoginResponseModel(l)).ToList();
+            var responses = logins.Select(l => new LoginResponseModel(l, _globalSettings)).ToList();
             return new ListResponseModel<LoginResponseModel>(responses);
         }
 
@@ -78,7 +81,7 @@ namespace Bit.Api.Controllers
             var login = model.ToCipherDetails(userId);
             await _cipherService.SaveDetailsAsync(login, userId);
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 
@@ -94,7 +97,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SaveAsync(login, userId, true);
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 
@@ -118,7 +121,7 @@ namespace Bit.Api.Controllers
 
             await _cipherService.SaveDetailsAsync(model.ToCipherDetails(login), userId);
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 
@@ -136,7 +139,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SaveAsync(model.ToCipher(login), userId, true);
 
-            var response = new LoginResponseModel(login);
+            var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
 

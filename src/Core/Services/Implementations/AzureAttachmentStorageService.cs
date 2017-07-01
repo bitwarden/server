@@ -15,7 +15,7 @@ namespace Bit.Core.Services
         public AzureAttachmentStorageService(
             GlobalSettings globalSettings)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+            var storageAccount = CloudStorageAccount.Parse(globalSettings.Attachment.ConnectionString);
             _blobClient = storageAccount.CreateCloudBlobClient();
         }
 
@@ -38,7 +38,7 @@ namespace Bit.Core.Services
             if(_attachmentsContainer == null)
             {
                 _attachmentsContainer = _blobClient.GetContainerReference(AttchmentContainerName);
-                await _attachmentsContainer.CreateIfNotExistsAsync();
+                await _attachmentsContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
             }
         }
     }

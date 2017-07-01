@@ -22,6 +22,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly CurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
 
         public CiphersController(
             ICipherRepository cipherRepository,
@@ -29,7 +30,8 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IUserService userService,
             IAttachmentStorageService attachmentStorageService,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            GlobalSettings globalSettings)
         {
             _cipherRepository = cipherRepository;
             _collectionCipherRepository = collectionCipherRepository;
@@ -37,6 +39,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _attachmentStorageService = attachmentStorageService;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("{id}")]
@@ -49,7 +52,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new CipherResponseModel(cipher);
+            return new CipherResponseModel(cipher, _globalSettings);
         }
 
         [HttpGet("{id}/full-details")]
@@ -65,7 +68,7 @@ namespace Bit.Api.Controllers
             }
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
-            return new CipherDetailsResponseModel(cipher, collectionCiphers);
+            return new CipherDetailsResponseModel(cipher, _globalSettings, collectionCiphers);
         }
 
         [HttpGet("")]
@@ -73,7 +76,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-            var responses = ciphers.Select(c => new CipherResponseModel(c)).ToList();
+            var responses = ciphers.Select(c => new CipherResponseModel(c, _globalSettings)).ToList();
             return new ListResponseModel<CipherResponseModel>(responses);
         }
 
@@ -86,7 +89,7 @@ namespace Bit.Api.Controllers
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
             var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, collectionCiphersGroupDict));
+            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict));
             return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
@@ -105,7 +108,8 @@ namespace Bit.Api.Controllers
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, collectionCiphersGroupDict));
+            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
+                collectionCiphersGroupDict));
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
@@ -226,6 +230,11 @@ namespace Bit.Api.Controllers
             if(!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
+            }
+
+            if(Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            {
+                throw new BadRequestException("Max file size is 100 MB.");
             }
 
             var idGuid = new Guid(id);

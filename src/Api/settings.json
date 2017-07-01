@@ -29,7 +29,7 @@
     },
     "attachment": {
       "connectionString": "SECRET",
-      "baseUrl": "http://localhost:4000/"
+      "baseUrl": "http://localhost:4000/attachments/"
     },
     "documentDb": {
       "uri": "SECRET",
