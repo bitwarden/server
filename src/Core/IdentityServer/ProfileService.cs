@@ -42,9 +42,9 @@ namespace Bit.Core.IdentityServer
             {
                 newClaims.AddRange(new List<Claim>
                 {
-                    new Claim("plan", "0"), // free plan hard coded for now
+                    new Claim("premium", user.Premium ? "true" : "false", ClaimValueTypes.Boolean),
                     new Claim(JwtClaimTypes.Email, user.Email),
-                    new Claim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+                    new Claim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false", ClaimValueTypes.Boolean),
                     new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
                 });
 

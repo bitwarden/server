@@ -16,7 +16,7 @@ namespace Bit.Core.IdentityServer
                     JwtClaimTypes.Email,
                     JwtClaimTypes.EmailVerified,
                     "sstamp", // security stamp
-                    "plan",
+                    "premium",
                     "device",
                     "orgowner",
                     "orgadmin",
