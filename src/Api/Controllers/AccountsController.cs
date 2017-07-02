@@ -10,7 +10,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
-using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -103,6 +102,30 @@ namespace Bit.Api.Controllers
 
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
+        }
+        
+        [HttpPost("verify-email")]
+        public async Task PostVerifyEmail()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.SendEmailVerificationAsync(user);
+        }
+
+        [HttpPost("verify-email-token")]
+        [AllowAnonymous]
+        public async Task PostVerifyEmailToken()
+        {
+            var user = await _userService.GetUserByIdAsync(new Guid());
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            await _userService.ConfirmEmailAsync(user, "");
         }
 
         [HttpPut("password")]

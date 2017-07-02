@@ -15,6 +15,7 @@ using Bit.Core.Models.Business;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Utils;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.Services
 {
@@ -287,6 +288,17 @@ namespace Bit.Core.Services
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
 
             return true;
+        }
+
+        public async Task SendEmailVerificationAsync(User user)
+        {
+            if(user.EmailVerified)
+            {
+                throw new BadRequestException("Email already verifed.");
+            }
+
+            var token = await base.GenerateEmailConfirmationTokenAsync(user);
+            await _mailService.SendVerifyEmailEmailAsync(user.Email, user.Id, token);
         }
 
         public async Task InitiateEmailChangeAsync(User user, string newEmail)

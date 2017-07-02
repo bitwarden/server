@@ -30,6 +30,23 @@ namespace Bit.Core.Services
             _engine = new RazorLightEngine(core, lookup);
         }
 
+        public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
+        {
+            var message = CreateDefaultMessage("Verify Your Email", email);
+            var model = new VerifyEmailModel
+            {
+                Token = token,
+                UserId = userId,
+                WebVaultUrl = _globalSettings.BaseVaultUri,
+                SiteName = _globalSettings.SiteName
+            };
+            message.HtmlContent = _engine.Parse("VerifyEmail", model);
+            message.TextContent = _engine.Parse("VerifyEmail.text", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail)
         {
             var message = CreateDefaultMessage("Your Email Change", toEmail);

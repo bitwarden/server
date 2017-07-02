@@ -7,8 +7,6 @@ namespace Bit.Core.Identity
 {
     public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
     {
-        private readonly GlobalSettings _globalSettings;
-
         public TwoFactorRememberTokenProvider(
             IDataProtectionProvider dataProtectionProvider,
             IOptions<TwoFactorRememberTokenProviderOptions> options)

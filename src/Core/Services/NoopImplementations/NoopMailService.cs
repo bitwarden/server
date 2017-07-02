@@ -12,6 +12,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendVerifyEmailEmailAsync(string email, Guid userId, string hint)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
         {
             return Task.FromResult(0);

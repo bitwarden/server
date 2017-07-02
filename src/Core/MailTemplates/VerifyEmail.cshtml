@@ -1,0 +1,8 @@
+﻿@model Bit.Core.Models.Mail.VerifyEmailModel
+@{
+    Layout = "_BasicMailLayout";
+}
+<p>
+    Verify this email address for your bitwarden account by clicking the following link:
+</p>
+<p><a href="@Model.Url" target="_blank">@Model.Url</a></p>
