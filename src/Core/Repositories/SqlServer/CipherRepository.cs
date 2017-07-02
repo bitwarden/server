@@ -413,6 +413,8 @@ namespace Bit.Core.Repositories.SqlServer
             ciphersTable.Columns.Add(favoritesColumn);
             var foldersColumn = new DataColumn(nameof(c.Folders), typeof(string));
             ciphersTable.Columns.Add(foldersColumn);
+            var attachmentsColumn = new DataColumn(nameof(c.Attachments), typeof(string));
+            ciphersTable.Columns.Add(attachmentsColumn);
             var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
             ciphersTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
@@ -433,6 +435,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[dataColumn] = cipher.Data;
                 row[favoritesColumn] = cipher.Favorites;
                 row[foldersColumn] = cipher.Folders;
+                row[attachmentsColumn] = cipher.Attachments;
                 row[creationDateColumn] = cipher.CreationDate;
                 row[revisionDateColumn] = cipher.RevisionDate;
 
