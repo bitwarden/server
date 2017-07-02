@@ -19,6 +19,8 @@ namespace Bit.Core.Models.Api
             Id = user.Id.ToString();
             Name = user.Name;
             Email = user.Email;
+            EmailVerified = user.EmailVerified;
+            Premium = user.Premium;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
             TwoFactorEnabled = user.TwoFactorIsEnabled();
@@ -31,6 +33,8 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
+        public bool EmailVerified { get; set; }
+        public bool Premium { get; set; }
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; }
         public bool TwoFactorEnabled { get; set; }
