@@ -35,7 +35,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Verify Your Email", email);
             var model = new VerifyEmailModel
             {
-                Token = token,
+                Token = WebUtility.UrlEncode(token),
                 UserId = userId,
                 WebVaultUrl = _globalSettings.BaseVaultUri,
                 SiteName = _globalSettings.SiteName

@@ -103,7 +103,7 @@ namespace Bit.Api.Controllers
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
-        
+
         [HttpPost("verify-email")]
         public async Task PostVerifyEmail()
         {
@@ -118,14 +118,26 @@ namespace Bit.Api.Controllers
 
         [HttpPost("verify-email-token")]
         [AllowAnonymous]
-        public async Task PostVerifyEmailToken()
+        public async Task PostVerifyEmailToken([FromBody]VerifyEmailRequestModel model)
         {
-            var user = await _userService.GetUserByIdAsync(new Guid());
+            var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
             if(user == null)
             {
                 throw new UnauthorizedAccessException();
             }
-            await _userService.ConfirmEmailAsync(user, "");
+            var result = await _userService.ConfirmEmailAsync(user, model.Token);
+            if(result.Succeeded)
+            {
+                return;
+            }
+
+            foreach(var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
         }
 
         [HttpPut("password")]

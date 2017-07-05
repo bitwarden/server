@@ -80,7 +80,7 @@ namespace Bit.Core.Identity
 
         public Task<bool> GetEmailConfirmedAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(true); // all emails are confirmed
+            return Task.FromResult(user.EmailVerified);
         }
 
         public Task<string> GetNormalizedEmailAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
@@ -121,7 +121,7 @@ namespace Bit.Core.Identity
 
         public Task SetEmailConfirmedAsync(User user, bool confirmed, CancellationToken cancellationToken = default(CancellationToken))
         {
-            // do nothing
+            user.EmailVerified = confirmed;
             return Task.FromResult(0);
         }
 

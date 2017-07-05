@@ -205,7 +205,7 @@ namespace Bit.Api
             else
             {
                 //return $"http://localhost:{port}";
-                return $"http://192.168.1.6:{port}"; // Desktop external
+                return $"http://192.168.1.4:{port}"; // Desktop external
             }
         }
     }

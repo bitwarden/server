@@ -294,7 +294,7 @@ namespace Bit.Core.Services
         {
             if(user.EmailVerified)
             {
-                throw new BadRequestException("Email already verifed.");
+                throw new BadRequestException("Email already verified.");
             }
 
             var token = await base.GenerateEmailConfirmationTokenAsync(user);

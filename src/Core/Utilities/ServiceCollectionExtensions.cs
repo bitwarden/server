@@ -103,6 +103,7 @@ namespace Bit.Core.Utilities
             identityBuilder
                 .AddUserStore<UserStore>()
                 .AddRoleStore<RoleStore>()
+                .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
                 .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
                 .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
                 .AddTokenProvider<DuoWebTokenProvider>(TwoFactorProviderType.Duo.ToString())
