@@ -109,11 +109,21 @@ namespace Bit.Core.Services
             if(cipher.UserId.HasValue)
             {
                 var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
+                if(!user.Premium)
+                {
+                    throw new BadRequestException("You must be a premium user to use attachments.");
+                }
+
                 storageBytesRemaining = user.StorageBytesRemaining();
             }
             else if(cipher.OrganizationId.HasValue)
             {
                 var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
+                if(!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use attachments.");
+                }
+
                 storageBytesRemaining = org.StorageBytesRemaining();
             }
 
