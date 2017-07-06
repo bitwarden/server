@@ -34,6 +34,9 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(10000)]
         public string Notes { get; set; }
+        [EncryptedString]
+        [StringLength(300)]
+        public string Totp { get; set; }
 
         public virtual Cipher ToCipher(Guid userId)
         {
