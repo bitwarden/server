@@ -90,7 +90,7 @@ namespace Bit.Core.Models.Table
                 return false;
             }
 
-            return providers[provider].Enabled;
+            return providers[provider].Enabled && (Premium || !TwoFactorProvider.RequiresPremium(provider));
         }
 
         public bool TwoFactorIsEnabled()
@@ -101,7 +101,7 @@ namespace Bit.Core.Models.Table
                 return false;
             }
 
-            return providers.Any(p => p.Value?.Enabled ?? false);
+            return providers.Any(p => (p.Value?.Enabled ?? false) && (Premium || !TwoFactorProvider.RequiresPremium(p.Key)));
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)

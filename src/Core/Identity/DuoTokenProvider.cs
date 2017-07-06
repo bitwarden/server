@@ -12,6 +12,11 @@ namespace Bit.Core.Identity
     {
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult(false);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo)
                 && !string.IsNullOrWhiteSpace((string)provider?.MetaData["UserId"]);
@@ -22,6 +27,11 @@ namespace Bit.Core.Identity
         /// <param name="purpose">Ex: "auto", "push", "passcode:123456", "sms", "phone"</param>
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult<string>(null);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             var duoClient = new DuoApi((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"], 
                 (string)provider.MetaData["Host"]);
@@ -61,6 +71,11 @@ namespace Bit.Core.Identity
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return false;
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             var duoClient = new DuoApi((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"], 
                 (string)provider.MetaData["Host"]);

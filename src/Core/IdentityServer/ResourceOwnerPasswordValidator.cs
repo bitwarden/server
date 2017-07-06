@@ -122,7 +122,7 @@ namespace Bit.Core.IdentityServer
         {
             var providerKeys = new List<byte>();
             var providers = new Dictionary<byte, Dictionary<string, object>>();
-            var enabledProviders = user.GetTwoFactorProviders()?.Where(p => p.Value.Enabled);
+            var enabledProviders = user.GetTwoFactorProviders()?.Where(p => user.TwoFactorProviderIsEnabled(p.Key));
             if(enabledProviders == null)
             {
                 BuildErrorResult(false, context);
@@ -192,6 +192,11 @@ namespace Bit.Core.IdentityServer
 
         private async Task<bool> VerifyTwoFactor(User user, TwoFactorProviderType type, string token)
         {
+            if(!user.TwoFactorProviderIsEnabled(type))
+            {
+                return false;
+            }
+
             switch(type)
             {
                 case TwoFactorProviderType.Authenticator:
@@ -210,6 +215,11 @@ namespace Bit.Core.IdentityServer
         private async Task<Dictionary<string, object>> BuildTwoFactorParams(User user, TwoFactorProviderType type,
             TwoFactorProvider provider)
         {
+            if(!user.TwoFactorProviderIsEnabled(type))
+            {
+                return null;
+            }
+
             switch(type)
             {
                 case TwoFactorProviderType.Duo:

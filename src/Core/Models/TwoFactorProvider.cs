@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Bit.Core.Enums;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using U2F.Core.Utils;
@@ -37,6 +38,19 @@ namespace Bit.Core.Models
                 string.IsNullOrWhiteSpace(Certificate) ? null : Utils.Base64StringToByteArray(Certificate);
             public uint Counter { get; set; }
             public bool Compromised { get; set; }
+        }
+
+        public static bool RequiresPremium(TwoFactorProviderType type)
+        {
+            switch(type)
+            {
+                case TwoFactorProviderType.Duo:
+                case TwoFactorProviderType.YubiKey:
+                case TwoFactorProviderType.U2f:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

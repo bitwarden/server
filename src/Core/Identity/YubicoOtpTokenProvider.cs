@@ -18,6 +18,11 @@ namespace Bit.Core.Identity
 
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult(false);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.YubiKey)
                 && (provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? false);
@@ -32,6 +37,11 @@ namespace Bit.Core.Identity
 
         public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult(false);
+            }
+
             if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
             {
                 return Task.FromResult(false);

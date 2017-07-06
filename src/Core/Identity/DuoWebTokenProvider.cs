@@ -19,6 +19,11 @@ namespace Bit.Core.Identity
 
         public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult(false);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo) && HasProperMetaData(provider);
             return Task.FromResult(canGenerate);
@@ -26,6 +31,11 @@ namespace Bit.Core.Identity
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult<string>(null);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             if(!HasProperMetaData(provider))
             {
@@ -39,6 +49,11 @@ namespace Bit.Core.Identity
 
         public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
+            if(!user.Premium)
+            {
+                return Task.FromResult(false);
+            }
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             if(!HasProperMetaData(provider))
             {
