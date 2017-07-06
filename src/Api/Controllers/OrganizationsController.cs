@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -73,7 +74,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var billingInfo = await _organizationService.GetBillingAsync(organization);
+            var billingInfo = await BillingHelpers.GetBillingAsync(organization);
             if(billingInfo == null)
             {
                 throw new NotFoundException();
@@ -130,7 +131,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/payment")]
         [HttpPost("{id}/payment")]
-        public async Task PutPayment(string id, [FromBody]OrganizationPaymentRequestModel model)
+        public async Task PutPayment(string id, [FromBody]PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))

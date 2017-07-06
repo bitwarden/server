@@ -10,6 +10,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -338,6 +339,89 @@ namespace Bit.Api.Controllers
             }
 
             throw new BadRequestException(ModelState);
+        }
+
+        [HttpPost("premium")]
+        public async Task<ProfileResponseModel> PostPremium([FromBody]PremiumRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.SignUpPremiumAsync(user, model.PaymentToken, model.AdditionalStorageGb.GetValueOrDefault(0));
+            return new ProfileResponseModel(user, null);
+        }
+
+        [HttpGet("billing")]
+        public async Task<BillingResponseModel> GetBilling()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var billingInfo = await BillingHelpers.GetBillingAsync(user);
+            if(billingInfo == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new BillingResponseModel(billingInfo);
+        }
+
+        [HttpPut("payment")]
+        [HttpPost("payment")]
+        public async Task PutPayment([FromBody]PaymentRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken);
+        }
+
+        [HttpPut("storage")]
+        [HttpPost("storage")]
+        public async Task PutStorage([FromBody]StorageRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.AdjustStorageAsync(user, model.StroageGbAdjustment.Value);
+        }
+
+        [HttpPut("cancel-premium")]
+        [HttpPost("cancel-premium")]
+        public async Task PutCancel()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.CancelPremiumAsync(user, true);
+        }
+
+        [HttpPut("reinstate-premium")]
+        [HttpPost("reinstate-premium")]
+        public async Task PutReinstate()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.ReinstatePremiumAsync(user);
         }
     }
 }

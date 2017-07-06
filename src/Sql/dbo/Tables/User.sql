@@ -18,6 +18,8 @@
     [Premium]                         BIT              NOT NULL,
     [Storage]                         BIGINT           NULL,
     [MaxStorageGb]                    SMALLINT         NULL,
+    [StripeCustomerId]                VARCHAR (50)     NULL,
+    [StripeSubscriptionId]            VARCHAR (50)     NULL,
     [CreationDate]                    DATETIME2 (7)    NOT NULL,
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)

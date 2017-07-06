@@ -18,6 +18,8 @@
     @Premium BIT,
     @Storage BIGINT,
     @MaxStorageGb SMALLINT,
+    @StripeCustomerId VARCHAR(50),
+    @StripeSubscriptionId VARCHAR(50),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -45,6 +47,8 @@ BEGIN
         [Premium],
         [Storage],
         [MaxStorageGb],
+        [StripeCustomerId],
+        [StripeSubscriptionId],
         [CreationDate],
         [RevisionDate]
     )
@@ -69,6 +73,8 @@ BEGIN
         @Premium,
         @Storage,
         @MaxStorageGb,
+        @StripeCustomerId,
+        @StripeSubscriptionId,
         @CreationDate,
         @RevisionDate
     )

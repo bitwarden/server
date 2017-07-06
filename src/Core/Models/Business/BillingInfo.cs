@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Models.Business
 {
-    public class OrganizationBilling
+    public class BillingInfo
     {
         public Source PaymentSource { get; set; }
         public StripeSubscription Subscription { get; set; }

@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
@@ -48,66 +47,6 @@ namespace Bit.Core.Services
             _pushNotificationService = pushNotificationService;
             _pushRegistrationService = pushRegistrationService;
         }
-        public async Task<OrganizationBilling> GetBillingAsync(Organization organization)
-        {
-            var orgBilling = new OrganizationBilling();
-            var customerService = new StripeCustomerService();
-            var subscriptionService = new StripeSubscriptionService();
-            var chargeService = new StripeChargeService();
-            var invoiceService = new StripeInvoiceService();
-
-            if(!string.IsNullOrWhiteSpace(organization.StripeCustomerId))
-            {
-                var customer = await customerService.GetAsync(organization.StripeCustomerId);
-                if(customer != null)
-                {
-                    if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
-                    {
-                        if(customer.DefaultSourceId.StartsWith("card_"))
-                        {
-                            orgBilling.PaymentSource =
-                                customer.Sources.Data.FirstOrDefault(s => s.Card?.Id == customer.DefaultSourceId);
-                        }
-                        else if(customer.DefaultSourceId.StartsWith("ba_"))
-                        {
-                            orgBilling.PaymentSource =
-                                customer.Sources.Data.FirstOrDefault(s => s.BankAccount?.Id == customer.DefaultSourceId);
-                        }
-                    }
-
-                    var charges = await chargeService.ListAsync(new StripeChargeListOptions
-                    {
-                        CustomerId = customer.Id,
-                        Limit = 20
-                    });
-                    orgBilling.Charges = charges?.Data?.OrderByDescending(c => c.Created);
-                }
-            }
-
-            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
-            {
-                var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
-                if(sub != null)
-                {
-                    orgBilling.Subscription = sub;
-                }
-
-                if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(organization.StripeCustomerId))
-                {
-                    try
-                    {
-                        var upcomingInvoice = await invoiceService.UpcomingAsync(organization.StripeCustomerId);
-                        if(upcomingInvoice != null)
-                        {
-                            orgBilling.UpcomingInvoice = upcomingInvoice;
-                        }
-                    }
-                    catch(StripeException) { }
-                }
-            }
-
-            return orgBilling;
-        }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
         {
@@ -117,36 +56,10 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var cardService = new StripeCardService();
-            var customerService = new StripeCustomerService();
-            StripeCustomer customer = null;
-
-            if(!string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            var updated = await BillingHelpers.UpdatePaymentMethodAsync(organization, paymentToken);
+            if(updated)
             {
-                customer = await customerService.GetAsync(organization.StripeCustomerId);
-            }
-
-            if(customer == null)
-            {
-                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
-                {
-                    Description = organization.BusinessName,
-                    Email = organization.BillingEmail,
-                    SourceToken = paymentToken
-                });
-
-                organization.StripeCustomerId = customer.Id;
                 await _organizationRepository.ReplaceAsync(organization);
-            }
-
-            await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
-            {
-                SourceToken = paymentToken
-            });
-
-            if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
-            {
-                await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
             }
         }
 
@@ -158,28 +71,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
-            {
-                throw new BadRequestException("Organization has no subscription.");
-            }
-
-            var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
-            if(sub == null)
-            {
-                throw new BadRequestException("Organization subscription was not found.");
-            }
-
-            if(sub.CanceledAt.HasValue)
-            {
-                throw new BadRequestException("Organization subscription is already canceled.");
-            }
-
-            var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
-            if(!canceledSub.CanceledAt.HasValue)
-            {
-                throw new BadRequestException("Unable to cancel subscription.");
-            }
+            await BillingHelpers.CancelSubscriptionAsync(organization, endOfPeriod);
         }
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -190,29 +82,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
-            {
-                throw new BadRequestException("Organization has no subscription.");
-            }
-
-            var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
-            if(sub == null)
-            {
-                throw new BadRequestException("Organization subscription was not found.");
-            }
-
-            if(sub.Status != "active" || !sub.CanceledAt.HasValue)
-            {
-                throw new BadRequestException("Organization subscription is not marked for cancellation.");
-            }
-
-            // Just touch the subscription.
-            var updatedSub = await subscriptionService.UpdateAsync(sub.Id, new StripeSubscriptionUpdateOptions { });
-            if(updatedSub.CanceledAt.HasValue)
-            {
-                throw new BadRequestException("Unable to reinstate subscription.");
-            }
+            await BillingHelpers.ReinstateSubscriptionAsync(organization);
         }
 
         public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
@@ -427,8 +297,6 @@ namespace Bit.Core.Services
                     Prorate = true,
                     SubscriptionId = sub.Id
                 });
-
-                await PreviewUpcomingAndPayAsync(organization, plan);
             }
             else if(additionalSeats > 0)
             {
@@ -438,47 +306,19 @@ namespace Bit.Core.Services
                     Quantity = additionalSeats,
                     Prorate = true
                 });
-
-                await PreviewUpcomingAndPayAsync(organization, plan);
             }
             else if(additionalSeats == 0)
             {
                 await subscriptionItemService.DeleteAsync(seatItem.Id);
             }
 
+            if(additionalSeats > 0)
+            {
+                await BillingHelpers.PreviewUpcomingInvoiceAndPayAsync(organization, plan.StripeSeatPlanId, 500);
+            }
+
             organization.Seats = (short?)newSeatTotal;
             await _organizationRepository.ReplaceAsync(organization);
-        }
-
-        private async Task PreviewUpcomingAndPayAsync(Organization org, Plan plan)
-        {
-            var invoiceService = new StripeInvoiceService();
-            var upcomingPreview = await invoiceService.UpcomingAsync(org.StripeCustomerId,
-                new StripeUpcomingInvoiceOptions
-                {
-                    SubscriptionId = org.StripeSubscriptionId
-                });
-
-            var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
-                .TakeWhile(i => i.Plan.Id == plan.StripeSeatPlanId && i.Proration).Sum(i => i.Amount);
-            if(prorationAmount.GetValueOrDefault() >= 500)
-            {
-                try
-                {
-                    // Owes more than $5.00 on next invoice. Invoice them and pay now instead of waiting until next month.
-                    var invoice = await invoiceService.CreateAsync(org.StripeCustomerId,
-                        new StripeInvoiceCreateOptions
-                        {
-                            SubscriptionId = org.StripeSubscriptionId
-                        });
-
-                    if(invoice.AmountDue > 0)
-                    {
-                        await invoiceService.PayAsync(invoice.Id);
-                    }
-                }
-                catch(StripeException) { }
-            }
         }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
@@ -620,27 +460,7 @@ namespace Bit.Core.Services
             }
             catch
             {
-                if(subscription != null)
-                {
-                    await subscriptionService.CancelAsync(subscription.Id, false);
-                }
-
-                if(customer != null)
-                {
-                    var chargeService = new StripeChargeService();
-                    var charges = await chargeService.ListAsync(new StripeChargeListOptions { CustomerId = customer.Id });
-                    if(charges?.Data != null)
-                    {
-                        var refundService = new StripeRefundService();
-                        foreach(var charge in charges.Data.Where(c => !c.Refunded))
-                        {
-                            await refundService.CreateAsync(charge.Id);
-                        }
-                    }
-
-                    await customerService.DeleteAsync(customer.Id);
-                }
-
+                await BillingHelpers.CancelAndRecoverChargesAsync(subscription?.Id, customer?.Id);
                 if(organization.Id != default(Guid))
                 {
                     await _organizationRepository.DeleteAsync(organization);

@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Api
 {
-    public class OrganizationPaymentRequestModel
+    public class PaymentRequestModel
     {
         [Required]
         public string PaymentToken { get; set; }

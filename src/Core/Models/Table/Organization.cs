@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Table
 {
-    public class Organization : IDataObject<Guid>
+    public class Organization : IDataObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
@@ -32,6 +32,16 @@ namespace Bit.Core.Models.Table
             }
         }
 
+        public string BillingEmailAddress()
+        {
+            return BillingEmail;
+        }
+
+        public string BillingName()
+        {
+            return BusinessName;
+        }
+
         public long StorageBytesRemaining()
         {
             if(!MaxStorageGb.HasValue)
@@ -39,7 +49,12 @@ namespace Bit.Core.Models.Table
                 return 0;
             }
 
-            var maxStorageBytes = MaxStorageGb.Value * 1073741824L;
+            return StorageBytesRemaining(MaxStorageGb.Value);
+        }
+
+        public long StorageBytesRemaining(short maxStorageGb)
+        {
+            var maxStorageBytes = maxStorageGb * 1073741824L;
             if(!Storage.HasValue)
             {
                 return maxStorageBytes;

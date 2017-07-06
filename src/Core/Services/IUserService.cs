@@ -38,5 +38,10 @@ namespace Bit.Core.Services
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
         Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
         Task<IdentityResult> DeleteAsync(User user);
+        Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb);
+        Task AdjustStorageAsync(User user, short storageAdjustmentGb);
+        Task ReplacePaymentMethodAsync(User user, string paymentToken);
+        Task CancelPremiumAsync(User user, bool endOfPeriod = false);
+        Task ReinstatePremiumAsync(User user);
     }
 }

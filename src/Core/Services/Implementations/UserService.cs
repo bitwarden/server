@@ -16,11 +16,16 @@ using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Utils;
 using Bit.Core.Exceptions;
+using Stripe;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
     public class UserService : UserManager<User>, IUserService, IDisposable
     {
+        private const string PremiumPlanId = "premium-annually";
+        private const string StoragePlanId = "storage-gb-annually";
+
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -490,6 +495,109 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
 
             return true;
+        }
+
+        public async Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb)
+        {
+            if(user.Premium)
+            {
+                throw new BadRequestException("Already a premium user.");
+            }
+
+            var customerService = new StripeCustomerService();
+            var customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+            {
+                Description = user.Name,
+                Email = user.Email,
+                SourceToken = paymentToken
+            });
+
+            var subCreateOptions = new StripeSubscriptionCreateOptions
+            {
+                Items = new List<StripeSubscriptionItemOption>(),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["userId"] = user.Id.ToString()
+                }
+            };
+
+            subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+            {
+                PlanId = PremiumPlanId,
+                Quantity = 1
+            });
+
+            if(additionalStorageGb > 0)
+            {
+                subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                {
+                    PlanId = StoragePlanId,
+                    Quantity = additionalStorageGb
+                });
+            }
+
+            StripeSubscription subscription = null;
+            try
+            {
+                var subscriptionService = new StripeSubscriptionService();
+                subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
+            }
+            catch(StripeException)
+            {
+                await customerService.DeleteAsync(customer.Id);
+                throw;
+            }
+
+            user.Premium = true;
+            user.MaxStorageGb = (short)(1 + additionalStorageGb);
+            user.RevisionDate = DateTime.UtcNow;
+            user.StripeCustomerId = customer.Id;
+            user.StripeSubscriptionId = subscription.Id;
+
+            try
+            {
+                await SaveUserAsync(user);
+            }
+            catch
+            {
+                await BillingHelpers.CancelAndRecoverChargesAsync(subscription.Id, customer.Id);
+                throw;
+            }
+        }
+
+        public async Task AdjustStorageAsync(User user, short storageAdjustmentGb)
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            if(!user.Premium)
+            {
+                throw new BadRequestException("Not a premium user.");
+            }
+
+            await BillingHelpers.AdjustStorageAsync(user, storageAdjustmentGb, StoragePlanId);
+            await SaveUserAsync(user);
+        }
+
+        public async Task ReplacePaymentMethodAsync(User user, string paymentToken)
+        {
+            var updated = await BillingHelpers.UpdatePaymentMethodAsync(user, paymentToken);
+            if(updated)
+            {
+                await SaveUserAsync(user);
+            }
+        }
+
+        public async Task CancelPremiumAsync(User user, bool endOfPeriod = false)
+        {
+            await BillingHelpers.CancelSubscriptionAsync(user, endOfPeriod);
+        }
+
+        public async Task ReinstatePremiumAsync(User user)
+        {
+            await BillingHelpers.ReinstateSubscriptionAsync(user);
         }
 
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)

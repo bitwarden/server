@@ -10,7 +10,6 @@ namespace Bit.Core.Services
 {
     public interface IOrganizationService
     {
-        Task<OrganizationBilling> GetBillingAsync(Organization organization);
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
         Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false);
         Task ReinstateSubscriptionAsync(Guid organizationId);

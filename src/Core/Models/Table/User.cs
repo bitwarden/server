@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Bit.Core.Models.Table
 {
-    public class User : IDataObject<Guid>
+    public class User : IDataObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -30,12 +30,24 @@ namespace Bit.Core.Models.Table
         public bool Premium { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
+        public string StripeCustomerId { get; set; }
+        public string StripeSubscriptionId { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public string BillingEmailAddress()
+        {
+            return Email;
+        }
+
+        public string BillingName()
+        {
+            return Name;
         }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
@@ -110,7 +122,12 @@ namespace Bit.Core.Models.Table
                 return 0;
             }
 
-            var maxStorageBytes = MaxStorageGb.Value * 1073741824L;
+            return StorageBytesRemaining(MaxStorageGb.Value);
+        }
+
+        public long StorageBytesRemaining(short maxStorageGb)
+        {
+            var maxStorageBytes = maxStorageGb * 1073741824L;
             if(!Storage.HasValue)
             {
                 return maxStorageBytes;
