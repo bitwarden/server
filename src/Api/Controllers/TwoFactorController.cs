@@ -41,7 +41,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var providers = user.GetTwoFactorProviders().Select(p => new TwoFactorProviderResponseModel(p.Key, p.Value));
+            var providers = user.GetTwoFactorProviders()?.Select(p => new TwoFactorProviderResponseModel(p.Key, p.Value));
             return new ListResponseModel<TwoFactorProviderResponseModel>(providers);
         }
 
