@@ -29,7 +29,7 @@ namespace Bit.Core.Identity
         {
             if(!user.Premium)
             {
-                return Task.FromResult<string>(null);
+                return null;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
