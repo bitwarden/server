@@ -29,6 +29,7 @@ namespace Bit.Core.Models.Api
             Username = data.Username;
             Password = data.Password;
             Notes = data.Notes;
+            Totp = data.Totp;
             RevisionDate = cipher.RevisionDate;
             Edit = true;
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
@@ -52,6 +53,7 @@ namespace Bit.Core.Models.Api
         public string Username { get; set; }
         public string Password { get; set; }
         public string Notes { get; set; }
+        public string Totp { get; set; }
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public DateTime RevisionDate { get; set; }
     }
