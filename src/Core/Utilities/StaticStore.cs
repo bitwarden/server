@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.StaticStore;
-using System;
 using System.Collections.Generic;
 
 namespace Bit.Core.Utilities
@@ -112,7 +111,9 @@ namespace Bit.Core.Utilities
                     StripePlanId = "personal-org-annually",
                     StripeSeatPlanId = "personal-org-seat-annually",
                     UpgradeSortOrder = 1,
-                    TrialPeriodDays = 7
+                    TrialPeriodDays = 7,
+                    UseTotp = true,
+                    MaxStorageGb = 1
                 },
                 new Plan
                 {
@@ -125,7 +126,9 @@ namespace Bit.Core.Utilities
                     StripePlanId = "teams-org-monthly",
                     StripeSeatPlanId = "teams-org-seat-monthly",
                     UpgradeSortOrder = 2,
-                    TrialPeriodDays = 7
+                    TrialPeriodDays = 7,
+                    UseTotp = true,
+                    MaxStorageGb = 1
                 },
                 new Plan
                 {
@@ -138,7 +141,9 @@ namespace Bit.Core.Utilities
                     StripePlanId = "teams-org-annually",
                     StripeSeatPlanId = "teams-org-seat-annually",
                     UpgradeSortOrder = 2,
-                    TrialPeriodDays = 7
+                    TrialPeriodDays = 7,
+                    UseTotp = true,
+                    MaxStorageGb = 1
                 },
                 new Plan
                 {
@@ -153,7 +158,9 @@ namespace Bit.Core.Utilities
                     UpgradeSortOrder = 3,
                     TrialPeriodDays = 7,
                     UseGroups = true,
-                    UseDirectory = true
+                    UseDirectory = true,
+                    UseTotp = true,
+                    MaxStorageGb = 1
                 },
                 new Plan
                 {
@@ -168,7 +175,9 @@ namespace Bit.Core.Utilities
                     UpgradeSortOrder = 3,
                     TrialPeriodDays = 7,
                     UseGroups = true,
-                    UseDirectory = true
+                    UseDirectory = true,
+                    UseTotp = true,
+                    MaxStorageGb = 1
                 }
             };
 

@@ -54,14 +54,15 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}/admin")]
         public async Task<LoginResponseModel> GetAdmin(string id)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var userId = _userService.GetProperUserId(User).Value;
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(login == null || !login.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
-            var response = new LoginResponseModel(login, _globalSettings);
+            var response = new LoginResponseModel(login, _globalSettings, login.OrganizationUseTotp);
             return response;
         }
 
@@ -97,7 +98,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SaveAsync(login, userId, true);
 
-            var response = new LoginResponseModel(login, _globalSettings);
+            var response = new LoginResponseModel(login, _globalSettings, false);
             return response;
         }
 
@@ -129,17 +130,17 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/admin")]
         public async Task<LoginResponseModel> PutAdmin(string id, [FromBody]LoginRequestModel model)
         {
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var userId = _userService.GetProperUserId(User).Value;
+            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if(login == null || !login.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SaveAsync(model.ToCipher(login), userId, true);
 
-            var response = new LoginResponseModel(login, _globalSettings);
+            var response = new LoginResponseModel(login, _globalSettings, login.OrganizationUseTotp);
             return response;
         }
 

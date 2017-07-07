@@ -79,6 +79,12 @@ namespace Bit.Core.Services
             {
                 await _cipherRepository.CreateAsync(cipher);
 
+                if(cipher.OrganizationId.HasValue)
+                {
+                    var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
+                    cipher.OrganizationUseTotp = org.UseTotp;
+                }
+
                 // push
                 await _pushService.PushSyncCipherCreateAsync(cipher);
             }

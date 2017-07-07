@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Table
         public short? MaxCollections { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
+        public bool UseTotp { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
         public string StripeCustomerId { get; set; }

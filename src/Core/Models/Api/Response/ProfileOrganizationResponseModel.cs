@@ -12,8 +12,10 @@ namespace Bit.Core.Models.Api
             Name = organization.Name;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
+            UseTotp = organization.UseTotp;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
+            MaxStorageGb = organization.MaxStorageGb;
             Key = organization.Key;
             Status = organization.Status;
             Type = organization.Type;
@@ -24,8 +26,10 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
+        public bool UseTotp { get; set; }
         public int Seats { get; set; }
         public int MaxCollections { get; set; }
+        public short? MaxStorageGb { get; set; }
         public string Key { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }

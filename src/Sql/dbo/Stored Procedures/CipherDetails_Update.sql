@@ -11,7 +11,8 @@
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
-    @Edit BIT -- not used
+    @Edit BIT, -- not used
+    @OrganizationUseTotp BIT -- not used
 AS
 BEGIN
     SET NOCOUNT ON

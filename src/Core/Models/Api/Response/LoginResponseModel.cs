@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api
 {
     public class LoginResponseModel : ResponseModel
     {
-        public LoginResponseModel(Cipher cipher, GlobalSettings globalSettings, string obj = "login")
+        public LoginResponseModel(Cipher cipher, GlobalSettings globalSettings, bool orgUseTotp, string obj = "login")
             : base(obj)
         {
             if(cipher == null)
@@ -32,11 +32,12 @@ namespace Bit.Core.Models.Api
             Totp = data.Totp;
             RevisionDate = cipher.RevisionDate;
             Edit = true;
+            OrganizationUseTotp = orgUseTotp;
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
         }
 
         public LoginResponseModel(CipherDetails cipher, GlobalSettings globalSettings, string obj = "login")
-            : this(cipher as Cipher, globalSettings, obj)
+            : this(cipher as Cipher, globalSettings, cipher.OrganizationUseTotp, obj)
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
@@ -48,6 +49,7 @@ namespace Bit.Core.Models.Api
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public bool Edit { get; set; }
+        public bool OrganizationUseTotp { get; set; }
         public string Name { get; set; }
         public string Uri { get; set; }
         public string Username { get; set; }

@@ -48,11 +48,13 @@ namespace Bit.Core.Models.Api
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
+            OrganizationUseTotp = cipher.OrganizationUseTotp;
         }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public bool Edit { get; set; }
+        public bool OrganizationUseTotp { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel

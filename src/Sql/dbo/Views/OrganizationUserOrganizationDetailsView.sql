@@ -7,8 +7,10 @@ SELECT
     O.[Enabled],
     O.[UseGroups],
     O.[UseDirectory],
+    O.[UseTotp],
     O.[Seats],
     O.[MaxCollections],
+    O.[MaxStorageGb],
     OU.[Key],
     OU.[Status],
     OU.[Type]

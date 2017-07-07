@@ -6,7 +6,11 @@ SELECT
     CASE 
         WHEN C.[UserId] IS NOT NULL OR OU.[AccessAll] = 1 OR CU.[ReadOnly] = 0 OR G.[AccessAll] = 1 OR CG.[ReadOnly] = 0 THEN 1
         ELSE 0
-    END [Edit]
+    END [Edit],
+    CASE 
+        WHEN C.[UserId] IS NULL AND O.[UseTotp] = 1 THEN 1
+        ELSE 0
+    END [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId) C
 LEFT JOIN
