@@ -48,7 +48,7 @@ namespace Bit.Api.Controllers
         [HttpPost("get-authenticator")]
         public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator([FromBody]TwoFactorRequestModel model)
         {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
+            var user = await CheckAsync(model.MasterPasswordHash, false);
             var response = new TwoFactorAuthenticatorResponseModel(user);
             return response;
         }
@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
             [FromBody]UpdateTwoFactorAuthenticatorRequestModel model)
         {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
+            var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
             if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
