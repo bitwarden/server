@@ -188,6 +188,17 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_DeleteAttachment]",
+                    new { Id = cipherId, AttachmentId = attachmentId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))

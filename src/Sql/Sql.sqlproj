@@ -203,5 +203,6 @@
     <Build Include="dbo\Stored Procedures\Cipher_UpdateAttachment.sql" />
     <Build Include="dbo\Stored Procedures\Organization_UpdateStorage.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_DeleteAttachment.sql" />
   </ItemGroup>
 </Project>

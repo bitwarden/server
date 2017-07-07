@@ -20,7 +20,6 @@ namespace Bit.Api.Controllers
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
-        private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -29,7 +28,6 @@ namespace Bit.Api.Controllers
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
-            IAttachmentStorageService attachmentStorageService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -37,7 +35,6 @@ namespace Bit.Api.Controllers
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
-            _attachmentStorageService = attachmentStorageService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -263,10 +260,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            // TODO: check and remove attachmentId from cipher in database
-
-            var storedFilename = $"{idGuid}/{attachmentId}";
-            await _attachmentStorageService.DeleteAttachmentAsync(storedFilename);
+            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
         }
     }
 }

@@ -15,6 +15,7 @@ namespace Bit.Core.Services
             bool orgAdmin = false);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);
+        Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
         Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId);
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);

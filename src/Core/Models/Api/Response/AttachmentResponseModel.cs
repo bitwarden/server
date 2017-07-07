@@ -26,21 +26,13 @@ namespace Bit.Core.Models.Api
 
         public static IEnumerable<AttachmentResponseModel> FromCipher(Cipher cipher, GlobalSettings globalSettings)
         {
-            if(string.IsNullOrWhiteSpace(cipher.Attachments))
+            var attachments = cipher.GetAttachments();
+            if(attachments == null)
             {
                 return null;
             }
 
-            try
-            {
-                var attachments =
-                    JsonConvert.DeserializeObject<Dictionary<string, CipherAttachment.MetaData>>(cipher.Attachments);
-                return attachments.Select(a => new AttachmentResponseModel(a.Key, a.Value, cipher, globalSettings));
-            }
-            catch
-            {
-                return null;
-            }
+            return attachments.Select(a => new AttachmentResponseModel(a.Key, a.Value, cipher, globalSettings));
         }
     }
 }

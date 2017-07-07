@@ -154,6 +154,7 @@ namespace Bit.Core.Services
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
+                cipher.AddAttachment(attachmentId, data);
             }
             catch
             {
@@ -184,6 +185,28 @@ namespace Bit.Core.Services
             await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
             // push
             await _pushService.PushSyncCiphersAsync(deletingUserId);
+        }
+
+        public async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false)
+        {
+            if(!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to delete this.");
+            }
+
+            if(!cipher.ContainsAttachment(attachmentId))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
+            cipher.DeleteAttachment(attachmentId);
+
+            var storedFilename = $"{cipher.Id}/{attachmentId}";
+            await _attachmentStorageService.DeleteAttachmentAsync(storedFilename);
+
+            // push
+            await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
         public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
