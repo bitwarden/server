@@ -139,7 +139,7 @@ namespace Bit.Core.Services
             }
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher.Id, attachmentId);
+            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, attachmentId);
 
             try
             {

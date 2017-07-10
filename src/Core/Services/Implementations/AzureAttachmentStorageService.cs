@@ -3,6 +3,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System.IO;
 using System;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
@@ -20,14 +21,29 @@ namespace Bit.Core.Services
             _blobClient = storageAccount.CreateCloudBlobClient();
         }
 
-        public async Task UploadNewAttachmentAsync(Stream stream, Guid cipherId, string attachmentId)
+        public async Task UploadUserAttachmentAsync(Stream stream, Cipher cipher, string attachmentId)
         {
-            await UploadAttachmentAsync(stream, $"{cipherId}/{attachmentId}");
+            await InitAsync();
+            var blob = _attachmentsContainer.GetBlockBlobReference($"{cipher.Id}/{attachmentId}");
+            blob.Metadata.Add("cipherId", cipher.Id.ToString());
+            if(cipher.UserId.HasValue)
+            {
+                blob.Metadata.Add("userId", cipher.UserId.Value.ToString());
+            }
+            else
+            {
+                blob.Metadata.Add("organizationId", cipher.OrganizationId.Value.ToString());
+            }
+            await blob.UploadFromStreamAsync(stream);
         }
 
         public async Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, string attachmentId)
         {
-            await UploadAttachmentAsync(stream, $"{cipherId}/temp/{organizationId}/{attachmentId}");
+            await InitAsync();
+            var blob = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{organizationId}/{attachmentId}");
+            blob.Metadata.Add("cipherId", cipherId.ToString());
+            blob.Metadata.Add("organizationId", organizationId.ToString());
+            await blob.UploadFromStreamAsync(stream);
         }
 
         public async Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
@@ -88,11 +104,33 @@ namespace Bit.Core.Services
             await blob.DeleteIfExistsAsync();
         }
 
-        private async Task UploadAttachmentAsync(Stream stream, string blobName)
+        public async Task DeleteAttachmentsAsync(Cipher cipher)
         {
             await InitAsync();
-            var blob = _attachmentsContainer.GetBlockBlobReference(blobName);
-            await blob.UploadFromStreamAsync(stream);
+            var attachments = cipher.GetAttachments();
+            if(attachments == null)
+            {
+                return;
+            }
+
+            foreach(var attachment in attachments)
+            {
+                var blobName = $"{cipher.Id}/{attachment.Key}";
+                var blob = _attachmentsContainer.GetBlockBlobReference(blobName);
+                await blob.DeleteIfExistsAsync();
+            }
+        }
+
+        public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+        {
+            await InitAsync();
+
+        }
+
+        public async Task DeleteAttachmentsForUserAsync(Guid userId)
+        {
+            await InitAsync();
+
         }
 
         private async Task InitAsync()

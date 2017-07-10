@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
@@ -26,7 +27,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task UploadNewAttachmentAsync(Stream stream, Guid cipherId, string attachmentId)
+        public Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, string attachmentId)
         {
             return Task.FromResult(0);
         }
