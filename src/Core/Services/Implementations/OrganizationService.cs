@@ -744,8 +744,11 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.DeleteAsync(orgUser);
 
-            // push
-            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            if(orgUser.UserId.HasValue)
+            {
+                // push
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            }
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid userId)
@@ -764,8 +767,11 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.DeleteAsync(orgUser);
 
-            // push
-            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            if(orgUser.UserId.HasValue)
+            {
+                // push
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            }
         }
 
         public async Task ImportAsync(Guid organizationId,
