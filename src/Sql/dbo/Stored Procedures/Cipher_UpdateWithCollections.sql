@@ -14,14 +14,31 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @CipherAttachments NVARCHAR(MAX)
+    SELECT
+        @CipherAttachments = [Attachments] 
+    FROM 
+        [dbo].[Cipher]
+    WHERE [Id] = @Id
+
+    DECLARE @Size BIGINT
+
+    SELECT 
+        @Size = SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
+    FROM
+        OPENJSON(@CipherAttachments)
+
+    DECLARE @SizeDec BIGINT = @Size * -1
+
     UPDATE
         [dbo].[Cipher]
     SET
         [UserId] = NULL,
         [OrganizationId] = @OrganizationId,
         [Data] = @Data,
+        [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate
-        -- No need to update Attachments, CreationDate, Favorites, Folders, or Type since that data will not change
+        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id
 
@@ -66,12 +83,7 @@ BEGIN
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 
-    IF @OrganizationId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
-    END
-    ELSE IF @UserId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-    END
+    EXEC [dbo].[Organization_UpdateStorage] @OrganizationId, @Size
+    EXEC [dbo].[User_UpdateStorage] @UserId, @SizeDec
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END

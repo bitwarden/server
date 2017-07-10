@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -133,14 +134,15 @@ namespace Bit.Api.Controllers
         public async Task PutShare(string id, [FromBody]CipherShareRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if(cipher == null || cipher.UserId != userId ||
                 !_currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
             {
                 throw new NotFoundException();
             }
 
-            await _cipherService.ShareAsync(model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+            var original = CoreHelpers.CloneObject(cipher);
+            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
                 model.CollectionIds.Select(c => new Guid(c)), userId);
         }
 
@@ -224,15 +226,7 @@ namespace Bit.Api.Controllers
         [DisableFormValueModelBinding]
         public async Task PostAttachment(string id)
         {
-            if(!Request?.ContentType.Contains("multipart/") ?? true)
-            {
-                throw new BadRequestException("Invalid content.");
-            }
-
-            if(Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
-            {
-                throw new BadRequestException("Max file size is 100 MB.");
-            }
+            ValidateAttachment();
 
             var idGuid = new Guid(id);
             var userId = _userService.GetProperUserId(User).Value;
@@ -244,7 +238,28 @@ namespace Bit.Api.Controllers
 
             await Request.GetFileAsync(async (stream, fileName) =>
             {
-                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, Request.ContentLength.GetValueOrDefault(0), userId);
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
+                        Request.ContentLength.GetValueOrDefault(0), userId);
+            });
+        }
+
+        [HttpPost("{id}/attachment/{attachmentId}/share")]
+        [DisableFormValueModelBinding]
+        public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
+        {
+            ValidateAttachment();
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(cipher == null || cipher.UserId != userId || !_currentContext.OrganizationUser(organizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            await Request.GetFileAsync(async (stream, fileName) =>
+            {
+                await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName,
+                    Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
             });
         }
 
@@ -261,6 +276,19 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+        }
+
+        private void ValidateAttachment()
+        {
+            if(!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            if(Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            {
+                throw new BadRequestException("Max file size is 100 MB.");
+            }
         }
     }
 }

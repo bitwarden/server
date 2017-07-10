@@ -139,8 +139,7 @@ namespace Bit.Core.Services
             }
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            var storageId = $"{cipher.Id}/{attachmentId}";
-            await _attachmentStorageService.UploadAttachmentAsync(stream, storageId);
+            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher.Id, attachmentId);
 
             try
             {
@@ -165,12 +164,35 @@ namespace Bit.Core.Services
             catch
             {
                 // Clean up since this is not transactional
-                await _attachmentStorageService.DeleteAttachmentAsync(storageId);
+                await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentId);
                 throw;
             }
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);
+        }
+
+        public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
+            string attachmentId, Guid organizationId)
+        {
+            if(requestLength < 1)
+            {
+                throw new BadRequestException("No data to attach.");
+            }
+
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(!org.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("This organization cannot use attachments.");
+            }
+
+            var storageBytesRemaining = org.StorageBytesRemaining();
+            if(storageBytesRemaining < requestLength)
+            {
+                throw new BadRequestException("Not enough storage available for this organization.");
+            }
+
+            await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId, attachmentId);
         }
 
         public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
@@ -207,9 +229,7 @@ namespace Bit.Core.Services
 
             await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
             cipher.DeleteAttachment(attachmentId);
-
-            var storedFilename = $"{cipher.Id}/{attachmentId}";
-            await _attachmentStorageService.DeleteAttachmentAsync(storedFilename);
+            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentId);
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);
@@ -258,7 +278,8 @@ namespace Bit.Core.Services
             await _pushService.PushSyncFolderDeleteAsync(folder);
         }
 
-        public async Task ShareAsync(Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId)
+        public async Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId,
+            IEnumerable<Guid> collectionIds, Guid sharingUserId)
         {
             if(cipher.Id == default(Guid))
             {
@@ -275,11 +296,48 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
-            cipher.UserId = sharingUserId;
-            cipher.OrganizationId = organizationId;
-            cipher.RevisionDate = DateTime.UtcNow;
-            await _cipherRepository.ReplaceAsync(cipher, collectionIds);
+            var attachments = cipher.GetAttachments();
+            var hasAttachments = (attachments?.Count ?? 0) > 0;
+
+            try
+            {
+                // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
+                cipher.UserId = sharingUserId;
+                cipher.OrganizationId = organizationId;
+                cipher.RevisionDate = DateTime.UtcNow;
+                await _cipherRepository.ReplaceAsync(cipher, collectionIds);
+
+                if(hasAttachments)
+                {
+                    // migrate attachments
+                    foreach(var attachment in attachments)
+                    {
+                        await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                    }
+                }
+            }
+            catch
+            {
+                // roll everything back
+                await _cipherRepository.ReplaceAsync(originalCipher);
+                if(!hasAttachments)
+                {
+                    throw;
+                }
+
+                foreach(var attachment in attachments)
+                {
+                    await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                }
+
+                throw;
+            }
+
+            // commit attachment migration
+            foreach(var attachment in attachments)
+            {
+                await _attachmentStorageService.CommitShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+            }
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);

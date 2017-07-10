@@ -48,7 +48,7 @@ namespace Bit.Core.Models.Api
             });
         }
 
-        public Cipher ToCipher(Cipher existingCipher)
+        public virtual Cipher ToCipher(Cipher existingCipher)
         {
             switch(existingCipher.Type)
             {
@@ -64,12 +64,35 @@ namespace Bit.Core.Models.Api
         }
     }
 
+    public class CipherAttachmentRequestModel : CipherRequestModel
+    {
+        public Dictionary<string, string> Attachments { get; set; }
+
+        public override Cipher ToCipher(Cipher existingCipher)
+        {
+            base.ToCipher(existingCipher);
+
+            var attachments = existingCipher.GetAttachments();
+            if((Attachments?.Count ?? 0) > 0 && (attachments?.Count ?? 0) > 0)
+            {
+                foreach(var attachment in existingCipher.GetAttachments().Where(a => Attachments.ContainsKey(a.Key)))
+                {
+                    attachment.Value.FileName = Attachments[attachment.Key];
+                }
+
+                existingCipher.SetAttachments(attachments);
+            }
+
+            return existingCipher;
+        }
+    }
+
     public class CipherShareRequestModel : IValidatableObject
     {
         [Required]
         public IEnumerable<string> CollectionIds { get; set; }
         [Required]
-        public CipherRequestModel Cipher { get; set; }
+        public CipherAttachmentRequestModel Cipher { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

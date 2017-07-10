@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Dapper;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -241,6 +242,11 @@ namespace Bit.Core.Utilities
 
             // Return formatted number with suffix
             return readable.ToString("0.## ") + suffix;
+        }
+
+        public static T CloneObject<T>(T obj)
+        {
+            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(obj));
         }
     }
 }

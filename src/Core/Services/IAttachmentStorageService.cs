@@ -1,11 +1,16 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Bit.Core.Services
 {
     public interface IAttachmentStorageService
     {
-        Task UploadAttachmentAsync(Stream stream, string name);
-        Task DeleteAttachmentAsync(string name);
+        Task UploadNewAttachmentAsync(Stream stream, Guid cipherId, string attachmentId);
+        Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, string attachmentId);
+        Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
+        Task CommitShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
+        Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
+        Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     }
 }
