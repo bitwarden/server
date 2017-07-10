@@ -31,5 +31,17 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task UpdateStorageAsync(Guid id, long storageIncrease)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[Organization_UpdateStorage]",
+                    new { Id = id, StorageIncrease = storageIncrease },
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 180);
+            }
+        }
     }
 }

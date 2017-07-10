@@ -175,24 +175,46 @@ namespace Bit.Core.Services
         public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
             string attachmentId, Guid organizationId)
         {
-            if(requestLength < 1)
+            try
             {
-                throw new BadRequestException("No data to attach.");
-            }
+                if(requestLength < 1)
+                {
+                    throw new BadRequestException("No data to attach.");
+                }
 
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
-            if(!org.MaxStorageGb.HasValue)
+                if(cipher.Id == default(Guid))
+                {
+                    throw new BadRequestException(nameof(cipher.Id));
+                }
+
+                if(cipher.OrganizationId.HasValue)
+                {
+                    throw new BadRequestException("Cipher belongs to an organization already.");
+                }
+
+                var org = await _organizationRepository.GetByIdAsync(organizationId);
+                if(org == null || !org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use attachments.");
+                }
+
+                var storageBytesRemaining = org.StorageBytesRemaining();
+                if(storageBytesRemaining < requestLength)
+                {
+                    throw new BadRequestException("Not enough storage available for this organization.");
+                }
+
+                await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId, attachmentId);
+            }
+            catch
             {
-                throw new BadRequestException("This organization cannot use attachments.");
-            }
+                foreach(var attachment in cipher.GetAttachments())
+                {
+                    await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                }
 
-            var storageBytesRemaining = org.StorageBytesRemaining();
-            if(storageBytesRemaining < requestLength)
-            {
-                throw new BadRequestException("Not enough storage available for this organization.");
+                throw;
             }
-
-            await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId, attachmentId);
         }
 
         public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
@@ -281,31 +303,47 @@ namespace Bit.Core.Services
         public async Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId,
             IEnumerable<Guid> collectionIds, Guid sharingUserId)
         {
-            if(cipher.Id == default(Guid))
-            {
-                throw new BadRequestException(nameof(cipher.Id));
-            }
-
-            if(cipher.OrganizationId.HasValue)
-            {
-                throw new BadRequestException("Already belongs to an organization.");
-            }
-
-            if(!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
-            {
-                throw new NotFoundException();
-            }
-
             var attachments = cipher.GetAttachments();
             var hasAttachments = (attachments?.Count ?? 0) > 0;
+            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+            var updatedCipher = false;
+            var migratedAttachments = false;
 
             try
             {
+                if(cipher.Id == default(Guid))
+                {
+                    throw new BadRequestException(nameof(cipher.Id));
+                }
+
+                if(cipher.OrganizationId.HasValue)
+                {
+                    throw new BadRequestException("Already belongs to an organization.");
+                }
+
+                if(!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
+                {
+                    throw new NotFoundException();
+                }
+
+                var org = await _organizationRepository.GetByIdAsync(organizationId);
+                if(!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use attachments.");
+                }
+
+                var storageBytesRemaining = org.StorageBytesRemaining();
+                if(storageBytesRemaining < storageAdjustment)
+                {
+                    throw new BadRequestException("Not enough storage available for this organization.");
+                }
+
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
                 cipher.UserId = sharingUserId;
                 cipher.OrganizationId = organizationId;
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher, collectionIds);
+                updatedCipher = true;
 
                 if(hasAttachments)
                 {
@@ -313,16 +351,27 @@ namespace Bit.Core.Services
                     foreach(var attachment in attachments)
                     {
                         await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                        migratedAttachments = true;
                     }
                 }
             }
             catch
             {
                 // roll everything back
-                await _cipherRepository.ReplaceAsync(originalCipher);
-                if(!hasAttachments)
+                if(updatedCipher)
+                {
+                    await _cipherRepository.ReplaceAsync(originalCipher);
+                }
+
+                if(!hasAttachments || !migratedAttachments)
                 {
                     throw;
+                }
+
+                if(updatedCipher)
+                {
+                    await _userRepository.UpdateStorageAsync(sharingUserId, storageAdjustment);
+                    await _organizationRepository.UpdateStorageAsync(organizationId, -1 * storageAdjustment);
                 }
 
                 foreach(var attachment in attachments)

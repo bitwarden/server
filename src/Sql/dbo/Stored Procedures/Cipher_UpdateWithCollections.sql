@@ -22,13 +22,17 @@ BEGIN
     WHERE [Id] = @Id
 
     DECLARE @Size BIGINT
+    DECLARE @SizeDec BIGINT
 
-    SELECT 
-        @Size = SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
-    FROM
-        OPENJSON(@CipherAttachments)
+    IF @CipherAttachments IS NOT NULL
+    BEGIN
+        SELECT 
+            @Size = SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
+        FROM
+            OPENJSON(@CipherAttachments)
 
-    DECLARE @SizeDec BIGINT = @Size * -1
+        SET @SizeDec = @Size * -1
+    END
 
     UPDATE
         [dbo].[Cipher]
@@ -83,7 +87,11 @@ BEGIN
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 
-    EXEC [dbo].[Organization_UpdateStorage] @OrganizationId, @Size
-    EXEC [dbo].[User_UpdateStorage] @UserId, @SizeDec
+    IF ISNULL(@Size, 0) > 0
+    BEGIN
+        EXEC [dbo].[Organization_UpdateStorage] @OrganizationId, @Size
+        EXEC [dbo].[User_UpdateStorage] @UserId, @SizeDec
+    END
+
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
