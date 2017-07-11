@@ -334,6 +334,11 @@ namespace Bit.Core.Services
             StripeCustomer customer = null;
             StripeSubscription subscription = null;
 
+            if(!plan.MaxStorageGb.HasValue && signup.AdditionalStorageGb > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional storage.");
+            }
+
             if(plan.BaseSeats + signup.AdditionalSeats <= 0)
             {
                 throw new BadRequestException("You do not have any seats!");
@@ -399,6 +404,15 @@ namespace Bit.Core.Services
                     });
                 }
 
+                if(signup.AdditionalStorageGb > 0)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = plan.StripStoragePlanId,
+                        Quantity = signup.AdditionalStorageGb
+                    });
+                }
+
                 try
                 {
                     subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
@@ -423,7 +437,8 @@ namespace Bit.Core.Services
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,
-                MaxStorageGb = plan.MaxStorageGb,
+                MaxStorageGb = !plan.MaxStorageGb.HasValue ?
+                    (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
                 UseGroups = plan.UseGroups,
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,

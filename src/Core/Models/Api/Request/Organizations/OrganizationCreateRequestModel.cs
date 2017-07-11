@@ -23,6 +23,8 @@ namespace Bit.Core.Models.Api
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
         public short AdditionalSeats { get; set; }
+        [Range(0, 99)]
+        public short? AdditionalStorageGb { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -34,6 +36,7 @@ namespace Bit.Core.Models.Api
                 Plan = PlanType,
                 PaymentToken = PaymentToken,
                 AdditionalSeats = AdditionalSeats,
+                AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),
                 BillingEmail = BillingEmail,
                 BusinessName = BusinessName
             };

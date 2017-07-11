@@ -26,6 +26,7 @@ namespace Bit.Core.Models.Api
             MaxCollections = organization.MaxCollections;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
+            UseTotp = organization.UseTotp;
         }
 
         public string Id { get; set; }
@@ -38,6 +39,7 @@ namespace Bit.Core.Models.Api
         public short? MaxCollections { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
+        public bool UseTotp { get; set; }
     }
 
     public class OrganizationBillingResponseModel : OrganizationResponseModel
@@ -49,8 +51,15 @@ namespace Bit.Core.Models.Api
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
             UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
+            StorageName = organization.Storage.HasValue ? 
+                Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
+            StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D) : 0; // 1 GB
+            MaxStorageGb = organization.MaxStorageGb;
         }
 
+        public string StorageName { get; set; }
+        public double? StorageGb { get; set; }
+        public short? MaxStorageGb { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }

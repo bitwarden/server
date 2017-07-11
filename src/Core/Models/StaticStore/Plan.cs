@@ -7,6 +7,7 @@ namespace Bit.Core.Models.StaticStore
         public string Name { get; set; }
         public string StripePlanId { get; set; }
         public string StripeSeatPlanId { get; set; }
+        public string StripStoragePlanId { get; set; }
         public PlanType Type { get; set; }
         public short BaseSeats { get; set; }
         public bool CanBuyAdditionalSeats { get; set; }

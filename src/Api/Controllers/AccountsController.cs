@@ -369,7 +369,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new BillingResponseModel(billingInfo);
+            return new BillingResponseModel(user, billingInfo);
         }
 
         [HttpPut("payment")]

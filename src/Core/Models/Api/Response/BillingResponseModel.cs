@@ -3,20 +3,27 @@ using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Business;
 using Stripe;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
 {
     public class BillingResponseModel : ResponseModel
     {
-        public BillingResponseModel(BillingInfo billing)
+        public BillingResponseModel(IStorable storable, BillingInfo billing)
             : base("billing")
         {
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
             UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
+            StorageName = storable.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(storable.Storage.Value) : null;
+            StorageGb = storable.Storage.HasValue ? Math.Round(storable.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+            MaxStorageGb = storable.MaxStorageGb;
         }
 
+        public string StorageName { get; set; }
+        public double? StorageGb { get; set; }
+        public short? MaxStorageGb { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
