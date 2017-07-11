@@ -32,13 +32,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task UpdateStorageAsync(Guid id, long storageIncrease)
+        public async Task UpdateStorageAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Organization_UpdateStorage]",
-                    new { Id = id, StorageIncrease = storageIncrease },
+                    new { Id = id },
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 180);
             }

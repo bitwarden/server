@@ -9,6 +9,6 @@ namespace Bit.Core.Repositories
         Task<User> GetByEmailAsync(string email);
         Task<string> GetPublicKeyAsync(Guid id);
         Task<DateTime> GetAccountRevisionDateAsync(Guid id);
-        Task UpdateStorageAsync(Guid id, long storageIncrease);
+        Task UpdateStorageAsync(Guid id);
     }
 }

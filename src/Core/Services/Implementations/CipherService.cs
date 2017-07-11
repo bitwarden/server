@@ -302,7 +302,6 @@ namespace Bit.Core.Services
         {
             var attachments = cipher.GetAttachments();
             var hasAttachments = (attachments?.Count ?? 0) > 0;
-            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
             var updatedCipher = false;
             var migratedAttachments = false;
 
@@ -329,8 +328,8 @@ namespace Bit.Core.Services
                     throw new BadRequestException("This organization cannot use attachments.");
                 }
 
-                var storageBytesRemaining = org.StorageBytesRemaining();
-                if(storageBytesRemaining < storageAdjustment)
+                var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+                if(org.StorageBytesRemaining() < storageAdjustment)
                 {
                     throw new BadRequestException("Not enough storage available for this organization.");
                 }
@@ -367,8 +366,8 @@ namespace Bit.Core.Services
 
                 if(updatedCipher)
                 {
-                    await _userRepository.UpdateStorageAsync(sharingUserId, storageAdjustment);
-                    await _organizationRepository.UpdateStorageAsync(organizationId, -1 * storageAdjustment);
+                    await _userRepository.UpdateStorageAsync(sharingUserId);
+                    await _organizationRepository.UpdateStorageAsync(organizationId);
                 }
 
                 foreach(var attachment in attachments)
