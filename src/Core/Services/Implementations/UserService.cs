@@ -164,6 +164,16 @@ namespace Bit.Core.Services
                 });
             }
 
+            if(!string.IsNullOrWhiteSpace(user.StripeSubscriptionId))
+            {
+                var subscriptionService = new StripeSubscriptionService();
+                var canceledSub = await subscriptionService.CancelAsync(user.StripeSubscriptionId, false);
+                if(!canceledSub.CanceledAt.HasValue)
+                {
+                    throw new BadRequestException("Unable to cancel subscription.");
+                }
+            }
+
             await _userRepository.DeleteAsync(user);
             return IdentityResult.Success;
         }
