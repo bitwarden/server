@@ -222,6 +222,29 @@ namespace Bit.Core.Services
             // TODO: Update organization
         }
 
+        public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            if(plan == null)
+            {
+                throw new BadRequestException("Existing plan not found.");
+            }
+
+            if(!plan.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("Plan does not allow additional storage.");
+            }
+
+            await BillingHelpers.AdjustStorageAsync(organization, storageAdjustmentGb, plan.StripStoragePlanId);
+            await _organizationRepository.ReplaceAsync(organization);
+        }
+
         public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
@@ -288,7 +311,7 @@ namespace Bit.Core.Services
             }
 
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
-            if(seatItem == null)
+            if(additionalSeats > 0 && seatItem == null)
             {
                 await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
                 {
@@ -298,7 +321,7 @@ namespace Bit.Core.Services
                     SubscriptionId = sub.Id
                 });
             }
-            else if(additionalSeats > 0)
+            else if(additionalSeats > 0 && seatItem != null)
             {
                 await subscriptionItemService.UpdateAsync(seatItem.Id, new StripeSubscriptionItemUpdateOptions
                 {
@@ -307,7 +330,7 @@ namespace Bit.Core.Services
                     Prorate = true
                 });
             }
-            else if(additionalSeats == 0)
+            else if(seatItem != null && additionalSeats == 0)
             {
                 await subscriptionItemService.DeleteAsync(seatItem.Id);
             }

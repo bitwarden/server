@@ -395,7 +395,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.AdjustStorageAsync(user, model.StroageGbAdjustment.Value);
+            await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
         }
 
         [HttpPut("cancel-premium")]

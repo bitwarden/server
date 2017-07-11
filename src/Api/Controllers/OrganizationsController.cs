@@ -168,6 +168,19 @@ namespace Bit.Api.Controllers
             await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         }
 
+        [HttpPut("{id}/storage")]
+        [HttpPost("{id}/storage")]
+        public async Task PutStorage(string id, [FromBody]StorageRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+        }
+
         [HttpPut("{id}/cancel")]
         [HttpPost("{id}/cancel")]
         public async Task PutCancel(string id)

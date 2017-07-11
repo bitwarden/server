@@ -183,8 +183,8 @@ namespace Bit.Core.Utilities
                 throw new BadRequestException("Subscription not found.");
             }
 
-            var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
-            if(seatItem == null)
+            var storageItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
+            if(additionalStorage > 0 && storageItem == null)
             {
                 await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
                 {
@@ -194,23 +194,23 @@ namespace Bit.Core.Utilities
                     SubscriptionId = sub.Id
                 });
             }
-            else if(additionalStorage > 0)
+            else if(additionalStorage > 0 && storageItem != null)
             {
-                await subscriptionItemService.UpdateAsync(seatItem.Id, new StripeSubscriptionItemUpdateOptions
+                await subscriptionItemService.UpdateAsync(storageItem.Id, new StripeSubscriptionItemUpdateOptions
                 {
                     PlanId = storagePlanId,
                     Quantity = additionalStorage,
                     Prorate = true
                 });
             }
-            else if(additionalStorage == 0)
+            else if(additionalStorage == 0 && storageItem != null)
             {
-                await subscriptionItemService.DeleteAsync(storagePlanId);
+                await subscriptionItemService.DeleteAsync(storageItem.Id);
             }
 
             if(additionalStorage > 0)
             {
-                await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, storagePlanId, 300);
+                await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, storagePlanId, 400);
             }
 
             storableSubscriber.MaxStorageGb = newStorageGb;
