@@ -21,7 +21,7 @@ namespace Bit.Core.Services
             _blobClient = storageAccount.CreateCloudBlobClient();
         }
 
-        public async Task UploadUserAttachmentAsync(Stream stream, Cipher cipher, string attachmentId)
+        public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, string attachmentId)
         {
             await InitAsync();
             var blob = _attachmentsContainer.GetBlockBlobReference($"{cipher.Id}/{attachmentId}");
@@ -40,7 +40,7 @@ namespace Bit.Core.Services
         public async Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, string attachmentId)
         {
             await InitAsync();
-            var blob = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{organizationId}/{attachmentId}");
+            var blob = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentId}");
             blob.Metadata.Add("cipherId", cipherId.ToString());
             blob.Metadata.Add("organizationId", organizationId.ToString());
             await blob.UploadFromStreamAsync(stream);
@@ -49,7 +49,7 @@ namespace Bit.Core.Services
         public async Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
         {
             await InitAsync();
-            var source = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{organizationId}/{attachmentId}");
+            var source = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentId}");
             if(!(await source.ExistsAsync()))
             {
                 return;
@@ -61,7 +61,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var original = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{attachmentId}");
+            var original = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{attachmentId}");
             await original.DeleteIfExistsAsync();
             await original.StartCopyAsync(dest);
 
@@ -69,22 +69,13 @@ namespace Bit.Core.Services
             await dest.StartCopyAsync(source);
         }
 
-        public async Task CommitShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
-        {
-            await InitAsync();
-            var source = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{organizationId}/{attachmentId}");
-            var original = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{attachmentId}");
-            await original.DeleteIfExistsAsync();
-            await source.DeleteIfExistsAsync();
-        }
-
         public async Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
         {
             await InitAsync();
-            var source = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{organizationId}/{attachmentId}");
+            var source = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentId}");
             await source.DeleteIfExistsAsync();
 
-            var original = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/temp/{attachmentId}");
+            var original = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{attachmentId}");
             if(!(await original.ExistsAsync()))
             {
                 return;
@@ -104,33 +95,38 @@ namespace Bit.Core.Services
             await blob.DeleteIfExistsAsync();
         }
 
-        public async Task DeleteAttachmentsAsync(Cipher cipher)
+        public async Task CleanupAsync(Guid cipherId)
         {
             await InitAsync();
-            var attachments = cipher.GetAttachments();
-            if(attachments == null)
+            foreach(var blob in _attachmentsContainer.ListBlobs($"temp/{cipherId}", true))
             {
-                return;
+                if(blob is CloudBlockBlob blockBlob)
+                {
+                    await blockBlob.DeleteIfExistsAsync();
+                }
             }
+        }
 
-            foreach(var attachment in attachments)
+        public async Task DeleteAttachmentsForCipherAsync(Guid cipherId)
+        {
+            await InitAsync();
+            foreach(var blob in _attachmentsContainer.ListBlobs(cipherId.ToString(), true))
             {
-                var blobName = $"{cipher.Id}/{attachment.Key}";
-                var blob = _attachmentsContainer.GetBlockBlobReference(blobName);
-                await blob.DeleteIfExistsAsync();
+                if(blob is CloudBlockBlob blockBlob)
+                {
+                    await blockBlob.DeleteIfExistsAsync();
+                }
             }
         }
 
         public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
         {
             await InitAsync();
-
         }
 
         public async Task DeleteAttachmentsForUserAsync(Guid userId)
         {
             await InitAsync();
-
         }
 
         private async Task InitAsync()

@@ -208,11 +208,7 @@ namespace Bit.Core.Services
             }
             catch
             {
-                foreach(var attachment in cipher.GetAttachments())
-                {
-                    await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
-                }
-
+                await _attachmentStorageService.CleanupAsync(cipher.Id);
                 throw;
             }
         }
@@ -225,6 +221,7 @@ namespace Bit.Core.Services
             }
 
             await _cipherRepository.DeleteAsync(cipher);
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
 
             // push
             await _pushService.PushSyncCipherDeleteAsync(cipher);
@@ -379,14 +376,12 @@ namespace Bit.Core.Services
                     await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
                 }
 
+                await _attachmentStorageService.CleanupAsync(cipher.Id);
                 throw;
             }
 
             // commit attachment migration
-            foreach(var attachment in attachments)
-            {
-                await _attachmentStorageService.CommitShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
-            }
+            await _attachmentStorageService.CleanupAsync(cipher.Id);
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);

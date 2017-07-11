@@ -10,8 +10,11 @@ namespace Bit.Core.Services
         Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, string attachmentId);
         Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, string attachmentId);
         Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
-        Task CommitShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
         Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId);
+        Task CleanupAsync(Guid cipherId);
         Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
+        Task DeleteAttachmentsForCipherAsync(Guid cipherId);
+        Task DeleteAttachmentsForOrganizationAsync(Guid organizationId);
+        Task DeleteAttachmentsForUserAsync(Guid userId);
     }
 }
