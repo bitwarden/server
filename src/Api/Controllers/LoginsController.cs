@@ -138,9 +138,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveAsync(model.ToCipher(login), userId, true);
+            // object cannot be a descendant of CipherDetails, so let's clone it.
+            var cipher = Core.Utilities.CoreHelpers.CloneObject(model.ToCipher(login));
+            await _cipherService.SaveAsync(cipher, userId, true);
 
-            var response = new LoginResponseModel(login, _globalSettings, login.OrganizationUseTotp);
+            var response = new LoginResponseModel(cipher, _globalSettings, login.OrganizationUseTotp);
             return response;
         }
 
