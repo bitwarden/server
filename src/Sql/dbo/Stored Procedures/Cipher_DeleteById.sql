@@ -6,10 +6,12 @@ BEGIN
 
     DECLARE @UserId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
+    DECLARE @Attachments BIT
 
     SELECT TOP 1
         @UserId = [UserId],
-        @OrganizationId = [OrganizationId]
+        @OrganizationId = [OrganizationId],
+        @Attachments = CASE WHEN [Attachments] IS NOT NULL THEN 1 ELSE 0 END
     FROM
         [dbo].[Cipher]
     WHERE
@@ -23,10 +25,18 @@ BEGIN
 
     IF @OrganizationId IS NOT NULL
     BEGIN
+        IF @Attachments = 1
+        BEGIN
+            EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
     END
     ELSE IF @UserId IS NOT NULL
     BEGIN
+        IF @Attachments = 1
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
 END
