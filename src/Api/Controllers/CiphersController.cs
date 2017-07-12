@@ -224,7 +224,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/attachment")]
         [DisableFormValueModelBinding]
-        public async Task PostAttachment(string id)
+        public async Task<CipherResponseModel> PostAttachment(string id)
         {
             ValidateAttachment();
 
@@ -241,6 +241,8 @@ namespace Bit.Api.Controllers
                 await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
                         Request.ContentLength.GetValueOrDefault(0), userId);
             });
+
+            return new CipherResponseModel(cipher, _globalSettings);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
