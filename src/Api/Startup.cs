@@ -180,7 +180,7 @@ namespace Bit.Api
             {
                 Authority = authority,
                 AllowedScopes = new string[] { "api" },
-                RequireHttpsMetadata = env.IsProduction(),
+                RequireHttpsMetadata = !env.IsDevelopment(),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
                 // Suffix until we retire the old jwt schemes.

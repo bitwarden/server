@@ -15,7 +15,7 @@ namespace Bit.Core.Utilities
             GlobalSettings globalSettings,
             Func<LogEvent, bool> filter = null)
         {
-            if(env.IsProduction())
+            if(!env.IsDevelopment())
             {
                 if(filter == null)
                 {

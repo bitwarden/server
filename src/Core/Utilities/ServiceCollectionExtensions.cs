@@ -132,14 +132,14 @@ namespace Bit.Core.Utilities
 
             services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
 
-            if(env.IsProduction())
+            if(env.IsDevelopment())
             {
-                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
+                identityServerBuilder.AddTemporarySigningCredential();
             }
             else
             {
-                identityServerBuilder.AddTemporarySigningCredential();
+                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
             }
 
             services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
@@ -152,7 +152,7 @@ namespace Bit.Core.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
-            if(env.IsProduction())
+            if(!env.IsDevelopment())
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
