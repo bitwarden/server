@@ -7,7 +7,7 @@
       "connectionString": "SECRET"
     },
     "mail": {
-      "apiKey": "SECRET",
+      "sendGridApiKey": "SECRET",
       "replyToEmail": "hello@bitwarden.com"
     },
     "identityServer": {
