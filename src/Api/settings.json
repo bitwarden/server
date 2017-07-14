@@ -2,7 +2,6 @@
   "globalSettings": {
     "siteName": "bitwarden",
     "baseVaultUri": "http://localhost:4001/#",
-    "jwtSigningKey": "THIS IS A SECRET. IT KEEPS YOUR TOKEN SAFE. :)",
     "stripeApiKey": "SECRET",
     "sqlServer": {
       "connectionString": "SECRET"
@@ -10,13 +9,6 @@
     "mail": {
       "apiKey": "SECRET",
       "replyToEmail": "hello@bitwarden.com"
-    },
-    "push": {
-      "apnsCertificateThumbprint": "SECRET",
-      "apnsCertificatePassword": "SECRET",
-      "gcmSenderId": "SECRET",
-      "gcmApiKey": "SECRET",
-      "gcmAppPackageName": "com.x8bit.bitwarden"
     },
     "identityServer": {
       "certificateThumbprint": "SECRET"

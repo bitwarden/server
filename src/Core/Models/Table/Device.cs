@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class Device : IDataObject<Guid>
+    public class Device : ITableObject<Guid>
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Table
 {
-    public class U2f : IDataObject<int>
+    public class U2f : ITableObject<int>
     {
         public int Id { get; set; }
         public Guid UserId { get; set; }

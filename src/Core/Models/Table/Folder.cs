@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class Folder : IDataObject<Guid>
+    public class Folder : ITableObject<Guid>
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }

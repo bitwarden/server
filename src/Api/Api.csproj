@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="1.1.2" />
     <PackageReference Include="AspNetCoreRateLimit" Version="1.0.5" />
-    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.2.0" />
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="1.2.1" />
     <PackageReference Include="System.Net.Http" Version="4.3.2" />
   </ItemGroup>
 

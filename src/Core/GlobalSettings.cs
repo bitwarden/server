@@ -4,11 +4,9 @@
     {
         public virtual string SiteName { get; set; }
         public virtual string BaseVaultUri { get; set; }
-        public virtual string JwtSigningKey { get; set; }
         public virtual string StripeApiKey { get; set; }
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual PushSettings Push { get; set; } = new PushSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
         public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -49,15 +47,6 @@
                 public string Username { get; set; }
                 public string Password { get; set; }
             }
-        }
-
-        public class PushSettings
-        {
-            public string ApnsCertificateThumbprint { get; set; }
-            public string ApnsCertificatePassword { get; set; }
-            public string GcmSenderId { get; set; }
-            public string GcmApiKey { get; set; }
-            public string GcmAppPackageName { get; set; }
         }
 
         public class IdentityServerSettings

@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -16,7 +15,7 @@ namespace Bit.Core.Utilities
     public static class CoreHelpers
     {
         private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
-        private static readonly DateTime _epoc = new DateTime(1970, 1, 1);
+        private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.

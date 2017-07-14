@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Models.Table
 {
-    public class Cipher : IDataObject<Guid>
+    public class Cipher : ITableObject<Guid>
     {
         private Dictionary<string, CipherAttachment.MetaData> _attachmentData;
 

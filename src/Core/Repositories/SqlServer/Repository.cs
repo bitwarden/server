@@ -4,10 +4,13 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId> where TId : IEquatable<TId> where T : class, IDataObject<TId>
+    public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
+        where TId : IEquatable<TId>
+        where T : class, ITableObject<TId>
     {
         public Repository(string connectionString, string schema = null, string table = null)
             : base(connectionString)

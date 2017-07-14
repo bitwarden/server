@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Table
 {
-    public class Organization : IDataObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
+    public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
