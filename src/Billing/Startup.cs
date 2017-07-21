@@ -10,6 +10,7 @@ using Bit.Core.Utilities;
 using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Billing
 {
@@ -67,6 +68,12 @@ namespace Bit.Billing
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+            }
+
+            // Forwarded headers
+            if(!env.IsDevelopment())
+            {
+                app.UseForwardedHeadersForAzure();
             }
 
             app.UseMvc();

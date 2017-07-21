@@ -150,6 +150,12 @@ namespace Bit.Api
                 })
                 .AddDebug();
 
+            // Forwarded headers
+            if(!env.IsDevelopment())
+            {
+                app.UseForwardedHeadersForAzure();
+            }
+
             // Rate limiting
             app.UseMiddleware<CustomIpRateLimitMiddleware>();
 
@@ -173,7 +179,7 @@ namespace Bit.Api
             app.UseMvc();
         }
 
-        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env, 
+        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env,
             string authority, string suffix)
         {
             var options = new IdentityServerAuthenticationOptions

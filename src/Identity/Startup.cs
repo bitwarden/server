@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Utilities;
 using Serilog.Events;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Identity
 {
@@ -71,6 +72,12 @@ namespace Bit.Identity
                 })
                 .AddConsole()
                 .AddDebug();
+
+            // Forwarded headers
+            if(!env.IsDevelopment())
+            {
+                app.UseForwardedHeadersForAzure();
+            }
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();

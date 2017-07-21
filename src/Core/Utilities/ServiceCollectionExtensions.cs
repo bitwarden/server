@@ -8,8 +8,10 @@ using IdentityModel;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using IdentityServer4.Validation;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -169,6 +171,21 @@ namespace Bit.Core.Utilities
             ConfigurationBinder.Bind(root.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
             return globalSettings;
+        }
+
+        public static void UseForwardedHeadersForAzure(this IApplicationBuilder app)
+        {
+            // ref: https://github.com/aspnet/Docs/issues/2384
+            var forwardOptions = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                RequireHeaderSymmetry = false
+            };
+
+            forwardOptions.KnownNetworks.Clear();
+            forwardOptions.KnownProxies.Clear();
+
+            app.UseForwardedHeaders(forwardOptions);
         }
     }
 }
