@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Utilities.Duo;
-using System;
 using Bit.Core.Models;
 
 namespace Bit.Core.Identity
@@ -43,7 +42,7 @@ namespace Bit.Core.Identity
             }
 
             var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
-                _globalSettings.Duo.AKey, user.Id.ToString());
+                _globalSettings.Duo.AKey, user.Email);
             return Task.FromResult(signatureRequest);
         }
 
@@ -63,13 +62,7 @@ namespace Bit.Core.Identity
             var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
                 _globalSettings.Duo.AKey, token);
 
-            Guid userId;
-            if(!Guid.TryParse(response, out userId))
-            {
-                return Task.FromResult(false);
-            }
-
-            return Task.FromResult(userId == user.Id);
+            return Task.FromResult(response == user.Email);
         }
 
         private bool HasProperMetaData(TwoFactorProvider provider)
