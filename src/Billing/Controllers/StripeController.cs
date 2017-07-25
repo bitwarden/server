@@ -14,15 +14,18 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IHostingEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
+        private readonly IUserService _userService;
 
         public StripeController(
             IOptions<BillingSettings> billingSettings,
             IHostingEnvironment hostingEnvironment,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            IUserService userService)
         {
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
+            _userService = userService;
         }
 
         [HttpPost("webhook")]
@@ -48,10 +51,18 @@ namespace Bit.Billing.Controllers
             {
                 var subscription = Mapper<StripeSubscription>.MapFromJson(parsedEvent.Data.Object.ToString())
                     as StripeSubscription;
-                if(subscription?.Status == "canceled" && (subscription.Metadata?.ContainsKey("organizationId") ?? false))
+                if(subscription?.Status == "canceled")
                 {
-                    var orgIdGuid = new Guid(subscription.Metadata["organizationId"]);
-                    await _organizationService.DisableAsync(orgIdGuid);
+                    if(subscription.Metadata?.ContainsKey("organizationId") ?? false)
+                    {
+                        var orgIdGuid = new Guid(subscription.Metadata["organizationId"]);
+                        await _organizationService.DisableAsync(orgIdGuid);
+                    }
+                    else if(subscription.Metadata?.ContainsKey("userId") ?? false)
+                    {
+                        var userIdGuid = new Guid(subscription.Metadata["userId"]);
+                        await _userService.DisablePremiumAsync(userIdGuid);
+                    }
                 }
             }
             else

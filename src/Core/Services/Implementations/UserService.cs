@@ -610,6 +610,17 @@ namespace Bit.Core.Services
             await BillingHelpers.ReinstateSubscriptionAsync(user);
         }
 
+        public async Task DisablePremiumAsync(Guid userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if(user != null && user.Premium)
+            {
+                user.Premium = false;
+                user.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(user);
+            }
+        }
+
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)
         {
             if(validatePassword)
