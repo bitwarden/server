@@ -5,6 +5,8 @@ using SendGrid;
 using SendGrid.Helpers.Mail;
 using Bit.Core.Models.Mail;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 
 namespace Bit.Core.Services
 {
@@ -59,6 +61,28 @@ namespace Bit.Core.Services
             {
                 var bypass = message.MetaData["SendGridBypassListManagement"] as bool?;
                 sendGridMessage.SetBypassListManagement(bypass.GetValueOrDefault(false));
+            }
+
+            try
+            {
+                await SendAsync(sendGridMessage, false);
+            }
+            catch(HttpRequestException)
+            {
+                await SendAsync(sendGridMessage, true);
+            }
+            catch(WebException)
+            {
+                await SendAsync(sendGridMessage, true);
+            }
+        }
+
+        private async Task SendAsync(SendGridMessage sendGridMessage, bool retry)
+        {
+            if(retry)
+            {
+                // wait and try again
+                await Task.Delay(2000);
             }
 
             await _client.SendEmailAsync(sendGridMessage);
