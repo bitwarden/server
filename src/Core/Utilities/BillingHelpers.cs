@@ -310,7 +310,7 @@ namespace Bit.Core.Utilities
                 throw new BadRequestException("Subscription was not found.");
             }
 
-            if(sub.Status != "active" || !sub.CanceledAt.HasValue)
+            if((sub.Status != "active" && sub.Status != "trialing") || !sub.CanceledAt.HasValue)
             {
                 throw new BadRequestException("Subscription is not marked for cancellation.");
             }
