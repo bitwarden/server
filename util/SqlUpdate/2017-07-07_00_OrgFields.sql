@@ -1,6 +1,9 @@
 alter table [organization] add [UseTotp] BIT NULL
 go
 
+alter table [organization] add [MaxStorageGb] SMALLINT NULL
+go
+
 -- all but free plans
 update [organization]
 set
