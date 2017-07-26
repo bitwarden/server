@@ -1,18 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <VersionPrefix>1.7.0</VersionPrefix>
+    <VersionPrefix>1.8.0</VersionPrefix>
     <TargetFramework>net461</TargetFramework>
-    <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Api</AssemblyName>
-    <OutputType>Exe</OutputType>
-    <PackageId>Api</PackageId>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <RootNamespace>Bit.Api</RootNamespace>
     <UserSecretsId>bitwarden-Api</UserSecretsId>
   </PropertyGroup>

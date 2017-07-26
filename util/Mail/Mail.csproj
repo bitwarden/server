@@ -2,10 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Mail</AssemblyName>
-    <OutputType>Exe</OutputType>
-    <PackageId>Mail</PackageId>
     <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
     <PackageTargetFallback>$(PackageTargetFallback);dotnet5.6;portable-net45+win8</PackageTargetFallback>
     <RootNamespace>Bit.Mail</RootNamespace>

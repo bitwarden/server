@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26430.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
 EndProject
@@ -24,11 +24,9 @@ Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Sql", "src\Sql\Sql.sqlproj"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mail", "util\Mail\Mail.csproj", "{B78A6C74-1A24-48C6-802A-13BE3E4DAFF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Billing", "src\Billing\Billing.csproj", "{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Billing", "src\Billing\Billing.csproj", "{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity", "src\Identity\Identity.csproj", "{04148736-3C0B-445E-8B74-2020E7A53502}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnhMigrator", "util\AnhMigrator\AnhMigrator.csproj", "{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity", "src\Identity\Identity.csproj", "{04148736-3C0B-445E-8B74-2020E7A53502}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,10 +60,6 @@ Global
 		{04148736-3C0B-445E-8B74-2020E7A53502}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04148736-3C0B-445E-8B74-2020E7A53502}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04148736-3C0B-445E-8B74-2020E7A53502}.Release|Any CPU.Build.0 = Release|Any CPU
-		{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -77,6 +71,5 @@ Global
 		{B78A6C74-1A24-48C6-802A-13BE3E4DAFF1} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{02BC2982-ED8D-4A6D-A41E-092B3DAEB98A} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{04148736-3C0B-445E-8B74-2020E7A53502} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
-		{05C45D68-DAB9-40E6-9E2E-F81BBD2E0C42} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 	EndGlobalSection
 EndGlobal

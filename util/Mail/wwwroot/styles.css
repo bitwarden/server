@@ -102,6 +102,10 @@ body {
     padding: 0 0 10px;
 }
 
+.content-block-spaced {
+    padding: 0 0 25px;
+}
+
 .indented {
     padding-left: 20px;
 }

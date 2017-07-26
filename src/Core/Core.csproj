@@ -3,13 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
     <AssemblyName>Core</AssemblyName>
-    <PackageId>Core</PackageId>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <RootNamespace>Bit.Core</RootNamespace>
   </PropertyGroup>
 

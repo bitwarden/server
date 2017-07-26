@@ -1,20 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <VersionPrefix>1.8.0</VersionPrefix>
     <TargetFramework>net461</TargetFramework>
     <AssemblyName>Identity</AssemblyName>
     <RootNamespace>Bit.Identity</RootNamespace>
     <UserSecretsId>bitwarden-Identity</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="1.1.2" />
     <PackageReference Include="System.Net.Http" Version="4.3.2" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
 </Project>
