@@ -192,7 +192,7 @@ namespace Bit.Core.IdentityServer
 
         private async Task<bool> VerifyTwoFactor(User user, TwoFactorProviderType type, string token)
         {
-            if(!user.TwoFactorProviderIsEnabled(type))
+            if(type != TwoFactorProviderType.Remember && !user.TwoFactorProviderIsEnabled(type))
             {
                 return false;
             }
