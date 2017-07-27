@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api
     public class GroupRequestModel
     {
         [Required]
-        [StringLength(300)]
+        [StringLength(50)]
         public string Name { get; set; }
         [Required]
         public bool? AccessAll { get; set; }

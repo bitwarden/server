@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         [EncryptedString]
-        [StringLength(300)]
+        [StringLength(1000)]
         public string Name { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
 

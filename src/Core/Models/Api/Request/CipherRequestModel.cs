@@ -20,22 +20,22 @@ namespace Bit.Core.Models.Api
         public string OrganizationId { get; set; }
         [Required]
         [EncryptedString]
-        [StringLength(300)]
+        [StringLength(1000)]
         public string Name { get; set; }
         [EncryptedString]
         [StringLength(10000)]
         public string Uri { get; set; }
         [EncryptedString]
-        [StringLength(300)]
+        [StringLength(1000)]
         public string Username { get; set; }
         [EncryptedString]
-        [StringLength(300)]
+        [StringLength(1000)]
         public string Password { get; set; }
         [EncryptedString]
         [StringLength(10000)]
         public string Notes { get; set; }
         [EncryptedString]
-        [StringLength(300)]
+        [StringLength(1000)]
         public string Totp { get; set; }
 
         public virtual Cipher ToCipher(Guid userId)
