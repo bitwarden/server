@@ -16,6 +16,7 @@
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
         public virtual U2fSettings U2f { get; set; } = new U2fSettings();
+        public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
 
         public class SqlServerSettings
         {
@@ -85,6 +86,14 @@
         public class U2fSettings
         {
             public string AppId { get; set; }
+        }
+
+        public class BraintreeSettings
+        {
+            public bool Production { get; set; }
+            public string MerchantId { get; set; }
+            public string PublicKey { get; set; }
+            public string PrivateKey { get; set; }
         }
     }
 }

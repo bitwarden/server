@@ -1,5 +1,8 @@
 ﻿{
   "globalSettings": {
-    "baseVaultUri": "https://vault.bitwarden.com/#"
+    "baseVaultUri": "https://vault.bitwarden.com/#",
+    "braintree": {
+      "production": true
+    }
   }
 }

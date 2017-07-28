@@ -36,6 +36,12 @@
     },
     "u2f": {
       "appId": "https://localhost:4001/app-id.json"
+    },
+    "braintree": {
+      "production": false,
+      "merchantId": "SECRET",
+      "publicKey": "SECRET",
+      "privateKey": "SECRET"
     }
   }
 }

@@ -514,55 +514,12 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already a premium user.");
             }
 
-            var customerService = new StripeCustomerService();
-            var customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
-            {
-                Description = user.Name,
-                Email = user.Email,
-                SourceToken = paymentToken
-            });
-
-            var subCreateOptions = new StripeSubscriptionCreateOptions
-            {
-                Items = new List<StripeSubscriptionItemOption>(),
-                Metadata = new Dictionary<string, string>
-                {
-                    ["userId"] = user.Id.ToString()
-                }
-            };
-
-            subCreateOptions.Items.Add(new StripeSubscriptionItemOption
-            {
-                PlanId = PremiumPlanId,
-                Quantity = 1
-            });
-
-            if(additionalStorageGb > 0)
-            {
-                subCreateOptions.Items.Add(new StripeSubscriptionItemOption
-                {
-                    PlanId = StoragePlanId,
-                    Quantity = additionalStorageGb
-                });
-            }
-
-            StripeSubscription subscription = null;
-            try
-            {
-                var subscriptionService = new StripeSubscriptionService();
-                subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
-            }
-            catch(StripeException)
-            {
-                await customerService.DeleteAsync(customer.Id);
-                throw;
-            }
+            IPaymentService paymentService = new StripePaymentService(_globalSettings);
+            await paymentService.PurchasePremiumAsync(user, paymentToken, additionalStorageGb);
 
             user.Premium = true;
             user.MaxStorageGb = (short)(1 + additionalStorageGb);
             user.RevisionDate = DateTime.UtcNow;
-            user.StripeCustomerId = customer.Id;
-            user.StripeSubscriptionId = subscription.Id;
 
             try
             {
@@ -570,7 +527,7 @@ namespace Bit.Core.Services
             }
             catch
             {
-                await BillingHelpers.CancelAndRecoverChargesAsync(subscription.Id, customer.Id);
+                await BillingHelpers.CancelAndRecoverChargesAsync(user.StripeSubscriptionId, user.StripeCustomerId);
                 throw;
             }
         }

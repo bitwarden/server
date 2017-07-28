@@ -30,5 +30,11 @@
   },
   "billingSettings": {
     "stripeWebhookKey": "SECRET"
+  },
+  "braintree": {
+    "production": false,
+    "merchantId": "SECRET",
+    "publicKey": "SECRET",
+    "privateKey": "SECRET"
   }
 }

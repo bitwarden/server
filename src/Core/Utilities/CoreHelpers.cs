@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -16,6 +17,7 @@ namespace Bit.Core.Utilities
     {
         private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
         private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        private static readonly Random _random = new Random();
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -128,34 +130,21 @@ namespace Bit.Core.Utilities
             return globalSettings.U2f.AppId;
         }
 
+        public static string RandomString(int length, bool alpha = true, bool upper = true, bool lower = true,
+            bool numeric = true, bool special = false)
+        {
+            return RandomString(length, RandomStringCharacters(alpha, upper, lower, numeric, special));
+        }
+
+        public static string RandomString(int length, string characters)
+        {
+            return new string(Enumerable.Repeat(characters, length).Select(s => s[_random.Next(s.Length)]).ToArray());
+        }
+
         public static string SecureRandomString(int length, bool alpha = true, bool upper = true, bool lower = true,
             bool numeric = true, bool special = false)
         {
-            var characters = string.Empty;
-            if(alpha)
-            {
-                if(upper)
-                {
-                    characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                }
-
-                if(lower)
-                {
-                    characters += "abcdefghijklmnopqrstuvwxyz";
-                }
-            }
-
-            if(numeric)
-            {
-                characters += "0123456789";
-            }
-
-            if(special)
-            {
-                characters += "!@#$%^*&";
-            }
-
-            return SecureRandomString(length, characters);
+            return SecureRandomString(length, RandomStringCharacters(alpha, upper, lower, numeric, special));
         }
 
         // ref https://stackoverflow.com/a/8996788/1090359 with modifications
@@ -203,6 +192,35 @@ namespace Bit.Core.Utilities
 
                 return sb.ToString();
             }
+        }
+
+        private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
+        {
+            var characters = string.Empty;
+            if(alpha)
+            {
+                if(upper)
+                {
+                    characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                }
+
+                if(lower)
+                {
+                    characters += "abcdefghijklmnopqrstuvwxyz";
+                }
+            }
+
+            if(numeric)
+            {
+                characters += "0123456789";
+            }
+
+            if(special)
+            {
+                characters += "!@#$%^*&";
+            }
+
+            return characters;
         }
 
         // ref: https://stackoverflow.com/a/11124118/1090359
