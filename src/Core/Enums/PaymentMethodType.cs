@@ -2,9 +2,9 @@
 {
     public enum PaymentMethodType : byte
     {
-        Card,
-        BankAccount,
-        PayPal,
-        Bitcoin
+        Card = 0,
+        BankAccount = 1,
+        PayPal = 2,
+        Bitcoin = 3
     }
 }

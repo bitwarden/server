@@ -60,8 +60,9 @@ namespace Bit.Core.Services
                 throw;
             }
 
-            user.StripeCustomerId = customer.Id;
-            user.StripeSubscriptionId = subscription.Id;
+            user.Gateway = Enums.GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+            user.GatewaySubscriptionId = subscription.Id;
         }
 
         public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
@@ -69,7 +70,7 @@ namespace Bit.Core.Services
         {
             var subscriptionItemService = new StripeSubscriptionItemService();
             var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(storableSubscriber.StripeSubscriptionId);
+            var sub = await subscriptionService.GetAsync(storableSubscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription not found.");
@@ -108,13 +109,13 @@ namespace Bit.Core.Services
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
         {
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 var subscriptionService = new StripeSubscriptionService();
-                await subscriptionService.CancelAsync(subscriber.StripeSubscriptionId, false);
+                await subscriptionService.CancelAsync(subscriber.GatewaySubscriptionId, false);
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
                 return;
             }
@@ -122,7 +123,7 @@ namespace Bit.Core.Services
             var chargeService = new StripeChargeService();
             var charges = await chargeService.ListAsync(new StripeChargeListOptions
             {
-                CustomerId = subscriber.StripeCustomerId
+                CustomerId = subscriber.GatewayCustomerId
             });
 
             if(charges?.Data != null)
@@ -135,17 +136,17 @@ namespace Bit.Core.Services
             }
 
             var customerService = new StripeCustomerService();
-            await customerService.DeleteAsync(subscriber.StripeCustomerId);
+            await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
         public async Task PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             int prorateThreshold = 500)
         {
             var invoiceService = new StripeInvoiceService();
-            var upcomingPreview = await invoiceService.UpcomingAsync(subscriber.StripeCustomerId,
+            var upcomingPreview = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId,
                 new StripeUpcomingInvoiceOptions
                 {
-                    SubscriptionId = subscriber.StripeSubscriptionId
+                    SubscriptionId = subscriber.GatewaySubscriptionId
                 });
 
             var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
@@ -156,10 +157,10 @@ namespace Bit.Core.Services
                 {
                     // Owes more than prorateThreshold on next invoice.
                     // Invoice them and pay now instead of waiting until next month.
-                    var invoice = await invoiceService.CreateAsync(subscriber.StripeCustomerId,
+                    var invoice = await invoiceService.CreateAsync(subscriber.GatewayCustomerId,
                         new StripeInvoiceCreateOptions
                         {
-                            SubscriptionId = subscriber.StripeSubscriptionId
+                            SubscriptionId = subscriber.GatewaySubscriptionId
                         });
 
                     if(invoice.AmountDue > 0)
@@ -178,13 +179,13 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 throw new GatewayException("No subscription.");
             }
 
             var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+            var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription was not found.");
@@ -209,13 +210,13 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 throw new GatewayException("No subscription.");
             }
 
             var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+            var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription was not found.");
@@ -241,15 +242,21 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
+            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != Enums.GatewayType.Stripe)
+            {
+                throw new GatewayException("Switching from one payment type to another is not supported. " +
+                    "Contact us for assistance.");
+            }
+
             var updatedSubscriber = false;
 
             var cardService = new StripeCardService();
             var customerService = new StripeCustomerService();
             StripeCustomer customer = null;
 
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                customer = await customerService.GetAsync(subscriber.StripeCustomerId);
+                customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
             }
 
             if(customer == null)
@@ -261,7 +268,8 @@ namespace Bit.Core.Services
                     SourceToken = paymentToken
                 });
 
-                subscriber.StripeCustomerId = customer.Id;
+                subscriber.Gateway = Enums.GatewayType.Stripe;
+                subscriber.GatewayCustomerId = customer.Id;
                 updatedSubscriber = true;
             }
             else
@@ -288,9 +296,9 @@ namespace Bit.Core.Services
             var chargeService = new StripeChargeService();
             var invoiceService = new StripeInvoiceService();
 
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                var customer = await customerService.GetAsync(subscriber.StripeCustomerId);
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
                 if(customer != null)
                 {
                     if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
@@ -324,19 +332,19 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
-                var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+                var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
                 if(sub != null)
                 {
                     billingInfo.Subscription = new BillingInfo.BillingSubscription(sub);
                 }
 
-                if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+                if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
                 {
                     try
                     {
-                        var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.StripeCustomerId);
+                        var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId);
                         if(upcomingInvoice != null)
                         {
                             billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoice(upcomingInvoice);

@@ -16,12 +16,12 @@ namespace Bit.Core.Utilities
                 throw new ArgumentNullException(nameof(storableSubscriber));
             }
 
-            if(string.IsNullOrWhiteSpace(storableSubscriber.StripeCustomerId))
+            if(string.IsNullOrWhiteSpace(storableSubscriber.GatewayCustomerId))
             {
                 throw new BadRequestException("No payment method found.");
             }
 
-            if(string.IsNullOrWhiteSpace(storableSubscriber.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(storableSubscriber.GatewaySubscriptionId))
             {
                 throw new BadRequestException("No subscription found.");
             }

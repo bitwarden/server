@@ -1,6 +1,8 @@
 ﻿using System;
 using Bit.Core.Utilities;
 using Bit.Core.Enums;
+using Bit.Core.Services;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.Models.Table
 {
@@ -19,8 +21,9 @@ namespace Bit.Core.Models.Table
         public bool UseTotp { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
-        public string StripeCustomerId { get; set; }
-        public string StripeSubscriptionId { get; set; }
+        public GatewayType? Gateway { get; set; }
+        public string GatewayCustomerId { get; set; }
+        public string GatewaySubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
@@ -62,6 +65,29 @@ namespace Bit.Core.Models.Table
             }
 
             return maxStorageBytes - Storage.Value;
+        }
+
+        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
+        {
+            if(Gateway == null)
+            {
+                throw new BadRequestException("No gateway.");
+            }
+
+            IPaymentService paymentService = null;
+            switch(Gateway)
+            {
+                case GatewayType.Stripe:
+                    paymentService = new StripePaymentService();
+                    break;
+                case GatewayType.Braintree:
+                    paymentService = new BraintreePaymentService(globalSettings);
+                    break;
+                default:
+                    throw new NotSupportedException("Unsupported gateway.");
+            }
+
+            return paymentService;
         }
     }
 }

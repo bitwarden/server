@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
 using Bit.Core.Services;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.Models.Table
 {
@@ -31,8 +32,9 @@ namespace Bit.Core.Models.Table
         public bool Premium { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
-        public string StripeCustomerId { get; set; }
-        public string StripeSubscriptionId { get; set; }
+        public GatewayType? Gateway { get; set; }
+        public string GatewayCustomerId { get; set; }
+        public string GatewaySubscriptionId { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
@@ -139,14 +141,22 @@ namespace Bit.Core.Models.Table
 
         public IPaymentService GetPaymentService(GlobalSettings globalSettings)
         {
-            IPaymentService paymentService = null;
-            if(StripeSubscriptionId.StartsWith("sub_"))
+            if(Gateway == null)
             {
-                paymentService = new StripePaymentService();
+                throw new BadRequestException("No gateway.");
             }
-            else
+
+            IPaymentService paymentService = null;
+            switch(Gateway)
             {
-                paymentService = new BraintreePaymentService(globalSettings);
+                case GatewayType.Stripe:
+                    paymentService = new StripePaymentService();
+                    break;
+                case GatewayType.Braintree:
+                    paymentService = new BraintreePaymentService(globalSettings);
+                    break;
+                default:
+                    throw new NotSupportedException("Unsupported gateway.");
             }
 
             return paymentService;

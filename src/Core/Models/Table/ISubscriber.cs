@@ -1,10 +1,15 @@
-﻿namespace Bit.Core.Models.Table
+﻿using Bit.Core.Enums;
+using Bit.Core.Services;
+
+namespace Bit.Core.Models.Table
 {
     public interface ISubscriber
     {
-        string StripeCustomerId { get; set; }
-        string StripeSubscriptionId { get; set; }
+        GatewayType? Gateway { get; set; }
+        string GatewayCustomerId { get; set; }
+        string GatewaySubscriptionId { get; set; }
         string BillingEmailAddress();
         string BillingName();
+        IPaymentService GetPaymentService(GlobalSettings globalSettings);
     }
 }

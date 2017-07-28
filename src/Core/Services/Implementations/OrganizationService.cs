@@ -95,7 +95,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            if(string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
                 throw new BadRequestException("No payment method found.");
             }
@@ -160,7 +160,7 @@ namespace Bit.Core.Services
             // TODO: Groups?
 
             var subscriptionService = new StripeSubscriptionService();
-            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 // They must have been on a free plan. Create new sub.
                 var subCreateOptions = new StripeSubscriptionCreateOptions
@@ -190,7 +190,7 @@ namespace Bit.Core.Services
                     });
                 }
 
-                await subscriptionService.CreateAsync(organization.StripeCustomerId, subCreateOptions);
+                await subscriptionService.CreateAsync(organization.GatewayCustomerId, subCreateOptions);
             }
             else
             {
@@ -218,7 +218,7 @@ namespace Bit.Core.Services
                     });
                 }
 
-                await subscriptionService.UpdateAsync(organization.StripeSubscriptionId, subUpdateOptions);
+                await subscriptionService.UpdateAsync(organization.GatewaySubscriptionId, subUpdateOptions);
             }
 
             // TODO: Update organization
@@ -256,12 +256,12 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            if(string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
                 throw new BadRequestException("No payment method found.");
             }
 
-            if(string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 throw new BadRequestException("No subscription found.");
             }
@@ -307,7 +307,7 @@ namespace Bit.Core.Services
 
             var subscriptionItemService = new StripeSubscriptionItemService();
             var subscriptionService = new StripeSubscriptionService();
-            var sub = await subscriptionService.GetAsync(organization.StripeSubscriptionId);
+            var sub = await subscriptionService.GetAsync(organization.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new BadRequestException("Subscription not found.");
@@ -469,8 +469,9 @@ namespace Bit.Core.Services
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
                 Plan = plan.Name,
-                StripeCustomerId = customer?.Id,
-                StripeSubscriptionId = subscription?.Id,
+                Gateway = GatewayType.Stripe,
+                GatewayCustomerId = customer?.Id,
+                GatewaySubscriptionId = subscription?.Id,
                 Enabled = true,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
@@ -515,10 +516,10 @@ namespace Bit.Core.Services
 
         public async Task DeleteAsync(Organization organization)
         {
-            if(!string.IsNullOrWhiteSpace(organization.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 var subscriptionService = new StripeSubscriptionService();
-                var canceledSub = await subscriptionService.CancelAsync(organization.StripeSubscriptionId, false);
+                var canceledSub = await subscriptionService.CancelAsync(organization.GatewaySubscriptionId, false);
                 if(!canceledSub.CanceledAt.HasValue)
                 {
                     throw new BadRequestException("Unable to cancel subscription.");
@@ -559,10 +560,10 @@ namespace Bit.Core.Services
 
             await _organizationRepository.ReplaceAsync(organization);
 
-            if(updateBilling && !string.IsNullOrWhiteSpace(organization.StripeCustomerId))
+            if(updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
                 var customerService = new StripeCustomerService();
-                await customerService.UpdateAsync(organization.StripeCustomerId, new StripeCustomerUpdateOptions
+                await customerService.UpdateAsync(organization.GatewayCustomerId, new StripeCustomerUpdateOptions
                 {
                     Email = organization.BillingEmail,
                     Description = organization.BusinessName

@@ -164,10 +164,10 @@ namespace Bit.Core.Services
                 });
             }
 
-            if(!string.IsNullOrWhiteSpace(user.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
             {
                 var subscriptionService = new StripeSubscriptionService();
-                var canceledSub = await subscriptionService.CancelAsync(user.StripeSubscriptionId, false);
+                var canceledSub = await subscriptionService.CancelAsync(user.GatewaySubscriptionId, false);
                 if(!canceledSub.CanceledAt.HasValue)
                 {
                     throw new BadRequestException("Unable to cancel subscription.");
@@ -560,7 +560,16 @@ namespace Bit.Core.Services
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken)
         {
-            var paymentService = user.GetPaymentService(_globalSettings);
+            IPaymentService paymentService = null;
+            if(paymentToken.StartsWith("tok_"))
+            {
+                paymentService = new StripePaymentService();
+            }
+            else
+            {
+                paymentService = new BraintreePaymentService(_globalSettings);
+            }
+
             var updated = await paymentService.UpdatePaymentMethodAsync(user, paymentToken);
             if(updated)
             {

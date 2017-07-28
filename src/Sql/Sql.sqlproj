@@ -205,4 +205,7 @@
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteAttachment.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="Sql.refactorlog" />
+  </ItemGroup>
 </Project>

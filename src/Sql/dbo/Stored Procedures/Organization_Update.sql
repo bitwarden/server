@@ -12,8 +12,9 @@
     @UseTotp BIT,
     @Storage BIGINT,
     @MaxStorageGb SMALLINT,
-    @StripeCustomerId VARCHAR(50),
-    @StripeSubscriptionId VARCHAR(50),
+    @Gateway TINYINT,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -37,8 +38,9 @@ BEGIN
         [UseTotp] = @UseTotp,
         [Storage] = @Storage,
         [MaxStorageGb] = @MaxStorageGb,
-        [StripeCustomerId] = @StripeCustomerId,
-        [StripeSubscriptionId] = @StripeSubscriptionId,
+        [Gateway] = @Gateway,
+        [GatewayCustomerId] = @GatewayCustomerId,
+        [GatewaySubscriptionId] = @GatewaySubscriptionId,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

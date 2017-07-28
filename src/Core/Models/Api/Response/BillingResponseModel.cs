@@ -55,7 +55,7 @@ namespace Bit.Core.Models.Api
             EndDate = sub.EndDate;
             CancelledDate = sub.CancelledDate;
             CancelAtEndDate = sub.CancelAtEndDate;
-            Cancelled = Cancelled;
+            Cancelled = sub.Cancelled;
             if(sub.Items != null)
             {
                 Items = sub.Items.Select(i => new BillingSubscriptionItem(i));

@@ -29,7 +29,7 @@ namespace Bit.Core.Services
 
         public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId)
         {
-            var sub = await _gateway.Subscription.FindAsync(storableSubscriber.StripeSubscriptionId);
+            var sub = await _gateway.Subscription.FindAsync(storableSubscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription was not found.");
@@ -82,17 +82,17 @@ namespace Bit.Core.Services
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
         {
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
-                await _gateway.Subscription.CancelAsync(subscriber.StripeSubscriptionId);
+                await _gateway.Subscription.CancelAsync(subscriber.GatewaySubscriptionId);
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
                 return;
             }
 
-            var transactionRequest = new TransactionSearchRequest().CustomerId.Is(subscriber.StripeCustomerId);
+            var transactionRequest = new TransactionSearchRequest().CustomerId.Is(subscriber.GatewayCustomerId);
             var transactions = _gateway.Transaction.Search(transactionRequest);
 
             if((transactions?.MaximumCount ?? 0) > 0)
@@ -103,7 +103,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            await _gateway.Customer.DeleteAsync(subscriber.StripeCustomerId);
+            await _gateway.Customer.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
         public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
@@ -113,12 +113,12 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 throw new GatewayException("No subscription.");
             }
 
-            var sub = await _gateway.Subscription.FindAsync(subscriber.StripeSubscriptionId);
+            var sub = await _gateway.Subscription.FindAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription was not found.");
@@ -138,7 +138,7 @@ namespace Bit.Core.Services
                     NumberOfBillingCycles = sub.CurrentBillingCycle
                 };
 
-                var result = await _gateway.Subscription.UpdateAsync(subscriber.StripeSubscriptionId, req);
+                var result = await _gateway.Subscription.UpdateAsync(subscriber.GatewaySubscriptionId, req);
                 if(!result.IsSuccess())
                 {
                     throw new GatewayException("Unable to cancel subscription.");
@@ -146,7 +146,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                var result = await _gateway.Subscription.CancelAsync(subscriber.StripeSubscriptionId);
+                var result = await _gateway.Subscription.CancelAsync(subscriber.GatewaySubscriptionId);
                 if(!result.IsSuccess())
                 {
                     throw new GatewayException("Unable to cancel subscription.");
@@ -157,9 +157,9 @@ namespace Bit.Core.Services
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                var customer = await _gateway.Customer.FindAsync(subscriber.StripeCustomerId);
+                var customer = await _gateway.Customer.FindAsync(subscriber.GatewayCustomerId);
                 if(customer != null)
                 {
                     if(customer.DefaultPaymentMethod != null)
@@ -174,9 +174,9 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
-                var sub = await _gateway.Subscription.FindAsync(subscriber.StripeSubscriptionId);
+                var sub = await _gateway.Subscription.FindAsync(subscriber.GatewaySubscriptionId);
                 if(sub != null)
                 {
                     var plans = await _gateway.Plan.AllAsync();
@@ -184,7 +184,8 @@ namespace Bit.Core.Services
                     billingInfo.Subscription = new BillingInfo.BillingSubscription(sub, plan);
                 }
 
-                if(sub.NextBillingDate.HasValue)
+                if(!billingInfo.Subscription.Cancelled && !billingInfo.Subscription.CancelAtEndDate &&
+                    sub.NextBillingDate.HasValue)
                 {
                     billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoice(sub);
                 }
@@ -237,8 +238,9 @@ namespace Bit.Core.Services
                 throw new GatewayException("Failed to create subscription.");
             }
 
-            user.StripeCustomerId = customerResult.Target.Id;
-            user.StripeSubscriptionId = subResult.Target.Id;
+            user.Gateway = Enums.GatewayType.Braintree;
+            user.GatewayCustomerId = customerResult.Target.Id;
+            user.GatewaySubscriptionId = subResult.Target.Id;
         }
 
         public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)
@@ -248,12 +250,12 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            if(string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 throw new GatewayException("No subscription.");
             }
 
-            var sub = await _gateway.Subscription.FindAsync(subscriber.StripeSubscriptionId);
+            var sub = await _gateway.Subscription.FindAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
                 throw new GatewayException("Subscription was not found.");
@@ -270,7 +272,7 @@ namespace Bit.Core.Services
                 NumberOfBillingCycles = null
             };
 
-            var result = await _gateway.Subscription.UpdateAsync(subscriber.StripeSubscriptionId, req);
+            var result = await _gateway.Subscription.UpdateAsync(subscriber.GatewaySubscriptionId, req);
             if(!result.IsSuccess())
             {
                 throw new GatewayException("Unable to reinstate subscription.");
@@ -284,12 +286,18 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
+            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != Enums.GatewayType.Braintree)
+            {
+                throw new GatewayException("Switching from one payment type to another is not supported. " +
+                    "Contact us for assistance.");
+            }
+
             var updatedSubscriber = false;
             Customer customer = null;
 
-            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                customer = await _gateway.Customer.FindAsync(subscriber.StripeCustomerId);
+                customer = await _gateway.Customer.FindAsync(subscriber.GatewayCustomerId);
             }
 
             if(customer == null)
@@ -306,7 +314,8 @@ namespace Bit.Core.Services
                 }
 
                 customer = result.Target;
-                subscriber.StripeCustomerId = customer.Id;
+                subscriber.Gateway = Enums.GatewayType.Braintree;
+                subscriber.GatewayCustomerId = customer.Id;
                 updatedSubscriber = true;
             }
             else
