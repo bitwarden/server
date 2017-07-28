@@ -323,7 +323,7 @@ namespace Bit.Core.Services
                 }
 
                 var org = await _organizationRepository.GetByIdAsync(organizationId);
-                if(!org.MaxStorageGb.HasValue)
+                if(hasAttachments && !org.MaxStorageGb.HasValue)
                 {
                     throw new BadRequestException("This organization cannot use attachments.");
                 }
