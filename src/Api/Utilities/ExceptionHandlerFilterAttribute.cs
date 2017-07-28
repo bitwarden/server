@@ -44,6 +44,11 @@ namespace Bit.Api.Utilities
                 context.HttpContext.Response.StatusCode = 400;
                 errorModel = new ErrorResponseModel(stripeException.StripeError.Parameter, stripeException.Message);
             }
+            else if(exception is GatewayException)
+            {
+                errorModel.Message = exception.Message;
+                context.HttpContext.Response.StatusCode = 400;
+            }
             else if(exception is ApplicationException)
             {
                 context.HttpContext.Response.StatusCode = 402;

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Bit.Core.Models.Business;
 using Stripe;
 using Bit.Core.Models.Table;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {
@@ -32,47 +33,32 @@ namespace Bit.Core.Models.Api
 
     public class BillingSource
     {
-        public BillingSource(Source source)
+        public BillingSource(BillingInfo.BillingSource source)
         {
             Type = source.Type;
-
-            switch(source.Type)
-            {
-                case SourceType.Card:
-                    Description = $"{source.Card.Brand}, *{source.Card.Last4}, " +
-                        string.Format("{0}/{1}",
-                            string.Concat(source.Card.ExpirationMonth.Length == 1 ?
-                                "0" : string.Empty, source.Card.ExpirationMonth),
-                            source.Card.ExpirationYear);
-                    CardBrand = source.Card.Brand;
-                    break;
-                case SourceType.BankAccount:
-                    Description = $"{source.BankAccount.BankName}, *{source.BankAccount.Last4}";
-                    break;
-                // bitcoin/alipay?
-                default:
-                    break;
-            }
+            CardBrand = source.CardBrand;
+            Description = source.Description;
         }
 
-        public SourceType Type { get; set; }
+        public PaymentMethodType Type { get; set; }
         public string CardBrand { get; set; }
         public string Description { get; set; }
     }
 
     public class BillingSubscription
     {
-        public BillingSubscription(StripeSubscription sub)
+        public BillingSubscription(BillingInfo.BillingSubscription sub)
         {
             Status = sub.Status;
-            TrialStartDate = sub.TrialStart;
-            TrialEndDate = sub.TrialEnd;
-            EndDate = sub.CurrentPeriodEnd;
-            CancelledDate = sub.CanceledAt;
-            CancelAtEndDate = sub.CancelAtPeriodEnd;
-            if(sub.Items?.Data != null)
+            TrialStartDate = sub.TrialStartDate;
+            TrialEndDate = sub.TrialEndDate;
+            EndDate = sub.EndDate;
+            CancelledDate = sub.CancelledDate;
+            CancelAtEndDate = sub.CancelAtEndDate;
+            Cancelled = Cancelled;
+            if(sub.Items != null)
             {
-                Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
+                Items = sub.Items.Select(i => new BillingSubscriptionItem(i));
             }
         }
 
@@ -82,19 +68,16 @@ namespace Bit.Core.Models.Api
         public DateTime? CancelledDate { get; set; }
         public bool CancelAtEndDate { get; set; }
         public string Status { get; set; }
+        public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
 
         public class BillingSubscriptionItem
         {
-            public BillingSubscriptionItem(StripeSubscriptionItem item)
+            public BillingSubscriptionItem(BillingInfo.BillingSubscription.BillingSubscriptionItem item)
             {
-                if(item.Plan != null)
-                {
-                    Name = item.Plan.Name;
-                    Amount = item.Plan.Amount / 100M;
-                    Interval = item.Plan.Interval;
-                }
-
+                Name = item.Name;
+                Amount = item.Amount;
+                Interval = item.Interval;
                 Quantity = item.Quantity;
             }
 
@@ -107,10 +90,10 @@ namespace Bit.Core.Models.Api
 
     public class BillingInvoice
     {
-        public BillingInvoice(StripeInvoice inv)
+        public BillingInvoice(BillingInfo.BillingInvoice inv)
         {
-            Amount = inv.AmountDue / 100M;
-            Date = inv.Date.Value;
+            Amount = inv.Amount;
+            Date = inv.Date;
         }
 
         public decimal Amount { get; set; }
@@ -119,12 +102,12 @@ namespace Bit.Core.Models.Api
 
     public class BillingCharge
     {
-        public BillingCharge(StripeCharge charge)
+        public BillingCharge(BillingInfo.BillingCharge charge)
         {
-            Amount = charge.Amount / 100M;
-            RefundedAmount = charge.AmountRefunded / 100M;
-            PaymentSource = charge.Source != null ? new BillingSource(charge.Source) : null;
-            CreatedDate = charge.Created;
+            Amount = charge.Amount;
+            RefundedAmount = charge.RefundedAmount;
+            PaymentSource = charge.PaymentSource != null ? new BillingSource(charge.PaymentSource) : null;
+            CreatedDate = charge.CreatedDate;
             FailureMessage = charge.FailureMessage;
             Refunded = charge.Refunded;
             Status = charge.Status;

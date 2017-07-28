@@ -25,6 +25,7 @@ namespace Bit.Core.Services
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushNotificationService;
         private readonly IPushRegistrationService _pushRegistrationService;
+        private readonly StripePaymentService _stripePaymentService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -46,6 +47,7 @@ namespace Bit.Core.Services
             _mailService = mailService;
             _pushNotificationService = pushNotificationService;
             _pushRegistrationService = pushRegistrationService;
+            _stripePaymentService = new StripePaymentService();
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
@@ -56,7 +58,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var updated = await BillingHelpers.UpdatePaymentMethodAsync(organization, paymentToken);
+            var updated = await _stripePaymentService.UpdatePaymentMethodAsync(organization, paymentToken);
             if(updated)
             {
                 await _organizationRepository.ReplaceAsync(organization);
@@ -71,7 +73,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await BillingHelpers.CancelSubscriptionAsync(organization, endOfPeriod);
+            await _stripePaymentService.CancelSubscriptionAsync(organization, endOfPeriod);
         }
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -82,7 +84,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await BillingHelpers.ReinstateSubscriptionAsync(organization);
+            await _stripePaymentService.ReinstateSubscriptionAsync(organization);
         }
 
         public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
@@ -241,7 +243,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(organization, storageAdjustmentGb, plan.StripStoragePlanId);
+            await BillingHelpers.AdjustStorageAsync(_stripePaymentService, organization, storageAdjustmentGb,
+                plan.StripStoragePlanId);
             await _organizationRepository.ReplaceAsync(organization);
         }
 
@@ -337,7 +340,7 @@ namespace Bit.Core.Services
 
             if(additionalSeats > 0)
             {
-                await BillingHelpers.PreviewUpcomingInvoiceAndPayAsync(organization, plan.StripeSeatPlanId, 500);
+                await _stripePaymentService.PreviewUpcomingInvoiceAndPayAsync(organization, plan.StripeSeatPlanId, 500);
             }
 
             organization.Seats = (short?)newSeatTotal;
@@ -500,7 +503,7 @@ namespace Bit.Core.Services
             }
             catch
             {
-                await BillingHelpers.CancelAndRecoverChargesAsync(subscription?.Id, customer?.Id);
+                await _stripePaymentService.CancelAndRecoverChargesAsync(organization);
                 if(organization.Id != default(Guid))
                 {
                     await _organizationRepository.DeleteAsync(organization);

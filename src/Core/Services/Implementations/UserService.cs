@@ -514,7 +514,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already a premium user.");
             }
 
-            IPaymentService paymentService = new StripePaymentService(_globalSettings);
+            IPaymentService paymentService = null;
+            if(paymentToken.StartsWith("tok_"))
+            {
+                paymentService = new StripePaymentService();
+            }
+            else
+            {
+                paymentService = new BraintreePaymentService(_globalSettings);
+            }
+
             await paymentService.PurchasePremiumAsync(user, paymentToken, additionalStorageGb);
 
             user.Premium = true;
@@ -527,7 +536,7 @@ namespace Bit.Core.Services
             }
             catch
             {
-                await BillingHelpers.CancelAndRecoverChargesAsync(user.StripeSubscriptionId, user.StripeCustomerId);
+                await paymentService.CancelAndRecoverChargesAsync(user);
                 throw;
             }
         }
@@ -544,13 +553,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Not a premium user.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(user, storageAdjustmentGb, StoragePlanId);
+            var paymentService = user.GetPaymentService(_globalSettings);
+            await BillingHelpers.AdjustStorageAsync(paymentService, user, storageAdjustmentGb, StoragePlanId);
             await SaveUserAsync(user);
         }
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken)
         {
-            var updated = await BillingHelpers.UpdatePaymentMethodAsync(user, paymentToken);
+            var paymentService = user.GetPaymentService(_globalSettings);
+            var updated = await paymentService.UpdatePaymentMethodAsync(user, paymentToken);
             if(updated)
             {
                 await SaveUserAsync(user);
@@ -559,12 +570,14 @@ namespace Bit.Core.Services
 
         public async Task CancelPremiumAsync(User user, bool endOfPeriod = false)
         {
-            await BillingHelpers.CancelSubscriptionAsync(user, endOfPeriod);
+            var paymentService = user.GetPaymentService(_globalSettings);
+            await paymentService.CancelSubscriptionAsync(user, endOfPeriod);
         }
 
         public async Task ReinstatePremiumAsync(User user)
         {
-            await BillingHelpers.ReinstateSubscriptionAsync(user);
+            var paymentService = user.GetPaymentService(_globalSettings);
+            await paymentService.ReinstateSubscriptionAsync(user);
         }
 
         public async Task DisablePremiumAsync(Guid userId)

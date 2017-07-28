@@ -74,7 +74,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var billingInfo = await BillingHelpers.GetBillingAsync(organization);
+            var paymentService = new StripePaymentService();
+            var billingInfo = await paymentService.GetBillingAsync(organization);
             if(billingInfo == null)
             {
                 throw new NotFoundException();
@@ -264,10 +265,10 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             await _organizationService.ImportAsync(
-                orgIdGuid, 
-                userId.Value, 
+                orgIdGuid,
+                userId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
-                model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()), 
+                model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
                 model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
         }
     }

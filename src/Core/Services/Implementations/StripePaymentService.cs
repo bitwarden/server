@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Stripe;
 using System.Collections.Generic;
+using Bit.Core.Exceptions;
+using System.Linq;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -10,12 +13,6 @@ namespace Bit.Core.Services
     {
         private const string PremiumPlanId = "premium-annually";
         private const string StoragePlanId = "storage-gb-annually";
-
-        public StripePaymentService(
-            GlobalSettings globalSettings)
-        {
-
-        }
 
         public async Task PurchasePremiumAsync(User user, string paymentToken, short additionalStorageGb)
         {
@@ -65,6 +62,291 @@ namespace Bit.Core.Services
 
             user.StripeCustomerId = customer.Id;
             user.StripeSubscriptionId = subscription.Id;
+        }
+
+        public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
+            string storagePlanId)
+        {
+            var subscriptionItemService = new StripeSubscriptionItemService();
+            var subscriptionService = new StripeSubscriptionService();
+            var sub = await subscriptionService.GetAsync(storableSubscriber.StripeSubscriptionId);
+            if(sub == null)
+            {
+                throw new GatewayException("Subscription not found.");
+            }
+
+            var storageItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
+            if(additionalStorage > 0 && storageItem == null)
+            {
+                await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
+                {
+                    PlanId = storagePlanId,
+                    Quantity = additionalStorage,
+                    Prorate = true,
+                    SubscriptionId = sub.Id
+                });
+            }
+            else if(additionalStorage > 0 && storageItem != null)
+            {
+                await subscriptionItemService.UpdateAsync(storageItem.Id, new StripeSubscriptionItemUpdateOptions
+                {
+                    PlanId = storagePlanId,
+                    Quantity = additionalStorage,
+                    Prorate = true
+                });
+            }
+            else if(additionalStorage == 0 && storageItem != null)
+            {
+                await subscriptionItemService.DeleteAsync(storageItem.Id);
+            }
+
+            if(additionalStorage > 0)
+            {
+                await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, storagePlanId, 400);
+            }
+        }
+
+        public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
+        {
+            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            {
+                var subscriptionService = new StripeSubscriptionService();
+                await subscriptionService.CancelAsync(subscriber.StripeSubscriptionId, false);
+            }
+
+            if(string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            {
+                return;
+            }
+
+            var chargeService = new StripeChargeService();
+            var charges = await chargeService.ListAsync(new StripeChargeListOptions
+            {
+                CustomerId = subscriber.StripeCustomerId
+            });
+
+            if(charges?.Data != null)
+            {
+                var refundService = new StripeRefundService();
+                foreach(var charge in charges.Data.Where(c => !c.Refunded))
+                {
+                    await refundService.CreateAsync(charge.Id);
+                }
+            }
+
+            var customerService = new StripeCustomerService();
+            await customerService.DeleteAsync(subscriber.StripeCustomerId);
+        }
+
+        public async Task PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
+            int prorateThreshold = 500)
+        {
+            var invoiceService = new StripeInvoiceService();
+            var upcomingPreview = await invoiceService.UpcomingAsync(subscriber.StripeCustomerId,
+                new StripeUpcomingInvoiceOptions
+                {
+                    SubscriptionId = subscriber.StripeSubscriptionId
+                });
+
+            var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
+                .TakeWhile(i => i.Plan.Id == planId && i.Proration).Sum(i => i.Amount);
+            if(prorationAmount.GetValueOrDefault() >= prorateThreshold)
+            {
+                try
+                {
+                    // Owes more than prorateThreshold on next invoice.
+                    // Invoice them and pay now instead of waiting until next month.
+                    var invoice = await invoiceService.CreateAsync(subscriber.StripeCustomerId,
+                        new StripeInvoiceCreateOptions
+                        {
+                            SubscriptionId = subscriber.StripeSubscriptionId
+                        });
+
+                    if(invoice.AmountDue > 0)
+                    {
+                        await invoiceService.PayAsync(invoice.Id);
+                    }
+                }
+                catch(StripeException) { }
+            }
+        }
+
+        public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
+        {
+            if(subscriber == null)
+            {
+                throw new ArgumentNullException(nameof(subscriber));
+            }
+
+            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            {
+                throw new GatewayException("No subscription.");
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+            if(sub == null)
+            {
+                throw new GatewayException("Subscription was not found.");
+            }
+
+            if(sub.CanceledAt.HasValue)
+            {
+                throw new GatewayException("Subscription is already canceled.");
+            }
+
+            var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
+            if(!canceledSub.CanceledAt.HasValue)
+            {
+                throw new GatewayException("Unable to cancel subscription.");
+            }
+        }
+
+        public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)
+        {
+            if(subscriber == null)
+            {
+                throw new ArgumentNullException(nameof(subscriber));
+            }
+
+            if(string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            {
+                throw new GatewayException("No subscription.");
+            }
+
+            var subscriptionService = new StripeSubscriptionService();
+            var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+            if(sub == null)
+            {
+                throw new GatewayException("Subscription was not found.");
+            }
+
+            if((sub.Status != "active" && sub.Status != "trialing") || !sub.CanceledAt.HasValue)
+            {
+                throw new GatewayException("Subscription is not marked for cancellation.");
+            }
+
+            // Just touch the subscription.
+            var updatedSub = await subscriptionService.UpdateAsync(sub.Id, new StripeSubscriptionUpdateOptions { });
+            if(updatedSub.CanceledAt.HasValue)
+            {
+                throw new GatewayException("Unable to reinstate subscription.");
+            }
+        }
+
+        public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, string paymentToken)
+        {
+            if(subscriber == null)
+            {
+                throw new ArgumentNullException(nameof(subscriber));
+            }
+
+            var updatedSubscriber = false;
+
+            var cardService = new StripeCardService();
+            var customerService = new StripeCustomerService();
+            StripeCustomer customer = null;
+
+            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            {
+                customer = await customerService.GetAsync(subscriber.StripeCustomerId);
+            }
+
+            if(customer == null)
+            {
+                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+                {
+                    Description = subscriber.BillingName(),
+                    Email = subscriber.BillingEmailAddress(),
+                    SourceToken = paymentToken
+                });
+
+                subscriber.StripeCustomerId = customer.Id;
+                updatedSubscriber = true;
+            }
+            else
+            {
+                await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
+                {
+                    SourceToken = paymentToken
+                });
+
+                if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
+                {
+                    await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
+                }
+            }
+
+            return updatedSubscriber;
+        }
+
+        public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
+        {
+            var billingInfo = new BillingInfo();
+            var customerService = new StripeCustomerService();
+            var subscriptionService = new StripeSubscriptionService();
+            var chargeService = new StripeChargeService();
+            var invoiceService = new StripeInvoiceService();
+
+            if(!string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+            {
+                var customer = await customerService.GetAsync(subscriber.StripeCustomerId);
+                if(customer != null)
+                {
+                    if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
+                    {
+                        if(customer.DefaultSourceId.StartsWith("card_"))
+                        {
+                            var source = customer.Sources.Data.FirstOrDefault(s => s.Card?.Id == customer.DefaultSourceId);
+                            if(source != null)
+                            {
+                                billingInfo.PaymentSource = new BillingInfo.BillingSource(source);
+                            }
+                        }
+                        else if(customer.DefaultSourceId.StartsWith("ba_"))
+                        {
+                            var source = customer.Sources.Data
+                                .FirstOrDefault(s => s.BankAccount?.Id == customer.DefaultSourceId);
+                            if(source != null)
+                            {
+                                billingInfo.PaymentSource = new BillingInfo.BillingSource(source);
+                            }
+                        }
+                    }
+
+                    var charges = await chargeService.ListAsync(new StripeChargeListOptions
+                    {
+                        CustomerId = customer.Id,
+                        Limit = 20
+                    });
+                    billingInfo.Charges = charges?.Data?.OrderByDescending(c => c.Created)
+                        .Select(c => new BillingInfo.BillingCharge(c));
+                }
+            }
+
+            if(!string.IsNullOrWhiteSpace(subscriber.StripeSubscriptionId))
+            {
+                var sub = await subscriptionService.GetAsync(subscriber.StripeSubscriptionId);
+                if(sub != null)
+                {
+                    billingInfo.Subscription = new BillingInfo.BillingSubscription(sub);
+                }
+
+                if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.StripeCustomerId))
+                {
+                    try
+                    {
+                        var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.StripeCustomerId);
+                        if(upcomingInvoice != null)
+                        {
+                            billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoice(upcomingInvoice);
+                        }
+                    }
+                    catch(StripeException) { }
+                }
+            }
+
+            return billingInfo;
         }
     }
 }

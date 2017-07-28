@@ -11,6 +11,7 @@ using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -22,17 +23,20 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly UserManager<User> _userManager;
+        private readonly GlobalSettings _globalSettings;
 
         public AccountsController(
             IUserService userService,
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            GlobalSettings globalSettings)
         {
             _userService = userService;
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
             _userManager = userManager;
+            _globalSettings = globalSettings;
         }
 
         [HttpPost("register")]
@@ -363,7 +367,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var billingInfo = await BillingHelpers.GetBillingAsync(user);
+            var paymentService = user.GetPaymentService(_globalSettings);
+            var billingInfo = await paymentService.GetBillingAsync(user);
             if(billingInfo == null)
             {
                 throw new NotFoundException();

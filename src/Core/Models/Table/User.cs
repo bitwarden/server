@@ -4,6 +4,7 @@ using Bit.Core.Utilities;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
+using Bit.Core.Services;
 
 namespace Bit.Core.Models.Table
 {
@@ -134,6 +135,21 @@ namespace Bit.Core.Models.Table
             }
 
             return maxStorageBytes - Storage.Value;
+        }
+
+        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
+        {
+            IPaymentService paymentService = null;
+            if(StripeSubscriptionId.StartsWith("sub_"))
+            {
+                paymentService = new StripePaymentService();
+            }
+            else
+            {
+                paymentService = new BraintreePaymentService(globalSettings);
+            }
+
+            return paymentService;
         }
     }
 }
