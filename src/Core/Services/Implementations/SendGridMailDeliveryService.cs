@@ -33,14 +33,7 @@ namespace Bit.Core.Services
                 Subject = message.Subject,
                 From = new EmailAddress(_globalSettings.Mail.ReplyToEmail, _globalSettings.SiteName),
                 HtmlContent = message.HtmlContent,
-                PlainTextContent = message.TextContent,
-                TrackingSettings = new TrackingSettings
-                {
-                    ClickTracking = new ClickTracking
-                    {
-                        EnableText = false
-                    }
-                }
+                PlainTextContent = message.TextContent
             };
 
             sendGridMessage.AddTos(message.ToEmails.Select(e => new EmailAddress(e)).ToList());
