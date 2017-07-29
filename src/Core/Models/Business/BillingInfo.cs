@@ -196,7 +196,11 @@ namespace Bit.Core.Models.Business
 
             public BillingInvoice(Subscription sub)
             {
-                Amount = sub.NextBillAmount.GetValueOrDefault();
+                Amount = sub.NextBillAmount.GetValueOrDefault() + sub.Balance.GetValueOrDefault();
+                if(Amount < 0)
+                {
+                    Amount = 0;
+                }
                 Date = sub.NextBillingDate;
             }
 

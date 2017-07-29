@@ -40,7 +40,8 @@ namespace Bit.Core.Services
                 AddOns = new AddOnsRequest(),
                 Options = new SubscriptionOptionsRequest
                 {
-                    ProrateCharges = true
+                    ProrateCharges = true,
+                    RevertSubscriptionOnProrationFailure = true
                 }
             };
 
@@ -64,7 +65,8 @@ namespace Bit.Core.Services
                     new UpdateAddOnRequest
                     {
                         ExistingId = storageItem.Id,
-                        Quantity = additionalStorage
+                        Quantity = additionalStorage,
+                        NeverExpires = true
                     }
                 };
             }
