@@ -57,9 +57,8 @@ namespace Bit.Core.Utilities
 
         public static DataTable ToArrayTVP<T>(this IEnumerable<T> values, string columnName)
         {
-            var table = new DataTable();
+            var table = new DataTable($"{columnName}Array", "dbo");
             table.Columns.Add(columnName, typeof(T));
-            table.SetTypeName($"[dbo].[{columnName}Array]");
 
             if(values != null)
             {
@@ -74,8 +73,7 @@ namespace Bit.Core.Utilities
 
         public static DataTable ToArrayTVP(this IEnumerable<SelectionReadOnly> values)
         {
-            var table = new DataTable();
-            table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
+            var table = new DataTable("SelectionReadOnlyArray", "dbo");
 
             var idColumn = new DataColumn("Id", typeof(Guid));
             table.Columns.Add(idColumn);

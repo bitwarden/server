@@ -98,24 +98,50 @@ namespace Bit.Core.Services
         public async Task CleanupAsync(Guid cipherId)
         {
             await InitAsync();
-            foreach(var blob in _attachmentsContainer.ListBlobs($"temp/{cipherId}", true))
+            var segment = await _attachmentsContainer.ListBlobsSegmentedAsync($"temp/{cipherId}", true,
+                BlobListingDetails.None, 100, null, null, null);
+
+            while(true)
             {
-                if(blob is CloudBlockBlob blockBlob)
+                foreach(var blob in segment.Results)
                 {
-                    await blockBlob.DeleteIfExistsAsync();
+                    if(blob is CloudBlockBlob blockBlob)
+                    {
+                        await blockBlob.DeleteIfExistsAsync();
+                    }
                 }
+
+                if(segment.ContinuationToken == null)
+                {
+                    break;
+                }
+
+                segment = await _attachmentsContainer.ListBlobsSegmentedAsync(segment.ContinuationToken);
             }
         }
 
         public async Task DeleteAttachmentsForCipherAsync(Guid cipherId)
         {
             await InitAsync();
-            foreach(var blob in _attachmentsContainer.ListBlobs(cipherId.ToString(), true))
+            var segment = await _attachmentsContainer.ListBlobsSegmentedAsync(cipherId.ToString(), true,
+                BlobListingDetails.None, 100, null, null, null);
+
+            while(true)
             {
-                if(blob is CloudBlockBlob blockBlob)
+                foreach(var blob in segment.Results)
                 {
-                    await blockBlob.DeleteIfExistsAsync();
+                    if(blob is CloudBlockBlob blockBlob)
+                    {
+                        await blockBlob.DeleteIfExistsAsync();
+                    }
                 }
+
+                if(segment.ContinuationToken == null)
+                {
+                    break;
+                }
+
+                segment = await _attachmentsContainer.ListBlobsSegmentedAsync(segment.ContinuationToken);
             }
         }
 

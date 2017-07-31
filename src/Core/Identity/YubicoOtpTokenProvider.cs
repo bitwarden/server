@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
+#if NET461
 using YubicoDotNetClient;
+#endif
 using System.Linq;
 
 namespace Bit.Core.Identity
@@ -55,9 +57,14 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
+
+#if NET461
             var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
             var response = client.Verify(token);
             return Task.FromResult(response.Status == YubicoResponseStatus.Ok);
+#else
+            return Task.FromResult(false);
+#endif
         }
     }
 }

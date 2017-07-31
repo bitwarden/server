@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <VersionPrefix>1.8.2</VersionPrefix>
-    <TargetFramework>net461</TargetFramework>
+    <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
     <AssemblyName>Identity</AssemblyName>
     <RootNamespace>Bit.Identity</RootNamespace>
     <UserSecretsId>bitwarden-Identity</UserSecretsId>

@@ -52,9 +52,14 @@ namespace Bit.Core.Utilities
         {
             services.AddSingleton<IMailService, RazorViewMailService>();
             services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
+#if NET461
             services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
-            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+#else
+            services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
+            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+#endif
+            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
         }
 
@@ -154,6 +159,7 @@ namespace Bit.Core.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
+#if NET461
             if(!env.IsDevelopment())
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
@@ -162,6 +168,7 @@ namespace Bit.Core.Utilities
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
+#endif
         }
 
         public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
