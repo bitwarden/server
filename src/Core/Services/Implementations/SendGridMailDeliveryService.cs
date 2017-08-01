@@ -36,6 +36,7 @@ namespace Bit.Core.Services
                 PlainTextContent = message.TextContent
             };
 
+            sendGridMessage.SetClickTracking(true, false);
             sendGridMessage.AddTos(message.ToEmails.Select(e => new EmailAddress(e)).ToList());
 
             if(message.MetaData?.ContainsKey("SendGridTemplateId") ?? false)
