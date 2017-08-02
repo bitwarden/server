@@ -2,6 +2,7 @@
 {
     public class GlobalSettings
     {
+        public bool SelfHosted { get; set; }
         public virtual string SiteName { get; set; }
         public virtual string BaseVaultUri { get; set; }
         public virtual string BaseApiUri { get; set; }
