@@ -2,6 +2,8 @@
   "globalSettings": {
     "siteName": "bitwarden",
     "baseVaultUri": "http://localhost:4001/#",
+    "baseApiUri": "http://localhost:4000",
+    "baseIdentityUri": "http://localhost:33656",
     "stripeApiKey": "SECRET",
     "sqlServer": {
       "connectionString": "SECRET"

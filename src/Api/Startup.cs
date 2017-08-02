@@ -66,9 +66,6 @@ namespace Bit.Api
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 
-            // IdentityServer
-            services.AddCustomIdentityServerServices(Environment, globalSettings);
-
             // Identity
             services.AddCustomIdentityServices(globalSettings);
 
@@ -166,11 +163,8 @@ namespace Bit.Api
             app.UseCors("All");
 
             // Add IdentityServer to the request pipeline.
-            app.UseIdentityServer();
-            app.UseIdentityServerAuthentication(
-                GetIdentityOptions(env, IdentityServerAuthority(env, "identity", "33656"), "3"));
-            app.UseIdentityServerAuthentication(
-                GetIdentityOptions(env, IdentityServerAuthority(env, "api", "4000"), "2"));
+            app.UseIdentityServerAuthentication(GetIdentityOptions(env, globalSettings, string.Empty));
+            app.UseIdentityServerAuthentication(GetIdentityOptions(env, globalSettings, "3"));
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
@@ -180,39 +174,21 @@ namespace Bit.Api
         }
 
         private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env,
-            string authority, string suffix)
+            GlobalSettings globalSettings, string suffix)
         {
             var options = new IdentityServerAuthenticationOptions
             {
-                Authority = authority,
+                Authority = globalSettings.BaseIdentityUri,
                 AllowedScopes = new string[] { "api" },
                 RequireHttpsMetadata = !env.IsDevelopment(),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
                 // Suffix until we retire the old jwt schemes.
                 AuthenticationScheme = $"Bearer{suffix}",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString(
-                    $"Bearer{suffix}", $"access_token{suffix}")
+                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString($"Bearer{suffix}", $"access_token{suffix}")
             };
 
             return options;
-        }
-
-        private string IdentityServerAuthority(IHostingEnvironment env, string subdomain, string port)
-        {
-            if(env.IsProduction())
-            {
-                return $"https://{subdomain}.bitwarden.com";
-            }
-            else if(env.IsEnvironment("Preview"))
-            {
-                return $"https://preview-{subdomain}.bitwarden.com";
-            }
-            else
-            {
-                return $"http://localhost:{port}";
-                //return $"http://192.168.1.3:{port}"; // Desktop external
-            }
         }
     }
 }

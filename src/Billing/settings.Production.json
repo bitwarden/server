@@ -1,6 +1,8 @@
 ﻿{
   "globalSettings": {
     "baseVaultUri": "https://vault.bitwarden.com/#",
+    "baseApiUri": "https://api.bitwarden.com",
+    "baseIdentityUri": "https://identity.bitwarden.com",
     "braintree": {
       "production": true
     }
