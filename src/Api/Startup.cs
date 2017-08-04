@@ -178,9 +178,9 @@ namespace Bit.Api
         {
             var options = new IdentityServerAuthenticationOptions
             {
-                Authority = globalSettings.BaseIdentityUri,
+                Authority = globalSettings.BaseServiceUri.InternalIdentity,
                 AllowedScopes = new string[] { "api" },
-                RequireHttpsMetadata = !env.IsDevelopment(),
+                RequireHttpsMetadata = false && !env.IsDevelopment(),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
                 // Suffix until we retire the old jwt schemes.

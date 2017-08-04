@@ -125,7 +125,7 @@ namespace Bit.Core.Utilities
 
         public static string U2fAppIdUrl(GlobalSettings globalSettings)
         {
-            return globalSettings.U2f.AppId;
+            return string.Concat(globalSettings.BaseServiceUri.Vault, "/app-id.json");
         }
 
         public static string RandomString(int length, bool alpha = true, bool upper = true, bool lower = true,

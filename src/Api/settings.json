@@ -2,9 +2,12 @@
   "globalSettings": {
     "selfHosted": false,
     "siteName": "bitwarden",
-    "baseVaultUri": "http://localhost:4001/#",
-    "baseApiUri": "http://localhost:4000",
-    "baseIdentityUri": "http://localhost:33656",
+    "baseServiceUri": {
+      "vault": "http://localhost:4001",
+      "api": "http://localhost:4000",
+      "identity": "http://localhost:33656",
+      "identityInternal": "http://localhost:33656"
+    },
     "stripeApiKey": "SECRET",
     "sqlServer": {
       "connectionString": "SECRET"
@@ -40,9 +43,6 @@
     },
     "duo": {
       "aKey": "SECRET"
-    },
-    "u2f": {
-      "appId": "https://localhost:4001/app-id.json"
     },
     "braintree": {
       "production": false,

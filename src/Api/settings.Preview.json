@@ -1,10 +1,10 @@
 ﻿{
   "globalSettings": {
-    "baseVaultUri": "https://preview-vault.bitwarden.com/#",
-    "baseApiUri": "https://preview-api.bitwarden.com",
-    "baseIdentityUri": "https://preview-identity.bitwarden.com",
-    "u2f": {
-      "appId": "https://preview-vault.bitwarden.com/app-id.json"
+    "baseServiceUri": {
+      "vault": "https://preview-vault.bitwarden.com",
+      "api": "https://preview-api.bitwarden.com",
+      "identity": "https://preview-identity.bitwarden.com",
+      "identityInternal": "https://preview-identity.bitwarden.com"
     }
   }
 }

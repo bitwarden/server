@@ -40,7 +40,7 @@ namespace Bit.Core.Services
                 "Welcome",
                 user.Email,
                 WelcomeTemplateId);
-            
+
             AddCategories(message, new List<string> { AdministrativeCategoryName, "Welcome" });
 
             await _mailDeliveryService.SendEmailAsync(message);
@@ -196,7 +196,7 @@ namespace Bit.Core.Services
             }
 
             AddSubstitution(message, "{{siteName}}", _globalSettings.SiteName);
-            AddSubstitution(message, "{{baseVaultUri}}", _globalSettings.BaseVaultUri);
+            AddSubstitution(message, "{{baseVaultUri}}", string.Concat(_globalSettings.BaseServiceUri.Vault, "/#"));
 
             return message;
         }

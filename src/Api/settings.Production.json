@@ -1,10 +1,10 @@
 ﻿{
   "globalSettings": {
-    "baseVaultUri": "https://vault.bitwarden.com/#",
-    "baseApiUri": "https://api.bitwarden.com",
-    "baseIdentityUri": "https://identity.bitwarden.com",
-    "u2f": {
-      "appId": "https://vault.bitwarden.com/app-id.json"
+    "baseServiceUri": {
+      "vault": "https://vault.bitwarden.com",
+      "api": "https://api.bitwarden.com",
+      "identity": "https://identity.bitwarden.com",
+      "identityInternal": "https://identity.bitwarden.com"
     },
     "braintree": {
       "production": true

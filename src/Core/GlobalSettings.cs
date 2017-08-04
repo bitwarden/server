@@ -4,10 +4,8 @@
     {
         public bool SelfHosted { get; set; }
         public virtual string SiteName { get; set; }
-        public virtual string BaseVaultUri { get; set; }
-        public virtual string BaseApiUri { get; set; }
-        public virtual string BaseIdentityUri { get; set; }
         public virtual string StripeApiKey { get; set; }
+        public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
@@ -18,8 +16,15 @@
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
-        public virtual U2fSettings U2f { get; set; } = new U2fSettings();
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+
+        public class BaseServiceUriSettings
+        {
+            public string Vault { get; set; }
+            public string Api { get; set; }
+            public string Identity { get; set; }
+            public string InternalIdentity { get; set; }
+        }
 
         public class SqlServerSettings
         {
@@ -84,11 +89,6 @@
         public class DuoSettings
         {
             public string AKey { get; set; }
-        }
-
-        public class U2fSettings
-        {
-            public string AppId { get; set; }
         }
 
         public class BraintreeSettings
