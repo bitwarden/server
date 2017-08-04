@@ -133,6 +133,7 @@ namespace Bit.Core.Utilities
                     options.Endpoints.EnableUserInfoEndpoint = false;
                     options.Endpoints.EnableCheckSessionEndpoint = false;
                     options.Endpoints.EnableTokenRevocationEndpoint = false;
+                    options.IssuerUri = globalSettings.BaseServiceUri.InternalIdentity;
                 })
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddInMemoryClients(Clients.GetClients());
