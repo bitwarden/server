@@ -203,3 +203,4 @@ mail_dist/
 *.refactorlog
 *.scmp
 src/Core/Properties/launchSettings.json
+*.override.env

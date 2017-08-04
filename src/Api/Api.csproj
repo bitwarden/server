@@ -6,6 +6,7 @@
     <AssemblyName>Api</AssemblyName>
     <RootNamespace>Bit.Api</RootNamespace>
     <UserSecretsId>bitwarden-Api</UserSecretsId>
+    <DockerComposeProjectPath>..\..\docker\Docker.dcproj</DockerComposeProjectPath>
   </PropertyGroup>
 
   <ItemGroup>

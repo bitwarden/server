@@ -6,6 +6,7 @@
     <AssemblyName>Identity</AssemblyName>
     <RootNamespace>Bit.Identity</RootNamespace>
     <UserSecretsId>bitwarden-Identity</UserSecretsId>
+    <DockerComposeProjectPath>..\..\docker\Docker.dcproj</DockerComposeProjectPath>
   </PropertyGroup>
 
   <ItemGroup>
