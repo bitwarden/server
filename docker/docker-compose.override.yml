@@ -4,8 +4,13 @@ services:
   mssql:
     volumes:
       - mssql_data:/var/opt/mssql/data
+  identity:
+    volumes:
+      - c:/bitwarden/identity:/etc/bitwarden/identity
   nginx:
     volumes:
+      - c:/bitwarden/nginx:/etc/bitwarden/nginx
       - c:/bitwarden/letsencrypt:/etc/letsencrypt
+      - c:/bitwarden/ssl:/etc/certificates
 volumes:
   mssql_data:

@@ -49,7 +49,7 @@ namespace Bit.Identity
 
             // Services
             services.AddBaseServices();
-            services.AddDefaultServices();
+            services.AddDefaultServices(globalSettings);
         }
 
         public void Configure(

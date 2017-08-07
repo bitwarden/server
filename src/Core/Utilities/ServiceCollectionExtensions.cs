@@ -48,10 +48,19 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IGroupService, GroupService>();
         }
 
-        public static void AddDefaultServices(this IServiceCollection services)
+        public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
             services.AddSingleton<IMailService, RazorViewMailService>();
-            services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
+
+            if(!string.IsNullOrWhiteSpace(globalSettings.Mail.SendGridApiKey))
+            {
+                services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
+            }
+            else
+            {
+                services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
+            }
+
 #if NET461
             services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
@@ -59,8 +68,23 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
 #endif
-            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-            services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
+            if(!string.IsNullOrWhiteSpace(globalSettings.Storage.ConnectionString))
+            {
+                services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
+            }
+            else
+            {
+                services.AddSingleton<IBlockIpService, NoopBlockIpService>();
+            }
+
+            if(!string.IsNullOrWhiteSpace(globalSettings.Attachment.ConnectionString))
+            {
+                services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
+            }
+            else
+            {
+                services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
+            }
         }
 
         public static void AddNoopServices(this IServiceCollection services)
@@ -147,14 +171,18 @@ namespace Bit.Core.Utilities
             else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword) &&
                 System.IO.File.Exists("identity.pfx"))
             {
-                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx", 
+                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
                     globalSettings.IdentityServer.CertificatePassword);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificateThumbprint))
+            {
+                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
             else
             {
-                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
+                throw new Exception("No identity certificate to use.");
             }
 
             services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
@@ -168,7 +196,9 @@ namespace Bit.Core.Utilities
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
 #if NET461
-            if(!env.IsDevelopment() && !globalSettings.SelfHosted)
+            if(!env.IsDevelopment() && !globalSettings.SelfHosted &&
+                !string.IsNullOrWhiteSpace(globalSettings.Storage.ConnectionString) &&
+                !string.IsNullOrWhiteSpace(globalSettings.DataProtection.CertificateThumbprint))
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);

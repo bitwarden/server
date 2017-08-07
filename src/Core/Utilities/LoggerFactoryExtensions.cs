@@ -22,13 +22,22 @@ namespace Bit.Core.Utilities
                     filter = (e) => true;
                 }
 
-                var serilog = new LoggerConfiguration()
+                var config = new LoggerConfiguration()
                     .Enrich.FromLogContext()
-                    .Filter.ByIncludingOnly(filter)
-                    .WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
-                        timeToLive: TimeSpan.FromDays(7))
-                    .CreateLogger();
+                    .Filter.ByIncludingOnly(filter);
 
+                if(globalSettings.DocumentDb != null && !string.IsNullOrWhiteSpace(globalSettings.DocumentDb.Uri) && 
+                    !string.IsNullOrWhiteSpace(globalSettings.DocumentDb.Key))
+                {
+                    config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
+                        timeToLive: TimeSpan.FromDays(7));
+                }
+                else
+                {
+                    // local file sink
+                }
+
+                var serilog = config.CreateLogger();
                 factory.AddSerilog(serilog);
                 appLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
             }

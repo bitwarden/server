@@ -45,7 +45,7 @@ namespace Bit.Billing
 
             // Services
             services.AddBaseServices();
-            services.AddDefaultServices();
+            services.AddDefaultServices(globalSettings);
 
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
