@@ -124,6 +124,16 @@ server {{
                 }
 
                 sw.WriteLine($@"
+    location / {{
+        proxy_pass http://web/;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Url-Scheme $scheme;
+        proxy_redirect off;
+    }}
+
     location /api/ {{
         proxy_pass http://api/;
         proxy_set_header X-Real-IP $remote_addr;

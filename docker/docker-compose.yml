@@ -10,6 +10,11 @@ services:
       - mssql.override.env
     ports:
       - '1433:1433'
+      
+  web:
+    image: bitwarden/web
+    container_name: web
+    restart: always
 
   api:
     image: bitwarden/api
