@@ -98,7 +98,7 @@ namespace Bit.Core.Utilities
         {
             // Clean possible garbage characters from thumbprint copy/paste
             // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
-            thumbprint = Regex.Replace(thumbprint, @"[^\da-zA-z]", string.Empty).ToUpper();
+            thumbprint = Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
 
             X509Certificate2 cert = null;
             var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
@@ -111,6 +111,11 @@ namespace Bit.Core.Utilities
 
             certStore.Close();
             return cert;
+        }
+
+        public static X509Certificate2 GetCertificate(string file, string password)
+        {
+            return new X509Certificate2(file, password);
         }
 
         public static long ToEpocMilliseconds(DateTime date)

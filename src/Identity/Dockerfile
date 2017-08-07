@@ -19,8 +19,10 @@ done
 
 # Custom
 
-ARG source
 WORKDIR /app
 EXPOSE 80
-COPY ${source:-obj/Docker/publish} .
-ENTRYPOINT ["dotnet", "Identity.dll"]
+COPY obj/Docker/publish .
+
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

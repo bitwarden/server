@@ -61,6 +61,7 @@
         public class IdentityServerSettings
         {
             public string CertificateThumbprint { get; set; }
+            public string CertificatePassword { get; set; }
         }
 
         public class DataProtectionSettings

@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  mssql:
+    volumes:
+      - /etc/bitwarden/mssql_data:/var/opt/mssql/data
+  api:
+    volumes:
+      - /etc/bitwarden/core:/etc/core
+  identity:
+    volumes:
+      - /etc/bitwarden/core:/etc/core
+  nginx:
+    volumes:
+      - /etc/bitwarden/letsencrypt:/etc/letsencrypt

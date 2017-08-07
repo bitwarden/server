@@ -19,8 +19,7 @@ done
 
 # Custom
 
-ARG source
 WORKDIR /app
 EXPOSE 80
-COPY ${source:-obj/Docker/publish} .
+COPY obj/Docker/publish .
 ENTRYPOINT ["dotnet", "Api.dll"]

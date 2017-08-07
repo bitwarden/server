@@ -5,8 +5,6 @@ services:
     image: microsoft/mssql-server-linux
     container_name: mssql
     restart: always
-    volumes:
-      - mssql_data:/var/opt/mssql/data
     env_file:
       - mssql.env
       - mssql.override.env
@@ -14,33 +12,24 @@ services:
       - '1433:1433'
 
   api:
-    image: api
+    image: bitwarden/api
     container_name: api
     restart: always
-    build: ../src/Api
     env_file:
       - global.env
       - global.override.env
 
   identity:
-    image: identity
+    image: bitwarden/identity
     container_name: identity
-    restart: always
-    build: ../src/Identity
     env_file:
       - global.env
       - global.override.env
 
   nginx:
-    image: nginx
+    image: bitwarden/nginx
     container_name: nginx
     restart: always
-    build: ../nginx
-    volumes:
-      - c:/bitwarden/letsencrypt:/etc/letsencrypt
     ports:
       - '80:80'
       - '443:443'
-
-volumes:
-  mssql_data:

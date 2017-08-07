@@ -144,6 +144,13 @@ namespace Bit.Core.Utilities
             {
                 identityServerBuilder.AddTemporarySigningCredential();
             }
+            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword) &&
+                System.IO.File.Exists("identity.pfx"))
+            {
+                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx", 
+                    globalSettings.IdentityServer.CertificatePassword);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
             else
             {
                 var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
@@ -161,7 +168,7 @@ namespace Bit.Core.Utilities
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
 #if NET461
-            if(!env.IsDevelopment())
+            if(!env.IsDevelopment() && !globalSettings.SelfHosted)
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);

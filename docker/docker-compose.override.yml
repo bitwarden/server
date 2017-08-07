@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  mssql:
+    volumes:
+      - mssql_data:/var/opt/mssql/data
+  nginx:
+    volumes:
+      - c:/bitwarden/letsencrypt:/etc/letsencrypt
+volumes:
+  mssql_data:
