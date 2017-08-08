@@ -4,9 +4,16 @@ services:
   mssql:
     volumes:
       - /etc/bitwarden/mssql_data:/var/opt/mssql/data
+  web:
+    volumes:
+      - /etc/bitwarden/web:/etc/bitwarden/web
+  api:
+    volumes:
+      - /etc/bitwarden/core:/etc/bitwarden/core
   identity:
     volumes:
       - /etc/bitwarden/identity:/etc/bitwarden/identity
+      - /etc/bitwarden/core:/etc/bitwarden/core
   nginx:
     volumes:
       - /etc/bitwarden/nginx:/etc/bitwarden/nginx

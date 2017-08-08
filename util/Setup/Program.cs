@@ -12,7 +12,7 @@ namespace Setup
         private static IDictionary<string, string> _parameters = null;
         private static string _domain = null;
         private static string _url = null;
-        private static string _certPassword = null;
+        private static string _identityCertPassword = null;
         private static bool _ssl = false;
         private static bool _letsEncrypt = false;
 
@@ -28,21 +28,21 @@ namespace Setup
             _ssl = _letsEncrypt || (_parameters.ContainsKey("ssl") ?
                 _parameters["ssl"].ToLowerInvariant() == "y" : false);
             _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
-            _certPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
+            _identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
 
-            MakeIdentityCert();
+            MakeCerts();
             BuildNginxConfig();
             BuildEnvironmentFiles();
             BuildAppSettingsFiles();
         }
 
-        private static void MakeIdentityCert()
+        private static void MakeCerts()
         {
             Directory.CreateDirectory("/bitwarden/identity/");
-            var identityCertResult = Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
+            Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
                 "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
-            var identityPfxResult = Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -certfile identity.crt -passout pass:{_certPassword}");
+            Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
+                $"-in identity.crt -certfile identity.crt -passout pass:{_identityCertPassword}");
         }
 
         private static void BuildNginxConfig()
@@ -165,6 +165,7 @@ server {{
 
         private static void BuildEnvironmentFiles()
         {
+            Directory.CreateDirectory("/bitwarden/docker/");
             var dbPass = _parameters.ContainsKey("db_pass") ? _parameters["db_pass"].ToLowerInvariant() : "REPLACE";
             var dbConnectionString = "Server=tcp:mssql,1433;Initial Catalog=vault;Persist Security Info=False;User ID=sa;" +
                 $"Password={dbPass};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;" +
@@ -176,7 +177,7 @@ server {{
 globalSettings:baseServiceUri:api={_url}/api
 globalSettings:baseServiceUri:identity={_url}/identity
 globalSettings:sqlServer:connectionString={dbConnectionString}
-globalSettings:identityServer:certificatePassword={_certPassword}
+globalSettings:identityServer:certificatePassword={_identityCertPassword}
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
 globalSettings:yubico:clientId=REPLACE
 globalSettings:yubico:REPLACE");

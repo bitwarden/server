@@ -22,4 +22,7 @@ done
 WORKDIR /app
 EXPOSE 80
 COPY obj/Docker/publish .
-ENTRYPOINT ["dotnet", "Api.dll"]
+
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.WindowsAzure.Storage;
 using System;
+using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Utilities
@@ -195,10 +196,19 @@ namespace Bit.Core.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
+            if(env.IsDevelopment())
+            {
+                return;
+            }
+
+            if(globalSettings.SelfHosted)
+            {
+                var dir = new DirectoryInfo("/etc/bitwarden/core/aspnet-dataprotection");
+                services.AddDataProtection().PersistKeysToFileSystem(dir);
+            }
+
 #if NET461
-            if(!env.IsDevelopment() && !globalSettings.SelfHosted &&
-                !string.IsNullOrWhiteSpace(globalSettings.Storage.ConnectionString) &&
-                !string.IsNullOrWhiteSpace(globalSettings.DataProtection.CertificateThumbprint))
+            if(!globalSettings.SelfHosted)
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
