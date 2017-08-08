@@ -145,6 +145,13 @@ server {{
         proxy_redirect off;
     }}
 
+    location = /app-id.json {{
+        proxy_pass http://web/app-id.json;
+        proxy_hide_header Content-Type;
+        add_header Content-Type $fido_content_type;
+        proxy_redirect off;
+    }}
+
     location /api/ {{
         proxy_pass http://api/;
         proxy_set_header X-Real-IP $remote_addr;
@@ -206,6 +213,29 @@ SA_PASSWORD={dbPass}");
     identityUri: ""{_url}/identity"",
     whitelistDomains: [""{_domain}""]
 }};");
+            }
+        }
+
+        private static void BuildAppId()
+        {
+            Directory.CreateDirectory("/bitwarden/web/");
+            using(var sw = File.CreateText("/bitwarden/web/app-id.json"))
+            {
+                sw.Write($@"{{
+  ""trustedFacets"": [
+    {{
+      ""version"": {{
+        ""major"": 1,
+        ""minor"": 0
+      }},
+      ""ids"": [
+        ""{_url}"",
+        ""ios:bundle-id:com.8bit.bitwarden"",
+        ""android:apk-key-hash:dUGFzUzf3lmHSLBDBIv+WaFyZMI""
+      ]
+    }}
+  ]
+}}");
             }
         }
 
