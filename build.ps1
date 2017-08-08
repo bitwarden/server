@@ -7,4 +7,5 @@ echo "=================="
 & $dir\src\Api\build.ps1
 & $dir\src\Identity\build.ps1
 & $dir\nginx\build.ps1
+& $dir\attachments\build.ps1
 & $dir\util\Setup\build.ps1

@@ -9,4 +9,5 @@ echo -e "=================="
 $DIR/src/Api/build.sh
 $DIR/src/Identity/build.sh
 $DIR/nginx/build.sh
+$DIR/attachments/build.sh
 $DIR/util/Setup/build.sh

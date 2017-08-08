@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Api
             : base("attachment")
         {
             Id = id;
-            Url = $"{globalSettings.Attachment.BaseUrl}{cipher.Id}/{id}";
+            Url = $"{globalSettings.Attachment.BaseUrl}/{cipher.Id}/{id}";
             FileName = data.FileName;
             Size = data.SizeString;
             SizeName = Utilities.CoreHelpers.ReadableBytesSize(data.Size);
