@@ -117,7 +117,7 @@ server {{
     # Headers
 
     # X-Frame-Options is to prevent from clickJacking attack
-    #add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Frame-Options SAMEORIGIN;
 
     # disable content-type sniffing on some browsers.
     add_header X-Content-Type-Options nosniff;
@@ -125,8 +125,13 @@ server {{
     # This header enables the Cross-site scripting (XSS) filter
     add_header X-XSS-Protection ""1; mode=block"";
 
-    # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack
-    #add_header Strict-Transport-Security max-age=15768000;");
+    # This header controls what referrer information is shared
+    add_header Referrer-Policy same-origin;
+
+    # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
+    add_header Strict-Transport-Security max-age=15768000;
+
+    # Content-Security-Policy is set via meta tag on the website so it is not included here");
                 }
 
                 sw.WriteLine($@"
