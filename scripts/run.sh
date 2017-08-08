@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-DOCKER_DIR=../docker
+DIR="$(dirname $(readlink -f $0))"
+DOCKER_DIR=$DIR/../docker
 
 docker --version
 docker-compose --version
