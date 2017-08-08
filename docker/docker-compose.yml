@@ -15,6 +15,11 @@ services:
     image: bitwarden/web
     container_name: web
     restart: always
+    
+  attachments:
+    image: bitwarden/attachments
+    container_name: attachments
+    restart: always
 
   api:
     image: bitwarden/api

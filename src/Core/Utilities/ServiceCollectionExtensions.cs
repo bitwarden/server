@@ -15,7 +15,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+#if NET461
 using Microsoft.WindowsAzure.Storage;
+#endif
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
@@ -53,9 +55,15 @@ namespace Bit.Core.Utilities
         {
             services.AddSingleton<IMailService, RazorViewMailService>();
 
-            if(!string.IsNullOrWhiteSpace(globalSettings.Mail.SendGridApiKey))
+            if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
             {
                 services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
+            }
+            else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host) &&
+                CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Password))
+            {
+                services.AddSingleton<IMailDeliveryService, SmtpMailDeliveryService>();
             }
             else
             {
@@ -63,13 +71,22 @@ namespace Bit.Core.Utilities
             }
 
 #if NET461
-            services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
-            services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+            if(globalSettings.SelfHosted)
+            {
+                services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
+            else
+            {
+                services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
+                services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+            }
 #else
             services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
 #endif
-            if(!string.IsNullOrWhiteSpace(globalSettings.Storage.ConnectionString))
+
+            if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             }
@@ -78,9 +95,13 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
             }
 
-            if(!string.IsNullOrWhiteSpace(globalSettings.Attachment.ConnectionString))
+            if(CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
             {
                 services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
+            }
+            else if(CoreHelpers.SettingHasValue(globalSettings.Attachment.BaseDirectory))
+            {
+                services.AddSingleton<IAttachmentStorageService, LocalAttachmentStorageService>();
             }
             else
             {
@@ -169,8 +190,8 @@ namespace Bit.Core.Utilities
             {
                 identityServerBuilder.AddTemporarySigningCredential();
             }
-            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword) &&
-                System.IO.File.Exists("identity.pfx"))
+            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword)
+                && File.Exists("identity.pfx"))
             {
                 var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
                     globalSettings.IdentityServer.CertificatePassword);

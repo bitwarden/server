@@ -7,6 +7,9 @@ services:
   web:
     volumes:
       - c:/bitwarden/web:/etc/bitwarden/web
+  attachments:
+    volumes:
+      - c:/bitwarden/core/attachments:/etc/bitwarden/core/attachments
   api:
     volumes:
       - c:/bitwarden/core:/etc/bitwarden/core

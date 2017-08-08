@@ -204,6 +204,16 @@ server {{
         proxy_redirect off;
     }}
 
+    location /attachments/ {{
+        proxy_pass http://attachments/;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Url-Scheme $scheme;
+        proxy_redirect off;
+    }}
+
     location /api/ {{
         proxy_pass http://api/;
         proxy_set_header X-Real-IP $remote_addr;
@@ -243,6 +253,8 @@ globalSettings:baseServiceUri:api={_url}/api
 globalSettings:baseServiceUri:identity={_url}/identity
 globalSettings:sqlServer:connectionString={dbConnectionString}
 globalSettings:identityServer:certificatePassword={_identityCertPassword}
+globalSettings:attachment:baseDirectory=/etc/bitwarden/core/attachments
+globalSettings:attachment:baseUrl={_url}/attachments
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
 globalSettings:yubico:clientId=REPLACE
 globalSettings:yubico:REPLACE");
@@ -265,6 +277,8 @@ SA_PASSWORD={dbPass}");
                 sw.Write($@"var bitwardenAppSettings = {{
     apiUri: ""{_url}/api"",
     identityUri: ""{_url}/identity"",
+    stripeKey: null,
+    braintreeKey: null,
     whitelistDomains: [""{_domain}""]
 }};");
             }

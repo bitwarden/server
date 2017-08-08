@@ -39,6 +39,7 @@
         public class AttachmentSettings
         {
             public string ConnectionString { get; set; }
+            public string BaseDirectory { get; set; }
             public string BaseUrl { get; set; }
         }
 
