@@ -11,6 +11,7 @@ namespace Setup
         private static string[] _args = null;
         private static IDictionary<string, string> _parameters = null;
         private static string _domain = null;
+        private static string _url = null;
         private static string _certPassword = null;
         private static bool _ssl = false;
         private static bool _letsEncrypt = false;
@@ -20,21 +21,26 @@ namespace Setup
             _args = args;
             _parameters = ParseParameters();
 
-            _domain = _parameters.ContainsKey("domain") ? _parameters["domain"].ToLowerInvariant() : "localhost";
-            _letsEncrypt = _parameters.ContainsKey("letsencrypt") ? _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
-            _ssl = _letsEncrypt || (_parameters.ContainsKey("ssl") ? _parameters["ssl"].ToLowerInvariant() == "y" : false);
+            _domain = _parameters.ContainsKey("domain") ?
+                _parameters["domain"].ToLowerInvariant() : "localhost";
+            _letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
+                _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
+            _ssl = _letsEncrypt || (_parameters.ContainsKey("ssl") ?
+                _parameters["ssl"].ToLowerInvariant() == "y" : false);
+            _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             _certPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
 
             MakeIdentityCert();
             BuildNginxConfig();
             BuildEnvironmentFiles();
+            BuildAppSettingsFiles();
         }
 
         private static void MakeIdentityCert()
         {
             Directory.CreateDirectory("/bitwarden/identity/");
             var identityCertResult = Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
-    "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
+                "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
             var identityPfxResult = Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -certfile identity.crt -passout pass:{_certPassword}");
         }
@@ -43,10 +49,10 @@ namespace Setup
         {
             Directory.CreateDirectory("/bitwarden/nginx/");
             var sslCiphers = "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:" +
-    "DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:" +
-    "ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:" +
-    "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:" +
-    "AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
+                "DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:" +
+                "ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:" +
+                "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:" +
+                "AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
 
             var dh = _letsEncrypt ||
                 (_parameters.ContainsKey("ssl_dh") ? _parameters["ssl_dh"].ToLowerInvariant() == "y" : false);
@@ -159,17 +165,16 @@ server {{
 
         private static void BuildEnvironmentFiles()
         {
-            var url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             var dbPass = _parameters.ContainsKey("db_pass") ? _parameters["db_pass"].ToLowerInvariant() : "REPLACE";
             var dbConnectionString = "Server=tcp:mssql,1433;Initial Catalog=vault;Persist Security Info=False;User ID=sa;" +
                 $"Password={dbPass};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;" +
                 "Connection Timeout=30;";
 
-            using(var sw = File.CreateText("/bitwarden/global.override.env"))
+            using(var sw = File.CreateText("/bitwarden/docker/global.override.env"))
             {
-                sw.Write($@"globalSettings:baseServiceUri:vault={url}
-globalSettings:baseServiceUri:api={url}/api
-globalSettings:baseServiceUri:identity={url}/identity
+                sw.Write($@"globalSettings:baseServiceUri:vault={_url}
+globalSettings:baseServiceUri:api={_url}/api
+globalSettings:baseServiceUri:identity={_url}/identity
 globalSettings:sqlServer:connectionString={dbConnectionString}
 globalSettings:identityServer:certificatePassword={_certPassword}
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
@@ -177,11 +182,24 @@ globalSettings:yubico:clientId=REPLACE
 globalSettings:yubico:REPLACE");
             }
 
-            using(var sw = File.CreateText("/bitwarden/mssql.override.env"))
+            using(var sw = File.CreateText("/bitwarden/docker/mssql.override.env"))
             {
                 sw.Write($@"ACCEPT_EULA=Y
 MSSQL_PID=Express
 SA_PASSWORD={dbPass}");
+            }
+        }
+
+        private static void BuildAppSettingsFiles()
+        {
+            Directory.CreateDirectory("/bitwarden/web/");
+            using(var sw = File.CreateText("/bitwarden/web/settings.js"))
+            {
+                sw.Write($@"var bitwardenAppSettings = {{
+    apiUri: ""{_url}/api"",
+    identityUri: ""{_url}/identity"",
+    whitelistDomains: [""{_domain}""]
+}};");
             }
         }
 
