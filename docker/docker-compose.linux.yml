@@ -18,4 +18,4 @@ services:
     volumes:
       - /etc/bitwarden/nginx:/etc/bitwarden/nginx
       - /etc/bitwarden/letsencrypt:/etc/letsencrypt
-      - /etc/bitwarden/ssl:/etc/certificates
+      - /etc/bitwarden/ssl:/etc/ssl

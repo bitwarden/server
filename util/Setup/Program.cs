@@ -14,6 +14,7 @@ namespace Setup
         private static string _url = null;
         private static string _identityCertPassword = null;
         private static bool _ssl = false;
+        private static bool _selfSignedSsl = false;
         private static bool _letsEncrypt = false;
 
         public static void Main(string[] args)
@@ -27,10 +28,24 @@ namespace Setup
                 _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
             _ssl = _letsEncrypt || (_parameters.ContainsKey("ssl") ?
                 _parameters["ssl"].ToLowerInvariant() == "y" : false);
-            _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
-            _identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
 
+            _ssl = _letsEncrypt;
+            if(!_letsEncrypt)
+            {
+                Console.Write("Are you using your own SSL certificate? (y/n): ");
+                _ssl = Console.ReadLine().ToLowerInvariant() == "y";
+
+                if(_ssl)
+                {
+                    Console.WriteLine("Make sure 'certificate.crt' and 'private.key' are provided in the " +
+                        "appropriate directory (see setup instructions).");
+                }
+            }
+
+            _identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
             MakeCerts();
+
+            _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             BuildNginxConfig();
             BuildEnvironmentFiles();
             BuildAppSettingsFiles();
@@ -38,6 +53,29 @@ namespace Setup
 
         private static void MakeCerts()
         {
+            if(!_ssl)
+            {
+                Console.Write("Do you want to generate a self signed SSL certificate? (y/n): ");
+                if(Console.ReadLine().ToLowerInvariant() == "y")
+                {
+                    Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
+                    Console.WriteLine("Generating self signed SSL certificate.");
+                    _ssl = _selfSignedSsl = true;
+                    Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
+                        $"-keyout /bitwarden/ssl/self/{_domain}/private.key " +
+                        $"-out /bitwarden/ssl/self/{_domain}/certificate.crt " +
+                        $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=bitwarden/CN={_domain}\"");
+                }
+            }
+
+            if(_letsEncrypt)
+            {
+                Directory.CreateDirectory($"/bitwarden/letsencrypt/live/{_domain}/");
+                Console.WriteLine("Generating DH ephemeral parameter.");
+                Exec($"openssl dhparam -out /bitwarden/letsencrypt/live/{_domain}/dhparam.pem 2048");
+            }
+
+            Console.WriteLine("Generating key for IdentityServer.");
             Directory.CreateDirectory("/bitwarden/identity/");
             Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
                 "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
@@ -54,12 +92,27 @@ namespace Setup
                 "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:" +
                 "AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
 
-            var dh = _letsEncrypt ||
-                (_parameters.ContainsKey("ssl_dh") ? _parameters["ssl_dh"].ToLowerInvariant() == "y" : false);
-            var trusted = _letsEncrypt ||
-                (_parameters.ContainsKey("ssl_trusted") ? _parameters["ssl_trusted"].ToLowerInvariant() == "y" : false);
-            var certPath = _letsEncrypt ? $"/etc/letsencrypt/live/{_domain}" : $"/etc/certificates/{_domain}";
+            var dh = _letsEncrypt;
+            if(_ssl && !_selfSignedSsl && !_letsEncrypt)
+            {
+                Console.Write("Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
+                dh = Console.ReadLine().ToLowerInvariant() == "y";
+            }
 
+            var trusted = _letsEncrypt;
+            if(_ssl && !_selfSignedSsl && !_letsEncrypt)
+            {
+                Console.Write("Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
+                trusted = Console.ReadLine().ToLowerInvariant() == "y";
+            }
+
+            var sslPath = _letsEncrypt ? $"/etc/letsencrypt/live/{_domain}" :
+                _selfSignedSsl ? $"/etc/ssl/self/{_domain}" : $"/etc/ssl/{_domain}";
+            var certFile = _letsEncrypt ? "fullchain.pem" : "certificate.crt";
+            var keyFile = _letsEncrypt ? "privkey.pem" : "private.key";
+            var caFile = _letsEncrypt ? "fullchain.pem" : "ca.crt";
+
+            Console.WriteLine("Building nginx config.");
             using(var sw = File.CreateText("/bitwarden/nginx/default.conf"))
             {
                 sw.WriteLine($@"server {{
@@ -77,8 +130,8 @@ server {{
     listen [::]:443 ssl http2;
     server_name {_domain};
 
-    ssl_certificate {certPath}/fullchain.pem;
-    ssl_certificate_key {certPath}/privkey.pem;
+    ssl_certificate {sslPath}/{certFile};
+    ssl_certificate_key {sslPath}/{keyFile};
     
     ssl_session_timeout 30m;
     ssl_session_cache shared:SSL:20m;
@@ -88,7 +141,7 @@ server {{
                     {
                         sw.WriteLine($@"
     # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
-    ssl_dhparam {certPath}/dhparam.pem;");
+    ssl_dhparam {sslPath}/dhparam.pem;");
                     }
 
                     sw.WriteLine($@"
@@ -108,14 +161,17 @@ server {{
     ssl_stapling_verify on;
 
     ## verify chain of trust of OCSP response using Root CA and Intermediate certs
-    ssl_trusted_certificate {certPath}/fullchain.pem;
+    ssl_trusted_certificate {sslPath}/{caFile};
 
     resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;");
                     }
 
                     sw.WriteLine($@"
-    # Headers
+    # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
+    add_header Strict-Transport-Security max-age=15768000;");
+                }
 
+                sw.WriteLine($@"
     # X-Frame-Options is to prevent from clickJacking attack
     add_header X-Frame-Options SAMEORIGIN;
 
@@ -128,11 +184,7 @@ server {{
     # This header controls what referrer information is shared
     add_header Referrer-Policy same-origin;
 
-    # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
-    add_header Strict-Transport-Security max-age=15768000;
-
     # Content-Security-Policy is set via meta tag on the website so it is not included here");
-                }
 
                 sw.WriteLine($@"
     location / {{
@@ -177,6 +229,7 @@ server {{
 
         private static void BuildEnvironmentFiles()
         {
+            Console.WriteLine("Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/docker/");
             var dbPass = _parameters.ContainsKey("db_pass") ? _parameters["db_pass"].ToLowerInvariant() : "REPLACE";
             var dbConnectionString = "Server=tcp:mssql,1433;Initial Catalog=vault;Persist Security Info=False;User ID=sa;" +
@@ -205,6 +258,7 @@ SA_PASSWORD={dbPass}");
 
         private static void BuildAppSettingsFiles()
         {
+            Console.WriteLine("Building app settings.");
             Directory.CreateDirectory("/bitwarden/web/");
             using(var sw = File.CreateText("/bitwarden/web/settings.js"))
             {
@@ -218,6 +272,7 @@ SA_PASSWORD={dbPass}");
 
         private static void BuildAppId()
         {
+            Console.WriteLine("Building FIDO U2F app id.");
             Directory.CreateDirectory("/bitwarden/web/");
             using(var sw = File.CreateText("/bitwarden/web/app-id.json"))
             {
