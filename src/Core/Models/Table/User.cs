@@ -35,6 +35,7 @@ namespace Bit.Core.Models.Table
         public GatewayType? Gateway { get; set; }
         public string GatewayCustomerId { get; set; }
         public string GatewaySubscriptionId { get; set; }
+        public string LicenseKey { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

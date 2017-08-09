@@ -7,6 +7,7 @@
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
+        public virtual string LicenseDirectory { get; set; }
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();

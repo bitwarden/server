@@ -10,12 +10,14 @@
     @UseGroups BIT,
     @UseDirectory BIT,
     @UseTotp BIT,
+    @SelfHost BIT,
     @Storage BIGINT,
     @MaxStorageGb SMALLINT,
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
     @Enabled BIT,
+    @LicenseKey VARCHAR(100),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -35,12 +37,14 @@ BEGIN
         [UseGroups],
         [UseDirectory],
         [UseTotp],
+        [SelfHost],
         [Storage],
         [MaxStorageGb],
         [Gateway],
         [GatewayCustomerId],
         [GatewaySubscriptionId],
         [Enabled],
+        [LicenseKey],
         [CreationDate],
         [RevisionDate]
     )
@@ -57,12 +61,14 @@ BEGIN
         @UseGroups,
         @UseDirectory,
         @UseTotp,
+        @SelfHost,
         @Storage,
         @MaxStorageGb,
         @Gateway,
         @GatewayCustomerId,
         @GatewaySubscriptionId,
         @Enabled,
+        @LicenseKey,
         @CreationDate,
         @RevisionDate
     )

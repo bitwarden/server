@@ -260,6 +260,7 @@ globalSettings:attachment:baseDirectory={_outputDir}/core/attachments
 globalSettings:attachment:baseUrl={_url}/attachments
 globalSettings:dataProtection:directory={_outputDir}/core/aspnet-dataprotection
 globalSettings:logDirectory={_outputDir}/core/logs
+globalSettings:licenseDirectory={_outputDir}/core/licenses
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
 globalSettings:yubico:clientId=REPLACE
 globalSettings:yubico:REPLACE");

@@ -19,12 +19,14 @@ namespace Bit.Core.Models.Table
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseTotp { get; set; }
+        public bool SelfHost { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }
         public string GatewayCustomerId { get; set; }
         public string GatewaySubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
+        public string LicenseKey { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

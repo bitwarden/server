@@ -21,6 +21,7 @@
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
+    @LicenseKey VARCHAR(100),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -51,6 +52,7 @@ BEGIN
         [Gateway],
         [GatewayCustomerId],
         [GatewaySubscriptionId],
+        [LicenseKey],
         [CreationDate],
         [RevisionDate]
     )
@@ -78,6 +80,7 @@ BEGIN
         @Gateway,
         @GatewayCustomerId,
         @GatewaySubscriptionId,
+        @LicenseKey,
         @CreationDate,
         @RevisionDate
     )
