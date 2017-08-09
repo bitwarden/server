@@ -345,6 +345,38 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
+        [AllowAnonymous]
+        [HttpPost("delete-recover")]
+        public async Task PostDeleteRecover([FromBody]DeleteRecoverRequestModel model)
+        {
+            await _userService.SendDeleteConfirmationAsync(model.Email);
+        }
+
+        [HttpPost("delete-recover-token")]
+        [AllowAnonymous]
+        public async Task PostDeleteRecoverToken([FromBody]VerifyDeleteRecoverRequestModel model)
+        {
+            var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.DeleteAsync(user, model.Token);
+            if(result.Succeeded)
+            {
+                return;
+            }
+
+            foreach(var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+        }
+
         [HttpPost("premium")]
         public async Task<ProfileResponseModel> PostPremium([FromBody]PremiumRequestModel model)
         {

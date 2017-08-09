@@ -11,6 +11,7 @@ namespace Bit.Core.Services
     {
         private const string WelcomeTemplateId = "045f8ad5-5547-4fa2-8d3d-6d46e401164d";
         private const string VerifyEmailTemplateId = "TODO";
+        private const string VerifyDeleteTemplateId = "TODO";
         private const string ChangeEmailAlreadyExistsTemplateId = "b69d2038-6ad9-4cf6-8f7f-7880921cba43";
         private const string ChangeEmailTemplateId = "ec2c1471-8292-4f17-b6b6-8223d514f86e";
         private const string TwoFactorEmailTemplateId = "264cfe69-5258-4c89-8d90-76b4659de589";
@@ -53,9 +54,26 @@ namespace Bit.Core.Services
                email,
                VerifyEmailTemplateId);
 
-            AddSubstitution(message, "{{token}}", Uri.EscapeDataString(token));
+            AddSubstitution(message, "{{token}}", WebUtility.UrlEncode(token));
             AddSubstitution(message, "{{userId}}", userId.ToString());
             AddCategories(message, new List<string> { AdministrativeCategoryName, "Verify Email" });
+            message.MetaData.Add("SendGridBypassListManagement", true);
+
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
+        {
+            var message = CreateDefaultMessage(
+               "Delete Your Account",
+               email,
+               VerifyDeleteTemplateId);
+
+            AddSubstitution(message, "{{token}}", WebUtility.UrlEncode(token));
+            AddSubstitution(message, "{{email}}", email);
+            AddSubstitution(message, "{{emailUrlEncoded}}", WebUtility.UrlEncode(email));
+            AddSubstitution(message, "{{userId}}", userId.ToString());
+            AddCategories(message, new List<string> { AdministrativeCategoryName, "Verify Delete" });
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);

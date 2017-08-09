@@ -178,6 +178,29 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
 
+        public async Task<IdentityResult> DeleteAsync(User user, string token)
+        {
+            if(!(await VerifyUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount", token)))
+            {
+                return IdentityResult.Failed(ErrorDescriber.InvalidToken());
+            }
+
+            return await DeleteAsync(user);
+        }
+
+        public async Task SendDeleteConfirmationAsync(string email)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if(user == null)
+            {
+                // No user exists.
+                return;
+            }
+
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+            await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
+        }
+
         public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
         {
             var result = await base.CreateAsync(user, masterPassword);

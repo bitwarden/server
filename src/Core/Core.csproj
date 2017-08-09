@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="MailTemplates\VerifyDelete.cshtml" />
+    <EmbeddedResource Include="MailTemplates\VerifyDelete.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\VerifyEmail.cshtml" />
     <EmbeddedResource Include="MailTemplates\VerifyEmail.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\TwoFactorEmail.cshtml" />

@@ -47,6 +47,25 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
+        {
+            var message = CreateDefaultMessage("Delete Your Account", email);
+            var model = new VerifyDeleteModel
+            {
+                Token = WebUtility.UrlEncode(token),
+                UserId = userId,
+                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                SiteName = _globalSettings.SiteName,
+                Email = email,
+                EmailEncoded = WebUtility.UrlEncode(email)
+            };
+            message.HtmlContent = _engine.Parse("VerifyDelete", model);
+            message.TextContent = _engine.Parse("VerifyDelete.text", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail)
         {
             var message = CreateDefaultMessage("Your Email Change", toEmail);

@@ -56,5 +56,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
