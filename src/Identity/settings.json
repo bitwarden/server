@@ -2,6 +2,7 @@
   "globalSettings": {
     "selfHosted": false,
     "siteName": "bitwarden",
+    "projectName": "Identity",
     "stripeApiKey": "SECRET",
     "baseServiceUri": {
       "vault": "http://localhost:4001",

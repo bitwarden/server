@@ -222,10 +222,10 @@ namespace Bit.Core.Utilities
                 return;
             }
 
-            if(globalSettings.SelfHosted)
+            if(globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
             {
-                var dir = new DirectoryInfo("/etc/bitwarden/core/aspnet-dataprotection");
-                services.AddDataProtection().PersistKeysToFileSystem(dir);
+                services.AddDataProtection()
+                    .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
 #if NET461

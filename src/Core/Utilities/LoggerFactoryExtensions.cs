@@ -26,15 +26,15 @@ namespace Bit.Core.Utilities
                     .Enrich.FromLogContext()
                     .Filter.ByIncludingOnly(filter);
 
-                if(globalSettings.DocumentDb != null && !string.IsNullOrWhiteSpace(globalSettings.DocumentDb.Uri) && 
-                    !string.IsNullOrWhiteSpace(globalSettings.DocumentDb.Key))
+                if(globalSettings.DocumentDb != null && CoreHelpers.SettingHasValue(globalSettings.DocumentDb.Uri) &&
+                    CoreHelpers.SettingHasValue(globalSettings.DocumentDb.Key))
                 {
                     config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
                         timeToLive: TimeSpan.FromDays(7));
                 }
-                else
+                else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
                 {
-                    // local file sink
+                    config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
                 }
 
                 var serilog = config.CreateLogger();

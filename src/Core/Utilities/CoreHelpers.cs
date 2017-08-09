@@ -280,7 +280,7 @@ namespace Bit.Core.Utilities
 
         public static bool SettingHasValue(string setting)
         {
-            if(string.IsNullOrWhiteSpace(setting) || setting.Equals("SECRET"))
+            if(string.IsNullOrWhiteSpace(setting) || setting.Equals("SECRET") || setting.Equals("REPLACE"))
             {
                 return false;
             }

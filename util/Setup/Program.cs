@@ -10,6 +10,7 @@ namespace Setup
     {
         private static string[] _args = null;
         private static IDictionary<string, string> _parameters = null;
+        private static string _outputDir = null;
         private static string _domain = null;
         private static string _url = null;
         private static string _identityCertPassword = null;
@@ -22,6 +23,8 @@ namespace Setup
             _args = args;
             _parameters = ParseParameters();
 
+            _outputDir = _parameters.ContainsKey("out") ?
+                _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
             _domain = _parameters.ContainsKey("domain") ?
                 _parameters["domain"].ToLowerInvariant() : "localhost";
             _letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
@@ -253,8 +256,10 @@ globalSettings:baseServiceUri:api={_url}/api
 globalSettings:baseServiceUri:identity={_url}/identity
 globalSettings:sqlServer:connectionString={dbConnectionString}
 globalSettings:identityServer:certificatePassword={_identityCertPassword}
-globalSettings:attachment:baseDirectory=/etc/bitwarden/core/attachments
+globalSettings:attachment:baseDirectory={_outputDir}/core/attachments
 globalSettings:attachment:baseUrl={_url}/attachments
+globalSettings:dataProtection:directory={_outputDir}/core/aspnet-dataprotection
+globalSettings:logDirectory={_outputDir}/core/logs
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
 globalSettings:yubico:clientId=REPLACE
 globalSettings:yubico:REPLACE");
