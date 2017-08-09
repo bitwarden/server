@@ -16,7 +16,6 @@ using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Utils;
 using Bit.Core.Exceptions;
-using Stripe;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
@@ -166,12 +165,8 @@ namespace Bit.Core.Services
 
             if(!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
             {
-                var subscriptionService = new StripeSubscriptionService();
-                var canceledSub = await subscriptionService.CancelAsync(user.GatewaySubscriptionId, false);
-                if(!canceledSub.CanceledAt.HasValue)
-                {
-                    throw new BadRequestException("Unable to cancel subscription.");
-                }
+                var paymentService = user.GetPaymentService(_globalSettings);
+                await paymentService.CancelSubscriptionAsync(user, false);
             }
 
             await _userRepository.DeleteAsync(user);
