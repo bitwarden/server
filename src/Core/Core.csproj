@@ -51,13 +51,13 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     <PackageReference Include="RazorLight" Version="1.1.0" />
-    <PackageReference Include="Sendgrid" Version="9.5.0" />
+    <PackageReference Include="Sendgrid" Version="9.7.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="1.4.0" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />
     <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.6.1" />
     <PackageReference Include="Stripe.net" Version="7.8.0" />
     <PackageReference Include="U2F.Core" Version="1.0.3" />
-    <PackageReference Include="WindowsAzure.Storage" Version="8.1.4" />
+    <PackageReference Include="WindowsAzure.Storage" Version="8.3.0" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
   </ItemGroup>
