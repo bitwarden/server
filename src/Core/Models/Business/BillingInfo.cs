@@ -24,7 +24,7 @@ namespace Bit.Core.Models.Business
                         Type = PaymentMethodType.Card;
                         Description = $"{source.Card.Brand}, *{source.Card.Last4}, " +
                             string.Format("{0}/{1}",
-                                string.Concat(source.Card.ExpirationMonth.Length == 1 ?
+                                string.Concat(source.Card.ExpirationMonth < 10 ?
                                     "0" : string.Empty, source.Card.ExpirationMonth),
                                 source.Card.ExpirationYear);
                         CardBrand = source.Card.Brand;
