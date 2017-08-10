@@ -191,15 +191,26 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if(sub.CanceledAt.HasValue)
+            if(sub.CanceledAt.HasValue || sub.Status == "cancelled")
             {
-                throw new GatewayException("Subscription is already canceled.");
+                // Already cancelled
+                return;
             }
 
-            var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
-            if(!canceledSub.CanceledAt.HasValue)
+            try
             {
-                throw new GatewayException("Unable to cancel subscription.");
+                var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
+                if(!canceledSub.CanceledAt.HasValue)
+                {
+                    throw new GatewayException("Unable to cancel subscription.");
+                }
+            }
+            catch(StripeException e)
+            {
+                if(e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
+                {
+                    throw e;
+                }
             }
         }
 

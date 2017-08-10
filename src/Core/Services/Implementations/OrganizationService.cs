@@ -518,12 +518,7 @@ namespace Bit.Core.Services
         {
             if(!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                var subscriptionService = new StripeSubscriptionService();
-                var canceledSub = await subscriptionService.CancelAsync(organization.GatewaySubscriptionId, false);
-                if(!canceledSub.CanceledAt.HasValue)
-                {
-                    throw new BadRequestException("Unable to cancel subscription.");
-                }
+                await _stripePaymentService.CancelSubscriptionAsync(organization, false);
             }
 
             await _organizationRepository.DeleteAsync(organization);
