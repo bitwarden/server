@@ -59,6 +59,7 @@
     <PackageReference Include="U2F.Core" Version="1.0.3" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.1.4" />
     <PackageReference Include="Otp.NET" Version="1.0.1" />
+    <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
@@ -66,7 +67,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
-    <PackageReference Include="YubicoDotNetClient" Version="1.0.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="1.0.8" />
   </ItemGroup>
 

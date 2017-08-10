@@ -2,9 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
-#if NET461
 using YubicoDotNetClient;
-#endif
 using System.Linq;
 
 namespace Bit.Core.Identity
@@ -37,16 +35,16 @@ namespace Bit.Core.Identity
             return Task.FromResult<string>(null);
         }
 
-        public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+        public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
             if(!user.Premium)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var id = token.Substring(0, 12);
@@ -54,17 +52,12 @@ namespace Bit.Core.Identity
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
             if(!provider.MetaData.ContainsValue(id))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
-
-#if NET461
             var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
-            var response = client.Verify(token);
-            return Task.FromResult(response.Status == YubicoResponseStatus.Ok);
-#else
-            return Task.FromResult(false);
-#endif
+            var response = await client.VerifyAsync(token);
+            return response.Status == YubicoResponseStatus.Ok;
         }
     }
 }
