@@ -2,9 +2,9 @@
 @{
     Layout = "_BasicMailLayout.text";
 }
-This email is to notify you that @Model.UserEmail
+This email is to notify you that @Raw(Model.UserEmail)
 has accepted your invitation to join
-@Model.OrganizationName.
+@Raw(Model.OrganizationName).
 
 To confirm this user, log into the bitwarden
 web vault, manage your organization "People"

@@ -2,6 +2,6 @@
 @{
     Layout = "_BasicMailLayout.text";
 }
-Your two-step verification code is: @Model.Token
+Your two-step verification code is: @Raw(Model.Token)
 
 Use this code to complete logging in with bitwarden.

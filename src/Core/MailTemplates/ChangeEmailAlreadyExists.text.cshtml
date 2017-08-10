@@ -2,10 +2,10 @@
 @{
     Layout = "_BasicMailLayout.text";
 }
-A user ({{fromEmail}}) recently tried to
+A user (@Raw(Model.FromEmail)) recently tried to
 change their account to use this email
-address ({{toEmail}}). An account already
-exists with this email ({{toEmail}}).
+address (@Raw(Model.ToEmail)). An account already
+exists with this email (@Raw(Model.ToEmail)).
 
 If you did not try to change an email
 address, you can safely ignore this

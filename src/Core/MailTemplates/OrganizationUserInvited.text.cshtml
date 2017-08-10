@@ -3,11 +3,11 @@
     Layout = "_BasicMailLayout.text";
 }
 You have been invited to join the
-@Model.OrganizationName organization.
+@Raw(Model.OrganizationName) organization.
 To accept this invite, click the
 following link:
 
-@Model.Url
+@Raw(Model.Url)
 
 If you do not wish to join this
 organization, you can safely ignore
