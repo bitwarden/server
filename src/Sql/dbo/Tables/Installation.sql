@@ -1,0 +1,9 @@
+﻿CREATE TABLE [dbo].[Installation] (
+    [Id]           UNIQUEIDENTIFIER NOT NULL,
+    [Email]        NVARCHAR (50)    NOT NULL,
+    [Key]          VARCHAR (150)    NOT NULL,
+    [Enabled]      BIT              NOT NULL,
+    [CreationDate] DATETIME2 (7)    NOT NULL,
+    CONSTRAINT [PK_Installation] PRIMARY KEY CLUSTERED ([Id] ASC)
+);
+

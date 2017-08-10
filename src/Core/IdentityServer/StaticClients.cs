@@ -1,11 +1,12 @@
 ﻿using IdentityServer4.Models;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bit.Core.IdentityServer
 {
-    public class Clients
+    public class StaticClients
     {
-        public static IEnumerable<Client> GetClients()
+        public static IDictionary<string, Client> GetApiClients()
         {
             return new List<Client>
             {
@@ -14,7 +15,7 @@ namespace Bit.Core.IdentityServer
                 new ApiClient("browser", 30, 1),
                 new ApiClient("desktop", 30, 1),
                 new ApiClient("connector", 30, 24)
-            };
+            }.ToDictionary(c => c.ClientId);
         }
 
         public class ApiClient : Client

@@ -30,7 +30,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var installation = new Installation
+            var installation = new Microsoft.Azure.NotificationHubs.Installation
             {
                 InstallationId = device.Id.ToString(),
                 PushChannel = device.PushToken,
@@ -85,8 +85,8 @@ namespace Bit.Core.Services
             await _client.CreateOrUpdateInstallationAsync(installation);
         }
 
-        private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-            Guid userId, string deviceIdentifier)
+        private void BuildInstallationTemplate(Microsoft.Azure.NotificationHubs.Installation installation,
+            string templateId, string templateBody, Guid userId, string deviceIdentifier)
         {
             if(templateBody == null)
             {

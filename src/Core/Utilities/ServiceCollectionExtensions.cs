@@ -39,6 +39,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
             services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
             services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
+            services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
         }
 
         public static void AddBaseServices(this IServiceCollection services)
@@ -158,7 +159,7 @@ namespace Bit.Core.Utilities
                 {
                     SecurityStampClaimType = "sstamp",
                     UserNameClaimType = JwtClaimTypes.Email,
-                    UserIdClaimType = JwtClaimTypes.Subject,
+                    UserIdClaimType = JwtClaimTypes.Subject
                 };
                 options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
             });
@@ -190,11 +191,11 @@ namespace Bit.Core.Utilities
                     options.Endpoints.EnableCheckSessionEndpoint = false;
                     options.Endpoints.EnableTokenRevocationEndpoint = false;
                     options.IssuerUri = globalSettings.BaseServiceUri.InternalIdentity;
+                    options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 })
+                .AddInMemoryCaching()
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
-                .AddInMemoryClients(Clients.GetClients());
-
-            services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
+                .AddClientStoreCache<ClientStore>();
 
             if(env.IsDevelopment())
             {
@@ -217,6 +218,8 @@ namespace Bit.Core.Utilities
                 throw new Exception("No identity certificate to use.");
             }
 
+            services.AddTransient<ClientStore>();
+            services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
             services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();

@@ -1,7 +1,6 @@
 ﻿using IdentityModel;
 using IdentityServer4.Models;
 using System.Collections.Generic;
-using System.Security.Claims;
 
 namespace Bit.Core.IdentityServer
 {
@@ -21,7 +20,8 @@ namespace Bit.Core.IdentityServer
                     "orgowner",
                     "orgadmin",
                     "orguser"
-                })
+                }),
+                new ApiResource("api.push")
             };
         }
     }

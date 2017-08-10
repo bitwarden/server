@@ -204,5 +204,11 @@
     <Build Include="dbo\Stored Procedures\Organization_UpdateStorage.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteAttachment.sql" />
+    <Build Include="dbo\Tables\Installation.sql" />
+    <Build Include="dbo\Stored Procedures\Installation_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Installation_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Installation_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Installation_Update.sql" />
+    <Build Include="dbo\Views\InstallationView.sql" />
   </ItemGroup>
 </Project>
