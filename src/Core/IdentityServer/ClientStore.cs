@@ -4,6 +4,8 @@ using IdentityServer4.Models;
 using System.Collections.Generic;
 using Bit.Core.Repositories;
 using System;
+using System.Security.Claims;
+using IdentityModel;
 
 namespace Bit.Core.IdentityServer
 {
@@ -37,7 +39,8 @@ namespace Bit.Core.IdentityServer
                             AllowedScopes = new string[] { "api.push" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
-                            Enabled = installation.Enabled
+                            Enabled = installation.Enabled,
+                            Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, installation.Id.ToString()) }
                         };
                     }
                 }

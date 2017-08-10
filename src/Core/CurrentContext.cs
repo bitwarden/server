@@ -11,6 +11,7 @@ namespace Bit.Core
         public virtual User User { get; set; }
         public virtual string DeviceIdentifier { get; set; }
         public virtual List<CurrentContentOrganization> Organizations { get; set; } = new List<CurrentContentOrganization>();
+        public virtual Guid? InstallationId { get; set; }
 
         public bool OrganizationUser(Guid orgId)
         {
