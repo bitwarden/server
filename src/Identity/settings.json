@@ -8,7 +8,7 @@
       "vault": "http://localhost:4001",
       "api": "http://localhost:4000",
       "identity": "http://localhost:33656",
-      "identityInternal": "http://localhost:33656"
+      "internalIdentity": "http://localhost:33656"
     },
     "sqlServer": {
       "connectionString": "SECRET"

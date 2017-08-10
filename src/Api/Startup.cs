@@ -180,7 +180,7 @@ namespace Bit.Api
             {
                 Authority = globalSettings.BaseServiceUri.InternalIdentity,
                 AllowedScopes = new string[] { "api" },
-                RequireHttpsMetadata = false && !env.IsDevelopment(),
+                RequireHttpsMetadata = !env.IsDevelopment() && globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https"),
                 ApiName = "api",
                 NameClaimType = ClaimTypes.Email,
                 // Suffix until we retire the old jwt schemes.
