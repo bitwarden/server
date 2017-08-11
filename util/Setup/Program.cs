@@ -26,6 +26,10 @@ namespace Setup
             _args = args;
             _parameters = ParseParameters();
 
+            _installationId = _parameters.ContainsKey("install_id") ?
+                _parameters["install_id"].ToLowerInvariant() : null;
+            _installationKey = _parameters.ContainsKey("install_key") ?
+                _parameters["install_key"].ToLowerInvariant() : null;
             _outputDir = _parameters.ContainsKey("out") ?
                 _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
             _domain = _parameters.ContainsKey("domain") ?
@@ -38,7 +42,7 @@ namespace Setup
             _ssl = _letsEncrypt;
             if(!_letsEncrypt)
             {
-                Console.Write("Are you using your own SSL certificate? (y/n): ");
+                Console.Write("(!) Are you using your own SSL certificate? (y/n): ");
                 _ssl = Console.ReadLine().ToLowerInvariant() == "y";
 
                 if(_ssl)
@@ -54,11 +58,7 @@ namespace Setup
             _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             BuildNginxConfig();
 
-            Console.Write("Installation id (get it at https://bitwarden.com/host/): ");
-            _installationId = Console.ReadLine().ToLowerInvariant();
-            Console.Write("Installation key (get it at https://bitwarden.com/host/): ");
-            _installationKey = Console.ReadLine().ToLowerInvariant();
-            Console.Write("Do you want to use push notifications? (y/n): ");
+            Console.Write("(!) Do you want to use push notifications? (y/n): ");
             _push = Console.ReadLine().ToLowerInvariant() == "y";
 
             BuildEnvironmentFiles();
@@ -69,7 +69,7 @@ namespace Setup
         {
             if(!_ssl)
             {
-                Console.Write("Do you want to generate a self signed SSL certificate? (y/n): ");
+                Console.Write("(!) Do you want to generate a self signed SSL certificate? (y/n): ");
                 if(Console.ReadLine().ToLowerInvariant() == "y")
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
@@ -85,7 +85,6 @@ namespace Setup
             if(_letsEncrypt)
             {
                 Directory.CreateDirectory($"/bitwarden/letsencrypt/live/{_domain}/");
-                Console.WriteLine("Generating DH ephemeral parameter.");
                 Exec($"openssl dhparam -out /bitwarden/letsencrypt/live/{_domain}/dhparam.pem 2048");
             }
 
@@ -109,14 +108,14 @@ namespace Setup
             var dh = _letsEncrypt;
             if(_ssl && !_selfSignedSsl && !_letsEncrypt)
             {
-                Console.Write("Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
+                Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
                 dh = Console.ReadLine().ToLowerInvariant() == "y";
             }
 
             var trusted = _letsEncrypt;
             if(_ssl && !_selfSignedSsl && !_letsEncrypt)
             {
-                Console.Write("Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
+                Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
                 trusted = Console.ReadLine().ToLowerInvariant() == "y";
             }
 
