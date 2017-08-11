@@ -35,7 +35,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("register")]
-        public async Task PostRegister(PushRegistrationRequestModel model)
+        public async Task PostRegister([FromBody]PushRegistrationRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
@@ -50,7 +50,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("add-organization")]
-        public async Task PutAddOrganization(PushUpdateRequestModel model)
+        public async Task PutAddOrganization([FromBody]PushUpdateRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete-organization")]
-        public async Task PutDeleteOrganization(PushUpdateRequestModel model)
+        public async Task PutDeleteOrganization([FromBody]PushUpdateRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
@@ -66,13 +66,13 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("send")]
-        public async Task PostSend(PushSendRequestModel model)
+        public async Task PostSend([FromBody]PushSendRequestModel model)
         {
             CheckUsage();
 
             if(!string.IsNullOrWhiteSpace(model.UserId))
             {
-                await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.OrganizationId),
+                await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
                        model.Type.Value, model.Payload, Prefix(model.Identifier));
             }
             else if(!string.IsNullOrWhiteSpace(model.OrganizationId))

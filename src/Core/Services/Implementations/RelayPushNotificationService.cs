@@ -165,7 +165,7 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(PushClient.BaseAddress, "send")
+                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/send"))
             };
             await PushClient.SendAsync(message);
         }

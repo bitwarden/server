@@ -7,6 +7,7 @@ using System;
 using Newtonsoft.Json.Linq;
 using Bit.Core.Utilities;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace Bit.Core.Services
 {
@@ -24,11 +25,13 @@ namespace Bit.Core.Services
             {
                 BaseAddress = new Uri(globalSettings.PushRelayBaseUri)
             };
+            PushClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             IdentityClient = new HttpClient
             {
                 BaseAddress = new Uri(globalSettings.Installation.IdentityUri)
             };
+            IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
         protected HttpClient PushClient { get; private set; }
@@ -52,7 +55,7 @@ namespace Bit.Core.Services
             var requestMessage = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(IdentityClient.BaseAddress, "connect/token"),
+                RequestUri = new Uri(string.Concat(IdentityClient.BaseAddress, "/connect/token")),
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },

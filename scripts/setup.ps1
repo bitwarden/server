@@ -20,9 +20,9 @@ if($letsEncrypt -eq "y") {
     if(!(Test-Path -Path $letsEncryptPath )){
         New-Item -ItemType directory -Path $letsEncryptPath
     }
-    docker run -it --rm -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot certonly --standalone --noninteractive --preferred-challenges http --email $email --agree-tos -d $domain
+    docker run -it --rm --name letsencrypt -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot certonly --standalone --noninteractive --preferred-challenges http --email $email --agree-tos -d $domain
 }
 
-docker run -it --rm -v ${outputDir}:/bitwarden bitwarden/setup dotnet Setup.dll -domain ${domain} -letsencrypt ${letsEncrypt} -db_pass ${databasePassword}
+docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup dotnet Setup.dll -domain ${domain} -letsencrypt ${letsEncrypt} -db_pass ${databasePassword}
 
 echo "Setup complete"

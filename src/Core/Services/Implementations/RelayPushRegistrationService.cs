@@ -38,7 +38,7 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(PushClient.BaseAddress, "register")
+                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/register"))
             };
             await PushClient.SendAsync(message);
         }
@@ -54,7 +54,7 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(AccessToken)
             {
                 Method = HttpMethod.Delete,
-                RequestUri = new Uri(PushClient.BaseAddress, deviceId)
+                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/", deviceId))
             };
             await PushClient.SendAsync(message);
         }
@@ -76,7 +76,7 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Put,
-                RequestUri = new Uri(PushClient.BaseAddress, "add-organization")
+                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/add-organization"))
             };
             await PushClient.SendAsync(message);
         }
@@ -98,7 +98,7 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Put,
-                RequestUri = new Uri(PushClient.BaseAddress, "delete-organization")
+                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/delete-organization"))
             };
             await PushClient.SendAsync(message);
         }

@@ -54,9 +54,9 @@ namespace Setup
             _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             BuildNginxConfig();
 
-            Console.Write("Installation ID: ");
+            Console.Write("Installation id (get it at https://bitwarden.com/host/): ");
             _installationId = Console.ReadLine().ToLowerInvariant();
-            Console.Write("Installation key: ");
+            Console.Write("Installation key (get it at https://bitwarden.com/host/): ");
             _installationKey = Console.ReadLine().ToLowerInvariant();
             Console.Write("Do you want to use push notifications? (y/n): ");
             _push = Console.ReadLine().ToLowerInvariant() == "y";
@@ -272,7 +272,7 @@ globalSettings:attachment:baseUrl={_url}/attachments
 globalSettings:dataProtection:directory={_outputDir}/core/aspnet-dataprotection
 globalSettings:logDirectory={_outputDir}/core/logs
 globalSettings:licenseDirectory={_outputDir}/core/licenses
-globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
+globalSettings:duo:aKey={Helpers.SecureRandomString(64, alpha: true, numeric: true)}
 globalSettings:installation:id={_installationId}
 globalSettings:installation:key={_installationKey}
 globalSettings:yubico:clientId=REPLACE
@@ -280,7 +280,8 @@ globalSettings:yubico:key=REPLACE");
 
                 if(!_push)
                 {
-                    sw.Write("globalSettings:pushRelayBaseUri=REPLACE");
+                    sw.Write(@"
+globalSettings:pushRelayBaseUri=REPLACE");
                 }
             }
 

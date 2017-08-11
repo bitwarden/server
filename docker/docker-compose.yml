@@ -7,7 +7,6 @@ services:
     restart: always
     env_file:
       - mssql.env
-      - mssql.override.env
     ports:
       - '1433:1433'
       
@@ -27,14 +26,12 @@ services:
     restart: always
     env_file:
       - global.env
-      - global.override.env
 
   identity:
     image: bitwarden/identity
     container_name: identity
     env_file:
       - global.env
-      - global.override.env
 
   nginx:
     image: bitwarden/nginx

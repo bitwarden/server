@@ -4,6 +4,9 @@ services:
   mssql:
     volumes:
       - /etc/bitwarden/mssql_data:/var/opt/mssql/data
+    env_file:
+      - mssql.env
+      - /etc/bitwarden/docker/mssql.override.env
   web:
     volumes:
       - /etc/bitwarden/web:/etc/bitwarden/web
@@ -13,10 +16,16 @@ services:
   api:
     volumes:
       - /etc/bitwarden/core:/etc/bitwarden/core
+    env_file:
+      - global.env
+      - /etc/bitwarden/docker/global.override.env
   identity:
     volumes:
       - /etc/bitwarden/identity:/etc/bitwarden/identity
       - /etc/bitwarden/core:/etc/bitwarden/core
+    env_file:
+      - global.env
+      - /etc/bitwarden/docker/global.override.env
   nginx:
     volumes:
       - /etc/bitwarden/nginx:/etc/bitwarden/nginx
