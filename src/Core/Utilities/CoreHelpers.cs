@@ -289,5 +289,41 @@ namespace Bit.Core.Utilities
 
             return true;
         }
+
+        public static string Base64UrlEncode(byte[] input)
+        {
+            var output = Convert.ToBase64String(input)
+                .Replace('+', '-')
+                .Replace('/', '_')
+                .Replace("=", string.Empty);
+            return output;
+        }
+
+        public static byte[] Base64UrlDecode(string input)
+        {
+            var output = input;
+            // 62nd char of encoding
+            output = output.Replace('-', '+');
+            // 63rd char of encoding
+            output = output.Replace('_', '/');
+            // Pad with trailing '='s
+            switch(output.Length % 4)
+            {
+                case 0:
+                    // No pad chars in this case
+                    break;
+                case 2:
+                    // Two pad chars
+                    output += "=="; break;
+                case 3:
+                    // One pad char
+                    output += "="; break;
+                default:
+                    throw new InvalidOperationException("Illegal base64url string!");
+            }
+
+            // Standard base64 decoder
+            return Convert.FromBase64String(output);
+        }
     }
 }

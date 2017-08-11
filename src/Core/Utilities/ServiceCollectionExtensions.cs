@@ -71,21 +71,26 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
             }
 
-#if NET461
-            if(globalSettings.SelfHosted)
+            if(globalSettings.SelfHosted &&
+                CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                globalSettings.Installation?.Id != null &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
             {
-                services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
-                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+                services.AddSingleton<IPushNotificationService, RelayPushNotificationService>();
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
-            else
+#if NET461
+            else if(!globalSettings.SelfHosted)
             {
                 services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
                 services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             }
-#else
-            services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
-            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
 #endif
+            else
+            {
+                services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
 
             if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {

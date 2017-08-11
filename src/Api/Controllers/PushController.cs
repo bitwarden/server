@@ -15,12 +15,14 @@ namespace Bit.Api.Controllers
     public class PushController : Controller
     {
         private readonly IPushRegistrationService _pushRegistrationService;
+        private readonly IPushNotificationService _pushNotificationService;
         private readonly IHostingEnvironment _environment;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public PushController(
             IPushRegistrationService pushRegistrationService,
+            IPushNotificationService pushNotificationService,
             IHostingEnvironment environment,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
@@ -28,6 +30,7 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
             _environment = environment;
             _pushRegistrationService = pushRegistrationService;
+            _pushNotificationService = pushNotificationService;
             _globalSettings = globalSettings;
         }
 
@@ -62,8 +65,30 @@ namespace Bit.Api.Controllers
                 model.DeviceIds.Select(d => Prefix(d)), Prefix(model.OrganizationId));
         }
 
+        [HttpPost("send")]
+        public async Task PostSend(PushSendRequestModel model)
+        {
+            CheckUsage();
+
+            if(!string.IsNullOrWhiteSpace(model.UserId))
+            {
+                await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.OrganizationId),
+                       model.Type.Value, model.Payload, Prefix(model.Identifier));
+            }
+            else if(!string.IsNullOrWhiteSpace(model.OrganizationId))
+            {
+                await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
+                    model.Type.Value, model.Payload, Prefix(model.Identifier));
+            }
+        }
+
         private string Prefix(string value)
         {
+            if(string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
             return $"{_currentContext.InstallationId.Value}_{value}";
         }
 

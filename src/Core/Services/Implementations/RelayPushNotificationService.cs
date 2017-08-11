@@ -1,28 +1,24 @@
-﻿#if NET461
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
-using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
+using System.Net.Http;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
-    public class NotificationHubPushNotificationService : IPushNotificationService
+    public class RelayPushNotificationService : BaseRelayPushNotificationService, IPushNotificationService
     {
-        private readonly NotificationHubClient _client;
+        private readonly HttpClient _client;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public NotificationHubPushNotificationService(
+        public RelayPushNotificationService(
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor)
+            : base(globalSettings)
         {
-            _client = NotificationHubClient.CreateClientFromConnectionString(globalSettings.NotificationHub.ConnectionString,
-                globalSettings.NotificationHub.HubName);
-
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -126,57 +122,72 @@ namespace Bit.Core.Services
 
         private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
         {
-            await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
+            var request = new PushSendRequestModel
+            {
+                UserId = userId.ToString(),
+                Type = type,
+                Payload = payload
+            };
+
+            if(excludeCurrentContext)
+            {
+                ExcludeCurrentContext(request);
+            }
+
+            await SendAsync(request);
         }
 
         private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
         {
-            await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
-        }
-
-        public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
-        {
-            var tag = BuildTag($"template:payload_userId:{userId}", identifier);
-            await SendPayloadAsync(tag, type, payload);
-        }
-
-        public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
-        {
-            var tag = BuildTag($"template:payload && organizationId:{orgId}", identifier);
-            await SendPayloadAsync(tag, type, payload);
-        }
-
-        private string GetContextIdentifier(bool excludeCurrentContext)
-        {
-            if(!excludeCurrentContext)
+            var request = new PushSendRequestModel
             {
-                return null;
+                OrganizationId = orgId.ToString(),
+                Type = type,
+                Payload = payload
+            };
+
+            if(excludeCurrentContext)
+            {
+                ExcludeCurrentContext(request);
             }
 
+            await SendAsync(request);
+        }
+
+        private async Task SendAsync(PushSendRequestModel requestModel)
+        {
+            var tokenStateResponse = await HandleTokenStateAsync();
+            if(!tokenStateResponse)
+            {
+                return;
+            }
+
+            var message = new TokenHttpRequestMessage(requestModel, AccessToken)
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri(PushClient.BaseAddress, "send")
+            };
+            await PushClient.SendAsync(message);
+        }
+
+        private void ExcludeCurrentContext(PushSendRequestModel request)
+        {
             var currentContext = _httpContextAccessor?.HttpContext?.
-                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
-            return currentContext?.DeviceIdentifier;
-        }
-
-        private string BuildTag(string tag, string identifier)
-        {
-            if(!string.IsNullOrWhiteSpace(identifier))
+            RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+            if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
-                tag += $" && !deviceIdentifier:{identifier}";
+                request.Identifier = currentContext.DeviceIdentifier;
             }
-
-            return $"({tag})";
         }
 
-        private async Task SendPayloadAsync(string tag, PushType type, object payload)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
         {
-            await _client.SendTemplateNotificationAsync(
-                new Dictionary<string, string>
-                {
-                    { "type",  ((byte)type).ToString() },
-                    { "payload", JsonConvert.SerializeObject(payload) }
-                }, tag);
+            throw new NotImplementedException();
+        }
+
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        {
+            throw new NotImplementedException();
         }
     }
 }
-#endif
