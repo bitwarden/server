@@ -28,8 +28,9 @@ namespace Bit.Core.Services
             }
 
             _globalSettings = globalSettings;
-            _certificate = CoreHelpers.GetCertificate("licensing.crt", null);
-            if(false && !_certificate.Thumbprint.Equals(""))
+            _certificate = CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+            if(!_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(
+                "‎207e64a231e8aa32aaf68a61037c075ebebd553f"), StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new Exception("Invalid licensing certificate.");
             }
@@ -60,6 +61,11 @@ namespace Bit.Core.Services
 
             var license = ReadUserLicense(user);
             return license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
+        }
+
+        public bool VerifyLicense(ILicense license)
+        {
+            return license.VerifySignature(_certificate);
         }
 
         private UserLicense ReadUserLicense(User user)

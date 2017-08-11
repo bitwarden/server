@@ -12,6 +12,9 @@ using System.Linq;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core;
+using System.IO;
+using Newtonsoft.Json;
+using Bit.Core.Models.Business;
 
 namespace Bit.Api.Controllers
 {
@@ -378,7 +381,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("premium")]
-        public async Task<ProfileResponseModel> PostPremium([FromBody]PremiumRequestModel model)
+        public async Task<ProfileResponseModel> PostPremium(PremiumRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -386,7 +389,32 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.SignUpPremiumAsync(user, model.PaymentToken, model.AdditionalStorageGb.GetValueOrDefault(0));
+            var valid = model.Validate(_globalSettings);
+            UserLicense license = null;
+            if(valid && model.License != null)
+            {
+                try
+                {
+                    using (var stream = model.License.OpenReadStream())
+                    using(var reader = new StreamReader(stream))
+                    {
+                        var s = await reader.ReadToEndAsync();
+                        license = JsonConvert.DeserializeObject<UserLicense>(s);
+                    }
+                }
+                catch
+                {
+                    valid = false;
+                }
+            }
+
+            if(!valid)
+            {
+                throw new BadRequestException("Invalid license.");
+            }
+
+            await _userService.SignUpPremiumAsync(user, model.PaymentToken,
+                model.AdditionalStorageGb.GetValueOrDefault(0), license);
             return new ProfileResponseModel(user, null);
         }
 

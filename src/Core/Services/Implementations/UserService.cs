@@ -17,6 +17,8 @@ using U2F.Core.Models;
 using U2F.Core.Utils;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -35,6 +37,7 @@ namespace Bit.Core.Services
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
+        private readonly ILicenseVerificationService _licenseVerificationService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -54,6 +57,7 @@ namespace Bit.Core.Services
             IdentityErrorDescriber errors,
             IServiceProvider services,
             ILogger<UserManager<User>> logger,
+            ILicenseVerificationService licenseVerificationService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -77,6 +81,7 @@ namespace Bit.Core.Services
             _identityErrorDescriber = errors;
             _passwordHasher = passwordHasher;
             _passwordValidators = passwordValidators;
+            _licenseVerificationService = licenseVerificationService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -481,7 +486,7 @@ namespace Bit.Core.Services
 
             if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
             {
-                user.TwoFactorRecoveryCode = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+                user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             }
             await SaveUserAsync(user);
         }
@@ -519,13 +524,13 @@ namespace Bit.Core.Services
             }
 
             user.TwoFactorProviders = null;
-            user.TwoFactorRecoveryCode = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+            user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             await SaveUserAsync(user);
 
             return true;
         }
 
-        public async Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb)
+        public async Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb, UserLicense license)
         {
             if(user.Premium)
             {
@@ -533,19 +538,36 @@ namespace Bit.Core.Services
             }
 
             IPaymentService paymentService = null;
-            if(paymentToken.StartsWith("tok_"))
+            if(_globalSettings.SelfHosted)
             {
-                paymentService = new StripePaymentService();
+                if(license == null || !_licenseVerificationService.VerifyLicense(license))
+                {
+                    throw new BadRequestException("Invalid license.");
+                }
+
+                Directory.CreateDirectory(_globalSettings.LicenseDirectory);
+                File.WriteAllText(_globalSettings.LicenseDirectory, JsonConvert.SerializeObject(license, Formatting.Indented));
+            }
+            else if(!string.IsNullOrWhiteSpace(paymentToken))
+            {
+                if(paymentToken.StartsWith("tok_"))
+                {
+                    paymentService = new StripePaymentService();
+                }
+                else
+                {
+                    paymentService = new BraintreePaymentService(_globalSettings);
+                }
+
+                await paymentService.PurchasePremiumAsync(user, paymentToken, additionalStorageGb);
             }
             else
             {
-                paymentService = new BraintreePaymentService(_globalSettings);
+                throw new InvalidOperationException("License or payment token is required.");
             }
 
-            await paymentService.PurchasePremiumAsync(user, paymentToken, additionalStorageGb);
-
             user.Premium = true;
-            user.MaxStorageGb = (short)(1 + additionalStorageGb);
+            user.MaxStorageGb = _globalSettings.SelfHosted ? (short)10240 : (short)(1 + additionalStorageGb);
             user.RevisionDate = DateTime.UtcNow;
 
             try
@@ -554,7 +576,11 @@ namespace Bit.Core.Services
             }
             catch
             {
-                await paymentService.CancelAndRecoverChargesAsync(user);
+                if(!_globalSettings.SelfHosted)
+                {
+                    await paymentService.CancelAndRecoverChargesAsync(user);
+                }
+
                 throw;
             }
         }

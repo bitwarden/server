@@ -1,11 +1,11 @@
 ﻿using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
-using Dapper;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -96,11 +96,16 @@ namespace Bit.Core.Utilities
             return table;
         }
 
-        public static X509Certificate2 GetCertificate(string thumbprint)
+        public static string CleanCertificateThumbprint(string thumbprint)
         {
             // Clean possible garbage characters from thumbprint copy/paste
             // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
-            thumbprint = Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
+            return Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
+        }
+
+        public static X509Certificate2 GetCertificate(string thumbprint)
+        {
+            thumbprint = CleanCertificateThumbprint(thumbprint);
 
             X509Certificate2 cert = null;
             var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
@@ -118,6 +123,17 @@ namespace Bit.Core.Utilities
         public static X509Certificate2 GetCertificate(string file, string password)
         {
             return new X509Certificate2(file, password);
+        }
+
+        public static X509Certificate2 GetEmbeddedCertificate(string file, string password)
+        {
+            var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
+            using(var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
+            using(var ms = new MemoryStream())
+            {
+                s.CopyTo(ms);
+                return new X509Certificate2(ms.ToArray(), password);
+            }
         }
 
         public static long ToEpocMilliseconds(DateTime date)
