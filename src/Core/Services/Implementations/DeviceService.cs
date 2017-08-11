@@ -30,19 +30,20 @@ namespace Bit.Core.Services
                 await _deviceRepository.ReplaceAsync(device);
             }
 
-            await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device);
+            await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+                device.UserId.ToString(), device.Identifier, device.Type);
         }
 
         public async Task ClearTokenAsync(Device device)
         {
             await _deviceRepository.ClearPushTokenAsync(device.Id);
-            await _pushRegistrationService.DeleteRegistrationAsync(device.Id);
+            await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
         }
 
         public async Task DeleteAsync(Device device)
         {
             await _deviceRepository.DeleteAsync(device);
-            await _pushRegistrationService.DeleteRegistrationAsync(device.Id);
+            await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
         }
     }
 }

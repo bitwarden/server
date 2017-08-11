@@ -25,6 +25,7 @@ namespace Bit.Core.Services
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushNotificationService;
         private readonly IPushRegistrationService _pushRegistrationService;
+        private readonly IDeviceRepository _deviceRepository;
         private readonly StripePaymentService _stripePaymentService;
 
         public OrganizationService(
@@ -36,7 +37,8 @@ namespace Bit.Core.Services
             IDataProtectionProvider dataProtectionProvider,
             IMailService mailService,
             IPushNotificationService pushNotificationService,
-            IPushRegistrationService pushRegistrationService)
+            IPushRegistrationService pushRegistrationService,
+            IDeviceRepository deviceRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -47,6 +49,7 @@ namespace Bit.Core.Services
             _mailService = mailService;
             _pushNotificationService = pushNotificationService;
             _pushRegistrationService = pushRegistrationService;
+            _deviceRepository = deviceRepository;
             _stripePaymentService = new StripePaymentService();
         }
 
@@ -496,8 +499,8 @@ namespace Bit.Core.Services
                 await _organizationUserRepository.CreateAsync(orgUser);
 
                 // push
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(orgUser.UserId.Value,
-                    organization.Id);
+                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(signup.Owner.Id);
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
@@ -732,7 +735,8 @@ namespace Bit.Core.Services
             }
 
             // push
-            await _pushRegistrationService.AddUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+            var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+            await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
             await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
 
             return orgUser;
@@ -784,7 +788,8 @@ namespace Bit.Core.Services
             if(orgUser.UserId.HasValue)
             {
                 // push
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
             }
         }
 
@@ -807,7 +812,8 @@ namespace Bit.Core.Services
             if(orgUser.UserId.HasValue)
             {
                 // push
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(orgUser.UserId.Value, organizationId);
+                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
             }
         }
 
@@ -979,6 +985,12 @@ namespace Bit.Core.Services
             var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
                 OrganizationUserType.Owner);
             return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
+        }
+
+        private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
+        {
+            var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
+            return devices.Select(d => d.Id.ToString());
         }
     }
 }

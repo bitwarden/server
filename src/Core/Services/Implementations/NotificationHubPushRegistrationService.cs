@@ -1,63 +1,59 @@
 ﻿#if NET461
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.NotificationHubs;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories;
+using Bit.Core.Enums;
+using System.Linq;
 
 namespace Bit.Core.Services
 {
     public class NotificationHubPushRegistrationService : IPushRegistrationService
     {
         private readonly NotificationHubClient _client;
-        private readonly IDeviceRepository _deviceRepository;
 
         public NotificationHubPushRegistrationService(
-            GlobalSettings globalSettings,
-            IDeviceRepository deviceRepository)
+            GlobalSettings globalSettings)
         {
             _client = NotificationHubClient.CreateClientFromConnectionString(globalSettings.NotificationHub.ConnectionString,
                 globalSettings.NotificationHub.HubName);
-
-            _deviceRepository = deviceRepository;
         }
 
-        public async Task CreateOrUpdateRegistrationAsync(Device device)
+        public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId, 
+            string identifier, DeviceType type)
         {
-            if(string.IsNullOrWhiteSpace(device.PushToken))
+            if(string.IsNullOrWhiteSpace(pushToken))
             {
                 return;
             }
 
-            var installation = new Microsoft.Azure.NotificationHubs.Installation
+            var installation = new Installation
             {
-                InstallationId = device.Id.ToString(),
-                PushChannel = device.PushToken,
+                InstallationId = deviceId,
+                PushChannel = pushToken,
                 Templates = new Dictionary<string, InstallationTemplate>()
             };
 
             installation.Tags = new List<string>
             {
-                $"userId:{device.UserId}"
+                $"userId:{userId}"
             };
 
-            if(!string.IsNullOrWhiteSpace(device.Identifier))
+            if(!string.IsNullOrWhiteSpace(identifier))
             {
-                installation.Tags.Add("deviceIdentifier:" + device.Identifier);
+                installation.Tags.Add("deviceIdentifier:" + identifier);
             }
 
             string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
-            switch(device.Type)
+            switch(type)
             {
-                case Enums.DeviceType.Android:
+                case DeviceType.Android:
                     payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                         "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
 
                     installation.Platform = NotificationPlatform.Gcm;
                     break;
-                case Enums.DeviceType.iOS:
+                case DeviceType.iOS:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
                         "\"aps\":{\"alert\":null,\"badge\":null,\"content-available\":1}}";
                     messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
@@ -67,7 +63,7 @@ namespace Bit.Core.Services
 
                     installation.Platform = NotificationPlatform.Apns;
                     break;
-                case Enums.DeviceType.AndroidAmazon:
+                case DeviceType.AndroidAmazon:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}";
                     messageTemplate = "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}";
 
@@ -77,16 +73,15 @@ namespace Bit.Core.Services
                     break;
             }
 
-            BuildInstallationTemplate(installation, "payload", payloadTemplate, device.UserId, device.Identifier);
-            BuildInstallationTemplate(installation, "message", messageTemplate, device.UserId, device.Identifier);
-            BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate, device.UserId,
-                device.Identifier);
+            BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
+            BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
+            BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate, userId, identifier);
 
             await _client.CreateOrUpdateInstallationAsync(installation);
         }
 
-        private void BuildInstallationTemplate(Microsoft.Azure.NotificationHubs.Installation installation,
-            string templateId, string templateBody, Guid userId, string deviceIdentifier)
+        private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
+            string userId, string identifier)
         {
             if(templateBody == null)
             {
@@ -105,32 +100,37 @@ namespace Bit.Core.Services
                 }
             };
 
-            if(!string.IsNullOrWhiteSpace(deviceIdentifier))
+            if(!string.IsNullOrWhiteSpace(identifier))
             {
-                template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{deviceIdentifier}");
+                template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
             }
 
             installation.Templates.Add(fullTemplateId, template);
         }
 
-        public async Task DeleteRegistrationAsync(Guid deviceId)
+        public async Task DeleteRegistrationAsync(string deviceId)
         {
-            await _client.DeleteInstallationAsync(deviceId.ToString());
+            await _client.DeleteInstallationAsync(deviceId);
         }
 
-        public async Task AddUserRegistrationOrganizationAsync(Guid userId, Guid organizationId)
+        public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
-            await PatchTagsForUserDevicesAsync(userId, UpdateOperationType.Add, $"organizationId:{organizationId}");
+            await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
         }
 
-        public async Task DeleteUserRegistrationOrganizationAsync(Guid userId, Guid organizationId)
+        public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
-            await PatchTagsForUserDevicesAsync(userId, UpdateOperationType.Remove, $"organizationId:{organizationId}");
+            await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
+                $"organizationId:{organizationId}");
         }
 
-        private async Task PatchTagsForUserDevicesAsync(Guid userId, UpdateOperationType op, string tag)
+        private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op, string tag)
         {
-            var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
+            if(!deviceIds.Any())
+            {
+                return;
+            }
+
             var operation = new PartialUpdateOperation
             {
                 Operation = op,
@@ -138,9 +138,9 @@ namespace Bit.Core.Services
                 Value = tag
             };
 
-            foreach(var device in devices)
+            foreach(var id in deviceIds)
             {
-                await _client.PatchInstallationAsync(device.Id.ToString(), new List<PartialUpdateOperation> { operation });
+                await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
             }
         }
     }

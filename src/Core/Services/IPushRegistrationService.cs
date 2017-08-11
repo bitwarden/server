@@ -1,14 +1,15 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
     public interface IPushRegistrationService
     {
-        Task CreateOrUpdateRegistrationAsync(Device device);
-        Task DeleteRegistrationAsync(Guid deviceId);
-        Task AddUserRegistrationOrganizationAsync(Guid userId, Guid organizationId);
-        Task DeleteUserRegistrationOrganizationAsync(Guid userId, Guid organizationId);
+        Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
+            string identifier, DeviceType type);
+        Task DeleteRegistrationAsync(string deviceId);
+        Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
+        Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
     }
 }

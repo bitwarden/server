@@ -17,6 +17,9 @@ namespace Setup
         private static bool _ssl = false;
         private static bool _selfSignedSsl = false;
         private static bool _letsEncrypt = false;
+        private static string _installationId = null;
+        private static string _installationKey = null;
+        private static bool _push = false;
 
         public static void Main(string[] args)
         {
@@ -50,6 +53,14 @@ namespace Setup
 
             _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
             BuildNginxConfig();
+
+            Console.Write("Installation ID: ");
+            _installationId = Console.ReadLine().ToLowerInvariant();
+            Console.Write("Installation key: ");
+            _installationKey = Console.ReadLine().ToLowerInvariant();
+            Console.Write("Do you want to use push notifications? (y/n): ");
+            _push = Console.ReadLine().ToLowerInvariant() == "y";
+
             BuildEnvironmentFiles();
             BuildAppSettingsFiles();
         }
@@ -262,8 +273,15 @@ globalSettings:dataProtection:directory={_outputDir}/core/aspnet-dataprotection
 globalSettings:logDirectory={_outputDir}/core/logs
 globalSettings:licenseDirectory={_outputDir}/core/licenses
 globalSettings:duo:aKey={Helpers.SecureRandomString(32, alpha: true, numeric: true)}
+globalSettings:installation:id={_installationId}
+globalSettings:installation:key={_installationKey}
 globalSettings:yubico:clientId=REPLACE
-globalSettings:yubico:REPLACE");
+globalSettings:yubico:key=REPLACE");
+
+                if(!_push)
+                {
+                    sw.Write("globalSettings:pushRelayBaseUri=REPLACE");
+                }
             }
 
             using(var sw = File.CreateText("/bitwarden/docker/mssql.override.env"))

@@ -1,4 +1,6 @@
-﻿namespace Bit.Core
+﻿using System;
+
+namespace Bit.Core
 {
     public class GlobalSettings
     {
@@ -8,6 +10,8 @@
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
         public virtual string LicenseDirectory { get; set; }
+        public virtual string PushRelayBaseUri { get; set; }
+        public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
@@ -103,6 +107,13 @@
             public string MerchantId { get; set; }
             public string PublicKey { get; set; }
             public string PrivateKey { get; set; }
+        }
+
+        public class InstallationSettings
+        {
+            public Guid? Id { get; set; }
+            public string Key { get; set; }
+            public string IdentityUri { get; set; }
         }
     }
 }
