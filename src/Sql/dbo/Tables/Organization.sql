@@ -18,6 +18,7 @@
     [GatewaySubscriptionId] VARCHAR (50)     NULL,
     [Enabled]               BIT              NOT NULL,
     [LicenseKey]            VARCHAR (100)    NULL,
+    [ExpirationDate]        DATETIME2 (7)    NULL,
     [CreationDate]          DATETIME2 (7)    NOT NULL,
     [RevisionDate]          DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)

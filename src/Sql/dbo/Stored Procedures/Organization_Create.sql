@@ -18,6 +18,7 @@
     @GatewaySubscriptionId VARCHAR(50),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
+    @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -45,6 +46,7 @@ BEGIN
         [GatewaySubscriptionId],
         [Enabled],
         [LicenseKey],
+        [ExpirationDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -69,6 +71,7 @@ BEGIN
         @GatewaySubscriptionId,
         @Enabled,
         @LicenseKey,
+        @ExpirationDate,
         @CreationDate,
         @RevisionDate
     )

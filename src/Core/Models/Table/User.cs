@@ -30,6 +30,7 @@ namespace Bit.Core.Models.Table
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
         public bool Premium { get; set; }
+        public DateTime? PremiumExpirationDate { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }

@@ -27,6 +27,7 @@ namespace Bit.Core.Models.Table
         public string GatewaySubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
         public string LicenseKey { get; set; }
+        public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

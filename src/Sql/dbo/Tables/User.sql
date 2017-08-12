@@ -16,6 +16,7 @@
     [PublicKey]                       VARCHAR (MAX)    NULL,
     [PrivateKey]                      VARCHAR (MAX)    NULL,
     [Premium]                         BIT              NOT NULL,
+    [PremiumExpirationDate]           DATETIME2 (7)    NULL,
     [Storage]                         BIGINT           NULL,
     [MaxStorageGb]                    SMALLINT         NULL,
     [Gateway]                         TINYINT          NULL,
