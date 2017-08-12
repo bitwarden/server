@@ -578,7 +578,7 @@ namespace Bit.Core.Services
             else
             {
                 user.MaxStorageGb = (short)(1 + additionalStorageGb);
-                user.LicenseKey = CoreHelpers.SecureRandomString(20, upper: false);
+                user.LicenseKey = CoreHelpers.SecureRandomString(20);
             }
 
             try
