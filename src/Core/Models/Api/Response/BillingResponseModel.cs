@@ -2,24 +2,25 @@
 using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Business;
-using Stripe;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 
 namespace Bit.Core.Models.Api
 {
     public class BillingResponseModel : ResponseModel
     {
-        public BillingResponseModel(IStorable storable, BillingInfo billing)
+        public BillingResponseModel(User user, BillingInfo billing, ILicensingService licenseService)
             : base("billing")
         {
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
             UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
-            StorageName = storable.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(storable.Storage.Value) : null;
-            StorageGb = storable.Storage.HasValue ? Math.Round(storable.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-            MaxStorageGb = storable.MaxStorageGb;
+            StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
+            StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+            MaxStorageGb = user.MaxStorageGb;
+            License = new UserLicense(user, billing, licenseService);
         }
 
         public string StorageName { get; set; }
@@ -29,6 +30,7 @@ namespace Bit.Core.Models.Api
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; }
+        public UserLicense License { get; set; }
     }
 
     public class BillingSource

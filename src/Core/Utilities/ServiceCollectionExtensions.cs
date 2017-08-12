@@ -55,6 +55,7 @@ namespace Bit.Core.Utilities
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
             services.AddSingleton<IMailService, RazorViewMailService>();
+            services.AddSingleton<ILicensingService, RsaLicensingService>();
 
             if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
             {
@@ -113,15 +114,6 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
             }
-
-            if(globalSettings.SelfHosted)
-            {
-                services.AddSingleton<ILicenseVerificationService, RsaLicenseVerificationService>();
-            }
-            else
-            {
-                services.AddSingleton<ILicenseVerificationService, NoopLicenseVerificationService>();
-            }
         }
 
         public static void AddNoopServices(this IServiceCollection services)
@@ -132,7 +124,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IBlockIpService, NoopBlockIpService>();
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
-            services.AddSingleton<ILicenseVerificationService, NoopLicenseVerificationService>();
+            services.AddSingleton<ILicensingService, NoopLicensingService>();
         }
 
         public static IdentityBuilder AddCustomIdentityServices(

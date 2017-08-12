@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Models.Table;
+using Bit.Core.Services;
+using Newtonsoft.Json;
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -11,12 +13,19 @@ namespace Bit.Core.Models.Business
         public UserLicense()
         { }
 
-        public UserLicense(User user)
+        public UserLicense(User user, BillingInfo billingInfo, ILicensingService licenseService)
         {
-            LicenseKey = "";
+            LicenseKey = user.LicenseKey;
             Id = user.Id;
             Email = user.Email;
             Version = 1;
+            Premium = user.Premium;
+            MaxStorageGb = user.MaxStorageGb;
+            Issued = DateTime.UtcNow;
+            Expires = billingInfo?.UpcomingInvoice?.Date;
+            Trial = (billingInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
+                billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+            Signature = Convert.ToBase64String(licenseService.SignLicense(this));
         }
 
         public string LicenseKey { get; set; }
@@ -26,9 +35,10 @@ namespace Bit.Core.Models.Business
         public short? MaxStorageGb { get; set; }
         public int Version { get; set; }
         public DateTime Issued { get; set; }
-        public DateTime Expires { get; set; }
+        public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
         public string Signature { get; set; }
+        [JsonIgnore]
         public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
         public byte[] GetSignatureData()
@@ -36,11 +46,12 @@ namespace Bit.Core.Models.Business
             string data = null;
             if(Version == 1)
             {
-                data = string.Format("user:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}",
+                data = string.Format("user:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}",
                     Version,
-                    Utilities.CoreHelpers.ToEpocMilliseconds(Issued),
-                    Utilities.CoreHelpers.ToEpocMilliseconds(Expires),
+                    Utilities.CoreHelpers.ToEpocSeconds(Issued),
+                    Expires.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Expires.Value).ToString() : null,
                     LicenseKey,
+                    Trial,
                     Id,
                     Email,
                     Premium,
@@ -84,6 +95,19 @@ namespace Bit.Core.Models.Business
             using(var rsa = certificate.GetRSAPublicKey())
             {
                 return rsa.VerifyData(GetSignatureData(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            }
+        }
+
+        public byte[] Sign(X509Certificate2 certificate)
+        {
+            if(!certificate.HasPrivateKey)
+            {
+                throw new InvalidOperationException("You don't have the private key!");
+            }
+
+            using(var rsa = certificate.GetRSAPrivateKey())
+            {
+                return rsa.SignData(GetSignatureData(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
         }
     }

@@ -3,10 +3,11 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
-    public interface ILicenseVerificationService
+    public interface ILicensingService
     {
         bool VerifyOrganizationPlan(Organization organization);
         bool VerifyUserPremium(User user);
         bool VerifyLicense(ILicense license);
+        byte[] SignLicense(ILicense license);
     }
 }

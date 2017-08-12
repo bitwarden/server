@@ -11,26 +11,23 @@ using System.Text;
 
 namespace Bit.Core.Services
 {
-    public class RsaLicenseVerificationService : ILicenseVerificationService
+    public class RsaLicensingService : ILicensingService
     {
         private readonly X509Certificate2 _certificate;
         private readonly GlobalSettings _globalSettings;
         private IDictionary<string, UserLicense> _userLicenseCache;
         private IDictionary<string, OrganizationLicense> _organizationLicenseCache;
 
-        public RsaLicenseVerificationService(
+        public RsaLicensingService(
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
-            if(!environment.IsDevelopment() && !globalSettings.SelfHosted)
-            {
-                throw new Exception($"{nameof(RsaLicenseVerificationService)} can only be used for self hosted instances.");
-            }
-
+            var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
             _globalSettings = globalSettings;
-            _certificate = CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
-            if(!_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(
-                "‎207e64a231e8aa32aaf68a61037c075ebebd553f"), StringComparison.InvariantCultureIgnoreCase))
+            _certificate = !_globalSettings.SelfHosted ? CoreHelpers.GetCertificate(certThumbprint)
+                : CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+            if(_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
+                StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new Exception("Invalid licensing certificate.");
             }
@@ -43,7 +40,12 @@ namespace Bit.Core.Services
 
         public bool VerifyOrganizationPlan(Organization organization)
         {
-            if(_globalSettings.SelfHosted && !organization.SelfHost)
+            if(!_globalSettings.SelfHosted)
+            {
+                return true;
+            }
+
+            if(!organization.SelfHost)
             {
                 return false;
             }
@@ -54,6 +56,11 @@ namespace Bit.Core.Services
 
         public bool VerifyUserPremium(User user)
         {
+            if(!_globalSettings.SelfHosted)
+            {
+                return user.Premium;
+            }
+
             if(!user.Premium)
             {
                 return false;
@@ -68,6 +75,16 @@ namespace Bit.Core.Services
             return license.VerifySignature(_certificate);
         }
 
+        public byte[] SignLicense(ILicense license)
+        {
+            if(_globalSettings.SelfHosted || !_certificate.HasPrivateKey)
+            {
+                throw new InvalidOperationException("Cannot sign licenses.");
+            }
+
+            return license.Sign(_certificate);
+        }
+
         private UserLicense ReadUserLicense(User user)
         {
             if(_userLicenseCache != null && _userLicenseCache.ContainsKey(user.LicenseKey))
@@ -75,7 +92,7 @@ namespace Bit.Core.Services
                 return _userLicenseCache[user.LicenseKey];
             }
 
-            var filePath = $"{_globalSettings.LicenseDirectory}/user/{user.LicenseKey}.json";
+            var filePath = $"{_globalSettings.LicenseDirectory}/user/{user.Id}.json";
             if(!File.Exists(filePath))
             {
                 return null;
@@ -98,7 +115,7 @@ namespace Bit.Core.Services
                 return _organizationLicenseCache[organization.LicenseKey];
             }
 
-            var filePath = $"{_globalSettings.LicenseDirectory}/organization/{organization.LicenseKey}.json";
+            var filePath = $"{_globalSettings.LicenseDirectory}/organization/{organization.Id}.json";
             if(!File.Exists(filePath))
             {
                 return null;

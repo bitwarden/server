@@ -146,6 +146,16 @@ namespace Bit.Core.Utilities
             return _epoc.AddMilliseconds(milliseconds);
         }
 
+        public static long ToEpocSeconds(DateTime date)
+        {
+            return (long)Math.Round((date - _epoc).TotalSeconds, 0);
+        }
+
+        public static DateTime FromEpocSeconds(long seconds)
+        {
+            return _epoc.AddSeconds(seconds);
+        }
+
         public static string U2fAppIdUrl(GlobalSettings globalSettings)
         {
             return string.Concat(globalSettings.BaseServiceUri.Vault, "/app-id.json");

@@ -43,7 +43,7 @@ namespace Bit.Core.Models.Business
         public bool SelfHost { get; set; }
         public int Version { get; set; }
         public DateTime Issued { get; set; }
-        public DateTime Expires { get; set; }
+        public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
         public string Signature { get; set; }
         public byte[] SignatureBytes => Convert.FromBase64String(Signature);
@@ -55,8 +55,8 @@ namespace Bit.Core.Models.Business
             {
                 data = string.Format("organization:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}_{10}_{11}_{12}_{13}",
                     Version,
-                    Utilities.CoreHelpers.ToEpocMilliseconds(Issued),
-                    Utilities.CoreHelpers.ToEpocMilliseconds(Expires),
+                    Utilities.CoreHelpers.ToEpocSeconds(Issued),
+                    Expires.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Expires.Value).ToString() : null,
                     LicenseKey,
                     Id,
                     Enabled,
@@ -76,7 +76,7 @@ namespace Bit.Core.Models.Business
 
             return Encoding.UTF8.GetBytes(data);
         }
-
+        
         public bool VerifyData(Organization organization)
         {
             if(Issued > DateTime.UtcNow)
@@ -114,6 +114,11 @@ namespace Bit.Core.Models.Business
             {
                 return rsa.VerifyData(GetSignatureData(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
+        }
+
+        public byte[] Sign(X509Certificate2 certificate)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -106,7 +106,7 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("No exp in token.");
             }
 
-            var expiration = CoreHelpers.FromEpocMilliseconds(1000 * exp.Value<long>());
+            var expiration = CoreHelpers.FromEpocSeconds(exp.Value<long>());
             return DateTime.UtcNow < expiration;
         }
 

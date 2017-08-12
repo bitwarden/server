@@ -37,7 +37,7 @@ namespace Bit.Core.Services
         private readonly IdentityOptions _identityOptions;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
-        private readonly ILicenseVerificationService _licenseVerificationService;
+        private readonly ILicensingService _licenseService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -57,7 +57,7 @@ namespace Bit.Core.Services
             IdentityErrorDescriber errors,
             IServiceProvider services,
             ILogger<UserManager<User>> logger,
-            ILicenseVerificationService licenseVerificationService,
+            ILicensingService licenseService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -81,7 +81,7 @@ namespace Bit.Core.Services
             _identityErrorDescriber = errors;
             _passwordHasher = passwordHasher;
             _passwordValidators = passwordValidators;
-            _licenseVerificationService = licenseVerificationService;
+            _licenseService = licenseService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -540,13 +540,14 @@ namespace Bit.Core.Services
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {
-                if(license == null || !_licenseVerificationService.VerifyLicense(license))
+                if(license == null || !_licenseService.VerifyLicense(license))
                 {
                     throw new BadRequestException("Invalid license.");
                 }
 
-                Directory.CreateDirectory(_globalSettings.LicenseDirectory);
-                File.WriteAllText(_globalSettings.LicenseDirectory, JsonConvert.SerializeObject(license, Formatting.Indented));
+                var dir = $"{_globalSettings.LicenseDirectory}/user";
+                Directory.CreateDirectory(dir);
+                File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
             }
             else if(!string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -567,20 +568,26 @@ namespace Bit.Core.Services
             }
 
             user.Premium = true;
-            user.MaxStorageGb = _globalSettings.SelfHosted ? (short)10240 : (short)(1 + additionalStorageGb);
             user.RevisionDate = DateTime.UtcNow;
+
+            if(_globalSettings.SelfHosted)
+            {
+                user.MaxStorageGb = 10240;
+                user.LicenseKey = license.LicenseKey;
+            }
+            else
+            {
+                user.MaxStorageGb = (short)(1 + additionalStorageGb);
+                user.LicenseKey = CoreHelpers.SecureRandomString(20, upper: false);
+            }
 
             try
             {
                 await SaveUserAsync(user);
             }
-            catch
+            catch when(!_globalSettings.SelfHosted)
             {
-                if(!_globalSettings.SelfHosted)
-                {
-                    await paymentService.CancelAndRecoverChargesAsync(user);
-                }
-
+                await paymentService.CancelAndRecoverChargesAsync(user);
                 throw;
             }
         }

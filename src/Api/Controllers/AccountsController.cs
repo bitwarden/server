@@ -25,6 +25,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ILicensingService _licenseService;
         private readonly UserManager<User> _userManager;
         private readonly GlobalSettings _globalSettings;
 
@@ -32,6 +33,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
+            ILicensingService licenseService,
             UserManager<User> userManager,
             GlobalSettings globalSettings)
         {
@@ -39,6 +41,7 @@ namespace Bit.Api.Controllers
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
             _userManager = userManager;
+            _licenseService = licenseService;
             _globalSettings = globalSettings;
         }
 
@@ -391,7 +394,7 @@ namespace Bit.Api.Controllers
 
             var valid = model.Validate(_globalSettings);
             UserLicense license = null;
-            if(valid && model.License != null)
+            if(valid && _globalSettings.SelfHosted && model.License != null)
             {
                 try
                 {
@@ -434,7 +437,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new BillingResponseModel(user, billingInfo);
+            return new BillingResponseModel(user, billingInfo, _licenseService);
         }
 
         [HttpPut("payment")]

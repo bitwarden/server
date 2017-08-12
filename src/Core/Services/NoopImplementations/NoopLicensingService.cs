@@ -5,15 +5,15 @@ using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
-    public class NoopLicenseVerificationService : ILicenseVerificationService
+    public class NoopLicensingService : ILicensingService
     {
-        public NoopLicenseVerificationService(
+        public NoopLicensingService(
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
             if(!environment.IsDevelopment() && globalSettings.SelfHosted)
             {
-                throw new Exception($"{nameof(NoopLicenseVerificationService)} cannot be used for self hosted instances.");
+                throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
             }
         }
 
@@ -30,6 +30,11 @@ namespace Bit.Core.Services
         public bool VerifyUserPremium(User user)
         {
             return user.Premium;
+        }
+
+        public byte[] SignLicense(ILicense license)
+        {
+            return new byte[0];
         }
     }
 }
