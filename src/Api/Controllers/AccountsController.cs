@@ -444,14 +444,16 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var paymentService = user.GetPaymentService(_globalSettings);
-            var billingInfo = await paymentService.GetBillingAsync(user);
-            if(billingInfo == null)
+            if(!_globalSettings.SelfHosted && user.Gateway != null)
             {
-                throw new NotFoundException();
+                var paymentService = user.GetPaymentService(_globalSettings);
+                var billingInfo = await paymentService.GetBillingAsync(user);
+                return new BillingResponseModel(user, billingInfo, _licenseService);
             }
-
-            return new BillingResponseModel(user, billingInfo, _licenseService);
+            else
+            {
+                return new BillingResponseModel(user);
+            }
         }
 
         [HttpPut("payment")]

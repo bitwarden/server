@@ -23,6 +23,14 @@ namespace Bit.Core.Models.Api
             License = new UserLicense(user, billing, licenseService);
         }
 
+        public BillingResponseModel(User user)
+            : base("billing")
+        {
+            StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
+            StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+            MaxStorageGb = user.MaxStorageGb;
+        }
+
         public string StorageName { get; set; }
         public double? StorageGb { get; set; }
         public short? MaxStorageGb { get; set; }
