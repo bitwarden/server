@@ -572,7 +572,7 @@ namespace Bit.Core.Services
 
             if(_globalSettings.SelfHosted)
             {
-                user.MaxStorageGb = 10240;
+                user.MaxStorageGb = 10240; // 10 TB
                 user.LicenseKey = license.LicenseKey;
             }
             else

@@ -396,22 +396,36 @@ namespace Bit.Api.Controllers
             UserLicense license = null;
             if(valid && _globalSettings.SelfHosted && model.License != null)
             {
-                try
-                {
-                    using (var stream = model.License.OpenReadStream())
-                    using(var reader = new StreamReader(stream))
-                    {
-                        var s = await reader.ReadToEndAsync();
-                        license = JsonConvert.DeserializeObject<UserLicense>(s);
-                    }
-                }
-                catch
+                if(!HttpContext.Request.ContentLength.HasValue || HttpContext.Request.ContentLength.Value > 51200) // 50 KB
                 {
                     valid = false;
                 }
+                else
+                {
+                    try
+                    {
+                        using(var stream = model.License.OpenReadStream())
+                        using(var reader = new StreamReader(stream))
+                        {
+                            var s = await reader.ReadToEndAsync();
+                            if(string.IsNullOrWhiteSpace(s))
+                            {
+                                valid = false;
+                            }
+                            else
+                            {
+                                license = JsonConvert.DeserializeObject<UserLicense>(s);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        valid = false;
+                    }
+                }
             }
 
-            if(!valid)
+            if(!valid || (_globalSettings.SelfHosted && license == null))
             {
                 throw new BadRequestException("Invalid license.");
             }
