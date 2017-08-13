@@ -31,9 +31,11 @@ namespace Bit.Core.Models.Business
                         break;
                     case SourceType.BankAccount:
                         Type = PaymentMethodType.BankAccount;
-                        Description = $"{source.BankAccount.BankName}, *{source.BankAccount.Last4}";
+                        Description = $"{source.BankAccount.BankName}, *{source.BankAccount.Last4} - " +
+                            (source.BankAccount.Status == "verified" ? "verified" :
+                            source.BankAccount.Status == "errored" ? "invalid" :
+                            source.BankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
                         break;
-                    // bitcoin?
                     default:
                         break;
                 }
