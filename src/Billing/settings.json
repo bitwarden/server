@@ -37,7 +37,8 @@
   },
   "billingSettings": {
     "stripeWebhookKey": "SECRET",
-    "stripeWebhookSecret": "SECRET"
+    "stripeWebhookSecret": "SECRET",
+    "braintreeWebhookKey": "SECRET"
   },
   "braintree": {
     "production": false,
