@@ -48,11 +48,13 @@ namespace Bit.Core.Models.Api
             Type = source.Type;
             CardBrand = source.CardBrand;
             Description = source.Description;
+            NeedsVerification = source.NeedsVerification;
         }
 
         public PaymentMethodType Type { get; set; }
         public string CardBrand { get; set; }
         public string Description { get; set; }
+        public bool NeedsVerification { get; set; }
     }
 
     public class BillingSubscription

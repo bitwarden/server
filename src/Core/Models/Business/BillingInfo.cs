@@ -35,6 +35,7 @@ namespace Bit.Core.Models.Business
                             (source.BankAccount.Status == "verified" ? "verified" :
                             source.BankAccount.Status == "errored" ? "invalid" :
                             source.BankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
+                        NeedsVerification = source.BankAccount.Status == "new" || source.BankAccount.Status == "validated";
                         break;
                     default:
                         break;
@@ -84,6 +85,7 @@ namespace Bit.Core.Models.Business
             public PaymentMethodType Type { get; set; }
             public string CardBrand { get; set; }
             public string Description { get; set; }
+            public bool NeedsVerification { get; set; }
         }
 
         public class BillingSubscription
