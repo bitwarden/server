@@ -551,6 +551,11 @@ namespace Bit.Core.Services
             }
             else if(!string.IsNullOrWhiteSpace(paymentToken))
             {
+                if(paymentToken.StartsWith("btok_"))
+                {
+                    throw new BadRequestException("Invalid token.");
+                }
+
                 if(paymentToken.StartsWith("tok_"))
                 {
                     paymentService = new StripePaymentService();
@@ -612,6 +617,11 @@ namespace Bit.Core.Services
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken)
         {
+            if(paymentToken.StartsWith("btok_"))
+            {
+                throw new BadRequestException("Invalid token.");
+            }
+
             IPaymentService paymentService = null;
             if(paymentToken.StartsWith("tok_"))
             {
