@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
@@ -30,14 +31,21 @@ namespace Bit.Billing.Controllers
         }
 
         [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook([FromBody]dynamic body, [FromQuery] string key)
+        public async Task<IActionResult> PostWebhook([FromQuery] string key)
         {
-            if(body == null || key != _billingSettings.StripeWebhookKey)
+            if(key != _billingSettings.StripeWebhookKey)
             {
                 return new BadRequestResult();
             }
 
-            StripeEvent parsedEvent = StripeEventUtility.ParseEventDataItem<StripeEvent>(body);
+            StripeEvent parsedEvent;
+            using(var sr = new StreamReader(HttpContext.Request.Body))
+            {
+                var json = await sr.ReadToEndAsync();
+                parsedEvent = StripeEventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
+                    _billingSettings.StripeWebhookSecret);
+            }
+
             if(string.IsNullOrWhiteSpace(parsedEvent?.Id))
             {
                 return new BadRequestResult();

@@ -10,7 +10,6 @@ using Bit.Core.Utilities;
 using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Billing
 {
