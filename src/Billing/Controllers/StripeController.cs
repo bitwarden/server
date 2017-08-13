@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Stripe;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
@@ -36,7 +37,7 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var parsedEvent = StripeEventUtility.ParseEventDataItem<StripeEvent>(body);
+            StripeEvent parsedEvent = StripeEventUtility.ParseEventDataItem<StripeEvent>(body);
             if(string.IsNullOrWhiteSpace(parsedEvent?.Id))
             {
                 return new BadRequestResult();
@@ -47,30 +48,57 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            if(parsedEvent.Type == "customer.subscription.deleted")
+            if(parsedEvent.Type.Equals("customer.subscription.deleted") ||
+                parsedEvent.Type.Equals("customer.subscription.updated"))
             {
-                var subscription = Mapper<StripeSubscription>.MapFromJson(parsedEvent.Data.Object.ToString())
-                    as StripeSubscription;
-                if(subscription?.Status == "canceled")
+                StripeSubscription subscription = Mapper<StripeSubscription>.MapFromJson(parsedEvent.Data.Object.ToString());
+                var ids = GetIdsFromMetaData(subscription.Metadata);
+
+                if(parsedEvent.Type.Equals("customer.subscription.deleted") && subscription?.Status == "canceled")
                 {
-                    if(subscription.Metadata?.ContainsKey("organizationId") ?? false)
+                    // org
+                    if(ids.Item1.HasValue)
                     {
-                        var orgIdGuid = new Guid(subscription.Metadata["organizationId"]);
-                        await _organizationService.DisableAsync(orgIdGuid);
+                        await _organizationService.DisableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
                     }
-                    else if(subscription.Metadata?.ContainsKey("userId") ?? false)
+                    // user
+                    else if(ids.Item2.HasValue)
                     {
-                        var userIdGuid = new Guid(subscription.Metadata["userId"]);
-                        await _userService.DisablePremiumAsync(userIdGuid);
+                        await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                    }
+                }
+                else if(parsedEvent.Type.Equals("customer.subscription.updated"))
+                {
+                    // org
+                    if(ids.Item1.HasValue)
+                    {
+                        await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                    }
+                    // user
+                    else if(ids.Item2.HasValue)
+                    {
+                        await _userService.UpdatePremiumExpirationAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
                     }
                 }
             }
-            else
-            {
-                // Not handling this event type.
-            }
 
             return new OkResult();
+        }
+
+        private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
+        {
+            Guid? orgId = null;
+            Guid? userId = null;
+            if(metaData?.ContainsKey("organizationId") ?? false)
+            {
+                orgId = new Guid(metaData["organizationId"]);
+            }
+            else if(metaData?.ContainsKey("userId") ?? false)
+            {
+                userId = new Guid(metaData["userId"]);
+            }
+
+            return new Tuple<Guid?, Guid?>(orgId, userId);
         }
     }
 }

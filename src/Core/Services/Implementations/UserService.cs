@@ -574,6 +574,7 @@ namespace Bit.Core.Services
             {
                 user.MaxStorageGb = 10240; // 10 TB
                 user.LicenseKey = license.LicenseKey;
+                user.PremiumExpirationDate = license.Expires;
             }
             else
             {
@@ -640,12 +641,24 @@ namespace Bit.Core.Services
             await paymentService.ReinstateSubscriptionAsync(user);
         }
 
-        public async Task DisablePremiumAsync(Guid userId)
+        public async Task DisablePremiumAsync(Guid userId, DateTime? expirationDate)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if(user != null && user.Premium)
             {
                 user.Premium = false;
+                user.PremiumExpirationDate = expirationDate;
+                user.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(user);
+            }
+        }
+
+        public async Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if(user != null)
+            {
+                user.PremiumExpirationDate = expirationDate;
                 user.RevisionDate = DateTime.UtcNow;
                 await _userRepository.ReplaceAsync(user);
             }

@@ -63,6 +63,8 @@ namespace Bit.Core.Services
             user.Gateway = Enums.GatewayType.Stripe;
             user.GatewayCustomerId = customer.Id;
             user.GatewaySubscriptionId = subscription.Id;
+            user.Premium = true;
+            user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
         }
 
         public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,

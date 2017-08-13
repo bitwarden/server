@@ -243,6 +243,8 @@ namespace Bit.Core.Services
             user.Gateway = Enums.GatewayType.Braintree;
             user.GatewayCustomerId = customerResult.Target.Id;
             user.GatewaySubscriptionId = subResult.Target.Id;
+            user.Premium = true;
+            user.PremiumExpirationDate = subResult.Target.BillingPeriodEndDate;
         }
 
         public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)

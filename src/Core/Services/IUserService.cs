@@ -45,6 +45,7 @@ namespace Bit.Core.Services
         Task ReplacePaymentMethodAsync(User user, string paymentToken);
         Task CancelPremiumAsync(User user, bool endOfPeriod = false);
         Task ReinstatePremiumAsync(User user);
-        Task DisablePremiumAsync(Guid userId);
+        Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
+        Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     }
 }

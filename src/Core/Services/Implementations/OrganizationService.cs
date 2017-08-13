@@ -527,15 +527,28 @@ namespace Bit.Core.Services
             await _organizationRepository.DeleteAsync(organization);
         }
 
-        public async Task DisableAsync(Guid organizationId)
+        public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
             if(org != null && org.Enabled)
             {
                 org.Enabled = false;
+                org.ExpirationDate = expirationDate;
+                org.RevisionDate = DateTime.UtcNow;
                 await _organizationRepository.ReplaceAsync(org);
 
                 // TODO: send email to owners?
+            }
+        }
+
+        public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
+        {
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(org != null)
+            {
+                org.ExpirationDate = expirationDate;
+                org.RevisionDate = DateTime.UtcNow;
+                await _organizationRepository.ReplaceAsync(org);
             }
         }
 
