@@ -303,7 +303,8 @@ SA_PASSWORD={dbPass}");
     identityUri: ""{_url}/identity"",
     stripeKey: null,
     braintreeKey: null,
-    whitelistDomains: [""{_domain}""]
+    whitelistDomains: [""{_domain}""],
+    selfHosted: true
 }};");
             }
         }

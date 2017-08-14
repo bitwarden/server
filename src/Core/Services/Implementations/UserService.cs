@@ -142,7 +142,7 @@ namespace Bit.Core.Services
             return await _userRepository.GetAccountRevisionDateAsync(userId);
         }
 
-        public async Task SaveUserAsync(User user)
+        public async Task SaveUserAsync(User user, bool push = false)
         {
             if(user.Id == default(Guid))
             {
@@ -152,8 +152,11 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
-            // push
-            await _pushService.PushSyncSettingsAsync(user.Id);
+            if(push)
+            {
+                // push
+                await _pushService.PushSyncSettingsAsync(user.Id);
+            }
         }
 
         public override async Task<IdentityResult> DeleteAsync(User user)
@@ -540,7 +543,7 @@ namespace Bit.Core.Services
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {
-                if(license == null || !_licenseService.VerifyLicense(license))
+                if(license == null || !_licenseService.VerifyLicense(license) || !license.CanUse(user))
                 {
                     throw new BadRequestException("Invalid license.");
                 }
@@ -605,7 +608,7 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
-            if(license == null || !_licenseService.VerifyLicense(license))
+            if(license == null || !_licenseService.VerifyLicense(license) || !license.CanUse(user))
             {
                 throw new BadRequestException("Invalid license.");
             }

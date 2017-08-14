@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Bit.Core.Utilities;
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -15,10 +16,13 @@ namespace Bit.Core.Services
     {
         private dynamic _decodedToken;
         private DateTime? _nextAuthAttempt = null;
+        private readonly ILogger<BaseRelayPushNotificationService> _logger;
 
         public BaseRelayPushNotificationService(
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<BaseRelayPushNotificationService> logger)
         {
+            _logger = logger;
             GlobalSettings = globalSettings;
 
             PushClient = new HttpClient
@@ -65,8 +69,17 @@ namespace Bit.Core.Services
                 })
             };
 
-            var response = await IdentityClient.SendAsync(requestMessage);
-            if(!response.IsSuccessStatusCode)
+            HttpResponseMessage response = null;
+            try
+            {
+                response = await IdentityClient.SendAsync(requestMessage);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12339, e, "Unable to auth for push.");
+            }
+
+            if(response == null || !response.IsSuccessStatusCode)
             {
                 if(response.StatusCode == HttpStatusCode.BadRequest)
                 {

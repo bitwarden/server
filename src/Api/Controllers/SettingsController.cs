@@ -42,7 +42,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.SaveUserAsync(model.ToUser(user));
+            await _userService.SaveUserAsync(model.ToUser(user), true);
 
             var response = new DomainsResponseModel(user);
             return response;

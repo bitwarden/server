@@ -65,6 +65,28 @@ namespace Bit.Core.Models.Business
             return Encoding.UTF8.GetBytes(data);
         }
 
+        public bool CanUse(User user)
+        {
+            if(Issued > DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            if(Expires < DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            if(Version == 1)
+            {
+                return user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+            }
+            else
+            {
+                throw new NotSupportedException($"Version {Version} is not supported.");
+            }
+        }
+
         public bool VerifyData(User user)
         {
             if(Issued > DateTime.UtcNow)

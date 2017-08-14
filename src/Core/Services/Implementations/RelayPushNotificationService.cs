@@ -6,19 +6,23 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
 using System.Net.Http;
 using Bit.Core.Models.Api;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
     public class RelayPushNotificationService : BaseRelayPushNotificationService, IPushNotificationService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<RelayPushNotificationService> _logger;
 
         public RelayPushNotificationService(
             GlobalSettings globalSettings,
-            IHttpContextAccessor httpContextAccessor)
-            : base(globalSettings)
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<RelayPushNotificationService> logger)
+            : base(globalSettings, logger)
         {
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         public async Task PushSyncCipherCreateAsync(Cipher cipher)
@@ -166,7 +170,15 @@ namespace Bit.Core.Services
                 Method = HttpMethod.Post,
                 RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/send"))
             };
-            await PushClient.SendAsync(message);
+
+            try
+            {
+                await PushClient.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12334, e, "Unable to send push notification.");
+            }
         }
 
         private void ExcludeCurrentContext(PushSendRequestModel request)

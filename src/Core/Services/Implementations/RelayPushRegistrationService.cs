@@ -5,14 +5,21 @@ using System;
 using Bit.Core.Models.Api;
 using Bit.Core.Enums;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
     public class RelayPushRegistrationService : BaseRelayPushNotificationService, IPushRegistrationService
     {
-        public RelayPushRegistrationService(GlobalSettings globalSettings)
-            : base(globalSettings)
-        { }
+        private readonly ILogger<RelayPushRegistrationService> _logger;
+
+        public RelayPushRegistrationService(
+            GlobalSettings globalSettings,
+            ILogger<RelayPushRegistrationService> logger)
+            : base(globalSettings, logger)
+        {
+            _logger = logger;
+        }
 
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
             string identifier, DeviceType type)
@@ -37,7 +44,15 @@ namespace Bit.Core.Services
                 Method = HttpMethod.Post,
                 RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/register"))
             };
-            await PushClient.SendAsync(message);
+
+            try
+            {
+                await PushClient.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12335, e, "Unable to create push registration.");
+            }
         }
 
         public async Task DeleteRegistrationAsync(string deviceId)
@@ -53,7 +68,15 @@ namespace Bit.Core.Services
                 Method = HttpMethod.Delete,
                 RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/", deviceId))
             };
-            await PushClient.SendAsync(message);
+
+            try
+            {
+                await PushClient.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12336, e, "Unable to delete push registration.");
+            }
         }
 
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -75,7 +98,15 @@ namespace Bit.Core.Services
                 Method = HttpMethod.Put,
                 RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/add-organization"))
             };
-            await PushClient.SendAsync(message);
+
+            try
+            {
+                await PushClient.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12337, e, "Unable to add user org push registration.");
+            }
         }
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -97,7 +128,15 @@ namespace Bit.Core.Services
                 Method = HttpMethod.Put,
                 RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/delete-organization"))
             };
-            await PushClient.SendAsync(message);
+
+            try
+            {
+                await PushClient.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12338, e, "Unable to delete user org push registration.");
+            }
         }
     }
 }
