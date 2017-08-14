@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.0.0-preview2-runtime-jessie
+FROM microsoft/dotnet:2.0.0-runtime-jessie
 
 # FROM https://github.com/aspnet/aspnet-docker/blob/master/1.1/jessie/runtime/Dockerfile
 
