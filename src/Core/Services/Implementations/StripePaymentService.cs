@@ -264,6 +264,7 @@ namespace Bit.Core.Services
             var updatedSubscriber = false;
 
             var cardService = new StripeCardService();
+            var bankSerice = new BankAccountService();
             var customerService = new StripeCustomerService();
             StripeCustomer customer = null;
 
@@ -287,14 +288,32 @@ namespace Bit.Core.Services
             }
             else
             {
-                await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
+                if(paymentToken.StartsWith("btok_"))
                 {
-                    SourceToken = paymentToken
-                });
+                    await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
+                    {
+                        SourceToken = paymentToken
+                    });
+                }
+                else
+                {
+                    await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
+                    {
+                        SourceToken = paymentToken
+                    });
+                }
 
                 if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
                 {
-                    await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
+                    var source = customer.Sources.FirstOrDefault(s => s.Id == customer.DefaultSourceId);
+                    if(source.BankAccount != null)
+                    {
+                        await bankSerice.DeleteAsync(customer.Id, customer.DefaultSourceId);
+                    }
+                    else if(source.Card != null)
+                    {
+                        await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
+                    }
                 }
             }
 
