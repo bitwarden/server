@@ -519,6 +519,8 @@ namespace Bit.Core.Services
                 GatewayCustomerId = customer?.Id,
                 GatewaySubscriptionId = subscription?.Id,
                 Enabled = true,
+                ExpirationDate = subscription.CurrentPeriodEnd,
+                LicenseKey = CoreHelpers.SecureRandomString(20),
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
