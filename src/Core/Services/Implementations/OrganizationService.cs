@@ -350,6 +350,49 @@ namespace Bit.Core.Services
             await _organizationRepository.ReplaceAsync(organization);
         }
 
+        public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+            {
+                throw new GatewayException("Not a gateway customer.");
+            }
+
+            var bankService = new BankAccountService();
+            var customerService = new StripeCustomerService();
+            var customer = await customerService.GetAsync(organization.GatewayCustomerId);
+            if(customer == null)
+            {
+                throw new GatewayException("Cannot find customer.");
+            }
+
+            var bankAccount = customer.Sources
+                    .FirstOrDefault(s => s.BankAccount != null && s.BankAccount.Status != "verified")?.BankAccount;
+            if(bankAccount == null)
+            {
+                throw new GatewayException("Cannot find an unverified bank account.");
+            }
+
+            try
+            {
+                var result = await bankService.VerifyAsync(organization.GatewayCustomerId, bankAccount.Id,
+                    new BankAccountVerifyOptions { AmountOne = amount1, AmountTwo = amount2 });
+                if(result.Status != "verified")
+                {
+                    throw new GatewayException("Unable to verify account.");
+                }
+            }
+            catch(StripeException e)
+            {
+                throw new GatewayException(e.Message);
+            }
+        }
+
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);

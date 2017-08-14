@@ -181,6 +181,18 @@ namespace Bit.Api.Controllers
 
             await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
         }
+        
+        [HttpPost("{id}/verify-bank")]
+        public async Task PostVerifyBank(string id, [FromBody]OrganizationVerifyBankRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
+        }
 
         [HttpPut("{id}/cancel")]
         [HttpPost("{id}/cancel")]

@@ -16,6 +16,7 @@ namespace Bit.Core.Services
         Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats);
         Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
         Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
+        Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task DeleteAsync(Organization organization);
         Task DisableAsync(Guid organizationId, DateTime? expirationDate);
