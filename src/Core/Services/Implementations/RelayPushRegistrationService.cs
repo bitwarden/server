@@ -10,9 +10,6 @@ namespace Bit.Core.Services
 {
     public class RelayPushRegistrationService : BaseRelayPushNotificationService, IPushRegistrationService
     {
-        private dynamic _decodedToken;
-        private DateTime? _nextAuthAttempt = null;
-
         public RelayPushRegistrationService(GlobalSettings globalSettings)
             : base(globalSettings)
         { }

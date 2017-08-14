@@ -11,7 +11,6 @@ namespace Bit.Core.Services
 {
     public class RelayPushNotificationService : BaseRelayPushNotificationService, IPushNotificationService
     {
-        private readonly HttpClient _client;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public RelayPushNotificationService(

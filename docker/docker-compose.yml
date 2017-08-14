@@ -5,8 +5,6 @@ services:
     image: microsoft/mssql-server-linux
     container_name: mssql
     restart: always
-    env_file:
-      - mssql.env
     ports:
       - '1433:1433'
       
@@ -24,14 +22,10 @@ services:
     image: bitwarden/api
     container_name: api
     restart: always
-    env_file:
-      - global.env
 
   identity:
     image: bitwarden/identity
     container_name: identity
-    env_file:
-      - global.env
 
   nginx:
     image: bitwarden/nginx
