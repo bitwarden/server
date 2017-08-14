@@ -41,6 +41,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> DeleteAsync(User user, string token);
         Task SendDeleteConfirmationAsync(string email);
         Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb, UserLicense license);
+        Task UpdateLicenseAsync(User user, UserLicense license);
         Task AdjustStorageAsync(User user, short storageAdjustmentGb);
         Task ReplacePaymentMethodAsync(User user, string paymentToken);
         Task CancelPremiumAsync(User user, bool endOfPeriod = false);

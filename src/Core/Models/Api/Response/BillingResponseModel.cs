@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Api
             StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
             MaxStorageGb = user.MaxStorageGb;
             License = new UserLicense(user, billing, licenseService);
+            Expiration = License.Expires;
         }
 
         public BillingResponseModel(User user)
@@ -29,6 +30,7 @@ namespace Bit.Core.Models.Api
             StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
             StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
             MaxStorageGb = user.MaxStorageGb;
+            Expiration = user.PremiumExpirationDate;
         }
 
         public string StorageName { get; set; }
@@ -39,6 +41,7 @@ namespace Bit.Core.Models.Api
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; }
         public UserLicense License { get; set; }
+        public DateTime? Expiration { get; set; }
     }
 
     public class BillingSource

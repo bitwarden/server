@@ -15,6 +15,7 @@ using Bit.Core;
 using System.IO;
 using Newtonsoft.Json;
 using Bit.Core.Models.Business;
+using Bit.Api.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -458,6 +459,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("payment")]
         [HttpPost("payment")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutPayment([FromBody]PaymentRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -471,6 +473,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("storage")]
         [HttpPost("storage")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutStorage([FromBody]StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -482,8 +485,46 @@ namespace Bit.Api.Controllers
             await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
         }
 
+        [HttpPut("license")]
+        [HttpPost("license")]
+        [SelfHosted(SelfHostedOnly = true)]
+        public async Task PutLicense(UpdateLicenseRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            UserLicense license = null;
+            if(HttpContext.Request.ContentLength.HasValue && HttpContext.Request.ContentLength.Value <= 51200) // 50 KB
+            {
+                try
+                {
+                    using(var stream = model.License.OpenReadStream())
+                    using(var reader = new StreamReader(stream))
+                    {
+                        var s = await reader.ReadToEndAsync();
+                        if(!string.IsNullOrWhiteSpace(s))
+                        {
+                            license = JsonConvert.DeserializeObject<UserLicense>(s);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if(license == null)
+            {
+                throw new BadRequestException("Invalid license");
+            }
+
+            await _userService.UpdateLicenseAsync(user, license);
+        }
+
         [HttpPut("cancel-premium")]
         [HttpPost("cancel-premium")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutCancel()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -497,6 +538,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("reinstate-premium")]
         [HttpPost("reinstate-premium")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutReinstate()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);

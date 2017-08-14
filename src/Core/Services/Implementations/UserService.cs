@@ -598,6 +598,30 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UpdateLicenseAsync(User user, UserLicense license)
+        {
+            if(!_globalSettings.SelfHosted)
+            {
+                throw new InvalidOperationException("Licenses require self hosting.");
+            }
+
+            if(license == null || !_licenseService.VerifyLicense(license))
+            {
+                throw new BadRequestException("Invalid license.");
+            }
+
+            var dir = $"{_globalSettings.LicenseDirectory}/user";
+            Directory.CreateDirectory(dir);
+            File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+
+            user.Premium = true;
+            user.RevisionDate = DateTime.UtcNow;
+            user.MaxStorageGb = 10240; // 10 TB
+            user.LicenseKey = license.LicenseKey;
+            user.PremiumExpirationDate = license.Expires;
+            await SaveUserAsync(user);
+        }
+
         public async Task AdjustStorageAsync(User user, short storageAdjustmentGb)
         {
             if(user == null)
