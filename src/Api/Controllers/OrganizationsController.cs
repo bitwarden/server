@@ -24,6 +24,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
+        private readonly ILicensingService _licensingService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
@@ -33,6 +34,7 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IUserService userService,
+            ILicensingService licensingService,
             CurrentContext currentContext,
             GlobalSettings globalSettings,
             UserManager<User> userManager)
@@ -43,6 +45,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
             _userManager = userManager;
+            _licensingService = licensingService;
             _globalSettings = globalSettings;
         }
 
@@ -93,6 +96,24 @@ namespace Bit.Api.Controllers
             {
                 return new OrganizationBillingResponseModel(organization);
             }
+        }
+
+        [HttpGet("{id}/license")]
+        public async Task<OrganizationLicense> GetLicense(string id, [FromQuery]Guid installationId)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationLicense(organization, installationId, _licensingService);
         }
 
         [HttpGet("")]

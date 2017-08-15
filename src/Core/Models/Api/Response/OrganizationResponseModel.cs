@@ -55,7 +55,6 @@ namespace Bit.Core.Models.Api
                 Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
             StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D) : 0; // 1 GB
             MaxStorageGb = organization.MaxStorageGb;
-            // License = ...
             Expiration = DateTime.UtcNow.AddYears(1);
         }
 
@@ -76,7 +75,6 @@ namespace Bit.Core.Models.Api
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; }
-        public OrganizationLicense License { get; set; }
         public DateTime? Expiration { get; set; }
     }
 }

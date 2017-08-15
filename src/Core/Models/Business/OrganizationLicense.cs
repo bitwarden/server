@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using Bit.Core.Services;
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -12,13 +13,15 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense()
         { }
 
-        public OrganizationLicense(Organization org, Guid installationId)
+        public OrganizationLicense(Organization org, Guid installationId, ILicensingService licenseService)
         {
-            LicenseKey = "";
+            LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
             Name = org.Name;
             Enabled = org.Enabled;
+            Plan = org.Plan;
+            PlanType = org.PlanType;
             Seats = org.Seats;
             MaxCollections = org.MaxCollections;
             UseGroups = org.UseGroups;
@@ -27,6 +30,10 @@ namespace Bit.Core.Models.Business
             MaxStorageGb = org.MaxStorageGb;
             SelfHost = org.SelfHost;
             Version = 1;
+            Issued = DateTime.UtcNow;
+            Expires = Issued.AddYears(1);
+            Trial = false;
+            Signature = Convert.ToBase64String(licenseService.SignLicense(this));
         }
 
         public string LicenseKey { get; set; }
