@@ -70,19 +70,14 @@ namespace Bit.Core.Models.Business
 
         public bool CanUse(User user)
         {
-            if(Issued > DateTime.UtcNow)
-            {
-                return false;
-            }
-
-            if(Expires < DateTime.UtcNow)
+            if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }
 
             if(Version == 1)
             {
-                return user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+                return user.EmailVerified && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
             }
             else
             {
@@ -92,12 +87,7 @@ namespace Bit.Core.Models.Business
 
         public bool VerifyData(User user)
         {
-            if(Issued > DateTime.UtcNow)
-            {
-                return false;
-            }
-
-            if(Expires < DateTime.UtcNow)
+            if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }

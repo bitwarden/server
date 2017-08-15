@@ -22,5 +22,6 @@ namespace Bit.Core.Models.StaticStore
         public int UpgradeSortOrder { get; set; }
         public bool Disabled { get; set; }
         public int? TrialPeriodDays { get; set; }
+        public bool SelfHost { get; set; }
     }
 }

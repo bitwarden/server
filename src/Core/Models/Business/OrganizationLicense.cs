@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
+using Newtonsoft.Json;
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -39,7 +40,7 @@ namespace Bit.Core.Models.Business
                 Trial = true;
             }
             else if(billingInfo.Subscription.TrialEndDate.HasValue &&
-                billingInfo.Subscription.TrialEndDate.Value < DateTime.UtcNow)
+                billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
             {
                 Expires = Refresh = billingInfo.Subscription.TrialEndDate.Value;
                 Trial = true;
@@ -89,6 +90,7 @@ namespace Bit.Core.Models.Business
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
         public string Signature { get; set; }
+        [JsonIgnore]
         public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
         public byte[] GetSignatureData()
@@ -124,19 +126,14 @@ namespace Bit.Core.Models.Business
 
         public bool CanUse(Guid installationId)
         {
-            if(Issued > DateTime.UtcNow)
-            {
-                return false;
-            }
-
-            if(Expires < DateTime.UtcNow)
+            if(!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }
 
             if(Version == 1)
             {
-                return InstallationId == installationId;
+                return InstallationId == installationId && SelfHost;
             }
             else
             {
@@ -146,12 +143,7 @@ namespace Bit.Core.Models.Business
 
         public bool VerifyData(Organization organization)
         {
-            if(Issued > DateTime.UtcNow)
-            {
-                return false;
-            }
-
-            if(Expires < DateTime.UtcNow)
+            if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }
@@ -185,7 +177,15 @@ namespace Bit.Core.Models.Business
 
         public byte[] Sign(X509Certificate2 certificate)
         {
-            throw new NotImplementedException();
+            if(!certificate.HasPrivateKey)
+            {
+                throw new InvalidOperationException("You don't have the private key!");
+            }
+
+            using(var rsa = certificate.GetRSAPrivateKey())
+            {
+                return rsa.SignData(GetSignatureData(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            }
         }
     }
 }

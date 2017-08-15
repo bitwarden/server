@@ -29,6 +29,7 @@ namespace Bit.Core.Services
         private readonly IPushRegistrationService _pushRegistrationService;
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILicensingService _licensingService;
+        private readonly IInstallationRepository _installationRepository;
         private readonly StripePaymentService _stripePaymentService;
         private readonly GlobalSettings _globalSettings;
 
@@ -44,6 +45,7 @@ namespace Bit.Core.Services
             IPushRegistrationService pushRegistrationService,
             IDeviceRepository deviceRepository,
             ILicensingService licensingService,
+            IInstallationRepository installationRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -57,6 +59,7 @@ namespace Bit.Core.Services
             _pushRegistrationService = pushRegistrationService;
             _deviceRepository = deviceRepository;
             _licensingService = licensingService;
+            _installationRepository = installationRepository;
             _stripePaymentService = new StripePaymentService();
             _globalSettings = globalSettings;
         }
@@ -522,6 +525,7 @@ namespace Bit.Core.Services
                 UseGroups = plan.UseGroups,
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
+                SelfHost = plan.SelfHost,
                 Plan = plan.Name,
                 Gateway = GatewayType.Stripe,
                 GatewayCustomerId = customer?.Id,
@@ -563,6 +567,7 @@ namespace Bit.Core.Services
                 UseDirectory = license.UseDirectory,
                 UseTotp = license.UseTotp,
                 Plan = license.Plan,
+                SelfHost = license.SelfHost,
                 Gateway = null,
                 GatewayCustomerId = null,
                 GatewaySubscriptionId = null,
@@ -997,6 +1002,25 @@ namespace Bit.Core.Services
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                 await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
             }
+        }
+
+        public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var installation = await _installationRepository.GetByIdAsync(installationId);
+            if(installation == null || !installation.Enabled)
+            {
+                throw new BadRequestException("Invalid installation id");
+            }
+
+            var paymentService = new StripePaymentService();
+            var billingInfo = await paymentService.GetBillingAsync(organization);
+            return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
         }
 
         public async Task ImportAsync(Guid organizationId,

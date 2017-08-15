@@ -164,7 +164,8 @@ namespace Bit.Core.Utilities
                     UseGroups = true,
                     UseDirectory = true,
                     UseTotp = true,
-                    MaxStorageGb = 1
+                    MaxStorageGb = 1,
+                    SelfHost = true
                 },
                 new Plan
                 {
@@ -182,7 +183,8 @@ namespace Bit.Core.Utilities
                     UseGroups = true,
                     UseDirectory = true,
                     UseTotp = true,
-                    MaxStorageGb = 1
+                    MaxStorageGb = 1,
+                    SelfHost = true
                 }
             };
 

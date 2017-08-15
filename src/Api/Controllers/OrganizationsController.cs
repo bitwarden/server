@@ -23,7 +23,6 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
-        private readonly ILicensingService _licensingService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
@@ -33,7 +32,6 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IUserService userService,
-            ILicensingService licensingService,
             CurrentContext currentContext,
             GlobalSettings globalSettings,
             UserManager<User> userManager)
@@ -44,7 +42,6 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
             _userManager = userManager;
-            _licensingService = licensingService;
             _globalSettings = globalSettings;
         }
 
@@ -107,15 +104,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            var license = await _organizationService.GenerateLicenseAsync(orgIdGuid, installationId);
+            if(license == null)
             {
                 throw new NotFoundException();
             }
 
-            var paymentService = new StripePaymentService();
-            var billingInfo = await paymentService.GetBillingAsync(organization);
-            return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
+            return license;
         }
 
         [HttpGet("")]
