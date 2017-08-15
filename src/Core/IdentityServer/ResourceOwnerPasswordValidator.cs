@@ -40,53 +40,56 @@ namespace Bit.Core.IdentityServer
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
             var twoFactorRemember = context.Request.Raw["TwoFactorRemember"]?.ToString() == "1";
             var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
-            var credentialsCorrect = false;
 
-            if(!string.IsNullOrWhiteSpace(context.UserName))
+            if(string.IsNullOrWhiteSpace(context.UserName))
             {
-                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-                if(user != null)
-                {
-                    credentialsCorrect = await _userManager.CheckPasswordAsync(user, context.Password);
-                    if(credentialsCorrect)
-                    {
-                        TwoFactorProviderType twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
-                        if(!twoFactorRequest && await TwoFactorRequiredAsync(user))
-                        {
-                            await BuildTwoFactorResultAsync(user, context);
-                            return;
-                        }
-
-                        if(twoFactorRequest && !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
-                        {
-                            await BuildTwoFactorResultAsync(user, context);
-                            return;
-                        }
-
-                        if(!twoFactorRequest || await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken))
-                        {
-                            var device = await SaveDeviceAsync(user, context);
-                            await BuildSuccessResultAsync(user, context, device, twoFactorRequest,
-                                twoFactorProviderType, twoFactorRemember);
-                            return;
-                        }
-
-                        if(twoFactorRequest && twoFactorProviderType == TwoFactorProviderType.Remember)
-                        {
-                            await Task.Delay(2000); // Delay for brute force.
-                            await BuildTwoFactorResultAsync(user, context);
-                            return;
-                        }
-                    }
-                }
+                await BuildErrorResultAsync(false, context);
+                return;
             }
 
-            await Task.Delay(2000); // Delay for brute force.
-            BuildErrorResult(credentialsCorrect && twoFactorRequest, context);
+            var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+            if(user == null || !await _userManager.CheckPasswordAsync(user, context.Password))
+            {
+                await BuildErrorResultAsync(false, context);
+                return;
+            }
+
+            if(await TwoFactorRequiredAsync(user))
+            {
+                var twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
+                if(!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
+                {
+                    await BuildTwoFactorResultAsync(user, context);
+                    return;
+                }
+
+                var verified = await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken);
+                if(!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
+                {
+                    await BuildErrorResultAsync(true, context);
+                    return;
+                }
+                else if(!verified && twoFactorProviderType == TwoFactorProviderType.Remember)
+                {
+                    await Task.Delay(2000); // Delay for brute force.
+                    await BuildTwoFactorResultAsync(user, context);
+                    return;
+                }
+            }
+            else
+            {
+                twoFactorRequest = false;
+                twoFactorRemember = false;
+                twoFactorToken = null;
+            }
+
+            var device = await SaveDeviceAsync(user, context);
+            await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
+            return;
         }
 
-        private async Task BuildSuccessResultAsync(User user, ResourceOwnerPasswordValidationContext context, Device device,
-            bool twoFactorRequest, TwoFactorProviderType twoFactorProviderType, bool twoFactorRemember)
+        private async Task BuildSuccessResultAsync(User user, ResourceOwnerPasswordValidationContext context,
+            Device device, bool sendRememberToken)
         {
             var claims = new List<Claim>();
 
@@ -106,7 +109,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("Key", user.Key);
             }
 
-            if(twoFactorRequest && twoFactorRemember)
+            if(sendRememberToken)
             {
                 var token = await _userManager.GenerateTwoFactorTokenAsync(user, TwoFactorProviderType.Remember.ToString());
                 customResponse.Add("TwoFactorToken", token);
@@ -125,7 +128,7 @@ namespace Bit.Core.IdentityServer
             var enabledProviders = user.GetTwoFactorProviders()?.Where(p => user.TwoFactorProviderIsEnabled(p.Key));
             if(enabledProviders == null)
             {
-                BuildErrorResult(false, context);
+                await BuildErrorResultAsync(false, context);
                 return;
             }
 
@@ -150,8 +153,9 @@ namespace Bit.Core.IdentityServer
             }
         }
 
-        private void BuildErrorResult(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)
+        private async Task BuildErrorResultAsync(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)
         {
+            await Task.Delay(2000); // Delay for brute force.
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
                 customResponse: new Dictionary<string, object>
                 {{
