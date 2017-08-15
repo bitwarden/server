@@ -4,6 +4,7 @@ echo $dir
 echo "`nBuilding bitwarden"
 echo "=================="
 
+& $dir\util\Server\build.ps1
 & $dir\src\Api\build.ps1
 & $dir\src\Identity\build.ps1
 & $dir\nginx\build.ps1

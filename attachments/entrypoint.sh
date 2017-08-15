@@ -1,4 +1,3 @@
 #!/bin/sh
 
-http-server /etc/bitwarden/core/attachments/. -p 80 -d false --utc
-
+dotnet /bitwarden_server/Server.dll /etc/bitwarden/core/attachments .

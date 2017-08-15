@@ -1,6 +1,5 @@
-FROM node
+FROM bitwarden/server
 
-RUN npm install http-server -g
 EXPOSE 80
 
 COPY entrypoint.sh /
