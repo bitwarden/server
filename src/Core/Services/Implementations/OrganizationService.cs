@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -616,6 +618,72 @@ namespace Bit.Core.Services
 
                 throw;
             }
+        }
+
+        public async Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(!_globalSettings.SelfHosted)
+            {
+                throw new InvalidOperationException("Licenses require self hosting.");
+            }
+
+            if(license == null || !_licensingService.VerifyLicense(license) || !license.CanUse(_globalSettings.Installation.Id))
+            {
+                throw new BadRequestException("Invalid license.");
+            }
+
+            if(!license.SelfHost)
+            {
+                throw new BadRequestException("This license does not allow on-premise hosting.");
+            }
+
+            if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(userCount >= license.Seats.Value)
+                {
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
+                        $"Your new license only has ({ license.Seats.Value}) seats. Remove some users.");
+                }
+            }
+
+            if(license.MaxCollections.HasValue &&
+                (!organization.MaxCollections.HasValue || organization.MaxCollections.Value > license.MaxCollections.Value))
+            {
+                var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
+                if(collectionCount > license.MaxCollections.Value)
+                {
+                    throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
+                        $"Your new license allows for a maximum of ({license.MaxCollections.Value}) collections. " +
+                        "Remove some collections.");
+                }
+            }
+
+            // TODO: groups
+
+            var dir = $"{_globalSettings.LicenseDirectory}/organization";
+            Directory.CreateDirectory(dir);
+            File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+
+            organization.Name = license.Name;
+            organization.PlanType = license.PlanType;
+            organization.Seats = license.Seats;
+            organization.MaxCollections = license.MaxCollections;
+            organization.UseGroups = license.UseGroups;
+            organization.UseDirectory = license.UseDirectory;
+            organization.UseTotp = license.UseTotp;
+            organization.Plan = license.Plan;
+            organization.Enabled = true;
+            organization.ExpirationDate = license.Expires;
+            organization.LicenseKey = license.LicenseKey;
+            organization.RevisionDate = DateTime.UtcNow;
+            await _organizationRepository.ReplaceAsync(organization);
         }
 
         public async Task DeleteAsync(Organization organization)

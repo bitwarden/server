@@ -296,6 +296,26 @@ namespace Bit.Api.Controllers
             }
         }
 
+        [HttpPut("{id}/license")]
+        [HttpPost("{id}/license")]
+        [SelfHosted(SelfHostedOnly = true)]
+        public async Task PutLicense(string id, LicenseRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
+            if(license == null)
+            {
+                throw new BadRequestException("Invalid license");
+            }
+
+            await _organizationService.UpdateLicenseAsync(id, license);
+        }
+
         [HttpPost("{id}/import")]
         public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
         {
