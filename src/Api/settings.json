@@ -2,7 +2,7 @@
   "globalSettings": {
     "selfHosted": false,
     "siteName": "bitwarden",
-    "projectName":  "Api",
+    "projectName": "Api",
     "stripeApiKey": "SECRET",
     "baseServiceUri": {
       "vault": "http://localhost:4001",
@@ -111,6 +111,11 @@
         "Endpoint": "get:/alive",
         "Period": "1m",
         "Limit": 5
+      },
+      {
+        "Endpoint": "post:/installations",
+        "Period": "2m",
+        "Limit": 2
       }
     ]
   },
