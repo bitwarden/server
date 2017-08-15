@@ -79,7 +79,12 @@ namespace Bit.Core.Services
                 _logger.LogError(12339, e, "Unable to auth for push.");
             }
 
-            if(response == null || !response.IsSuccessStatusCode)
+            if(response == null)
+            {
+                return false;
+            }
+
+            if(!response.IsSuccessStatusCode)
             {
                 if(response.StatusCode == HttpStatusCode.BadRequest)
                 {
