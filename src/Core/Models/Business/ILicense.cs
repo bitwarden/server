@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Business
         string LicenseKey { get; set; }
         int Version { get; set; }
         DateTime Issued { get; set; }
+        DateTime? Refresh { get; set; }
         DateTime? Expires { get; set; }
         bool Trial { get; set; }
         string Signature { get; set; }

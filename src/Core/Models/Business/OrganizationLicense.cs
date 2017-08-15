@@ -52,6 +52,7 @@ namespace Bit.Core.Models.Business
         public bool SelfHost { get; set; }
         public int Version { get; set; }
         public DateTime Issued { get; set; }
+        public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
         public string Signature { get; set; }
@@ -62,9 +63,10 @@ namespace Bit.Core.Models.Business
             string data = null;
             if(Version == 1)
             {
-                data = string.Format("organization:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}_{10}_{11}_{12}_{13}_{14}",
+                data = string.Format("organization:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}_{10}_{11}_{12}_{13}_{14}_{15}",
                     Version,
                     Utilities.CoreHelpers.ToEpocSeconds(Issued),
+                    Refresh.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Refresh.Value).ToString() : null,
                     Expires.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Expires.Value).ToString() : null,
                     LicenseKey,
                     InstallationId,
