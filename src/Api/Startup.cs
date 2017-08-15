@@ -44,8 +44,11 @@ namespace Bit.Api
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
-            services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
-            services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+            if(!globalSettings.SelfHosted)
+            {
+                services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
+                services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+            }
 
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);
@@ -62,9 +65,12 @@ namespace Bit.Api
             // Caching
             services.AddMemoryCache();
 
-            // Rate limiting
-            services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-            services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            if(!globalSettings.SelfHosted)
+            {
+                // Rate limiting
+                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            }
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
@@ -158,8 +164,11 @@ namespace Bit.Api
                 app.UseForwardedHeadersForAzure();
             }
 
-            // Rate limiting
-            app.UseMiddleware<CustomIpRateLimitMiddleware>();
+            if(!globalSettings.SelfHosted)
+            {
+                // Rate limiting
+                app.UseMiddleware<CustomIpRateLimitMiddleware>();
+            }
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();
