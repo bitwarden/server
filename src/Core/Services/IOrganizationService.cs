@@ -19,6 +19,7 @@ namespace Bit.Core.Services
         Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner, string ownerKey);
+        Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license);
         Task DeleteAsync(Organization organization);
         Task DisableAsync(Guid organizationId, DateTime? expirationDate);
         Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);

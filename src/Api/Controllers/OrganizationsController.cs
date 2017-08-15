@@ -25,6 +25,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
 
         public OrganizationsController(
@@ -33,6 +34,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IUserService userService,
             CurrentContext currentContext,
+            GlobalSettings globalSettings,
             UserManager<User> userManager)
         {
             _organizationRepository = organizationRepository;
@@ -41,6 +43,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
             _userManager = userManager;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("{id}")]
@@ -76,14 +79,20 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var paymentService = new StripePaymentService();
-            var billingInfo = await paymentService.GetBillingAsync(organization);
-            if(billingInfo == null)
+            if(!_globalSettings.SelfHosted && organization.Gateway != null)
             {
-                throw new NotFoundException();
+                var paymentService = new StripePaymentService();
+                var billingInfo = await paymentService.GetBillingAsync(organization);
+                if(billingInfo == null)
+                {
+                    throw new NotFoundException();
+                }
+                return new OrganizationBillingResponseModel(organization, billingInfo);
             }
-
-            return new OrganizationBillingResponseModel(organization, billingInfo);
+            else
+            {
+                return new OrganizationBillingResponseModel(organization);
+            }
         }
 
         [HttpGet("")]
@@ -208,7 +217,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
         }
-        
+
         [HttpPost("{id}/verify-bank")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostVerifyBank(string id, [FromBody]OrganizationVerifyBankRequestModel model)
@@ -307,13 +316,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
+            var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
             if(license == null)
             {
                 throw new BadRequestException("Invalid license");
             }
 
-            await _organizationService.UpdateLicenseAsync(id, license);
+            await _organizationService.UpdateLicenseAsync(new Guid(id), license);
         }
 
         [HttpPost("{id}/import")]

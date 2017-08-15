@@ -51,10 +51,22 @@ namespace Bit.Core.Models.Api
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
             UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
-            StorageName = organization.Storage.HasValue ? 
+            StorageName = organization.Storage.HasValue ?
                 Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
             StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D) : 0; // 1 GB
             MaxStorageGb = organization.MaxStorageGb;
+            // License = ...
+            Expiration = DateTime.UtcNow.AddYears(1);
+        }
+
+        public OrganizationBillingResponseModel(Organization organization)
+            : base(organization, "organizationBilling")
+        {
+            StorageName = organization.Storage.HasValue ?
+                Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
+            StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+            MaxStorageGb = organization.MaxStorageGb;
+            Expiration = organization.ExpirationDate;
         }
 
         public string StorageName { get; set; }
@@ -64,5 +76,7 @@ namespace Bit.Core.Models.Api
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; }
+        public OrganizationLicense License { get; set; }
+        public DateTime? Expiration { get; set; }
     }
 }
