@@ -395,35 +395,9 @@ namespace Bit.Api.Controllers
 
             var valid = model.Validate(_globalSettings);
             UserLicense license = null;
-            if(valid && _globalSettings.SelfHosted && model.License != null)
+            if(valid && _globalSettings.SelfHosted)
             {
-                if(!HttpContext.Request.ContentLength.HasValue || HttpContext.Request.ContentLength.Value > 51200) // 50 KB
-                {
-                    valid = false;
-                }
-                else
-                {
-                    try
-                    {
-                        using(var stream = model.License.OpenReadStream())
-                        using(var reader = new StreamReader(stream))
-                        {
-                            var s = await reader.ReadToEndAsync();
-                            if(string.IsNullOrWhiteSpace(s))
-                            {
-                                valid = false;
-                            }
-                            else
-                            {
-                                license = JsonConvert.DeserializeObject<UserLicense>(s);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        valid = false;
-                    }
-                }
+                license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
             }
 
             if(!valid || (_globalSettings.SelfHosted && license == null))
@@ -488,7 +462,7 @@ namespace Bit.Api.Controllers
         [HttpPut("license")]
         [HttpPost("license")]
         [SelfHosted(SelfHostedOnly = true)]
-        public async Task PutLicense(UpdateLicenseRequestModel model)
+        public async Task PutLicense(LicenseRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -496,24 +470,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            UserLicense license = null;
-            if(HttpContext.Request.ContentLength.HasValue && HttpContext.Request.ContentLength.Value <= 51200) // 50 KB
-            {
-                try
-                {
-                    using(var stream = model.License.OpenReadStream())
-                    using(var reader = new StreamReader(stream))
-                    {
-                        var s = await reader.ReadToEndAsync();
-                        if(!string.IsNullOrWhiteSpace(s))
-                        {
-                            license = JsonConvert.DeserializeObject<UserLicense>(s);
-                        }
-                    }
-                }
-                catch { }
-            }
-
+            var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
             if(license == null)
             {
                 throw new BadRequestException("Invalid license");

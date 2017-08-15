@@ -26,7 +26,9 @@ namespace Bit.Core.Services
         private readonly IPushNotificationService _pushNotificationService;
         private readonly IPushRegistrationService _pushRegistrationService;
         private readonly IDeviceRepository _deviceRepository;
+        private readonly ILicensingService _licensingService;
         private readonly StripePaymentService _stripePaymentService;
+        private readonly GlobalSettings _globalSettings;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -38,7 +40,9 @@ namespace Bit.Core.Services
             IMailService mailService,
             IPushNotificationService pushNotificationService,
             IPushRegistrationService pushRegistrationService,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            ILicensingService licensingService,
+            GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -50,7 +54,9 @@ namespace Bit.Core.Services
             _pushNotificationService = pushNotificationService;
             _pushRegistrationService = pushRegistrationService;
             _deviceRepository = deviceRepository;
+            _licensingService = licensingService;
             _stripePaymentService = new StripePaymentService();
+            _globalSettings = globalSettings;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
@@ -401,11 +407,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
-            var customerService = new StripeCustomerService();
-            var subscriptionService = new StripeSubscriptionService();
-            StripeCustomer customer = null;
-            StripeSubscription subscription = null;
-
             if(!plan.MaxStorageGb.HasValue && signup.AdditionalStorageGb > 0)
             {
                 throw new BadRequestException("Plan does not allow additional storage.");
@@ -427,6 +428,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException($"Selected plan allows a maximum of " +
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
+
+            var customerService = new StripeCustomerService();
+            var subscriptionService = new StripeSubscriptionService();
+            StripeCustomer customer = null;
+            StripeSubscription subscription = null;
 
             // Pre-generate the org id so that we can save it with the Stripe subscription..
             Guid newOrgId = CoreHelpers.GenerateComb();
@@ -525,6 +531,52 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow
             };
 
+            return await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, true);
+        }
+
+        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
+            OrganizationLicense license, User owner, string ownerKey)
+        {
+            if(license == null || !_licensingService.VerifyLicense(license) || !license.CanUse(_globalSettings.Installation.Id))
+            {
+                throw new BadRequestException("Invalid license.");
+            }
+
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled);
+            if(plan == null)
+            {
+                throw new BadRequestException("Plan not found.");
+            }
+
+            var organization = new Organization
+            {
+                Name = license.Name,
+                BillingEmail = null,
+                BusinessName = null,
+                PlanType = license.PlanType,
+                Seats = license.Seats,
+                MaxCollections = license.MaxCollections,
+                MaxStorageGb = 10240, // 10 TB
+                UseGroups = license.UseGroups,
+                UseDirectory = license.UseDirectory,
+                UseTotp = license.UseTotp,
+                Plan = license.Plan,
+                Gateway = null,
+                GatewayCustomerId = null,
+                GatewaySubscriptionId = null,
+                Enabled = true,
+                ExpirationDate = license.Expires,
+                LicenseKey = license.LicenseKey,
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow
+            };
+
+            return await SignUpAsync(organization, owner.Id, ownerKey, false);
+        }
+
+        private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
+            Guid ownerId, string ownerKey, bool withPayment)
+        {
             try
             {
                 await _organizationRepository.CreateAsync(organization);
@@ -532,8 +584,8 @@ namespace Bit.Core.Services
                 var orgUser = new OrganizationUser
                 {
                     OrganizationId = organization.Id,
-                    UserId = signup.Owner.Id,
-                    Key = signup.OwnerKey,
+                    UserId = ownerId,
+                    Key = ownerKey,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     AccessAll = true,
@@ -546,13 +598,17 @@ namespace Bit.Core.Services
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                 await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(signup.Owner.Id);
+                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
             }
             catch
             {
-                await _stripePaymentService.CancelAndRecoverChargesAsync(organization);
+                if(withPayment)
+                {
+                    await _stripePaymentService.CancelAndRecoverChargesAsync(organization);
+                }
+
                 if(organization.Id != default(Guid))
                 {
                     await _organizationRepository.DeleteAsync(organization);

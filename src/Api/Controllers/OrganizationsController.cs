@@ -11,6 +11,8 @@ using Bit.Core;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Bit.Api.Utilities;
+using Bit.Core.Models.Business;
 
 namespace Bit.Api.Controllers
 {
@@ -94,6 +96,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -104,6 +107,26 @@ namespace Bit.Api.Controllers
 
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
+            return new OrganizationResponseModel(result.Item1);
+        }
+
+        [HttpPost("license")]
+        [SelfHosted(SelfHostedOnly = true)]
+        public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
+            if(license == null)
+            {
+                throw new BadRequestException("Invalid license");
+            }
+
+            var result = await _organizationService.SignUpAsync(license, user, model.Key);
             return new OrganizationResponseModel(result.Item1);
         }
 
@@ -132,6 +155,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/payment")]
         [HttpPost("{id}/payment")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutPayment(string id, [FromBody]PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -145,6 +169,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/upgrade")]
         [HttpPost("{id}/upgrade")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -158,6 +183,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/seat")]
         [HttpPost("{id}/seat")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -171,6 +197,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/storage")]
         [HttpPost("{id}/storage")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -183,6 +210,7 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPost("{id}/verify-bank")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostVerifyBank(string id, [FromBody]OrganizationVerifyBankRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -196,6 +224,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/cancel")]
         [HttpPost("{id}/cancel")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutCancel(string id)
         {
             var orgIdGuid = new Guid(id);
@@ -209,6 +238,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/reinstate")]
         [HttpPost("{id}/reinstate")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutReinstate(string id)
         {
             var orgIdGuid = new Guid(id);

@@ -111,7 +111,7 @@ namespace Bit.Core
 
         public class InstallationSettings
         {
-            public Guid? Id { get; set; }
+            public Guid Id { get; set; }
             public string Key { get; set; }
             public string IdentityUri { get; set; }
         }
