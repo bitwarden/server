@@ -22,7 +22,8 @@ namespace Bit.Core.Models.Business
             Premium = user.Premium;
             MaxStorageGb = user.MaxStorageGb;
             Issued = DateTime.UtcNow;
-            Expires = billingInfo?.UpcomingInvoice?.Date;
+            Expires = billingInfo?.UpcomingInvoice?.Date?.AddDays(7);
+            Refresh = billingInfo?.UpcomingInvoice?.Date;
             Trial = (billingInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
                 billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
             Signature = Convert.ToBase64String(licenseService.SignLicense(this));

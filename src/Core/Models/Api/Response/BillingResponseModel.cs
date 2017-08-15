@@ -67,7 +67,8 @@ namespace Bit.Core.Models.Api
             Status = sub.Status;
             TrialStartDate = sub.TrialStartDate;
             TrialEndDate = sub.TrialEndDate;
-            EndDate = sub.EndDate;
+            PeriodStartDate = sub.PeriodStartDate;
+            PeriodEndDate = sub.PeriodEndDate;
             CancelledDate = sub.CancelledDate;
             CancelAtEndDate = sub.CancelAtEndDate;
             Cancelled = sub.Cancelled;
@@ -79,7 +80,8 @@ namespace Bit.Core.Models.Api
 
         public DateTime? TrialStartDate { get; set; }
         public DateTime? TrialEndDate { get; set; }
-        public DateTime? EndDate { get; set; }
+        public DateTime? PeriodStartDate { get; set; }
+        public DateTime? PeriodEndDate { get; set; }
         public DateTime? CancelledDate { get; set; }
         public bool CancelAtEndDate { get; set; }
         public string Status { get; set; }

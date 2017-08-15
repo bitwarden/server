@@ -10,7 +10,6 @@ using Bit.Core.Services;
 using Bit.Core;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 
@@ -114,7 +113,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new OrganizationLicense(organization, installationId, _licensingService);
+            var paymentService = new StripePaymentService();
+            var billingInfo = await paymentService.GetBillingAsync(organization);
+            return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
         }
 
         [HttpGet("")]

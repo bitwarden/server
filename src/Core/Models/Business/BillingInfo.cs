@@ -95,7 +95,8 @@ namespace Bit.Core.Models.Business
                 Status = sub.Status;
                 TrialStartDate = sub.TrialStart;
                 TrialEndDate = sub.TrialEnd;
-                EndDate = sub.CurrentPeriodEnd;
+                PeriodStartDate = sub.CurrentPeriodStart;
+                PeriodEndDate = sub.CurrentPeriodEnd;
                 CancelledDate = sub.CanceledAt;
                 CancelAtEndDate = sub.CancelAtPeriodEnd;
                 Cancelled = sub.Status == "cancelled";
@@ -122,7 +123,8 @@ namespace Bit.Core.Models.Business
                     }
                 }
 
-                EndDate = sub.BillingPeriodEndDate;
+                PeriodStartDate = sub.BillingPeriodStartDate;
+                PeriodEndDate = sub.BillingPeriodEndDate;
 
                 CancelAtEndDate = !sub.NeverExpires.GetValueOrDefault();
                 Cancelled = sub.Status == SubscriptionStatus.CANCELED;
@@ -146,7 +148,9 @@ namespace Bit.Core.Models.Business
 
             public DateTime? TrialStartDate { get; set; }
             public DateTime? TrialEndDate { get; set; }
-            public DateTime? EndDate { get; set; }
+            public DateTime? PeriodStartDate { get; set; }
+            public DateTime? PeriodEndDate { get; set; }
+            public TimeSpan? PeriodDuration => PeriodEndDate - PeriodStartDate;
             public DateTime? CancelledDate { get; set; }
             public bool CancelAtEndDate { get; set; }
             public string Status { get; set; }

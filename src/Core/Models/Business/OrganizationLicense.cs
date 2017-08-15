@@ -13,8 +13,10 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense()
         { }
 
-        public OrganizationLicense(Organization org, Guid installationId, ILicensingService licenseService)
+        public OrganizationLicense(Organization org, BillingInfo billingInfo, Guid installationId,
+            ILicensingService licenseService)
         {
+            Version = 1;
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -29,10 +31,41 @@ namespace Bit.Core.Models.Business
             UseTotp = org.UseTotp;
             MaxStorageGb = org.MaxStorageGb;
             SelfHost = org.SelfHost;
-            Version = 1;
             Issued = DateTime.UtcNow;
-            Expires = Issued.AddYears(1);
-            Trial = false;
+
+            if(billingInfo?.Subscription == null)
+            {
+                Expires = Refresh = Issued.AddDays(7);
+                Trial = true;
+            }
+            else if(billingInfo.Subscription.TrialEndDate.HasValue &&
+                billingInfo.Subscription.TrialEndDate.Value < DateTime.UtcNow)
+            {
+                Expires = Refresh = billingInfo.Subscription.TrialEndDate.Value;
+                Trial = true;
+            }
+            else
+            {
+                if(org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
+                {
+                    // expired
+                    Expires = Refresh = org.ExpirationDate.Value;
+                }
+                else if(billingInfo?.Subscription?.PeriodDuration != null &&
+                    billingInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+                {
+                    Refresh = DateTime.UtcNow.AddDays(30);
+                    Expires = billingInfo?.Subscription.PeriodEndDate.Value.AddDays(60);
+                }
+                else
+                {
+                    Expires = org.ExpirationDate.HasValue ? org.ExpirationDate.Value.AddMonths(11) : Issued.AddYears(1);
+                    Refresh = DateTime.UtcNow - Expires > TimeSpan.FromDays(30) ? DateTime.UtcNow.AddDays(30) : Expires;
+                }
+
+                Trial = false;
+            }
+
             Signature = Convert.ToBase64String(licenseService.SignLicense(this));
         }
 
