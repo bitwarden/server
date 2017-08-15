@@ -99,6 +99,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/license")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<OrganizationLicense> GetLicense(string id, [FromQuery]Guid installationId)
         {
             var orgIdGuid = new Guid(id);
