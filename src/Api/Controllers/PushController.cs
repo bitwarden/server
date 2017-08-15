@@ -7,11 +7,13 @@ using Bit.Core.Models.Api;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting;
+using Bit.Api.Utilities;
 
 namespace Bit.Api.Controllers
 {
     [Route("push")]
     [Authorize("Push")]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public class PushController : Controller
     {
         private readonly IPushRegistrationService _pushRegistrationService;
