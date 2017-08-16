@@ -949,6 +949,7 @@ namespace Bit.Core.Services
             {
                 user.Premium = true;
                 user.MaxStorageGb = 10240; // 10 TB
+                user.RevisionDate = DateTime.UtcNow;
                 await _userRepository.ReplaceAsync(user);
             }
 
