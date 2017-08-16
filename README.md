@@ -5,16 +5,43 @@
 
 The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all other bitwarden projects.
 
-The core infrastructure is written in C# using .NET with ASP.NET Core. The database is SQL Server.
+The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server.
+
+The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
 # Build/Run
 
 **Requirements**
 
-- [ASP.NET Core](https://dot.net)
-- Recommended: [Visual Studio](https://www.visualstudio.com/)
+- [.NET Core 2.x](https://dot.net)
+- [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index)
 
-Open `bitwarden-core.sln`. After restoring the nuget packages, you can build and run the `Api` project.
+**Recommended tooling**
+
+- [Visual Studio](https://www.visualstudio.com/vs/) (Windows and macOS)
+- [Visual Studio Code](https://code.visualstudio.com/) (other)
+
+**API**
+
+```
+cd src/Api
+dotnet restore
+dotnet build
+dotnet run -f netcoreapp2.0
+```
+
+visit http://localhost:5000/alive
+
+**Identity**
+
+```
+cd src/Identity
+dotnet restore
+dotnet build
+dotnet run -f netcoreapp2.0
+```
+
+visit http://localhost:33657/.well-known/openid-configuration
 
 # Contribute
 

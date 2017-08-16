@@ -16,12 +16,12 @@
       }
     },
     "Identity": {
-      "commandName": "Identity",
-      "launchBrowser": false,
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:33657",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "http://localhost:33657"
+      }
     }
   }
 }
