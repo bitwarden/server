@@ -543,9 +543,14 @@ namespace Bit.Core.Services
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {
-                if(license == null || !_licenseService.VerifyLicense(license) || !license.CanUse(user))
+                if(license == null || !_licenseService.VerifyLicense(license))
                 {
                     throw new BadRequestException("Invalid license.");
+                }
+
+                if(!license.CanUse(user))
+                {
+                    throw new BadRequestException("This license is not valid for this user.");
                 }
 
                 var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -608,18 +613,23 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
-            if(license == null || !_licenseService.VerifyLicense(license) || !license.CanUse(user))
+            if(license == null || !_licenseService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
+            }
+
+            if(!license.CanUse(user))
+            {
+                throw new BadRequestException("This license is not valid for this user.");
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
             Directory.CreateDirectory(dir);
             File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
 
-            user.Premium = true;
+            user.Premium = license.Premium;
             user.RevisionDate = DateTime.UtcNow;
-            user.MaxStorageGb = 10240; // 10 TB
+            user.MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb; // 10 TB
             user.LicenseKey = license.LicenseKey;
             user.PremiumExpirationDate = license.Expires;
             await SaveUserAsync(user);

@@ -543,9 +543,15 @@ namespace Bit.Core.Services
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
             OrganizationLicense license, User owner, string ownerKey)
         {
-            if(license == null || !_licensingService.VerifyLicense(license) || !license.CanUse(_globalSettings.Installation.Id))
+            if(license == null || !_licensingService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
+            }
+
+            if(!license.CanUse(_globalSettings.Installation.Id))
+            {
+                throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
+                    "hosting of organizations and that the installation id matches.");
             }
 
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled);
@@ -578,7 +584,13 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow
             };
 
-            return await SignUpAsync(organization, owner.Id, ownerKey, false);
+            var result = await SignUpAsync(organization, owner.Id, ownerKey, false);
+
+            var dir = $"{_globalSettings.LicenseDirectory}/organization";
+            Directory.CreateDirectory(dir);
+            File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+
+            return result;
         }
 
         private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
@@ -638,14 +650,15 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
-            if(license == null || !_licensingService.VerifyLicense(license) || !license.CanUse(_globalSettings.Installation.Id))
+            if(license == null || !_licensingService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
             }
 
-            if(!license.SelfHost)
+            if(!license.CanUse(_globalSettings.Installation.Id))
             {
-                throw new BadRequestException("This license does not allow on-premise hosting.");
+                throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
+                    "hosting of organizations and that the installation id matches.");
             }
 
             if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
@@ -670,7 +683,15 @@ namespace Bit.Core.Services
                 }
             }
 
-            // TODO: groups
+            if(!license.UseGroups && organization.UseGroups)
+            {
+                var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(groups.Count > 0)
+                {
+                    throw new BadRequestException($"Your organization currently has {groups.Count} groups. " +
+                        $"Your new license does not allow for the use of groups. Remove all groups.");
+                }
+            }
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
