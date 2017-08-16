@@ -1,13 +1,18 @@
-[![appveyor build](https://ci.appveyor.com/api/projects/status/github/bitwarden/core?branch=master&svg=true)](https://ci.appveyor.com/project/bitwarden/core/branch/master)
-[![Join the chat at https://gitter.im/bitwarden/Lobby](https://badges.gitter.im/bitwarden/Lobby.svg)](https://gitter.im/bitwarden/Lobby)
-
-# bitwarden Core
+<p align="center">
+  <img src="https://i.imgur.com/INGIjkh.png" alt="bitwarden" />
+</p>
+<p align="center">
+  <a href="https://ci.appveyor.com/project/bitwarden/core/branch/master" target="_blank">
+    <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/core?branch=master&svg=true" alt="appveyor build" />
+  </a>
+  <a href="https://gitter.im/bitwarden/Lobby" target="_blank">
+    <img src="https://badges.gitter.im/bitwarden/Lobby.svg" alt="gitter chat" />
+  </a>
+</p>
 
 The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all other bitwarden projects.
 
-The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server.
-
-The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
+The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
 # Build/Run
 
