@@ -16,7 +16,7 @@ The codebase can be developed, built, run, and deployed cross-platform on Window
 - [.NET Core 2.x](https://dot.net)
 - [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index)
 
-**Recommended tooling**
+**Recommended Development Tooling**
 
 - [Visual Studio](https://www.visualstudio.com/vs/) (Windows and macOS)
 - [Visual Studio Code](https://code.visualstudio.com/) (other)
