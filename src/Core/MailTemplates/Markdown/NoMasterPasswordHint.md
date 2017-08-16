@@ -1,0 +1,3 @@
+﻿You (or someone) recently requested your master password hint. Unfortunately, your account does not have a master password hint.
+
+If you did not request your master password hint you can safely ignore this email.

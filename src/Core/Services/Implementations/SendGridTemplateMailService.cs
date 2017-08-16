@@ -88,7 +88,7 @@ namespace Bit.Core.Services
 
             AddSubstitution(message, "{{fromEmail}}", fromEmail);
             AddSubstitution(message, "{{toEmail}}", toEmail);
-            AddCategories(message, new List<string> { AdministrativeCategoryName, "Change Email Alrady Exists" });
+            AddCategories(message, new List<string> { AdministrativeCategoryName, "Change Email Already Exists" });
 
             await _mailDeliveryService.SendEmailAsync(message);
         }

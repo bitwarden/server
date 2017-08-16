@@ -10,20 +10,20 @@ using System.Net;
 
 namespace Bit.Core.Services
 {
-    public class RazorViewMailService : IMailService
+    public class RazorMailService : IMailService
     {
         private readonly GlobalSettings _globalSettings;
         private readonly IRazorLightEngine _engine;
         private readonly IMailDeliveryService _mailDeliveryService;
 
-        public RazorViewMailService(
+        public RazorMailService(
             GlobalSettings globalSettings,
             IMailDeliveryService mailDeliveryService)
         {
             _globalSettings = globalSettings;
             _mailDeliveryService = mailDeliveryService;
 
-            var manager = new CustomEmbeddedResourceTemplateManager("Bit.Core.MailTemplates");
+            var manager = new CustomEmbeddedResourceTemplateManager("Bit.Core.MailTemplates.Razor");
             var core = new EngineCore(manager, EngineConfiguration.Default);
             var pageFactory = new DefaultPageFactory(core.KeyCompile);
             var lookup = new DefaultPageLookup(pageFactory);
@@ -151,8 +151,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("OrganizationUserInvited", model);
-            message.TextContent = _engine.Parse("OrganizationUserInvited.text", model);
+            message.HtmlContent = _engine.Parse("OrganizationUserAccepted", model);
+            message.TextContent = _engine.Parse("OrganizationUserAccepted.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 

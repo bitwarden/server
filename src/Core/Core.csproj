@@ -8,36 +8,48 @@
 
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
-    <EmbeddedResource Include="MailTemplates\VerifyDelete.cshtml" />
-    <EmbeddedResource Include="MailTemplates\VerifyDelete.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\VerifyEmail.cshtml" />
-    <EmbeddedResource Include="MailTemplates\VerifyEmail.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\TwoFactorEmail.cshtml" />
-    <EmbeddedResource Include="MailTemplates\TwoFactorEmail.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\ChangeEmailAlreadyExists.cshtml" />
-    <EmbeddedResource Include="MailTemplates\ChangeEmailAlreadyExists.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserInvited.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserInvited.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserAccepted.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserAccepted.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserConfirmed.cshtml" />
-    <EmbeddedResource Include="MailTemplates\OrganizationUserConfirmed.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\MasterPasswordHint.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\ChangeEmail.cshtml" />
-    <EmbeddedResource Include="MailTemplates\ChangeEmail.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\NoMasterPasswordHint.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\NoMasterPasswordHint.cshtml" />
-    <EmbeddedResource Include="MailTemplates\MasterPasswordHint.cshtml" />
-    <EmbeddedResource Include="MailTemplates\Welcome.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\Welcome.cshtml" />
-    <EmbeddedResource Include="MailTemplates\_MailLayout.cshtml" />
-    <EmbeddedResource Include="MailTemplates\_MailLayout.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\_BasicMailLayout.text.cshtml" />
-    <EmbeddedResource Include="MailTemplates\_BasicMailLayout.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Markdown\ChangeEmail.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\ChangeEmailAlreadyExists.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\MasterPasswordHint.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\NoMasterPasswordHint.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserAccepted.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserConfirmed.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserInvited.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\TwoFactorEmail.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\VerifyDelete.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\VerifyEmail.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\Welcome.md" />
+    <EmbeddedResource Include="MailTemplates\Razor\VerifyDelete.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\VerifyDelete.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\VerifyEmail.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\VerifyEmail.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\TwoFactorEmail.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\TwoFactorEmail.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\ChangeEmailAlreadyExists.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\ChangeEmailAlreadyExists.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserInvited.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserInvited.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserAccepted.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserAccepted.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserConfirmed.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\OrganizationUserConfirmed.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\MasterPasswordHint.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\ChangeEmail.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\ChangeEmail.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\NoMasterPasswordHint.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\NoMasterPasswordHint.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\MasterPasswordHint.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\Welcome.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\Welcome.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\_MailLayout.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\_MailLayout.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\_BasicMailLayout.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\_BasicMailLayout.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Braintree" Version="3.8.0" />
+    <PackageReference Include="CommonMark.NET" Version="0.15.1" />
     <PackageReference Include="IdentityServer4" Version="1.5.2" />
     <PackageReference Include="IdentityServer4.AspNetIdentity" Version="1.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="1.0.2" />
