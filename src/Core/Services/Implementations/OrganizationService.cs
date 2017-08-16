@@ -944,6 +944,14 @@ namespace Bit.Core.Services
                 await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
             }
 
+            // self-hosted org users get premium access
+            if(_globalSettings.SelfHosted && !user.Premium && org.Enabled)
+            {
+                user.Premium = true;
+                user.MaxStorageGb = 10240; // 10 TB
+                await _userRepository.ReplaceAsync(user);
+            }
+
             // push
             var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
             await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
