@@ -13,7 +13,7 @@ The codebase can be developed, built, run, and deployed cross-platform on Window
 
 **Requirements**
 
-- [.NET Core 2.x](https://dot.net)
+- [.NET Core 2.x](https://www.microsoft.com/net/download/core)
 - [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index)
 
 **Recommended Development Tooling**
