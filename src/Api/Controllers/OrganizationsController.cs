@@ -159,6 +159,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
