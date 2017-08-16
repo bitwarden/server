@@ -12,8 +12,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{458155D3-BCBC-481D-B37A-40D2ED10F0A4}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		build.ps1 = build.ps1
+		build.sh = build.sh
+		LICENSE.txt = LICENSE.txt
 		NuGet.Config = NuGet.Config
 		README.md = README.md
+		SECURITY.md = SECURITY.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "src\Core\Core.csproj", "{3973D21B-A692-4B60-9B70-3631C057423A}"
@@ -30,7 +34,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity", "src\Identity\Id
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Setup", "util\Setup\Setup.csproj", "{EF2164EF-1FC0-4518-A2ED-CE02D3630B00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "util\Server\Server.csproj", "{66B0A682-658A-4A82-B606-A077A4871448}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "util\Server\Server.csproj", "{66B0A682-658A-4A82-B606-A077A4871448}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
