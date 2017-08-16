@@ -2,6 +2,8 @@
 using Bit.Core.Services;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -17,6 +19,7 @@ namespace Bit.Core.Models.Business
         {
             LicenseKey = user.LicenseKey;
             Id = user.Id;
+            Name = user.Name;
             Email = user.Email;
             Version = 1;
             Premium = user.Premium;
@@ -31,6 +34,7 @@ namespace Bit.Core.Models.Business
 
         public string LicenseKey { get; set; }
         public Guid Id { get; set; }
+        public string Name { get; set; }
         public string Email { get; set; }
         public bool Premium { get; set; }
         public short? MaxStorageGb { get; set; }
@@ -48,17 +52,13 @@ namespace Bit.Core.Models.Business
             string data = null;
             if(Version == 1)
             {
-                data = string.Format("user:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}",
-                    Version,
-                    Utilities.CoreHelpers.ToEpocSeconds(Issued),
-                    Refresh.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Refresh.Value).ToString() : null,
-                    Expires.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Expires.Value).ToString() : null,
-                    LicenseKey,
-                    Trial,
-                    Id,
-                    Email,
-                    Premium,
-                    MaxStorageGb);
+                var props = typeof(UserLicense)
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => !p.Name.Equals(nameof(Signature)) && !p.Name.Equals(nameof(SignatureBytes)))
+                    .OrderBy(p => p.Name)
+                    .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                    .Aggregate((c, n) => $"{c}|{n}");
+                data = $"license:user|{props}";
             }
             else
             {

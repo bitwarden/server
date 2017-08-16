@@ -351,5 +351,25 @@ namespace Bit.Core.Utilities
             // Standard base64 decoder
             return Convert.FromBase64String(output);
         }
+
+        public static string FormatLicenseSignatureValue(object val)
+        {
+            if(val == null)
+            {
+                return string.Empty;
+            }
+
+            if(val.GetType() == typeof(DateTime))
+            {
+                return ToEpocSeconds((DateTime)val).ToString();
+            }
+
+            if(val.GetType() == typeof(bool))
+            {
+                return val.ToString().ToLowerInvariant();
+            }
+
+            return val.ToString();
+        }
     }
 }

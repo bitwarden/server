@@ -3,6 +3,8 @@ using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -22,6 +24,8 @@ namespace Bit.Core.Models.Business
             InstallationId = installationId;
             Id = org.Id;
             Name = org.Name;
+            BillingEmail = org.BillingEmail;
+            BusinessName = org.BusinessName;
             Enabled = org.Enabled;
             Plan = org.Plan;
             PlanType = org.PlanType;
@@ -74,6 +78,8 @@ namespace Bit.Core.Models.Business
         public Guid InstallationId { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; }
+        public string BillingEmail { get; set; }
+        public string BusinessName { get; set; }
         public bool Enabled { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
@@ -98,23 +104,13 @@ namespace Bit.Core.Models.Business
             string data = null;
             if(Version == 1)
             {
-                data = string.Format("organization:{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}_{10}_{11}_{12}_{13}_{14}_{15}",
-                    Version,
-                    Utilities.CoreHelpers.ToEpocSeconds(Issued),
-                    Refresh.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Refresh.Value).ToString() : null,
-                    Expires.HasValue ? Utilities.CoreHelpers.ToEpocSeconds(Expires.Value).ToString() : null,
-                    LicenseKey,
-                    InstallationId,
-                    Id,
-                    Enabled,
-                    PlanType,
-                    Seats,
-                    MaxCollections,
-                    UseGroups,
-                    UseDirectory,
-                    UseTotp,
-                    MaxStorageGb,
-                    SelfHost);
+                var props = typeof(OrganizationLicense)
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => !p.Name.Equals(nameof(Signature)) && !p.Name.Equals(nameof(SignatureBytes)))
+                    .OrderBy(p => p.Name)
+                    .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                    .Aggregate((c, n) => $"{c}|{n}");
+                data = $"license:organization|{props}";
             }
             else
             {
