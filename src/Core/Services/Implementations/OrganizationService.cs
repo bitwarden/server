@@ -152,7 +152,7 @@ namespace Bit.Core.Services
             if(!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(userCount >= newPlanSeats)
+                if(userCount > newPlanSeats)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
                         $"only has ({newPlanSeats}) seats. Remove some users.");
@@ -651,7 +651,7 @@ namespace Bit.Core.Services
             if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
-                if(userCount >= license.Seats.Value)
+                if(userCount > license.Seats.Value)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
                         $"Your new license only has ({ license.Seats.Value}) seats. Remove some users.");

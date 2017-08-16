@@ -29,6 +29,8 @@ namespace Bit.Core.Models.Business
             Refresh = billingInfo?.UpcomingInvoice?.Date;
             Trial = (billingInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
                 billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+
+            Hash = Convert.ToBase64String(ComputeHash());
             Signature = Convert.ToBase64String(licenseService.SignLicense(this));
         }
 
@@ -43,18 +45,29 @@ namespace Bit.Core.Models.Business
         public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
+        public string Hash { get; set; }
         public string Signature { get; set; }
         [JsonIgnore]
         public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
-        public byte[] GetSignatureData()
+        public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
             if(Version == 1)
             {
                 var props = typeof(UserLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(p => !p.Name.Equals(nameof(Signature)) && !p.Name.Equals(nameof(SignatureBytes)))
+                    .Where(p =>
+                        !p.Name.Equals(nameof(Signature)) &&
+                        !p.Name.Equals(nameof(SignatureBytes)) &&
+                        (
+                            !forHash ||
+                            (
+                                !p.Name.Equals(nameof(Hash)) &&
+                                !p.Name.Equals(nameof(Issued)) &&
+                                !p.Name.Equals(nameof(Refresh))
+                            )
+                        ))
                     .OrderBy(p => p.Name)
                     .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                     .Aggregate((c, n) => $"{c}|{n}");
@@ -66,6 +79,14 @@ namespace Bit.Core.Models.Business
             }
 
             return Encoding.UTF8.GetBytes(data);
+        }
+
+        public byte[] ComputeHash()
+        {
+            using(var alg = SHA256.Create())
+            {
+                return alg.ComputeHash(GetDataBytes(true));
+            }
         }
 
         public bool CanUse(User user)
@@ -109,7 +130,7 @@ namespace Bit.Core.Models.Business
         {
             using(var rsa = certificate.GetRSAPublicKey())
             {
-                return rsa.VerifyData(GetSignatureData(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
         }
 
@@ -122,7 +143,7 @@ namespace Bit.Core.Models.Business
 
             using(var rsa = certificate.GetRSAPrivateKey())
             {
-                return rsa.SignData(GetSignatureData(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
         }
     }

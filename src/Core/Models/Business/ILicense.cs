@@ -11,8 +11,11 @@ namespace Bit.Core.Models.Business
         DateTime? Refresh { get; set; }
         DateTime? Expires { get; set; }
         bool Trial { get; set; }
+        string Hash { get; set; }
         string Signature { get; set; }
-        byte[] GetSignatureData();
+        byte[] SignatureBytes { get; }
+        byte[] GetDataBytes(bool forHash = false);
+        byte[] ComputeHash();
         bool VerifySignature(X509Certificate2 certificate);
         byte[] Sign(X509Certificate2 certificate);
     }
