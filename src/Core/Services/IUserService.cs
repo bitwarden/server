@@ -47,6 +47,7 @@ namespace Bit.Core.Services
         Task CancelPremiumAsync(User user, bool endOfPeriod = false);
         Task ReinstatePremiumAsync(User user);
         Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
+        Task DisablePremiumAsync(User user, DateTime? expirationDate);
         Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     }
 }

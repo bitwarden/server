@@ -116,7 +116,7 @@ namespace Bit.Core.Models.Business
             if(Version == 1)
             {
                 return
-                    user.LicenseKey.Equals(LicenseKey, StringComparison.InvariantCultureIgnoreCase) &&
+                    user.LicenseKey.Equals(LicenseKey) &&
                     user.Premium == Premium &&
                     user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
             }

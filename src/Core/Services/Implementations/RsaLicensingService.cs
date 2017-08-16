@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Services
 {
@@ -15,13 +16,17 @@ namespace Bit.Core.Services
     {
         private readonly X509Certificate2 _certificate;
         private readonly GlobalSettings _globalSettings;
-        private IDictionary<string, UserLicense> _userLicenseCache;
-        private IDictionary<string, OrganizationLicense> _organizationLicenseCache;
+        private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
+        private IDictionary<Guid, DateTime> _organizationCheckCache = new Dictionary<Guid, DateTime>();
+        private readonly IUserService _userService;
 
         public RsaLicensingService(
+            IUserService userService,
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
+            _userService = userService;
+
             var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
             _globalSettings = globalSettings;
             _certificate = !_globalSettings.SelfHosted ? CoreHelpers.GetCertificate(certThumbprint)
@@ -54,7 +59,7 @@ namespace Bit.Core.Services
             return license != null && license.VerifyData(organization) && license.VerifySignature(_certificate);
         }
 
-        public bool VerifyUserPremium(User user)
+        public async Task<bool> VerifyUserPremiumAsync(User user)
         {
             if(!_globalSettings.SelfHosted)
             {
@@ -66,8 +71,33 @@ namespace Bit.Core.Services
                 return false;
             }
 
+            // Only check once per day
+            var now = DateTime.UtcNow;
+            if(_userCheckCache.ContainsKey(user.Id))
+            {
+                var lastCheck = _userCheckCache[user.Id];
+                if(lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
+                {
+                    return user.Premium;
+                }
+                else
+                {
+                    _userCheckCache[user.Id] = now;
+                }
+            }
+            else
+            {
+                _userCheckCache.Add(user.Id, now);
+            }
+
             var license = ReadUserLicense(user);
-            return license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
+            var licensedForPremium = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
+            if(!licensedForPremium)
+            {
+                await _userService.DisablePremiumAsync(user, license.Expires);
+            }
+
+            return licensedForPremium;
         }
 
         public bool VerifyLicense(ILicense license)
@@ -87,11 +117,6 @@ namespace Bit.Core.Services
 
         private UserLicense ReadUserLicense(User user)
         {
-            if(_userLicenseCache != null && _userLicenseCache.ContainsKey(user.LicenseKey))
-            {
-                return _userLicenseCache[user.LicenseKey];
-            }
-
             var filePath = $"{_globalSettings.LicenseDirectory}/user/{user.Id}.json";
             if(!File.Exists(filePath))
             {
@@ -99,22 +124,11 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            var obj = JsonConvert.DeserializeObject<UserLicense>(data);
-            if(_userLicenseCache == null)
-            {
-                _userLicenseCache = new Dictionary<string, UserLicense>();
-            }
-            _userLicenseCache.Add(obj.LicenseKey, obj);
-            return obj;
+            return JsonConvert.DeserializeObject<UserLicense>(data);
         }
 
         private OrganizationLicense ReadOrganiztionLicense(Organization organization)
         {
-            if(_organizationLicenseCache != null && _organizationLicenseCache.ContainsKey(organization.LicenseKey))
-            {
-                return _organizationLicenseCache[organization.LicenseKey];
-            }
-
             var filePath = $"{_globalSettings.LicenseDirectory}/organization/{organization.Id}.json";
             if(!File.Exists(filePath))
             {
@@ -122,13 +136,7 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            var obj = JsonConvert.DeserializeObject<OrganizationLicense>(data);
-            if(_organizationLicenseCache == null)
-            {
-                _organizationLicenseCache = new Dictionary<string, OrganizationLicense>();
-            }
-            _organizationLicenseCache.Add(obj.LicenseKey, obj);
-            return obj;
+            return JsonConvert.DeserializeObject<OrganizationLicense>(data);
         }
     }
 }

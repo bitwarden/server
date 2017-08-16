@@ -167,7 +167,7 @@ namespace Bit.Core.Models.Business
             if(Version == 1)
             {
                 return
-                    organization.LicenseKey.Equals(LicenseKey, StringComparison.InvariantCultureIgnoreCase) &&
+                    organization.LicenseKey.Equals(LicenseKey) &&
                     organization.Enabled == Enabled &&
                     organization.PlanType == PlanType &&
                     organization.Seats == Seats &&

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using System;
 using Bit.Core.Models.Business;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Services
 {
@@ -27,9 +28,9 @@ namespace Bit.Core.Services
             return true;
         }
 
-        public bool VerifyUserPremium(User user)
+        public Task<bool> VerifyUserPremiumAsync(User user)
         {
-            return user.Premium;
+            return Task.FromResult(user.Premium);
         }
 
         public byte[] SignLicense(ILicense license)

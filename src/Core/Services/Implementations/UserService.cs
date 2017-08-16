@@ -691,6 +691,11 @@ namespace Bit.Core.Services
         public async Task DisablePremiumAsync(Guid userId, DateTime? expirationDate)
         {
             var user = await _userRepository.GetByIdAsync(userId);
+            await DisablePremiumAsync(user, expirationDate);
+        }
+
+        public async Task DisablePremiumAsync(User user, DateTime? expirationDate)
+        {
             if(user != null && user.Premium)
             {
                 user.Premium = false;

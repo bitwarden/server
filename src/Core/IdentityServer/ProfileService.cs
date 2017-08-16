@@ -18,17 +18,20 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ILicensingService _licensingService;
         private IdentityOptions _identityOptions;
 
         public ProfileService(
             IUserRepository userRepository,
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
+            ILicensingService licensingService,
             IOptions<IdentityOptions> identityOptionsAccessor)
         {
             _userRepository = userRepository;
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
+            _licensingService = licensingService;
             _identityOptions = identityOptionsAccessor?.Value ?? new IdentityOptions();
         }
 
@@ -40,9 +43,10 @@ namespace Bit.Core.IdentityServer
             var user = await _userService.GetUserByPrincipalAsync(context.Subject);
             if(user != null)
             {
+                var isPremium = await _licensingService.VerifyUserPremiumAsync(user);
                 newClaims.AddRange(new List<Claim>
                 {
-                    new Claim("premium", user.Premium ? "true" : "false", ClaimValueTypes.Boolean),
+                    new Claim("premium", isPremium ? "true" : "false", ClaimValueTypes.Boolean),
                     new Claim(JwtClaimTypes.Email, user.Email),
                     new Claim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false", ClaimValueTypes.Boolean),
                     new Claim(_identityOptions.ClaimsIdentity.SecurityStampClaimType, user.SecurityStamp)
