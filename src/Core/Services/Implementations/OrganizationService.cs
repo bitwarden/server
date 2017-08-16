@@ -551,7 +551,7 @@ namespace Bit.Core.Services
             if(!license.CanUse(_globalSettings.Installation.Id))
             {
                 throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                    "hosting of organizations and that the installation id matches.");
+                    "hosting of organizations and that the installation id matches your current installation.");
             }
 
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled);
@@ -658,7 +658,7 @@ namespace Bit.Core.Services
             if(!license.CanUse(_globalSettings.Installation.Id))
             {
                 throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                    "hosting of organizations and that the installation id matches.");
+                    "hosting of organizations and that the installation id matches your current installation.");
             }
 
             if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
