@@ -557,12 +557,12 @@ namespace Bit.Core.Services
             var organization = new Organization
             {
                 Name = license.Name,
-                BillingEmail = null,
-                BusinessName = null,
+                BillingEmail = license.BillingEmail,
+                BusinessName = license.BusinessName,
                 PlanType = license.PlanType,
                 Seats = license.Seats,
                 MaxCollections = license.MaxCollections,
-                MaxStorageGb = 10240, // 10 TB
+                MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseTotp = license.UseTotp,
@@ -571,7 +571,7 @@ namespace Bit.Core.Services
                 Gateway = null,
                 GatewayCustomerId = null,
                 GatewaySubscriptionId = null,
-                Enabled = true,
+                Enabled = license.Enabled,
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
                 CreationDate = DateTime.UtcNow,
@@ -677,6 +677,8 @@ namespace Bit.Core.Services
             File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
 
             organization.Name = license.Name;
+            organization.BusinessName = license.BusinessName;
+            organization.BillingEmail = license.BillingEmail;
             organization.PlanType = license.PlanType;
             organization.Seats = license.Seats;
             organization.MaxCollections = license.MaxCollections;
@@ -684,7 +686,7 @@ namespace Bit.Core.Services
             organization.UseDirectory = license.UseDirectory;
             organization.UseTotp = license.UseTotp;
             organization.Plan = license.Plan;
-            organization.Enabled = true;
+            organization.Enabled = license.Enabled;
             organization.ExpirationDate = license.Expires;
             organization.LicenseKey = license.LicenseKey;
             organization.RevisionDate = DateTime.UtcNow;
