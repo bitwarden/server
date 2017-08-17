@@ -37,8 +37,6 @@ namespace Bit.Core.IdentityServer
 
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
-            await _licensingService.ValidateOrganizationsAsync();
-
             var existingClaims = context.Subject.Claims;
             var newClaims = new List<Claim>();
 
