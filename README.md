@@ -23,6 +23,8 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 - [.NET Core 2.x](https://www.microsoft.com/net/download/core)
 - [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index)
 
+*These dependencies are free to use.*
+
 ### Recommended Development Tooling
 
 - [Visual Studio](https://www.visualstudio.com/vs/) (Windows and macOS)
@@ -52,6 +54,6 @@ visit http://localhost:33657/.well-known/openid-configuration
 
 ## Contribute
 
-Code contributions are welcome! Visual Studio or VS Code is required to work on this project. Please commit any pull requests against the `master` branch.
+Code contributions are welcome! Visual Studio or VS Code is highly recommended if you are working on this project. Please commit any pull requests against the `master` branch.
 
 Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file.
