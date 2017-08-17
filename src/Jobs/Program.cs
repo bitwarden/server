@@ -17,14 +17,25 @@ namespace Bit.Jobs
         public static void Main(string[] args)
         {
             var parameters = ParseParameters(args);
-            var host = new WebHostBuilder()
-                .UseContentRoot(parameters.ContainsKey("d") ? parameters["d"] : Directory.GetCurrentDirectory())
-                .UseStartup<Startup>()
-                .UseServer(new NoopServer())
-                .Build();
+            try
+            {
+                var host = new WebHostBuilder()
+                    .UseContentRoot(parameters.ContainsKey("d") ? parameters["d"] : Directory.GetCurrentDirectory())
+                    .UseStartup<Startup>()
+                    .UseServer(new NoopServer())
+                    .Build();
 
-            _logger = host.Services.GetRequiredService<ILogger<Program>>();
-            _licensingService = host.Services.GetRequiredService<ILicensingService>();
+                _logger = host.Services.GetRequiredService<ILogger<Program>>();
+                _licensingService = host.Services.GetRequiredService<ILicensingService>();
+            }
+            catch(Exception e)
+            {
+                if(_logger != null)
+                {
+                    _logger.LogCritical(1, e, "Error while bootstrapping.");
+                }
+                throw e;
+            }
 
             MainAsync(parameters).Wait();
         }
@@ -36,19 +47,29 @@ namespace Bit.Jobs
                 return;
             }
 
-            switch(parameters["j"])
+            _logger.LogInformation("Starting job '{0}'.", parameters["j"]);
+
+            try
             {
-                case "validate-licenses":
-                    await _licensingService.ValidateOrganizationsAsync();
-                    break;
-                case "refresh-licenses":
-                    // TODO
-                    break;
-                case "hello":
-                    _logger.LogInformation("Hello World!");
-                    break;
-                default:
-                    break;
+                switch(parameters["j"])
+                {
+                    case "validate-licenses":
+                        await _licensingService.ValidateOrganizationsAsync();
+                        break;
+                    case "refresh-licenses":
+                        // TODO
+                        break;
+                    case "alive":
+                        _logger.LogInformation(DateTime.UtcNow.ToString());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(2, e, "Error performing job.");
+                throw e;
             }
         }
 
