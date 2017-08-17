@@ -548,7 +548,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid license.");
             }
 
-            if(!license.CanUse(_globalSettings.Installation.Id))
+            if(!license.CanUse(_globalSettings))
             {
                 throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
                     "hosting of organizations and that the installation id matches your current installation.");
@@ -655,7 +655,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid license.");
             }
 
-            if(!license.CanUse(_globalSettings.Installation.Id))
+            if(!license.CanUse(_globalSettings))
             {
                 throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
                     "hosting of organizations and that the installation id matches your current installation.");

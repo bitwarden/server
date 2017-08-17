@@ -19,6 +19,18 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
+        public async Task<ICollection<Organization>> GetManyAsync()
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Organization>(
+                    "[dbo].[Organization_Read]",
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))

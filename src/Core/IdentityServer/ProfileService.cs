@@ -37,13 +37,15 @@ namespace Bit.Core.IdentityServer
 
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
+            await _licensingService.ValidateOrganizationsAsync();
+
             var existingClaims = context.Subject.Claims;
             var newClaims = new List<Claim>();
 
             var user = await _userService.GetUserByPrincipalAsync(context.Subject);
             if(user != null)
             {
-                var isPremium = await _licensingService.VerifyUserPremiumAsync(user);
+                var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
                 newClaims.AddRange(new List<Claim>
                 {
                     new Claim("premium", isPremium ? "true" : "false", ClaimValueTypes.Boolean),

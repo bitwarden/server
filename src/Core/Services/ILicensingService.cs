@@ -6,8 +6,8 @@ namespace Bit.Core.Services
 {
     public interface ILicensingService
     {
-        bool VerifyOrganizationPlan(Organization organization);
-        Task<bool> VerifyUserPremiumAsync(User user);
+        Task ValidateOrganizationsAsync();
+        Task<bool> ValidateUserPremiumAsync(User user);
         bool VerifyLicense(ILicense license);
         byte[] SignLicense(ILicense license);
     }

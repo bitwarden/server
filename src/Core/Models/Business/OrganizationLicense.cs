@@ -140,7 +140,7 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        public bool CanUse(Guid installationId)
+        public bool CanUse(GlobalSettings globalSettings)
         {
             if(!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
@@ -149,7 +149,7 @@ namespace Bit.Core.Models.Business
 
             if(Version == 1)
             {
-                return InstallationId == installationId && SelfHost;
+                return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
             else
             {
@@ -157,7 +157,7 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        public bool VerifyData(Organization organization)
+        public bool VerifyData(Organization organization, GlobalSettings globalSettings)
         {
             if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
@@ -167,6 +167,7 @@ namespace Bit.Core.Models.Business
             if(Version == 1)
             {
                 return
+                    globalSettings.Installation.Id == InstallationId &&
                     organization.LicenseKey.Equals(LicenseKey) &&
                     organization.Enabled == Enabled &&
                     organization.PlanType == PlanType &&
@@ -175,7 +176,8 @@ namespace Bit.Core.Models.Business
                     organization.UseGroups == UseGroups &&
                     organization.UseDirectory == UseDirectory &&
                     organization.UseTotp == UseTotp &&
-                    organization.SelfHost == SelfHost;
+                    organization.SelfHost == SelfHost &&
+                    organization.Name.Equals(Name);
             }
             else
             {

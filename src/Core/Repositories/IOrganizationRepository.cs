@@ -7,6 +7,7 @@ namespace Bit.Core.Repositories
 {
     public interface IOrganizationRepository : IRepository<Organization, Guid>
     {
+        Task<ICollection<Organization>> GetManyAsync();
         Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
         Task UpdateStorageAsync(Guid id);
     }

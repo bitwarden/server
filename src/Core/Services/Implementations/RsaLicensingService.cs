@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,16 +18,20 @@ namespace Bit.Core.Services
     {
         private readonly X509Certificate2 _certificate;
         private readonly GlobalSettings _globalSettings;
-        private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
-        private IDictionary<Guid, DateTime> _organizationCheckCache = new Dictionary<Guid, DateTime>();
         private readonly IUserRepository _userRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+
+        private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
+        private DateTime? _organizationCheckCache = null;
 
         public RsaLicensingService(
             IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
+            _organizationRepository = organizationRepository;
 
             var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
             _globalSettings = globalSettings;
@@ -44,23 +49,35 @@ namespace Bit.Core.Services
             }
         }
 
-        public bool VerifyOrganizationPlan(Organization organization)
+        public async Task ValidateOrganizationsAsync()
         {
             if(!_globalSettings.SelfHosted)
             {
-                return true;
+                return;
             }
 
-            if(!organization.SelfHost)
+            var now = DateTime.UtcNow;
+            if(_organizationCheckCache.HasValue && now - _organizationCheckCache.Value < TimeSpan.FromDays(1))
             {
-                return false;
+                return;
             }
+            _organizationCheckCache = now;
 
-            var license = ReadOrganiztionLicense(organization);
-            return license != null && license.VerifyData(organization) && license.VerifySignature(_certificate);
+            var orgs = await _organizationRepository.GetManyAsync();
+            foreach(var org in orgs.Where(o => o.Enabled))
+            {
+                var license = ReadOrganiztionLicense(org);
+                if(license == null || !license.VerifyData(org, _globalSettings) || !license.VerifySignature(_certificate))
+                {
+                    org.Enabled = false;
+                    org.ExpirationDate = license.Expires;
+                    org.RevisionDate = DateTime.UtcNow;
+                    await _organizationRepository.ReplaceAsync(org);
+                }
+            }
         }
 
-        public async Task<bool> VerifyUserPremiumAsync(User user)
+        public async Task<bool> ValidateUserPremiumAsync(User user)
         {
             if(!_globalSettings.SelfHosted)
             {
