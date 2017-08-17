@@ -77,7 +77,7 @@ namespace Bit.Core.Services
             if(_userCheckCache.ContainsKey(user.Id))
             {
                 var lastCheck = _userCheckCache[user.Id];
-                if(lastCheck < now && now - lastCheck < TimeSpan.FromMinutes(1))
+                if(lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
                 {
                     return user.Premium;
                 }
