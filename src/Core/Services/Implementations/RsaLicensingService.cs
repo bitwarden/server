@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
@@ -18,14 +19,14 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
         private IDictionary<Guid, DateTime> _organizationCheckCache = new Dictionary<Guid, DateTime>();
-        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
 
         public RsaLicensingService(
-            IUserService userService,
+            IUserRepository userRepository,
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
-            _userService = userService;
+            _userRepository = userRepository;
 
             var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
             _globalSettings = globalSettings;
@@ -76,7 +77,7 @@ namespace Bit.Core.Services
             if(_userCheckCache.ContainsKey(user.Id))
             {
                 var lastCheck = _userCheckCache[user.Id];
-                if(lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
+                if(lastCheck < now && now - lastCheck < TimeSpan.FromMinutes(1))
                 {
                     return user.Premium;
                 }
@@ -94,7 +95,10 @@ namespace Bit.Core.Services
             var licensedForPremium = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
             if(!licensedForPremium)
             {
-                await _userService.DisablePremiumAsync(user, license.Expires);
+                user.Premium = false;
+                user.PremiumExpirationDate = license.Expires;
+                user.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(user);
             }
 
             return licensedForPremium;
