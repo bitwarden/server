@@ -30,6 +30,8 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 - [Visual Studio](https://www.visualstudio.com/vs/) (Windows and macOS)
 - [Visual Studio Code](https://code.visualstudio.com/) (other)
 
+*These tools are free to use.*
+
 ### API
 
 ```
