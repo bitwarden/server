@@ -18,19 +18,19 @@ namespace Bit.Core.Services
             }
         }
 
-        public bool VerifyLicense(ILicense license)
+        public Task ValidateOrganizationsAsync()
         {
-            return true;
-        }
-
-        public bool VerifyOrganizationPlan(Organization organization)
-        {
-            return true;
+            return Task.FromResult(0);
         }
 
         public Task<bool> ValidateUserPremiumAsync(User user)
         {
             return Task.FromResult(user.Premium);
+        }
+
+        public bool VerifyLicense(ILicense license)
+        {
+            return true;
         }
 
         public byte[] SignLicense(ILicense license)
