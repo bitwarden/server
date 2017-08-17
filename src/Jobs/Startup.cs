@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Builder;
+using Serilog.Events;
 
 namespace Bit.Jobs
 {
@@ -55,7 +56,10 @@ namespace Bit.Jobs
             GlobalSettings globalSettings)
         {
             loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings)
+                .AddSerilog(env, appLifetime, globalSettings, (e) =>
+                {
+                    return e.Level >= LogEventLevel.Information;
+                })
                 .AddConsole()
                 .AddDebug();
         }

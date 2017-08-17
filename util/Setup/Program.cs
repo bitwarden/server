@@ -261,26 +261,26 @@ server {{
 
             using(var sw = File.CreateText("/bitwarden/docker/global.override.env"))
             {
-                sw.Write($@"globalSettings:baseServiceUri:vault={_url}
-globalSettings:baseServiceUri:api={_url}/api
-globalSettings:baseServiceUri:identity={_url}/identity
-globalSettings:sqlServer:connectionString={dbConnectionString}
-globalSettings:identityServer:certificatePassword={_identityCertPassword}
-globalSettings:attachment:baseDirectory={_outputDir}/core/attachments
-globalSettings:attachment:baseUrl={_url}/attachments
-globalSettings:dataProtection:directory={_outputDir}/core/aspnet-dataprotection
-globalSettings:logDirectory={_outputDir}/core/logs
-globalSettings:licenseDirectory={_outputDir}/core/licenses
-globalSettings:duo:aKey={Helpers.SecureRandomString(64, alpha: true, numeric: true)}
-globalSettings:installation:id={_installationId}
-globalSettings:installation:key={_installationKey}
-globalSettings:yubico:clientId=REPLACE
-globalSettings:yubico:key=REPLACE");
+                sw.Write($@"globalSettings__baseServiceUri__vault={_url}
+globalSettings__baseServiceUri__api={_url}/api
+globalSettings__baseServiceUri__identity={_url}/identity
+globalSettings__sqlServer__connectionString=""{dbConnectionString}""
+globalSettings__identityServer__certificatePassword={_identityCertPassword}
+globalSettings__attachment__baseDirectory={_outputDir}/core/attachments
+globalSettings__attachment__baseUrl={_url}/attachments
+globalSettings__dataProtection__directory={_outputDir}/core/aspnet-dataprotection
+globalSettings__logDirectory={_outputDir}/core/logs
+globalSettings__licenseDirectory={_outputDir}/core/licenses
+globalSettings__duo__aKey={Helpers.SecureRandomString(64, alpha: true, numeric: true)}
+globalSettings__installation__id={_installationId}
+globalSettings__installation__key={_installationKey}
+globalSettings__yubico__clientId=REPLACE
+globalSettings__yubico__key=REPLACE");
 
                 if(!_push)
                 {
                     sw.Write(@"
-globalSettings:pushRelayBaseUri=REPLACE");
+globalSettings__pushRelayBaseUri=REPLACE");
                 }
             }
 
