@@ -26,7 +26,7 @@ Desktop
 Web
 ============
 
-You can also access your vault from any web-enabled device using our web vault at: <{{vaultUrl}}>
+You can also access your vault from any web-enabled device using our web vault at: <{{vaultUrl}}?utm_source=welcome_email&utm_medium=email>
 
 ------------
 

@@ -29,7 +29,7 @@ namespace Bit.Core.Services
             var model = new Dictionary<string, string>
             {
                 ["url"] = string.Format("{0}/verify-email?userId={1}&token={2}",
-                    _globalSettings.BaseServiceUri.Vault, userId, WebUtility.UrlEncode(token))
+                    _globalSettings.BaseServiceUri.VaultWithHash, userId, WebUtility.UrlEncode(token))
             };
 
             var message = await CreateMessageAsync("Verify Your Email", email, "VerifyEmail", model);
@@ -42,7 +42,7 @@ namespace Bit.Core.Services
             var model = new Dictionary<string, string>
             {
                 ["url"] = string.Format("{0}/verify-recover-delete?userId={1}&token={2}&email={3}",
-                    _globalSettings.BaseServiceUri.Vault,
+                    _globalSettings.BaseServiceUri.VaultWithHash,
                     userId,
                     WebUtility.UrlEncode(token),
                     WebUtility.UrlEncode(email)),
@@ -96,7 +96,7 @@ namespace Bit.Core.Services
             var model = new Dictionary<string, string>
             {
                 ["hint"] = WebUtility.HtmlEncode(hint),
-                ["vaultUrl"] = _globalSettings.BaseServiceUri.Vault
+                ["vaultUrl"] = _globalSettings.BaseServiceUri.VaultWithHash
             };
 
             var message = await CreateMessageAsync("Your Master Password Hint", email, "MasterPasswordHint", model);
@@ -146,7 +146,7 @@ namespace Bit.Core.Services
                 ["organizationName"] = WebUtility.HtmlEncode(organizationName),
                 ["url"] = string.Format("{0}/accept-organization?organizationId={1}&organizationUserId={2}" +
                     "&email={3}&organizationName={4}&token={5}",
-                    _globalSettings.BaseServiceUri.Vault,
+                    _globalSettings.BaseServiceUri.VaultWithHash,
                     orgUser.OrganizationId,
                     orgUser.Id,
                     WebUtility.UrlEncode(orgUser.Email),
@@ -163,7 +163,7 @@ namespace Bit.Core.Services
         {
             var model = new Dictionary<string, string>
             {
-                ["vaultUrl"] = _globalSettings.BaseServiceUri.Vault
+                ["vaultUrl"] = _globalSettings.BaseServiceUri.VaultWithHash
             };
 
             var message = await CreateMessageAsync("Welcome", user.Email, "Welcome", model);

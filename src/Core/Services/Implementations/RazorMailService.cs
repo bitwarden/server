@@ -37,7 +37,7 @@ namespace Bit.Core.Services
             {
                 Token = WebUtility.UrlEncode(token),
                 UserId = userId,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("VerifyEmail", model);
@@ -54,7 +54,7 @@ namespace Bit.Core.Services
             {
                 Token = WebUtility.UrlEncode(token),
                 UserId = userId,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
                 Email = email,
                 EmailEncoded = WebUtility.UrlEncode(email)
@@ -73,7 +73,7 @@ namespace Bit.Core.Services
             {
                 FromEmail = fromEmail,
                 ToEmail = toEmail,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("ChangeEmailAlreadyExists", model);
@@ -87,7 +87,7 @@ namespace Bit.Core.Services
             var model = new EmailTokenViewModel
             {
                 Token = token,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("ChangeEmail", model);
@@ -103,7 +103,7 @@ namespace Bit.Core.Services
             var model = new EmailTokenViewModel
             {
                 Token = token,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("TwoFactorEmail", model);
@@ -119,7 +119,7 @@ namespace Bit.Core.Services
             var model = new MasterPasswordHintViewModel
             {
                 Hint = hint,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("MasterPasswordHint", model);
@@ -132,7 +132,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Your Master Password Hint", email);
             var model = new BaseMailModel
             {
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("NoMasterPasswordHint", model);
@@ -148,7 +148,7 @@ namespace Bit.Core.Services
             {
                 OrganizationName = organizationName,
                 UserEmail = userEmail,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("OrganizationUserAccepted", model);
@@ -162,7 +162,7 @@ namespace Bit.Core.Services
             var model = new OrganizationUserConfirmedViewModel
             {
                 OrganizationName = organizationName,
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("OrganizationUserConfirmed", model);
@@ -181,7 +181,7 @@ namespace Bit.Core.Services
                 OrganizationUserId = orgUser.Id.ToString(),
                 Token = WebUtility.UrlEncode(token),
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("OrganizationUserInvited", model);
@@ -194,7 +194,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Welcome", user.Email);
             var model = new BaseMailModel
             {
-                WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             message.HtmlContent = _engine.Parse("Welcome", model);

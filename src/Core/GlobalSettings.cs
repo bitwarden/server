@@ -28,6 +28,7 @@ namespace Bit.Core
         public class BaseServiceUriSettings
         {
             public string Vault { get; set; }
+            public string VaultWithHash => $"{Vault}/#";
             public string Api { get; set; }
             public string Identity { get; set; }
             public string InternalIdentity { get; set; }

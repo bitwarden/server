@@ -214,7 +214,7 @@ namespace Bit.Core.Services
             }
 
             AddSubstitution(message, "{{siteName}}", _globalSettings.SiteName);
-            AddSubstitution(message, "{{baseVaultUri}}", string.Concat(_globalSettings.BaseServiceUri.Vault, "/#"));
+            AddSubstitution(message, "{{baseVaultUri}}", _globalSettings.BaseServiceUri.VaultWithHash);
 
             return message;
         }
