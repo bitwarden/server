@@ -210,5 +210,6 @@
     <Build Include="dbo\Stored Procedures\Installation_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Installation_Update.sql" />
     <Build Include="dbo\Views\InstallationView.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_Read.sql" />
   </ItemGroup>
 </Project>
