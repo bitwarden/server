@@ -14,7 +14,7 @@ namespace Bit.Core.Utilities
                 .AddJsonFile("settings.json")
                 .AddJsonFile($"settings.{env.EnvironmentName}.json", optional: true);
 
-            if(env.IsDevelopment())
+            if(env.IsDevelopment() && !string.IsNullOrWhiteSpace(userSecretsId))
             {
                 builder.AddUserSecrets(userSecretsId);
             }

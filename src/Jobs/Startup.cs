@@ -1,21 +1,20 @@
 ﻿using System;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Utilities;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Builder;
 
-namespace Bit.Identity
+namespace Bit.Jobs
 {
     public class Startup
     {
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Identity");
+                .AddSettingsConfiguration(env, "bitwarden-Jobs");
             Configuration = builder.Build();
             Environment = env;
         }
@@ -40,9 +39,6 @@ namespace Bit.Identity
             // Context
             services.AddScoped<CurrentContext>();
 
-            // IdentityServer
-            services.AddCustomIdentityServerServices(Environment, globalSettings);
-
             // Identity
             services.AddCustomIdentityServices(globalSettings);
 
@@ -59,27 +55,9 @@ namespace Bit.Identity
             GlobalSettings globalSettings)
         {
             loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings, (e) =>
-                {
-                    var context = e.Properties["SourceContext"].ToString();
-                    if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                    {
-                        return e.Level > LogEventLevel.Error;
-                    }
-
-                    return e.Level >= LogEventLevel.Error;
-                })
+                .AddSerilog(env, appLifetime, globalSettings)
                 .AddConsole()
                 .AddDebug();
-
-            // Forwarded headers
-            if(!env.IsDevelopment())
-            {
-                app.UseForwardedHeadersForAzure();
-            }
-
-            // Add IdentityServer to the request pipeline.
-            app.UseIdentityServer();
         }
     }
 }
