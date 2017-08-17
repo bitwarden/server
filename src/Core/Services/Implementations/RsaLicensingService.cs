@@ -3,6 +3,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -20,18 +21,20 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly ILogger<RsaLicensingService> _logger;
 
         private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
-        private DateTime? _organizationCheckCache = null;
 
         public RsaLicensingService(
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IHostingEnvironment environment,
+            ILogger<RsaLicensingService> logger,
             GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
+            _logger = logger;
 
             var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
             _globalSettings = globalSettings;
@@ -56,19 +59,17 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var now = DateTime.UtcNow;
-            if(_organizationCheckCache.HasValue && now - _organizationCheckCache.Value < TimeSpan.FromDays(1))
-            {
-                return;
-            }
-            _organizationCheckCache = now;
-
             var orgs = await _organizationRepository.GetManyAsync();
+            _logger.LogInformation("Validating licenses for {0} organizations.", orgs.Count);
+
             foreach(var org in orgs.Where(o => o.Enabled))
             {
                 var license = ReadOrganiztionLicense(org);
                 if(license == null || !license.VerifyData(org, _globalSettings) || !license.VerifySignature(_certificate))
                 {
+                    _logger.LogInformation("Organization {0}({1}) has an invalid license and is being disabled.",
+                        org.Id, org.Name);
+
                     org.Enabled = false;
                     org.ExpirationDate = license.Expires;
                     org.RevisionDate = DateTime.UtcNow;
@@ -108,10 +109,15 @@ namespace Bit.Core.Services
                 _userCheckCache.Add(user.Id, now);
             }
 
+            _logger.LogInformation("Validating premium license for user {0}({1}).", user.Id, user.Email);
+
             var license = ReadUserLicense(user);
             var licensedForPremium = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
             if(!licensedForPremium)
             {
+                _logger.LogInformation("User {0}({1}) has an invalid license and premium is being disabled.",
+                    user.Id, user.Email);
+
                 user.Premium = false;
                 user.PremiumExpirationDate = license.Expires;
                 user.RevisionDate = DateTime.UtcNow;

@@ -71,6 +71,8 @@ namespace Bit.Jobs
                 _logger.LogError(2, e, "Error performing job.");
                 throw e;
             }
+
+            _logger.LogInformation("Finished job '{0}'.", parameters["j"]);
         }
 
         private static IDictionary<string, string> ParseParameters(string[] args)
