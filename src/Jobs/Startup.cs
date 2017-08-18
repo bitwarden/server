@@ -56,10 +56,7 @@ namespace Bit.Jobs
             GlobalSettings globalSettings)
         {
             loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings, (e) =>
-                {
-                    return e.Level >= LogEventLevel.Information;
-                })
+                .AddSerilog(env, appLifetime, globalSettings, e => e.Level >= LogEventLevel.Information)
                 .AddConsole()
                 .AddDebug();
         }

@@ -53,8 +53,11 @@ namespace Bit.Jobs
             {
                 switch(parameters["j"])
                 {
-                    case "validate-licenses":
+                    case "validate-organizations":
                         await _licensingService.ValidateOrganizationsAsync();
+                        break;
+                    case "validate-users":
+                        // TODO
                         break;
                     case "refresh-licenses":
                         // TODO
