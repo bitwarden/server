@@ -2,7 +2,7 @@ version: '3'
 
 services:
   mssql:
-    image: microsoft/mssql-server-linux
+    image: bitwarden/mssql
     container_name: mssql
     restart: always
     ports:
@@ -26,6 +26,7 @@ services:
   identity:
     image: bitwarden/identity
     container_name: identity
+    restart: always
 
   nginx:
     image: bitwarden/nginx

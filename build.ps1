@@ -9,4 +9,5 @@ echo "=================="
 & $dir\util\Server\build.ps1
 & $dir\util\Nginx\build.ps1
 & $dir\util\Attachments\build.ps1
+& $dir\util\MsSql\build.ps1
 & $dir\util\Setup\build.ps1
