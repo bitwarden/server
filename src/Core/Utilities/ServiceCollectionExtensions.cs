@@ -101,7 +101,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             }
 
-            if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             }
