@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.0.0-preview2-runtime
+FROM microsoft/dotnet:2.0.0-runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

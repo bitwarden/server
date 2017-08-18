@@ -1,7 +1,9 @@
-﻿using System;
+﻿using DbUp;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Setup
@@ -25,7 +27,22 @@ namespace Setup
         {
             _args = args;
             _parameters = ParseParameters();
+            if(_parameters.ContainsKey("install"))
+            {
+                Install();
+            }
+            else if(_parameters.ContainsKey("update"))
+            {
+                Update();
+            }
+            else
+            {
+                Console.WriteLine("No top-level command detected. Exiting...");
+            }
+        }
 
+        private static void Install()
+        {
             _installationId = _parameters.ContainsKey("install_id") ?
                 _parameters["install_id"].ToLowerInvariant() : null;
             _installationKey = _parameters.ContainsKey("install_key") ?
@@ -63,6 +80,41 @@ namespace Setup
 
             BuildEnvironmentFiles();
             BuildAppSettingsFiles();
+        }
+
+        private static void Update()
+        {
+            if(_parameters.ContainsKey("db"))
+            {
+                MigrateDatabase();
+            }
+        }
+
+        private static void MigrateDatabase()
+        {
+            Console.WriteLine("Migrating database.");
+
+            var dbPass = Helpers.GetDatabasePasswordFronEnvFile();
+            var connectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass ?? string.Empty);
+            var upgrader = DeployChanges.To
+                .SqlDatabase(connectionString)
+                .JournalToSqlTable("dbo", "Migration")
+                .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+                    s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
+                .WithTransaction()
+                .WithExecutionTimeout(new TimeSpan(0, 5, 0))
+                .LogToConsole()
+                .Build();
+
+            var result = upgrader.PerformUpgrade();
+            if(result.Successful)
+            {
+                Console.WriteLine("Migration successful.");
+            }
+            else
+            {
+                Console.WriteLine("Migration failed.");
+            }
         }
 
         private static void MakeCerts()
@@ -255,9 +307,7 @@ server {{
             Console.WriteLine("Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/docker/");
             var dbPass = _parameters.ContainsKey("db_pass") ? _parameters["db_pass"].ToLowerInvariant() : "REPLACE";
-            var dbConnectionString = "Server=tcp:mssql,1433;Initial Catalog=vault;Persist Security Info=False;User ID=sa;" +
-                $"Password={dbPass};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;" +
-                "Connection Timeout=30;";
+            var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass);
 
             using(var sw = File.CreateText("/bitwarden/docker/global.override.env"))
             {

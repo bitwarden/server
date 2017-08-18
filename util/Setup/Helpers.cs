@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Setup
 {
@@ -86,6 +88,32 @@ namespace Setup
             }
 
             return characters;
+        }
+
+        public static string MakeSqlConnectionString(string server, string database, string username, string password)
+        {
+            return $"Server=tcp:{server},1433;Initial Catalog={database};Persist Security Info=False;User ID={username};" +
+                $"Password={password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;" +
+                "Connection Timeout=30;";
+        }
+
+        public static string GetDatabasePasswordFronEnvFile()
+        {
+            if(!File.Exists("/bitwarden/docker/mssql.override.env"))
+            {
+                return null;
+            }
+
+            var lines = File.ReadAllLines("/bitwarden/docker/mssql.override.env");
+            foreach(var line in lines)
+            {
+                if(line.StartsWith("SA_PASSWORD="))
+                {
+                    return line.Split(new char[] { '=' }, 2)[1];
+                }
+            }
+
+            return null;
         }
     }
 }

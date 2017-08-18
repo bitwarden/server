@@ -36,17 +36,44 @@ namespace Bit.Core
 
         public class SqlServerSettings
         {
-            public string ConnectionString { get; set; }
+            private string _connectionString;
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set
+                {
+                    _connectionString = value.Trim('"');
+                }
+            }
         }
 
         public class StorageSettings
         {
-            public string ConnectionString { get; set; }
+            private string _connectionString;
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set
+                {
+                    _connectionString = value.Trim('"');
+                }
+            }
         }
 
         public class AttachmentSettings
         {
-            public string ConnectionString { get; set; }
+            private string _connectionString;
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set
+                {
+                    _connectionString = value.Trim('"');
+                }
+            }
             public string BaseDirectory { get; set; }
             public string BaseUrl { get; set; }
         }
@@ -87,7 +114,16 @@ namespace Bit.Core
 
         public class NotificationHubSettings
         {
-            public string ConnectionString { get; set; }
+            private string _connectionString;
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set
+                {
+                    _connectionString = value.Trim('"');
+                }
+            }
             public string HubName { get; set; }
         }
 
