@@ -21,7 +21,7 @@ namespace Setup
         private static bool _ssl = false;
         private static bool _selfSignedSsl = false;
         private static bool _letsEncrypt = false;
-        private static string _installationId = null;
+        private static Guid? _installationId = null;
         private static string _installationKey = null;
         private static bool _push = false;
 
@@ -120,14 +120,15 @@ namespace Setup
 
         private static bool ValidateInstallation()
         {
-            Console.Write("(!) Enter your installation id (get it at https://bitwarden.com/host/): ");
-            _installationId = Console.ReadLine();
+            Console.Write("(!) Enter your installation id (get it at https://bitwarden.com/install): ");
+            var installationId = Console.ReadLine();
             Guid installationidGuid;
-            if(!Guid.TryParse(_installationId, out installationidGuid))
+            if(!Guid.TryParse(installationId.Trim(), out installationidGuid))
             {
                 Console.WriteLine("Invalid installation id.");
                 return false;
             }
+            _installationId = installationidGuid;
 
             Console.Write("(!) Enter your installation key: ");
             _installationKey = Console.ReadLine();

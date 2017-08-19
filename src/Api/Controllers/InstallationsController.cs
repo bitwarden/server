@@ -21,7 +21,7 @@ namespace Bit.Api.Controllers
             _installationRepository = installationRepository;
         }
 
-        [HttpPost("{id}")]
+        [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<InstallationResponseModel> Get(Guid id)
         {
