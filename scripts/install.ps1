@@ -2,22 +2,6 @@ param (
     [string]$outputDir = "c:/bitwarden"
 )
 
-$year = (Get-Date).year
-
-Write-Host @'
- _     _ _                         _            
-| |__ (_) |___      ____ _ _ __ __| | ___ _ __  
-| '_ \| | __\ \ /\ / / _` | '__/ _` |/ _ \ '_ \ 
-| |_) | | |_ \ V  V / (_| | | | (_| |  __/ | | |
-|_.__/|_|\__| \_/\_/ \__,_|_|  \__,_|\___|_| |_|
-'@
-
-Write-Host "
-Open source password management solutions
-Copyright 2015-${year}, 8bit Solutions LLC
-https://bitwarden.com, https://github.com/bitwarden
-"
-
 if(!(Test-Path -Path $outputDir )){
     New-Item -ItemType directory -Path $outputDir
 }
