@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -92,9 +93,19 @@ namespace Setup
 
         public static string MakeSqlConnectionString(string server, string database, string username, string password)
         {
-            return $"Server=tcp:{server},1433;Initial Catalog={database};Persist Security Info=False;User ID={username};" +
-                $"Password={password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;" +
-                "Connection Timeout=30;";
+            var builder = new SqlConnectionStringBuilder
+            {
+                DataSource = $"tcp:{server},1433",
+                InitialCatalog = database,
+                UserID = username,
+                Password = password,
+                MultipleActiveResultSets = false,
+                Encrypt = true,
+                ConnectTimeout = 30,
+                TrustServerCertificate = true,
+                PersistSecurityInfo = false
+            };
+            return builder.ConnectionString;
         }
 
         public static string GetDatabasePasswordFronEnvFile()
