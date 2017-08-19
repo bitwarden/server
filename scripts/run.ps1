@@ -1,5 +1,11 @@
+param (
+    [string] $dockerDir = ""
+)
+
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$dockerDir="${dir}\..\docker"
+if($dockerDir -eq "") {
+    $dockerDir="${dir}\..\docker"
+}
 
 docker --version
 docker-compose --version
