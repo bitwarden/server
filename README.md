@@ -54,6 +54,45 @@ dotnet run -f netcoreapp2.0
 
 visit http://localhost:33657/.well-known/openid-configuration
 
+## Deploy
+
+You can deploy bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
+
+### Requirements
+
+- [Docker](https://www.docker.com/community-edition#/download)
+- [Docker Compose](https://docs.docker.com/compose/install/) (already included with some Docker installations)
+
+### Windows
+
+```
+Invoke-RestMethod -OutFile bitwarden.ps1 -Uri https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.ps1
+
+.\bitwarden.ps1 -install
+.\bitwarden.ps1 -updatedb
+.\bitwarden.ps1 -run
+```
+
+### macOS
+
+```
+curl -s -o bitwarden.sh https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh
+
+./bitwarden.sh install
+./bitwarden.sh updatedb
+./bitwarden.sh runmac
+```
+
+### Linux
+
+```
+curl -s -o bitwarden.sh https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh
+
+./bitwarden.sh install
+./bitwarden.sh updatedb
+./bitwarden.sh run
+```
+
 ## Contribute
 
 Code contributions are welcome! Visual Studio or VS Code is highly recommended if you are working on this project. Please commit any pull requests against the `master` branch.
