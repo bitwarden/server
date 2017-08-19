@@ -22,13 +22,11 @@ EOF
 docker --version
 echo ""
 
-OUTPUT_DIR=/etc/bitwarden
+OUTPUT_DIR=~/bitwarden
 mkdir -p $OUTPUT_DIR
 
-echo -e "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): "
-read DOMAIN
-echo -e "\n(!) Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): "
-read LETS_ENCRYPT
+read -p "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): " DOMAIN
+read -p "(!) Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): " LETS_ENCRYPT
 
 if [ $LETS_ENCRYPT == 'y' ]
 then

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-DIR="$(dirname $(readlink -f $0))"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKER_DIR=$DIR/../docker
 
 docker --version

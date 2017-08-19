@@ -204,3 +204,4 @@ mail_dist/
 *.scmp
 src/Core/Properties/launchSettings.json
 *.override.env
+**/*.DS_Store
