@@ -56,6 +56,10 @@ visit http://localhost:33657/.well-known/openid-configuration
 
 ## Deploy
 
+<p align="center">
+  <img src="https://i.imgur.com/SZc8JnH.png" alt="docker" />
+</p>
+
 You can deploy bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
 
 ### Requirements
