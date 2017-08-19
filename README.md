@@ -69,6 +69,8 @@ You can deploy bitwarden using Docker containers on Windows, macOS, and Linux di
 - [Docker](https://www.docker.com/community-edition#/download)
 - [Docker Compose](https://docs.docker.com/compose/install/) (already included with some Docker installations)
 
+*These dependencies are free to use.*
+
 ### Windows
 
 ```
