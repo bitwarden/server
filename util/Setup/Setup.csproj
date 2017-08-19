@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="dbup" Version="3.3.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
   </ItemGroup>
 

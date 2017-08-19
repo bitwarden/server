@@ -1,8 +1,10 @@
 ﻿using DbUp;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -12,7 +14,7 @@ namespace Setup
     {
         private static string[] _args = null;
         private static IDictionary<string, string> _parameters = null;
-        private static string _outputDir = null;
+        private static string _outputDir = "/etc/bitwarden";
         private static string _domain = null;
         private static string _url = null;
         private static string _identityCertPassword = null;
@@ -43,18 +45,17 @@ namespace Setup
 
         private static void Install()
         {
-            _installationId = _parameters.ContainsKey("install_id") ?
-                _parameters["install_id"].ToLowerInvariant() : null;
-            _installationKey = _parameters.ContainsKey("install_key") ?
-                _parameters["install_key"].ToLowerInvariant() : null;
             _outputDir = _parameters.ContainsKey("out") ?
-                _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
+                _parameters["out"].ToLowerInvariant() : _outputDir;
             _domain = _parameters.ContainsKey("domain") ?
                 _parameters["domain"].ToLowerInvariant() : "localhost";
             _letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
                 _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
-            _ssl = _letsEncrypt || (_parameters.ContainsKey("ssl") ?
-                _parameters["ssl"].ToLowerInvariant() == "y" : false);
+
+            if(!ValidateInstallation())
+            {
+                return;
+            }
 
             _ssl = _letsEncrypt;
             if(!_letsEncrypt)
@@ -114,6 +115,56 @@ namespace Setup
             else
             {
                 Console.WriteLine("Migration failed.");
+            }
+        }
+
+        private static bool ValidateInstallation()
+        {
+            Console.Write("(!) Enter your installation id (get it at https://bitwarden.com/host/): ");
+            _installationId = Console.ReadLine();
+            Guid installationidGuid;
+            if(!Guid.TryParse(_installationId, out installationidGuid))
+            {
+                Console.WriteLine("Invalid installation id.");
+                return false;
+            }
+
+            Console.Write("(!) Enter your installation key: ");
+            _installationKey = Console.ReadLine();
+
+            try
+            {
+                var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" + _installationId)
+                    .GetAwaiter().GetResult();
+
+                if(!response.IsSuccessStatusCode)
+                {
+                    if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        Console.WriteLine("Invalid installation id.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unable to validate installation id.");
+                    }
+
+                    return false;
+                }
+
+                var resultString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var result = JsonConvert.DeserializeObject<dynamic>(resultString);
+                if(!(bool)result.Enabled)
+                {
+                    Console.WriteLine("Installation id has been disabled.");
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                Console.WriteLine("Unable to validate installation id. Problem contacting bitwarden server.");
+                return false;
             }
         }
 
@@ -306,7 +357,7 @@ server {{
         {
             Console.WriteLine("Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/docker/");
-            var dbPass = _parameters.ContainsKey("db_pass") ? _parameters["db_pass"].ToLowerInvariant() : "REPLACE";
+            var dbPass = Helpers.SecureRandomString(32);
             var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass);
 
             using(var sw = File.CreateText("/bitwarden/docker/global.override.env"))
