@@ -29,10 +29,10 @@ $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
 
 function Download-Run-Files {
     Invoke-RestMethod -OutFile run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
-    Invoke-RestMethod -OutFile docker\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
-    Invoke-RestMethod -OutFile docker\docker-compose.windows.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.windows.yml"
-    Invoke-RestMethod -OutFile docker\global.env -Uri "${githubBaseUrl}/docker/global.env"
-    Invoke-RestMethod -OutFile docker\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
+    Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
+    Invoke-RestMethod -OutFile $dockerDir\docker-compose.windows.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.windows.yml"
+    Invoke-RestMethod -OutFile $dockerDir\global.env -Uri "${githubBaseUrl}/docker/global.env"
+    Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
 }
 
 if($install) {
