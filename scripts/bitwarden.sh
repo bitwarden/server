@@ -56,12 +56,12 @@ function downloadRunFiles() {
     curl -s -o $DOCKER_DIR/mssql.env $GITHUB_BASE_URL/docker/mssql.env
 }
 
-if [ $1 == 'install' ]
+if [ "$1" == "install" ]
 then
     curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
     chmod u+x $SCRIPTS_DIR/install.sh
     $SCRIPTS_DIR/install.sh $OUTPUT
-elif [ $1 == 'run' -o $1 == 'restart' ]
+elif [ "$1" == "run" -o "$1" == "restart" ]
 then
     if [ ! -d "$DOCKER_DIR" ]
     then
@@ -69,7 +69,7 @@ then
         downloadRunFiles
     fi
     $SCRIPTS_DIR/run.sh $DOCKER_DIR $OS
-elif [ $1 == 'update' ]
+elif [ "$1" == "update" ]
 then
     if [ -d "$DOCKER_DIR" ]
     then
@@ -79,7 +79,7 @@ then
     mkdir $DOCKER_DIR
     downloadRunFiles
     $SCRIPTS_DIR/run.sh $DOCKER_DIR $OS
-elif [ $1 == 'updatedb' ]
+elif [ "$1" == "updatedb" ]
 then
     curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh
     chmod u+x $SCRIPTS_DIR/update-db.sh
