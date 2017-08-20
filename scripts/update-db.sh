@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-OUTPUT_DIR=~/bitwarden
+OUTPUT_DIR="../."
 if [ $# -eq 1 ]
 then
     OUTPUT_DIR=$1
