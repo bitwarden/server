@@ -39,7 +39,7 @@ then
 fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
-DOCKER_DIR="$SCRIPTS_DIR/docker"
+DOCKER_DIR="$OUTPUT/docker"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/core/master"
 
 if [ ! -d "$SCRIPTS_DIR" ]
