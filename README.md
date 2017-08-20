@@ -37,7 +37,7 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 ```
 cd src/Api
 dotnet restore
-dotnet build
+dotnet build -f netcoreapp2.0
 dotnet run -f netcoreapp2.0
 ```
 
@@ -48,7 +48,7 @@ visit http://localhost:5000/alive
 ```
 cd src/Identity
 dotnet restore
-dotnet build
+dotnet build -f netcoreapp2.0
 dotnet run -f netcoreapp2.0
 ```
 
