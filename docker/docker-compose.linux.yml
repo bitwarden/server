@@ -3,31 +3,31 @@ version: '3'
 services:
   mssql:
     volumes:
-      - /etc/bitwarden/mssql_data:/var/opt/mssql/data
+      - ../../mssql_data:/var/opt/mssql/data
     env_file:
       - mssql.env
-      - /etc/bitwarden/docker/mssql.override.env
+      - ../../env/mssql.override.env
   web:
     volumes:
-      - /etc/bitwarden/web:/etc/bitwarden/web
+      - ../../web:/etc/bitwarden/web
   attachments:
     volumes:
-      - /etc/bitwarden/core/attachments:/etc/bitwarden/core/attachments
+      - ../../core/attachments:/etc/bitwarden/core/attachments
   api:
     volumes:
-      - /etc/bitwarden/core:/etc/bitwarden/core
+      - ../../core:/etc/bitwarden/core
     env_file:
       - global.env
-      - /etc/bitwarden/docker/global.override.env
+      - ../../env/global.override.env
   identity:
     volumes:
-      - /etc/bitwarden/identity:/etc/bitwarden/identity
-      - /etc/bitwarden/core:/etc/bitwarden/core
+      - ../../identity:/etc/bitwarden/identity
+      - ../../core:/etc/bitwarden/core
     env_file:
       - global.env
-      - /etc/bitwarden/docker/global.override.env
+      - ../../env/global.override.env
   nginx:
     volumes:
-      - /etc/bitwarden/nginx:/etc/bitwarden/nginx
-      - /etc/bitwarden/letsencrypt:/etc/letsencrypt
-      - /etc/bitwarden/ssl:/etc/ssl
+      - ../../nginx:/etc/bitwarden/nginx
+      - ../../letsencrypt:/etc/letsencrypt
+      - ../../ssl:/etc/ssl

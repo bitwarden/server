@@ -360,11 +360,11 @@ server {{
         private static void BuildEnvironmentFiles()
         {
             Console.WriteLine("Building docker environment override files.");
-            Directory.CreateDirectory("/bitwarden/docker/");
+            Directory.CreateDirectory("/bitwarden/env/");
             var dbPass = Helpers.SecureRandomString(32);
             var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass);
 
-            using(var sw = File.CreateText("/bitwarden/docker/global.override.env"))
+            using(var sw = File.CreateText("/bitwarden/env/global.override.env"))
             {
                 sw.Write($@"globalSettings__baseServiceUri__vault={_url}
 globalSettings__baseServiceUri__api={_url}/api
@@ -389,7 +389,7 @@ globalSettings__pushRelayBaseUri=REPLACE");
                 }
             }
 
-            using(var sw = File.CreateText("/bitwarden/docker/mssql.override.env"))
+            using(var sw = File.CreateText("/bitwarden/env/mssql.override.env"))
             {
                 sw.Write($@"ACCEPT_EULA=Y
 MSSQL_PID=Express

@@ -110,12 +110,12 @@ namespace Setup
 
         public static string GetDatabasePasswordFronEnvFile()
         {
-            if(!File.Exists("/bitwarden/docker/mssql.override.env"))
+            if(!File.Exists("/bitwarden/env/mssql.override.env"))
             {
                 return null;
             }
 
-            var lines = File.ReadAllLines("/bitwarden/docker/mssql.override.env");
+            var lines = File.ReadAllLines("/bitwarden/env/mssql.override.env");
             foreach(var line in lines)
             {
                 if(line.StartsWith("SA_PASSWORD="))
