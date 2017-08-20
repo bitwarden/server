@@ -49,6 +49,7 @@ fi
 
 function downloadRunFiles() {
     curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.ps1
+    chmod u+x $SCRIPTS_DIR/run.sh
     curl -s -o $DOCKER_DIR/docker-compose.yml $GITHUB_BASE_URL/docker/docker-compose.yml
     curl -s -o $DOCKER_DIR/docker-compose.$OS.yml $GITHUB_BASE_URL/docker/docker-compose.$OS.yml
     curl -s -o $DOCKER_DIR/global.env $GITHUB_BASE_URL/docker/global.env
@@ -67,7 +68,6 @@ then
         mkdir $DOCKER_DIR
         downloadRunFiles
     fi
-    chmod u+x $SCRIPTS_DIR/run.sh
     $SCRIPTS_DIR/run.sh $DOCKER_DIR $OS
 elif [ $1 == 'update' ]
 then
