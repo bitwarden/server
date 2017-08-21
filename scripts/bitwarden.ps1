@@ -34,6 +34,10 @@ $scriptsDir = "${output}\scripts"
 $dockerDir = "${output}\docker"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
 
+if(!(Test-Path -Path $scriptsDir)) {
+    New-Item -ItemType directory -Path $scriptsDir | Out-Null
+}
+
 function Download-Run-Files {
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
@@ -44,7 +48,7 @@ function Download-Run-Files {
 
 if($install) {
     Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
-    $scriptsDir\install.ps1 -outputDir $output
+    Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output"
 }
 elseif($run -Or $restart) {
     if(!(Test-Path -Path $dockerDir)) {
@@ -52,7 +56,7 @@ elseif($run -Or $restart) {
         Download-Run-Files
     }
 
-    $scriptsDir\run.ps1 -dockerDir $dockerDir
+    Invoke-Expression "$scriptsDir\run.ps1 -dockerDir $dockerDir"
 }
 elseif($update) {
     if(Test-Path -Path $dockerDir) {
@@ -61,11 +65,11 @@ elseif($update) {
     New-Item -ItemType directory -Path $dockerDir | Out-Null
 
     Download-Run-Files
-    $scriptsDir\run.ps1 -dockerDir $dockerDir
+    Invoke-Expression "$scriptsDir\run.ps1 -dockerDir $dockerDir"
 }
 elseif($updatedb) {
     Invoke-RestMethod -OutFile $scriptsDir\update-db.ps1 -Uri "${githubBaseUrl}/scripts/update-db.ps1"
-    $scriptsDir\update-db.ps1 -outputDir $output
+    Invoke-Expression "$scriptsDir\update-db.ps1 -outputDir $output"
 }
 else {
     echo "No command found."
