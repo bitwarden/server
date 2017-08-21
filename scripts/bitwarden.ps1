@@ -60,7 +60,7 @@ elseif($run -Or $restart) {
         Download-Run-Files
     }
 
-    Invoke-Expression "$scriptsDir\run.ps1 -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -outputDir $output -dockerDir $dockerDir"
 }
 elseif($update) {
     if(Test-Path -Path $dockerDir) {
@@ -69,7 +69,7 @@ elseif($update) {
     New-Item -ItemType directory -Path $dockerDir | Out-Null
 
     Download-Run-Files
-    Invoke-Expression "$scriptsDir\run.ps1 -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
     Invoke-RestMethod -OutFile $scriptsDir\update-db.ps1 -Uri "${githubBaseUrl}/scripts/update-db.ps1"

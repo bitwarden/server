@@ -67,7 +67,7 @@ then
         mkdir $DOCKER_DIR
         downloadRunFiles
     fi
-    $SCRIPTS_DIR/run.sh $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh $OUTPUT $DOCKER_DIR
 elif [ "$1" == "update" ]
 then
     if [ -d "$DOCKER_DIR" ]
@@ -77,7 +77,7 @@ then
 
     mkdir $DOCKER_DIR
     downloadRunFiles
-    $SCRIPTS_DIR/run.sh $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
     curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh
