@@ -1,7 +1,8 @@
 param (
     [switch] $install,
     [switch] $run,
-    [switch] $restart,
+    [switch] $restart
+    [switch] $stop,
     [switch] $update,
     [switch] $updatedb,
     [string] $output = ""
@@ -40,6 +41,7 @@ if(!(Test-Path -Path $scriptsDir)) {
 
 function Download-Run-Files {
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
+    Invoke-RestMethod -OutFile $scriptsDir\stop.ps1 -Uri "${githubBaseUrl}/scripts/stop.ps1"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.macwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.macwin.yml"
     Invoke-RestMethod -OutFile $dockerDir\global.env -Uri "${githubBaseUrl}/docker/global.env"
@@ -70,6 +72,9 @@ elseif($update) {
 elseif($updatedb) {
     Invoke-RestMethod -OutFile $scriptsDir\update-db.ps1 -Uri "${githubBaseUrl}/scripts/update-db.ps1"
     Invoke-Expression "$scriptsDir\update-db.ps1 -outputDir $output"
+}
+elseif($stop) {
+    Invoke-Expression "$scriptsDir\stop.ps1 -dockerDir $dockerDir"
 }
 else {
     echo "No command found."

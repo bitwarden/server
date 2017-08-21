@@ -47,6 +47,8 @@ fi
 function downloadRunFiles() {
     curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.sh
     chmod u+x $SCRIPTS_DIR/run.sh
+    curl -s -o $SCRIPTS_DIR/stop.sh $GITHUB_BASE_URL/scripts/stop.sh
+    chmod u+x $SCRIPTS_DIR/stop.sh
     curl -s -o $DOCKER_DIR/docker-compose.yml $GITHUB_BASE_URL/docker/docker-compose.yml
     curl -s -o $DOCKER_DIR/docker-compose.$OS.yml $GITHUB_BASE_URL/docker/docker-compose.$OS.yml
     curl -s -o $DOCKER_DIR/global.env $GITHUB_BASE_URL/docker/global.env
@@ -81,6 +83,9 @@ then
     curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh
     chmod u+x $SCRIPTS_DIR/update-db.sh
     $SCRIPTS_DIR/update-db.sh $OUTPUT
+elif [ "$1" == "stop" ]
+then
+    $SCRIPTS_DIR/stop.sh $DOCKER_DIR
 else
     echo "No command found."
 fi

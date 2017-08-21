@@ -81,6 +81,7 @@ namespace Setup
 
             BuildEnvironmentFiles();
             BuildAppSettingsFiles();
+            BuildAppId();
         }
 
         private static void Update()
