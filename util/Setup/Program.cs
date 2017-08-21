@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -97,9 +98,20 @@ namespace Setup
             Console.WriteLine("Migrating database.");
 
             var dbPass = Helpers.GetDatabasePasswordFronEnvFile();
-            var connectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass ?? string.Empty);
+            var masterConnectionString = Helpers.MakeSqlConnectionString("mssql", "master", "sa", dbPass ?? string.Empty);
+            var vaultConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass ?? string.Empty);
+
+            using(var connection = new SqlConnection(masterConnectionString))
+            {
+                var command = new SqlCommand(
+                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) CREATE DATABASE [vault];",
+                    connection);
+                command.Connection.Open();
+                command.ExecuteNonQuery();
+            }
+
             var upgrader = DeployChanges.To
-                .SqlDatabase(connectionString)
+                .SqlDatabase(vaultConnectionString)
                 .JournalToSqlTable("dbo", "Migration")
                 .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                     s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
