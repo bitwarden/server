@@ -11,10 +11,10 @@ if($dockerDir -eq "") {
 docker --version
 docker-compose --version
 
-$letsEncryptLivePath = "${outputDir}/letsencrypt/live"
-if(Test-Path -Path $letsEncryptLivePath) {
+$letsEncryptPath = "${outputDir}/letsencrypt"
+if(Test-Path -Path $letsEncryptPath) {
     docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
-        renew --logs-dir $outputDir/letsencrypt/logs --staging
+        renew --logs-dir /etc/letsencrypt/logs --staging
 }
 
 docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml down
