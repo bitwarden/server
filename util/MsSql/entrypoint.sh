@@ -1,4 +1,5 @@
 #!/bin/sh
 
-/setup.sh &
+env >> /etc/environment
+cron
 /opt/mssql/bin/sqlservr

@@ -4,6 +4,7 @@ services:
   mssql:
     volumes:
       - mssql_data:/var/opt/mssql/data
+      - ../mssql/backups:/etc/bitwarden/mssql/backups
     env_file:
       - mssql.env
       - ../env/mssql.override.env
