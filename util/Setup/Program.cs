@@ -60,7 +60,7 @@ namespace Setup
             _ssl = _letsEncrypt;
             if(!_letsEncrypt)
             {
-                Console.Write("(!) Are you using your own SSL certificate? (y/n): ");
+                Console.Write("(!) Do you have a SSL certificate to use? (y/n): ");
                 _ssl = Console.ReadLine().ToLowerInvariant() == "y";
 
                 if(_ssl)
@@ -176,7 +176,7 @@ namespace Setup
         {
             if(!_ssl)
             {
-                Console.Write("(!) Do you want to generate a self signed SSL certificate? (y/n): ");
+                Console.Write("(!) Do you want to generate a self-signed SSL certificate? (y/n): ");
                 if(Console.ReadLine().ToLowerInvariant() == "y")
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
@@ -283,12 +283,11 @@ server {{
     ## verify chain of trust of OCSP response using Root CA and Intermediate certs
     ssl_trusted_certificate {sslPath}/{caFile};
 
-    resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;");
-                    }
+    resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
 
-                    sw.WriteLine($@"
     # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
     add_header Strict-Transport-Security max-age=15768000;");
+                    }
                 }
 
                 sw.WriteLine($@"
