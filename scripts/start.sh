@@ -26,7 +26,7 @@ docker-compose --version
 
 docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.$OS.yml down
 
-LETS_ENCRYPT_PATH = "${outputDir}/letsencrypt"
+LETS_ENCRYPT_PATH="${outputDir}/letsencrypt"
 if [ -d "${LETS_ENCRYPT_PATH}" ]
 then
     docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
