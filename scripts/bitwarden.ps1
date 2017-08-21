@@ -1,7 +1,7 @@
 param (
     [switch] $install,
     [switch] $run,
-    [switch] $restart
+    [switch] $restart,
     [switch] $stop,
     [switch] $update,
     [switch] $updatedb,
