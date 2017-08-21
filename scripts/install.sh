@@ -21,9 +21,10 @@ then
     if [ "$LETS_ENCRYPT" == "y" ]
     then
         read -p "(!) Enter your email address (Let's Encrypt will send you certificate expiration reminders): " EMAIL
-        mkdir -p $OUTPUT_DIR/letsencrypt/live/$DOMAIN
+        mkdir -p $OUTPUT_DIR/letsencrypt
         docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
-            certonly --standalone --noninteractive  --agree-tos --preferred-challenges http --email $EMAIL -d $DOMAIN
+            certonly --standalone --noninteractive  --agree-tos --preferred-challenges http --email $EMAIL -d $DOMAIN \
+            --logs-dir /etc/letsencrypt/logs
     fi
 fi
 

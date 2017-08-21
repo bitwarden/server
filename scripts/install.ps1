@@ -24,7 +24,7 @@ if($domain -ne "localhost") {
         }
         docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
             certonly --standalone --noninteractive --agree-tos --preferred-challenges http --email $email -d $domain `
-            --logs-dir /etc/letsencrypt/logs --staging
+            --logs-dir /etc/letsencrypt/logs
     }
 }
 
