@@ -23,7 +23,8 @@ if($domain -ne "localhost") {
             New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
         }
         docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
-            certonly --standalone --noninteractive --agree-tos --preferred-challenges http --email $email -d $domain
+            certonly --standalone --noninteractive --agree-tos --preferred-challenges http --email $email -d $domain `
+            --logs-dir $outputDir/letsencrypt/logs --staging
     }
 }
 
