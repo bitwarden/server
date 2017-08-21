@@ -45,8 +45,8 @@ then
 fi
 
 function downloadRunFiles() {
-    curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.sh
-    chmod u+x $SCRIPTS_DIR/run.sh
+    curl -s -o $SCRIPTS_DIR/start.sh $GITHUB_BASE_URL/scripts/start.sh
+    chmod u+x $SCRIPTS_DIR/start.sh
     curl -s -o $SCRIPTS_DIR/stop.sh $GITHUB_BASE_URL/scripts/stop.sh
     chmod u+x $SCRIPTS_DIR/stop.sh
     curl -s -o $DOCKER_DIR/docker-compose.yml $GITHUB_BASE_URL/docker/docker-compose.yml
@@ -60,14 +60,14 @@ then
     curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
     chmod u+x $SCRIPTS_DIR/install.sh
     $SCRIPTS_DIR/install.sh $OUTPUT
-elif [ "$1" == "run" -o "$1" == "restart" ]
+elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     if [ ! -d "$DOCKER_DIR" ]
     then
         mkdir $DOCKER_DIR
         downloadRunFiles
     fi
-    $SCRIPTS_DIR/run.sh $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/start.sh $OUTPUT $DOCKER_DIR
 elif [ "$1" == "update" ]
 then
     if [ -d "$DOCKER_DIR" ]
@@ -77,7 +77,7 @@ then
 
     mkdir $DOCKER_DIR
     downloadRunFiles
-    $SCRIPTS_DIR/run.sh $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/start.sh $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
     curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh

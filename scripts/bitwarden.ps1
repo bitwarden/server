@@ -1,6 +1,6 @@
 param (
     [switch] $install,
-    [switch] $run,
+    [switch] $start,
     [switch] $restart,
     [switch] $stop,
     [switch] $update,
@@ -42,7 +42,7 @@ if(!(Test-Path -Path $scriptsDir)) {
 }
 
 function Download-Run-Files {
-    Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
+    Invoke-RestMethod -OutFile $scriptsDir\start.ps1 -Uri "${githubBaseUrl}/scripts/start.ps1"
     Invoke-RestMethod -OutFile $scriptsDir\stop.ps1 -Uri "${githubBaseUrl}/scripts/stop.ps1"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.macwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.macwin.yml"
@@ -54,13 +54,13 @@ if($install) {
     Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
     Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output"
 }
-elseif($run -Or $restart) {
+elseif($start -Or $restart) {
     if(!(Test-Path -Path $dockerDir)) {
         New-Item -ItemType directory -Path $dockerDir | Out-Null
         Download-Run-Files
     }
 
-    Invoke-Expression "$scriptsDir\run.ps1 -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\start.ps1 -outputDir $output -dockerDir $dockerDir"
 }
 elseif($update) {
     if(Test-Path -Path $dockerDir) {
@@ -69,7 +69,7 @@ elseif($update) {
     New-Item -ItemType directory -Path $dockerDir | Out-Null
 
     Download-Run-Files
-    Invoke-Expression "$scriptsDir\run.ps1 -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\start.ps1 -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
     Invoke-RestMethod -OutFile $scriptsDir\update-db.ps1 -Uri "${githubBaseUrl}/scripts/update-db.ps1"
