@@ -3,7 +3,7 @@ param (
 )
 
 if(!(Test-Path -Path $outputDir )){
-    New-Item -ItemType directory -Path $outputDir
+    New-Item -ItemType directory -Path $outputDir | Out-Null
 }
 
 docker --version
@@ -20,7 +20,7 @@ if($domain -ne "localhost") {
         
         $letsEncryptPath = "${outputDir}/letsencrypt/live/${domain}"
         if(!(Test-Path -Path $letsEncryptPath )){
-            New-Item -ItemType directory -Path $letsEncryptPath
+            New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
         }
         docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
             certonly --standalone --noninteractive --agree-tos --preferred-challenges http --email $email -d $domain
