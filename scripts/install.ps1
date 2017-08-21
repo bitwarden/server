@@ -1,5 +1,5 @@
 param (
-    [string]$outputDir = "c:/bitwarden"
+    [string]$outputDir = "../."
 )
 
 if(!(Test-Path -Path $outputDir )){

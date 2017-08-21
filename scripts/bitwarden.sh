@@ -17,25 +17,22 @@ https://bitwarden.com, https://github.com/bitwarden
 
 EOF
 
-OS="linux"
-if [ $# -eq 2 ]
-then
-    if [ $2 == "mac" -o $2 == "linux" ]
-    then
-        OS=$2
-    fi
-fi
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 OUTPUT="$DIR/bitwarden"
-if [ $# -eq 3 ]
+if [ $# -eq 2 ]
 then
-    OUTPUT=$3
+    OUTPUT=$2
 fi
 
 if [ ! -d "$OUTPUT" ]
 then
     mkdir $OUTPUT
+fi
+
+OS="linux"
+if [ "$(uname)" == "Darwin" ]
+then
+    OS="macwin"
 fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
@@ -68,7 +65,7 @@ then
         mkdir $DOCKER_DIR
         downloadRunFiles
     fi
-    $SCRIPTS_DIR/run.sh $DOCKER_DIR $OS
+    $SCRIPTS_DIR/run.sh $DOCKER_DIR
 elif [ "$1" == "update" ]
 then
     if [ -d "$DOCKER_DIR" ]
@@ -78,7 +75,7 @@ then
 
     mkdir $DOCKER_DIR
     downloadRunFiles
-    $SCRIPTS_DIR/run.sh $DOCKER_DIR $OS
+    $SCRIPTS_DIR/run.sh $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
     curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh

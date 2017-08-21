@@ -10,5 +10,5 @@ if($dockerDir -eq "") {
 docker --version
 docker-compose --version
 
-docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.windows.yml down
-docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.windows.yml up -d
+docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml down
+docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml up -d

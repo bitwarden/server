@@ -1,5 +1,5 @@
 param (
-    [string]$outputDir = "c:/bitwarden"
+    [string]$outputDir = "../."
 )
 
 docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup `
