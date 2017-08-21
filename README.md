@@ -20,7 +20,7 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 
 ### Requirements
 
-- [.NET Core 2.x](https://www.microsoft.com/net/download/core)
+- [.NET Core 2.x SDK](https://www.microsoft.com/net/download/core)
 - [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index) (2017 for cross-platform)
 
 *These dependencies are free to use.*
