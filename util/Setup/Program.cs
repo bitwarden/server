@@ -397,7 +397,7 @@ globalSettings__mail__smtp__host=REPLACE
 globalSettings__mail__smtp__username=REPLACE
 globalSettings__mail__smtp__password=REPLACE
 globalSettings__mail__smtp__ssl=true
-globalSettings__mail__smtp__port=465");
+globalSettings__mail__smtp__port=587");
 
                 if(!_push)
                 {
