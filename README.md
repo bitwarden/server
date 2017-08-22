@@ -77,7 +77,6 @@ You can deploy bitwarden using Docker containers on Windows, macOS, and Linux di
 $ curl -s -o bitwarden.sh \
     https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh \
     && sudo chmod u+x bitwarden.sh
-
 $ ./bitwarden.sh install
 $ ./bitwarden.sh start
 $ ./bitwarden.sh updatedb
@@ -86,11 +85,11 @@ $ ./bitwarden.sh updatedb
 ### Windows
 
 ```
-Invoke-RestMethod -OutFile bitwarden.ps1 -Uri https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.ps1
-
-.\bitwarden.ps1 -install
-.\bitwarden.ps1 -start
-.\bitwarden.ps1 -updatedb
+> Invoke-RestMethod -OutFile bitwarden.ps1 `
+    -Uri https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.ps1
+> .\bitwarden.ps1 -install
+> .\bitwarden.ps1 -start
+> .\bitwarden.ps1 -updatedb
 ```
 
 ## Contribute
