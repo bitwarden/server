@@ -87,8 +87,8 @@ namespace Bit.Core
             public class SmtpSettings
             {
                 public string Host { get; set; }
-                public int Port { get; set; } = 587;
-                public bool Ssl { get; set; } = true;
+                public int Port { get; set; } = 25;
+                public bool Ssl { get; set; } = false;
                 public string Username { get; set; }
                 public string Password { get; set; }
             }
