@@ -7,6 +7,8 @@ echo -e "\n# Building API"
 
 echo -e "\nBuilding app"
 echo -e ".NET Core version $(dotnet --version)"
+dotnet clean $DIR/Api.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish/Api
+dotnet clean $DIR/../Jobs/Jobs.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish/Jobs
 dotnet publish $DIR/Api.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish/Api
 dotnet publish $DIR/../Jobs/Jobs.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish/Jobs
 

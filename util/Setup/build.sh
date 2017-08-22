@@ -7,6 +7,7 @@ echo -e "\n# Building Setup"
 
 echo -e "\nBuilding app"
 echo -e ".NET Core version $(dotnet --version)"
+dotnet clean $DIR/Setup.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish
 dotnet publish $DIR/Setup.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish
 
 echo -e "\nBuilding docker image"
