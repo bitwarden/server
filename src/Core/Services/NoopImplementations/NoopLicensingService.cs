@@ -23,6 +23,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task ValidateUsersAsync()
+        {
+            return Task.FromResult(0);
+        }
+
         public Task<bool> ValidateUserPremiumAsync(User user)
         {
             return Task.FromResult(user.Premium);

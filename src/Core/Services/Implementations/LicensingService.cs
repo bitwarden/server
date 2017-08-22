@@ -15,25 +15,28 @@ using System.Threading.Tasks;
 
 namespace Bit.Core.Services
 {
-    public class RsaLicensingService : ILicensingService
+    public class LicensingService : ILicensingService
     {
         private readonly X509Certificate2 _certificate;
         private readonly GlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly ILogger<RsaLicensingService> _logger;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ILogger<LicensingService> _logger;
 
         private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
 
-        public RsaLicensingService(
+        public LicensingService(
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IHostingEnvironment environment,
-            ILogger<RsaLicensingService> logger,
+            ILogger<LicensingService> logger,
             GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _logger = logger;
 
             var certThumbprint = "‎207e64a231e8aa32aaf68a61037c075ebebd553f";
@@ -59,10 +62,10 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var orgs = await _organizationRepository.GetManyAsync();
+            var orgs = await _organizationRepository.GetManyByEnabledAsync();
             _logger.LogInformation("Validating licenses for {0} organizations.", orgs.Count);
 
-            foreach(var org in orgs.Where(o => o.Enabled))
+            foreach(var org in orgs)
             {
                 var license = ReadOrganiztionLicense(org);
                 if(license == null || !license.VerifyData(org, _globalSettings) || !license.VerifySignature(_certificate))
@@ -74,6 +77,42 @@ namespace Bit.Core.Services
                     org.ExpirationDate = license.Expires;
                     org.RevisionDate = DateTime.UtcNow;
                     await _organizationRepository.ReplaceAsync(org);
+                }
+            }
+        }
+
+        public async Task ValidateUsersAsync()
+        {
+            if(!_globalSettings.SelfHosted)
+            {
+                return;
+            }
+
+            var premiumUsers = await _userRepository.GetManyByPremiumAsync(true);
+            _logger.LogInformation("Validating premium for {0} users.", premiumUsers.Count);
+
+            foreach(var user in premiumUsers)
+            {
+                await ProcessUserValidationAsync(user);
+            }
+
+            var nonPremiumUsers = await _userRepository.GetManyByPremiumAsync(false);
+            _logger.LogInformation("Checking to restore premium for {0} users.", nonPremiumUsers.Count);
+
+            foreach(var user in nonPremiumUsers)
+            {
+                var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+                if(details.Any(d => d.Enabled))
+                {
+                    _logger.LogInformation("Granting premium to user {0}({1}) because they are in an active organization.",
+                        user.Id, user.Email);
+
+                    user.Premium = true;
+                    user.MaxStorageGb = 10240; // 10 TB
+                    user.RevisionDate = DateTime.UtcNow;
+                    user.PremiumExpirationDate = null;
+                    user.LicenseKey = null;
+                    await _userRepository.ReplaceAsync(user);
                 }
             }
         }
@@ -110,10 +149,30 @@ namespace Bit.Core.Services
             }
 
             _logger.LogInformation("Validating premium license for user {0}({1}).", user.Id, user.Email);
+            return await ProcessUserValidationAsync(user);
+        }
 
+        private async Task<bool> ProcessUserValidationAsync(User user)
+        {
             var license = ReadUserLicense(user);
-            var licensedForPremium = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
-            if(!licensedForPremium)
+            var valid = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
+
+            if(!valid)
+            {
+                var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+                valid = details.Any(d => d.Enabled);
+
+                if(valid && (!string.IsNullOrWhiteSpace(user.LicenseKey) || user.PremiumExpirationDate.HasValue))
+                {
+                    // user used to be on a license but is now part of a organization that gives them premium.
+                    // update the record.
+                    user.PremiumExpirationDate = null;
+                    user.LicenseKey = null;
+                    await _userRepository.ReplaceAsync(user);
+                }
+            }
+
+            if(!valid)
             {
                 _logger.LogInformation("User {0}({1}) has an invalid license and premium is being disabled.",
                     user.Id, user.Email);
@@ -124,7 +183,7 @@ namespace Bit.Core.Services
                 await _userRepository.ReplaceAsync(user);
             }
 
-            return licensedForPremium;
+            return valid;
         }
 
         public bool VerifyLicense(ILicense license)

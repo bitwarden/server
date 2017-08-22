@@ -1,5 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_Read]
-    @Id UNIQUEIDENTIFIER
+﻿CREATE PROCEDURE [dbo].[Organization_ReadByEnabled]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -8,4 +7,6 @@ BEGIN
         *
     FROM
         [dbo].[OrganizationView]
+    WHERE
+        [Enabled] = 1
 END

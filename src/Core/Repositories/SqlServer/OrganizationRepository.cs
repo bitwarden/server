@@ -19,12 +19,12 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
-        public async Task<ICollection<Organization>> GetManyAsync()
+        public async Task<ICollection<Organization>> GetManyByEnabledAsync()
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Organization>(
-                    "[dbo].[Organization_Read]",
+                    "[dbo].[Organization_ReadByEnabled]",
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

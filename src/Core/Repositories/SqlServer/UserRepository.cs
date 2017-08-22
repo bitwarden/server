@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -33,6 +34,19 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
+            }
+        }
+
+        public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<User>(
+                    "[dbo].[User_ReadByPremium]",
+                    new { Premium = premium },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
             }
         }
 

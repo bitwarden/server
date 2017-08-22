@@ -56,8 +56,8 @@ namespace Bit.Jobs
                     case "validate-organizations":
                         await _licensingService.ValidateOrganizationsAsync();
                         break;
-                    case "validate-users":
-                        // TODO
+                    case "validate-users-premium":
+                        await _licensingService.ValidateUsersAsync();
                         break;
                     case "refresh-licenses":
                         // TODO

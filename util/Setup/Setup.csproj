@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="DbScripts\2017-08-22_00_LicenseCheckScripts.sql" />
     <EmbeddedResource Include="DbScripts\2017-08-19_00_InitialSetup.sql" />
   </ItemGroup>
 

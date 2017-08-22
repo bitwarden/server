@@ -1,4 +1,5 @@
 0 * * * * root dotnet /jobs/Jobs.dll -d /jobs -j alive >> /var/log/cron.log 2>&1
 0 */6 * * * root dotnet /jobs/Jobs.dll -d /jobs -j validate-organizations >> /var/log/cron.log 2>&1
+30 */12 * * * root dotnet /jobs/Jobs.dll -d /jobs -j validate-users-premium >> /var/log/cron.log 2>&1
 
 # An empty line is required at the end of this file for a valid cron file.
