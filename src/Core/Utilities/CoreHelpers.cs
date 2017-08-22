@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using Dapper;
 
 namespace Bit.Core.Utilities
 {
@@ -58,8 +59,8 @@ namespace Bit.Core.Utilities
         public static DataTable ToArrayTVP<T>(this IEnumerable<T> values, string columnName)
         {
             var table = new DataTable();
+            table.SetTypeName($"[dbo].[{columnName}Array]");
             table.Columns.Add(columnName, typeof(T));
-            table.ExtendedProperties["dapper:TypeName"] = $"[dbo].[{columnName}Array]";
 
             if(values != null)
             {
@@ -75,7 +76,7 @@ namespace Bit.Core.Utilities
         public static DataTable ToArrayTVP(this IEnumerable<SelectionReadOnly> values)
         {
             var table = new DataTable();
-            table.ExtendedProperties["dapper:TypeName"] = "[dbo].[SelectionReadOnlyArray]";
+            table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
 
             var idColumn = new DataColumn("Id", typeof(Guid));
             table.Columns.Add(idColumn);
