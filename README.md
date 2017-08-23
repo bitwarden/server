@@ -35,10 +35,10 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 ### API
 
 ```
-cd src/Api
-dotnet restore
-dotnet build -f netcoreapp2.0
-dotnet run -f netcoreapp2.0
+$ cd src/Api
+$ dotnet restore
+$ dotnet build -f netcoreapp2.0
+$ dotnet run -f netcoreapp2.0
 ```
 
 visit http://localhost:5000/alive
@@ -46,10 +46,10 @@ visit http://localhost:5000/alive
 ### Identity
 
 ```
-cd src/Identity
-dotnet restore
-dotnet build -f netcoreapp2.0
-dotnet run -f netcoreapp2.0
+$ cd src/Identity
+$ dotnet restore
+$ dotnet build -f netcoreapp2.0
+$ dotnet run -f netcoreapp2.0
 ```
 
 visit http://localhost:33657/.well-known/openid-configuration
