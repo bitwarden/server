@@ -27,6 +27,9 @@ https://bitwarden.com, https://github.com/bitwarden
 ===================================================
 "
 
+docker --version
+docker-compose --version
+
 # Setup
 
 $scriptPath = $MyInvocation.MyCommand.Path
@@ -95,6 +98,7 @@ elseif($update) {
 
     Download-All-Files
     Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
     Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"

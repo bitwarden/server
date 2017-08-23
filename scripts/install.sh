@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-docker --version
 echo ""
 
 OUTPUT_DIR="../."

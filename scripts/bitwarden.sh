@@ -19,6 +19,9 @@ https://bitwarden.com, https://github.com/bitwarden
 
 EOF
 
+docker --version
+docker-compose --version
+
 # Setup
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -104,6 +107,7 @@ then
     mkdir $DOCKER_DIR
     downloadAllFiles
     $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
     $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR

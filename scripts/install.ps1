@@ -6,7 +6,6 @@ if(!(Test-Path -Path $outputDir )){
     New-Item -ItemType directory -Path $outputDir | Out-Null
 }
 
-docker --version
 echo ""
 
 [string]$letsEncrypt = "n"

@@ -38,7 +38,7 @@ function dockerPrune() {
 }
 
 function updateLetsEncrypt() {
-    if [ -d "${outputDir}/letsencrypt" ]
+    if [ -d "${outputDir}/letsencrypt/live" ]
     then
         docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
