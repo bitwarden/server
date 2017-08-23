@@ -6,14 +6,15 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 OUTPUT_DIR="../."
-if [ $# -eq 2 ]
+if [ $# -gt 1 ]
 then
     OUTPUT_DIR=$2
 fi
 
 DOCKER_DIR=$DIR/../docker
-if [ $# -eq 3 ]
+if [ $# -eq 2 ]
 then
+    OUTPUT_DIR=$2
     DOCKER_DIR=$3
 fi
 
