@@ -6,8 +6,6 @@ if(!(Test-Path -Path $outputDir )){
     New-Item -ItemType directory -Path $outputDir | Out-Null
 }
 
-echo ""
-
 [string]$letsEncrypt = "n"
 [string]$domain = $( Read-Host "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com)" )
 

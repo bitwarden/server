@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-echo ""
-
 OUTPUT_DIR="../."
 if [ $# -eq 1 ]
 then

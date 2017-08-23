@@ -30,6 +30,8 @@ https://bitwarden.com, https://github.com/bitwarden
 docker --version
 docker-compose --version
 
+echo ""
+
 # Setup
 
 $scriptPath = $MyInvocation.MyCommand.Path
