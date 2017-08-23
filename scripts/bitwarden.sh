@@ -21,8 +21,9 @@ EOF
 
 # Setup
 
-SCRIPT_NAME=`basename "$0"`
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_NAME=`basename "$0"`
+SCRIPT_PATH="$DIR/$SCRIPT_NAME"
 OUTPUT="$DIR/bitwarden"
 if [ $# -eq 2 ]
 then
@@ -52,8 +53,8 @@ fi
 # Functions
 
 function downloadSelf() {
-    curl -s -o $SCRIPTS_DIR/$SCRIPT_NAME $GITHUB_BASE_URL/scripts/bitwarden.sh
-    chmod u+x $SCRIPTS_DIR/$SCRIPT_NAME
+    curl -s -o $SCRIPT_PATH $GITHUB_BASE_URL/scripts/bitwarden.sh
+    chmod u+x $SCRIPT_PATH
 }
 
 function downloadInstall() {

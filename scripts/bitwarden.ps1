@@ -29,7 +29,7 @@ https://bitwarden.com, https://github.com/bitwarden
 
 # Setup
 
-$scriptName = $MyInvocation.MyCommand.Name
+$scriptPath = $MyInvocation.MyCommand.Path
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if($output -eq "") {
     $output="${dir}\bitwarden"
@@ -50,7 +50,7 @@ if(!(Test-Path -Path $scriptsDir)) {
 # Functions
 
 function Download-Self {
-    Invoke-RestMethod -OutFile $scriptsDir\$scriptName -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
+    Invoke-RestMethod -OutFile $scriptPath -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
 }
 
 function Download-Install {
