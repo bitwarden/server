@@ -5,6 +5,7 @@ param (
     [switch] $stop,
     [switch] $update,
     [switch] $updatedb,
+    [switch] $updateself,
     [string] $output = ""
 )
 
@@ -22,8 +23,13 @@ Write-Host "
 Open source password management solutions
 Copyright 2015-${year}, 8bit Solutions LLC
 https://bitwarden.com, https://github.com/bitwarden
+
+===================================================
 "
 
+# Setup
+
+$scriptName = $MyInvocation.MyCommand.Name
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if($output -eq "") {
     $output="${dir}\bitwarden"
@@ -41,26 +47,45 @@ if(!(Test-Path -Path $scriptsDir)) {
     New-Item -ItemType directory -Path $scriptsDir | Out-Null
 }
 
-function Download-Run-Files {
-    Invoke-RestMethod -OutFile $scriptsDir\start.ps1 -Uri "${githubBaseUrl}/scripts/start.ps1"
-    Invoke-RestMethod -OutFile $scriptsDir\stop.ps1 -Uri "${githubBaseUrl}/scripts/stop.ps1"
+# Functions
+
+function Download-Self {
+    Invoke-RestMethod -OutFile $scriptsDir\$scriptName -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
+}
+
+function Download-Install {
+    Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
+}
+
+function Download-Run-File {
+    Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
+}
+
+function Download-Docker-Files {
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.macwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.macwin.yml"
     Invoke-RestMethod -OutFile $dockerDir\global.env -Uri "${githubBaseUrl}/docker/global.env"
     Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
 }
 
+function Download-All-Files {
+    Download-Run-File
+    Download-Docker-Files
+}
+
+# Commands
+
 if($install) {
-    Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
+    Download-Install
     Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output"
 }
 elseif($start -Or $restart) {
     if(!(Test-Path -Path $dockerDir)) {
         New-Item -ItemType directory -Path $dockerDir | Out-Null
-        Download-Run-Files
+        Download-All-Files
     }
 
-    Invoke-Expression "$scriptsDir\start.ps1 -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
 }
 elseif($update) {
     if(Test-Path -Path $dockerDir) {
@@ -68,15 +93,18 @@ elseif($update) {
     }
     New-Item -ItemType directory -Path $dockerDir | Out-Null
 
-    Download-Run-Files
-    Invoke-Expression "$scriptsDir\start.ps1 -outputDir $output -dockerDir $dockerDir"
+    Download-All-Files
+    Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
-    Invoke-RestMethod -OutFile $scriptsDir\update-db.ps1 -Uri "${githubBaseUrl}/scripts/update-db.ps1"
-    Invoke-Expression "$scriptsDir\update-db.ps1 -outputDir $output"
+    Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
 }
 elseif($stop) {
-    Invoke-Expression "$scriptsDir\stop.ps1 -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -dockerDir $dockerDir"
+}
+elseif($updateself) {
+    Download-Self
+    echo "Updated self."
 }
 else {
     echo "No command found."

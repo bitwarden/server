@@ -15,8 +15,13 @@ Open source password management solutions
 Copyright 2015-$(date +'%Y'), 8bit Solutions LLC
 https://bitwarden.com, https://github.com/bitwarden
 
+===================================================
+
 EOF
 
+# Setup
+
+SCRIPT_NAME=`basename "$0"`
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 OUTPUT="$DIR/bitwarden"
 if [ $# -eq 2 ]
@@ -44,30 +49,50 @@ then
     mkdir $SCRIPTS_DIR
 fi
 
-function downloadRunFiles() {
-    curl -s -o $SCRIPTS_DIR/start.sh $GITHUB_BASE_URL/scripts/start.sh
-    chmod u+x $SCRIPTS_DIR/start.sh
-    curl -s -o $SCRIPTS_DIR/stop.sh $GITHUB_BASE_URL/scripts/stop.sh
-    chmod u+x $SCRIPTS_DIR/stop.sh
+# Functions
+
+function downloadSelf() {
+    curl -s -o $SCRIPTS_DIR/$SCRIPT_NAME $GITHUB_BASE_URL/scripts/bitwarden.sh
+    chmod u+x $SCRIPTS_DIR/$SCRIPT_NAME
+}
+
+function downloadInstall() {
+    curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
+    chmod u+x $SCRIPTS_DIR/install.sh
+}
+
+function downloadRunFile() {
+    curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.sh
+    chmod u+x $SCRIPTS_DIR/run.sh
+}
+
+function downloadDockerFiles() {
     curl -s -o $DOCKER_DIR/docker-compose.yml $GITHUB_BASE_URL/docker/docker-compose.yml
     curl -s -o $DOCKER_DIR/docker-compose.$OS.yml $GITHUB_BASE_URL/docker/docker-compose.$OS.yml
     curl -s -o $DOCKER_DIR/global.env $GITHUB_BASE_URL/docker/global.env
     curl -s -o $DOCKER_DIR/mssql.env $GITHUB_BASE_URL/docker/mssql.env
 }
 
+function downloadAllFiles() {
+    downloadRunFile
+    downloadDockerFiles
+}
+
+# Commands
+
 if [ "$1" == "install" ]
 then
-    curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
-    chmod u+x $SCRIPTS_DIR/install.sh
+    downloadInstall
     $SCRIPTS_DIR/install.sh $OUTPUT
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     if [ ! -d "$DOCKER_DIR" ]
     then
         mkdir $DOCKER_DIR
-        downloadRunFiles
+        downloadAllFiles
     fi
-    $SCRIPTS_DIR/start.sh $OUTPUT $DOCKER_DIR
+    
+    $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
 elif [ "$1" == "update" ]
 then
     if [ -d "$DOCKER_DIR" ]
@@ -76,16 +101,18 @@ then
     fi
 
     mkdir $DOCKER_DIR
-    downloadRunFiles
-    $SCRIPTS_DIR/start.sh $OUTPUT $DOCKER_DIR
+    downloadAllFiles
+    $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
-    curl -s -o $SCRIPTS_DIR/update-db.sh $GITHUB_BASE_URL/scripts/update-db.sh
-    chmod u+x $SCRIPTS_DIR/update-db.sh
-    $SCRIPTS_DIR/update-db.sh $OUTPUT
+    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
 elif [ "$1" == "stop" ]
 then
-    $SCRIPTS_DIR/stop.sh $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh stop $OUTPUT $DOCKER_DIR
+elif [ "$1" == "updateself" ]
+then
+    downloadSelf
+    echo "Updated self."
 else
     echo "No command found."
 fi
