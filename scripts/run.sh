@@ -62,7 +62,7 @@ then
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown
-elif [ "$1" == "upadtedb" ]
+elif [ "$1" == "updatedb" ]
 then
     updateDatabase
 fi
