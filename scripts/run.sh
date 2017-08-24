@@ -12,9 +12,8 @@ then
 fi
 
 DOCKER_DIR=$DIR/../docker
-if [ $# -eq 2 ]
+if [ $# -gt 2 ]
 then
-    OUTPUT_DIR=$2
     DOCKER_DIR=$3
 fi
 
