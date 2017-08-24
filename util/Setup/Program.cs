@@ -102,8 +102,8 @@ namespace Setup
             var vaultUrl = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
             Console.WriteLine("\nbitwarden is up and running!");
             Console.WriteLine("===================================================");
-            Console.WriteLine("\nvisit {0}", vaultUrl);
-            Console.Write("to update, run ");
+            Console.WriteLine("\n- visit {0}", vaultUrl);
+            Console.Write("- to update, run ");
             if(_parameters.ContainsKey("env") && _parameters["env"] == "win")
             {
                 Console.Write("'.\\bitwarden.ps1 -update'");
