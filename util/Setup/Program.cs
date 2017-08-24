@@ -249,122 +249,97 @@ namespace Setup
             using(var sw = File.CreateText("/bitwarden/nginx/default.conf"))
             {
                 sw.WriteLine($@"server {{
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name {_domain};");
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  server_name {_domain};");
 
                 if(_ssl)
                 {
-                    sw.WriteLine($@"    return 301 https://$server_name$request_uri;
+                    sw.WriteLine($@"  return 301 https://$server_name$request_uri;
 }}
 
 server {{
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name {_domain};
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name {_domain};
 
-    ssl_certificate {sslPath}/{certFile};
-    ssl_certificate_key {sslPath}/{keyFile};
-    
-    ssl_session_timeout 30m;
-    ssl_session_cache shared:SSL:20m;
-    ssl_session_tickets off;");
+  ssl_certificate {sslPath}/{certFile};
+  ssl_certificate_key {sslPath}/{keyFile};
+
+  ssl_session_timeout 30m;
+  ssl_session_cache shared:SSL:20m;
+  ssl_session_tickets off;");
 
                     if(dh)
                     {
                         sw.WriteLine($@"
-    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
-    ssl_dhparam {sslPath}/dhparam.pem;");
+  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
+  ssl_dhparam {sslPath}/dhparam.pem;");
                     }
 
                     sw.WriteLine($@"
-    # SSL protocols TLS v1~TLSv1.2 are allowed. Disabed SSLv3
-    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    # Disabled insecure ciphers suite. For example, MD5, DES, RC4, PSK
-    ssl_ciphers ""{sslCiphers}"";
-    # enables server-side protection from BEAST attacks
-    ssl_prefer_server_ciphers on;");
+  # SSL protocols TLS v1~TLSv1.2 are allowed. Disabed SSLv3
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+  # Disabled insecure ciphers suite. For example, MD5, DES, RC4, PSK
+  ssl_ciphers ""{sslCiphers}"";
+  # enables server-side protection from BEAST attacks
+  ssl_prefer_server_ciphers on;");
 
                     if(trusted)
                     {
                         sw.WriteLine($@"
-    # OCSP Stapling ---
-    # fetch OCSP records from URL in ssl_certificate and cache them
-    ssl_stapling on;
-    ssl_stapling_verify on;
+  # OCSP Stapling ---
+  # fetch OCSP records from URL in ssl_certificate and cache them
+  ssl_stapling on;
+  ssl_stapling_verify on;
 
-    ## verify chain of trust of OCSP response using Root CA and Intermediate certs
-    ssl_trusted_certificate {sslPath}/{caFile};
+  ## verify chain of trust of OCSP response using Root CA and Intermediate certs
+  ssl_trusted_certificate {sslPath}/{caFile};
 
-    resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
+  resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
 
-    # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
-    add_header Strict-Transport-Security max-age=15768000;");
+  # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
+  add_header Strict-Transport-Security max-age=15768000;");
                     }
                 }
 
                 sw.WriteLine($@"
-    # X-Frame-Options is to prevent from clickJacking attack
-    add_header X-Frame-Options SAMEORIGIN;
+  # X-Frame-Options is to prevent from clickJacking attack
+  add_header X-Frame-Options SAMEORIGIN;
 
-    # disable content-type sniffing on some browsers.
-    add_header X-Content-Type-Options nosniff;
+  # disable content-type sniffing on some browsers.
+  add_header X-Content-Type-Options nosniff;
 
-    # This header enables the Cross-site scripting (XSS) filter
-    add_header X-XSS-Protection ""1; mode=block"";
+  # This header enables the Cross-site scripting (XSS) filter
+  add_header X-XSS-Protection ""1; mode=block"";
 
-    # This header controls what referrer information is shared
-    add_header Referrer-Policy same-origin;
+  # This header controls what referrer information is shared
+  add_header Referrer-Policy same-origin;
 
-    # Content-Security-Policy is set via meta tag on the website so it is not included here");
+  # Content-Security-Policy is set via meta tag on the website so it is not included here");
 
                 sw.WriteLine($@"
-    location / {{
-        proxy_pass http://web/;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Url-Scheme $scheme;
-        proxy_redirect off;
-    }}
+  location / {{
+    proxy_pass http://web/;
+  }}
 
-    location = /app-id.json {{
-        proxy_pass http://web/app-id.json;
-        proxy_hide_header Content-Type;
-        add_header Content-Type $fido_content_type;
-        proxy_redirect off;
-    }}
+  location = /app-id.json {{
+    proxy_pass http://web/app-id.json;
+    proxy_hide_header Content-Type;
+    add_header Content-Type $fido_content_type;
+  }}
 
-    location /attachments/ {{
-        proxy_pass http://attachments/;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Url-Scheme $scheme;
-        proxy_redirect off;
-    }}
+  location /attachments/ {{
+    proxy_pass http://attachments/;
+  }}
 
-    location /api/ {{
-        proxy_pass http://api/;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Url-Scheme $scheme;
-        proxy_redirect off;
-    }}
+  location /api/ {{
+    proxy_pass http://api/;
+  }}
 
-    location /identity/ {{
-        proxy_pass http://identity/;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Url-Scheme $scheme;
-        proxy_redirect off;
-    }}
+  location /identity/ {{
+    proxy_pass http://identity/;
+  }}
 }}");
             }
         }
