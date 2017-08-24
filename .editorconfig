@@ -47,6 +47,34 @@ dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_explicit_tuple_names = true:suggestion
 
+# Prefix private members with underscore
+dotnet_naming_rule.private_members_with_underscore.symbols = private_members
+dotnet_naming_rule.private_members_with_underscore.style = underscore_prefix
+dotnet_naming_rule.private_members_with_underscore.severity = suggestion
+
+dotnet_naming_symbols.private_members.applicable_kinds = field
+dotnet_naming_symbols.private_members.applicable_accessibilities = private
+dotnet_naming_symbols.private_members.required_modifiers = readonly
+
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+dotnet_naming_style.underscore_prefix.required_prefix = _
+dotnet_naming_style.underscore_prefix.required_suffix = 
+dotnet_naming_style.underscore_prefix.word_separator = 
+
+# Async methods should have "Async" suffix
+dotnet_naming_rule.async_methods_end_in_async.symbols = any_async_methods
+dotnet_naming_rule.async_methods_end_in_async.style = end_in_async
+dotnet_naming_rule.async_methods_end_in_async.severity = suggestion
+
+dotnet_naming_symbols.any_async_methods.applicable_kinds = method
+dotnet_naming_symbols.any_async_methods.applicable_accessibilities = *
+dotnet_naming_symbols.any_async_methods.required_modifiers = async
+
+dotnet_naming_style.underscore_prefix.required_prefix = 
+dotnet_naming_style.end_in_async.required_suffix = Async
+dotnet_naming_style.end_in_async.capitalization = pascal_case
+dotnet_naming_style.underscore_prefix.word_separator = 
+
 # CSharp code style settings:
 [*.cs]
 # Prefer "var" everywhere
