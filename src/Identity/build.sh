@@ -3,11 +3,13 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo -e "\n# Building Identity"
+echo -e "\n## Building Identity"
 
 echo -e "\nBuilding app"
-echo -e ".NET Core version $(dotnet --version)"
+echo ".NET Core version $(dotnet --version)"
+echo "Clean"
 dotnet clean $DIR/Identity.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish
+echo "Publish"
 dotnet publish $DIR/Identity.csproj -f netcoreapp2.0 -c "Release" -o $DIR/obj/Docker/publish
 
 echo -e "\nBuilding docker image"

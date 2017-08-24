@@ -1,6 +1,6 @@
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-echo "`n# Building nginx"
+echo "`n## Building nginx"
 
 echo "`nBuilding docker image"
 docker --version

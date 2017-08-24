@@ -1,6 +1,6 @@
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-echo "`n# Building MsSql"
+echo "`n## Building MsSql"
 
 echo "`nBuilding docker image"
 docker --version
