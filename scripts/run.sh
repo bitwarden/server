@@ -51,6 +51,11 @@ function updateDatabase() {
     echo "Database update complete"
 }
 
+function printEnvironment() {
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup \
+        dotnet Setup.dll -printenv 1 -env $OS
+}
+
 # Commands
 
 if [ "$1" == "start" -o "$1" == "restart" ]
@@ -59,6 +64,7 @@ then
     updateLetsEncrypt
     dockerComposeUp
     dockerPrune
+    printEnvironment
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown

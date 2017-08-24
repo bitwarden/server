@@ -108,17 +108,17 @@ namespace Setup
             return builder.ConnectionString;
         }
 
-        public static string GetDatabasePasswordFronEnvFile()
+        public static string GetValueFronEnvFile(string envFile, string key)
         {
-            if(!File.Exists("/bitwarden/env/mssql.override.env"))
+            if(!File.Exists($"/bitwarden/env/{envFile}.override.env"))
             {
                 return null;
             }
 
-            var lines = File.ReadAllLines("/bitwarden/env/mssql.override.env");
+            var lines = File.ReadAllLines($"/bitwarden/env/{envFile}.override.env");
             foreach(var line in lines)
             {
-                if(line.StartsWith("SA_PASSWORD="))
+                if(line.StartsWith($"{key}="))
                 {
                     return line.Split(new char[] { '=' }, 2)[1];
                 }

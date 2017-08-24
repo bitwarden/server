@@ -38,6 +38,10 @@ namespace Setup
             {
                 Update();
             }
+            else if(_parameters.ContainsKey("printenv"))
+            {
+                PrintEnvironment();
+            }
             else
             {
                 Console.WriteLine("No top-level command detected. Exiting...");
@@ -93,11 +97,29 @@ namespace Setup
             }
         }
 
+        private static void PrintEnvironment()
+        {
+            var vaultUrl = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
+            Console.WriteLine("============================");
+            Console.WriteLine("bitwarden is up and running!");
+            Console.WriteLine("============================");
+            Console.WriteLine("visit {0}", vaultUrl);
+            Console.Write("\nto update, run ");
+            if(_parameters.ContainsKey("env") && _parameters["env"] == "win")
+            {
+                Console.Write(".\bitwarden.ps1 update");
+            }
+            else
+            {
+                Console.Write("./bitwarden.sh update");
+            }
+        }
+
         private static void MigrateDatabase()
         {
             Console.WriteLine("Migrating database.");
 
-            var dbPass = Helpers.GetDatabasePasswordFronEnvFile();
+            var dbPass = Helpers.GetValueFronEnvFile("mssql", "SA_PASSWORD");
             var masterConnectionString = Helpers.MakeSqlConnectionString("mssql", "master", "sa", dbPass ?? string.Empty);
             var vaultConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass ?? string.Empty);
 
