@@ -3,7 +3,7 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo -e "\n## Building nginx"
+echo -e "\n## Building Nginx"
 
 echo -e "\nBuilding docker image"
 docker --version
