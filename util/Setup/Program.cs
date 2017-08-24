@@ -100,19 +100,19 @@ namespace Setup
         private static void PrintEnvironment()
         {
             var vaultUrl = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
-            Console.WriteLine("============================");
-            Console.WriteLine("bitwarden is up and running!");
-            Console.WriteLine("============================");
-            Console.WriteLine("visit {0}", vaultUrl);
-            Console.Write("\nto update, run ");
+            Console.WriteLine("\nbitwarden is up and running!");
+            Console.WriteLine("===================================================");
+            Console.WriteLine("\nvisit {0}", vaultUrl);
+            Console.Write("to update, run ");
             if(_parameters.ContainsKey("env") && _parameters["env"] == "win")
             {
-                Console.Write(".\bitwarden.ps1 update");
+                Console.Write("'.\\bitwarden.ps1 -update'");
             }
             else
             {
-                Console.Write("./bitwarden.sh update");
+                Console.Write("'./bitwarden.sh update'");
             }
+            Console.WriteLine("\n");
         }
 
         private static void MigrateDatabase()
