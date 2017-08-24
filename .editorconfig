@@ -70,10 +70,10 @@ dotnet_naming_symbols.any_async_methods.applicable_kinds = method
 dotnet_naming_symbols.any_async_methods.applicable_accessibilities = *
 dotnet_naming_symbols.any_async_methods.required_modifiers = async
 
-dotnet_naming_style.underscore_prefix.required_prefix = 
+dotnet_naming_style.end_in_async.required_prefix = 
 dotnet_naming_style.end_in_async.required_suffix = Async
 dotnet_naming_style.end_in_async.capitalization = pascal_case
-dotnet_naming_style.underscore_prefix.word_separator = 
+dotnet_naming_style.end_in_async.word_separator = 
 
 # CSharp code style settings:
 [*.cs]
