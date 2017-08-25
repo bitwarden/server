@@ -155,7 +155,7 @@ namespace Setup
 
         private static bool ValidateInstallation()
         {
-            Console.Write("(!) Enter your installation id (get it at https://bitwarden.com/install): ");
+            Console.Write("(!) Enter your installation id (get it at https://bitwarden.com/host): ");
             var installationId = Console.ReadLine();
             Guid installationidGuid;
             if(!Guid.TryParse(installationId.Trim(), out installationidGuid))
