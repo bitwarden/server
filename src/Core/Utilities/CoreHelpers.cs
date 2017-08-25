@@ -386,10 +386,15 @@ namespace Bit.Core.Utilities
                 var dashIndex = _version.IndexOf('-');
                 var trimmedVersion = dashIndex > 0 ? _version.Substring(0, dashIndex) : _version;
 
-                var semVerParts = trimmedVersion.Split('.').Reverse().ToArray();
-                for(var i = 0; i < semVerParts.Length; i++)
+                var semVerParts = trimmedVersion.Split('.').Reverse().Select(p => Convert.ToInt32(p)).ToList();
+                if(semVerParts.Count < 4)
                 {
-                    _versionWeight += (i + 1) * Convert.ToInt32(semVerParts[i]);
+                    semVerParts.Insert(0, 0);
+                }
+
+                for(var i = 0; i < semVerParts.Count; i++)
+                {
+                    _versionWeight += Convert.ToInt32(Math.Pow(100, (i + 1)) * semVerParts[i]);
                 }
             }
 
