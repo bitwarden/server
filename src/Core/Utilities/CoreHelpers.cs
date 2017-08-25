@@ -19,6 +19,8 @@ namespace Bit.Core.Utilities
         private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
         private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly Random _random = new Random();
+        private static string _version;
+        private static int _versionWeight;
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -371,6 +373,27 @@ namespace Bit.Core.Utilities
             }
 
             return val.ToString();
+        }
+
+        public static (string version, int versionWeight) GetVersionInfo()
+        {
+            if(string.IsNullOrWhiteSpace(_version))
+            {
+                _version = Assembly.GetEntryAssembly()
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                    .InformationalVersion;
+
+                var dashIndex = _version.IndexOf('-');
+                var trimmedVersion = dashIndex > 0 ? _version.Substring(0, dashIndex) : _version;
+
+                var semVerParts = trimmedVersion.Split('.').Reverse().ToArray();
+                for(var i = 0; i < semVerParts.Length; i++)
+                {
+                    _versionWeight += (i + 1) * Convert.ToInt32(semVerParts[i]);
+                }
+            }
+
+            return (_version, _versionWeight);
         }
     }
 }

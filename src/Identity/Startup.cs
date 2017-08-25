@@ -72,11 +72,8 @@ namespace Bit.Identity
                 .AddConsole()
                 .AddDebug();
 
-            // Forwarded headers
-            if(!env.IsDevelopment())
-            {
-                app.UseForwardedHeadersForAzure();
-            }
+            // Default Middleware
+            app.UseDefaultMiddleware(env);
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();

@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Reflection;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api
 {
@@ -8,13 +8,12 @@ namespace Bit.Core.Models.Api
         public VersionResponseModel()
             : base("version")
         {
-            Version = Assembly.GetEntryAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                .InformationalVersion;
-            VersionInt = Convert.ToInt32(Version.Replace(".", string.Empty));
+            var info = CoreHelpers.GetVersionInfo();
+            Version = info.version;
+            VersionWeight = info.versionWeight;
         }
 
         public string Version { get; set; }
-        public int VersionInt { get; set; }
+        public int VersionWeight { get; set; }
     }
 }

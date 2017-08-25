@@ -69,11 +69,8 @@ namespace Bit.Billing
                 app.UseDeveloperExceptionPage();
             }
 
-            // Forwarded headers
-            if(!env.IsDevelopment())
-            {
-                app.UseForwardedHeadersForAzure();
-            }
+            // Default Middleware
+            app.UseDefaultMiddleware(env);
 
             app.UseMvc();
         }

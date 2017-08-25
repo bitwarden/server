@@ -15,12 +15,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 #if NET461
 using Microsoft.WindowsAzure.Storage;
 #endif
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Utilities
 {
@@ -267,19 +269,35 @@ namespace Bit.Core.Utilities
             return globalSettings;
         }
 
-        public static void UseForwardedHeadersForAzure(this IApplicationBuilder app)
+        public static void UseDefaultMiddleware(this IApplicationBuilder app, IHostingEnvironment env)
         {
-            // ref: https://github.com/aspnet/Docs/issues/2384
-            var forwardOptions = new ForwardedHeadersOptions
+            if(!env.IsDevelopment())
             {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-                RequireHeaderSymmetry = false
-            };
+                // Adjust headers for proxy.
+                // ref: https://github.com/aspnet/Docs/issues/2384
+                var forwardOptions = new ForwardedHeadersOptions
+                {
+                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                    RequireHeaderSymmetry = false
+                };
+                forwardOptions.KnownNetworks.Clear();
+                forwardOptions.KnownProxies.Clear();
+                app.UseForwardedHeaders(forwardOptions);
+            }
 
-            forwardOptions.KnownNetworks.Clear();
-            forwardOptions.KnownProxies.Clear();
+            // Add version information to response headers
+            app.Use(async (httpContext, next) =>
+            {
+                httpContext.Response.OnStarting((state) =>
+                {
+                    var info = CoreHelpers.GetVersionInfo();
+                    httpContext.Response.Headers.Append("Version", info.version);
+                    httpContext.Response.Headers.Append("VersionWeight", info.versionWeight.ToString());
+                    return Task.FromResult(0);
+                }, null);
 
-            app.UseForwardedHeaders(forwardOptions);
+                await next.Invoke();
+            });
         }
     }
 }

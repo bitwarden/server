@@ -158,11 +158,8 @@ namespace Bit.Api
                 })
                 .AddDebug();
 
-            // Forwarded headers
-            if(!env.IsDevelopment())
-            {
-                app.UseForwardedHeadersForAzure();
-            }
+            // Default Middleware
+            app.UseDefaultMiddleware(env);
 
             if(!globalSettings.SelfHosted)
             {
