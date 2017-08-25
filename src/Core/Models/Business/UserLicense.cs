@@ -98,7 +98,8 @@ namespace Bit.Core.Models.Business
 
             if(Version == 1)
             {
-                return user.EmailVerified && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+                // TODO: Revert verification check
+                return /*user.EmailVerified &&*/ user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
             }
             else
             {
