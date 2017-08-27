@@ -19,12 +19,14 @@ if($domain -ne "localhost") {
         if(!(Test-Path -Path $letsEncryptPath )){
             New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
         }
+        docker pull certbot/certbot
         docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
             certonly --standalone --noninteractive --agree-tos --preferred-challenges http --email $email -d $domain `
             --logs-dir /etc/letsencrypt/logs
     }
 }
 
+docker pull bitwarden/setup
 docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup `
     dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt}
 

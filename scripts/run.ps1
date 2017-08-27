@@ -35,18 +35,21 @@ function Docker-Prune {
 
 function Update-Lets-Encrypt {
     if(Test-Path -Path "${outputDir}\letsencrypt\live") {
+        docker pull certbot/certbot
         docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
             renew --logs-dir /etc/letsencrypt/logs
     }
 }
 
 function Update-Database {
+    docker pull bitwarden/setup
     docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup `
         dotnet Setup.dll -update 1 -db 1
     echo "Database update complete"
 }
 
 function Print-Environment {
+    docker pull bitwarden/setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup `
         dotnet Setup.dll -printenv 1 -env win
 }
