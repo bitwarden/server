@@ -33,6 +33,10 @@ function dockerComposeDown() {
     docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.$OS.yml down
 }
 
+function dockerComposePull() {
+    docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.$OS.yml pull
+}
+
 function dockerPrune() {
     docker image prune -f
 }
@@ -61,10 +65,14 @@ function printEnvironment() {
 if [ "$1" == "start" -o "$1" == "restart" ]
 then
     dockerComposeDown
+    dockerComposePull
     updateLetsEncrypt
     dockerComposeUp
     dockerPrune
     printEnvironment
+elif [ "$1" == "pull" ]
+then
+    dockerComposePull
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown

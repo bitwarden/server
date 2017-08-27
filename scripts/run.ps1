@@ -4,6 +4,7 @@ param (
     [switch] $start,
     [switch] $restart,
     [switch] $stop,
+    [switch] $pull,
     [switch] $updatedb
 )
 
@@ -22,6 +23,10 @@ function Docker-Compose-Up {
 
 function Docker-Compose-Down {
     docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml down
+}
+
+function Docker-Compose-Pull {
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml pull
 }
 
 function Docker-Prune {
@@ -50,10 +55,14 @@ function Print-Environment {
 
 if($start -Or $restart) {
     Docker-Compose-Down
+    Docker-Compose-Pull
     Update-Lets-Encrypt
     Docker-Compose-Up
     Docker-Prune
     Print-Environment
+}
+elseif($pull) {
+    Docker-Compose-Pull
 }
 elseif($stop) {
     Docker-Compose-Down
