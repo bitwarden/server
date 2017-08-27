@@ -35,10 +35,10 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 ### API
 
 ```
-$ cd src/Api
-$ dotnet restore
-$ dotnet build -f netcoreapp2.0
-$ dotnet run -f netcoreapp2.0
+cd src/Api
+dotnet restore
+dotnet build -f netcoreapp2.0
+dotnet run -f netcoreapp2.0
 ```
 
 visit http://localhost:5000/alive
@@ -46,10 +46,10 @@ visit http://localhost:5000/alive
 ### Identity
 
 ```
-$ cd src/Identity
-$ dotnet restore
-$ dotnet build -f netcoreapp2.0
-$ dotnet run -f netcoreapp2.0
+cd src/Identity
+dotnet restore
+dotnet build -f netcoreapp2.0
+dotnet run -f netcoreapp2.0
 ```
 
 visit http://localhost:33657/.well-known/openid-configuration
@@ -74,22 +74,22 @@ You can deploy bitwarden using Docker containers on Windows, macOS, and Linux di
 ### Linux & macOS
 
 ```
-$ curl -s -o bitwarden.sh \
+curl -s -o bitwarden.sh \
     https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh \
     && sudo chmod u+x bitwarden.sh
-$ ./bitwarden.sh install
-$ ./bitwarden.sh start
-$ ./bitwarden.sh updatedb
+./bitwarden.sh install
+./bitwarden.sh start
+./bitwarden.sh updatedb
 ```
 
 ### Windows
 
 ```
-> Invoke-RestMethod -OutFile bitwarden.ps1 `
+Invoke-RestMethod -OutFile bitwarden.ps1 `
     -Uri https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.ps1
-> .\bitwarden.ps1 -install
-> .\bitwarden.ps1 -start
-> .\bitwarden.ps1 -updatedb
+.\bitwarden.ps1 -install
+.\bitwarden.ps1 -start
+.\bitwarden.ps1 -updatedb
 ```
 
 ## Contribute
