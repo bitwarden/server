@@ -390,6 +390,7 @@ globalSettings__installation__id={_installationId}
 globalSettings__installation__key={_installationKey}
 globalSettings__yubico__clientId=REPLACE
 globalSettings__yubico__key=REPLACE
+globalSettings__mail__replyToEmail=hello@bitwarden.com
 globalSettings__mail__smtp__host=REPLACE
 globalSettings__mail__smtp__username=REPLACE
 globalSettings__mail__smtp__password=REPLACE
