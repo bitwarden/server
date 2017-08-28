@@ -390,12 +390,13 @@ globalSettings__installation__id={_installationId}
 globalSettings__installation__key={_installationKey}
 globalSettings__yubico__clientId=REPLACE
 globalSettings__yubico__key=REPLACE
-globalSettings__mail__replyToEmail=hello@bitwarden.com
+globalSettings__mail__replyToEmail=no-reply@{_domain}
 globalSettings__mail__smtp__host=REPLACE
 globalSettings__mail__smtp__username=REPLACE
 globalSettings__mail__smtp__password=REPLACE
 globalSettings__mail__smtp__ssl=true
-globalSettings__mail__smtp__port=587");
+globalSettings__mail__smtp__port=587
+globalSettings__disableUserRegistration=false");
 
                 if(!_push)
                 {

@@ -206,6 +206,11 @@ namespace Bit.Core.Services
 
         public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
         {
+            if(_globalSettings.DisableUserRegistration)
+            {
+                throw new BadRequestException("Registration has been disabled by the system administrator.");
+            }
+
             var result = await base.CreateAsync(user, masterPassword);
             if(result == IdentityResult.Success)
             {
