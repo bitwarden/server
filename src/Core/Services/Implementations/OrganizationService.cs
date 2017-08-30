@@ -1039,6 +1039,11 @@ namespace Bit.Core.Services
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            return await GenerateLicenseAsync(organization, installationId);
+        }
+
+        public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId)
+        {
             if(organization == null)
             {
                 throw new NotFoundException();

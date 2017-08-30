@@ -97,6 +97,11 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.push");
                 });
+                config.AddPolicy("Licensing", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
+                });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
@@ -190,7 +195,7 @@ namespace Bit.Api
             var options = new IdentityServerAuthenticationOptions
             {
                 Authority = globalSettings.BaseServiceUri.InternalIdentity,
-                AllowedScopes = new string[] { "api", "api.push" },
+                AllowedScopes = new string[] { "api", "api.push", "api.licensing" },
                 RequireHttpsMetadata = !env.IsDevelopment() && globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https"),
                 NameClaimType = ClaimTypes.Email,
                 // Suffix until we retire the old jwt schemes.

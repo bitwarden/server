@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 
 namespace Bit.Core.Models.Api
 {
     public class BillingResponseModel : ResponseModel
     {
-        public BillingResponseModel(User user, BillingInfo billing, ILicensingService licenseService)
+        public BillingResponseModel(User user, BillingInfo billing, UserLicense license)
             : base("billing")
         {
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
@@ -20,7 +19,7 @@ namespace Bit.Core.Models.Api
             StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
             StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
             MaxStorageGb = user.MaxStorageGb;
-            License = new UserLicense(user, billing, licenseService);
+            License = license;
             Expiration = License.Expires;
         }
 

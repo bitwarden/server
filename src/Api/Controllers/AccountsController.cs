@@ -421,7 +421,8 @@ namespace Bit.Api.Controllers
             {
                 var paymentService = user.GetPaymentService(_globalSettings);
                 var billingInfo = await paymentService.GetBillingAsync(user);
-                return new BillingResponseModel(user, billingInfo, _licenseService);
+                var license = await _userService.GenerateLicenseAsync(user, billingInfo);
+                return new BillingResponseModel(user, billingInfo, license);
             }
             else
             {

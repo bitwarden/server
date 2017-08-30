@@ -25,8 +25,7 @@ namespace Bit.Core.IdentityServer
             if(clientId.StartsWith("installation."))
             {
                 var idParts = clientId.Split('.');
-                Guid id;
-                if(idParts.Length > 1 && Guid.TryParse(idParts[1], out id))
+                if(idParts.Length > 1 && Guid.TryParse(idParts[1], out Guid id))
                 {
                     var installation = await _installationRepository.GetByIdAsync(id);
                     if(installation != null)
@@ -36,7 +35,7 @@ namespace Bit.Core.IdentityServer
                             ClientId = $"installation.{installation.Id}",
                             RequireClientSecret = true,
                             ClientSecrets = { new Secret(installation.Key.Sha256()) },
-                            AllowedScopes = new string[] { "api.push" },
+                            AllowedScopes = new string[] { "api.push", "api.licensing" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = installation.Enabled,

@@ -34,6 +34,24 @@ namespace Bit.Core.Models.Business
             Signature = Convert.ToBase64String(licenseService.SignLicense(this));
         }
 
+        public UserLicense(User user, ILicensingService licenseService)
+        {
+            LicenseKey = user.LicenseKey;
+            Id = user.Id;
+            Name = user.Name;
+            Email = user.Email;
+            Version = 1;
+            Premium = user.Premium;
+            MaxStorageGb = user.MaxStorageGb;
+            Issued = DateTime.UtcNow;
+            Expires = user.PremiumExpirationDate?.AddDays(7);
+            Refresh = user.PremiumExpirationDate?.Date;
+            Trial = false;
+
+            Hash = Convert.ToBase64String(ComputeHash());
+            Signature = Convert.ToBase64String(licenseService.SignLicense(this));
+        }
+
         public string LicenseKey { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; }

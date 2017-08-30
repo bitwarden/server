@@ -721,6 +721,23 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task<UserLicense> GenerateLicenseAsync(User user, BillingInfo billingInfo = null)
+        {
+            if(user == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if(billingInfo == null && user.Gateway != null)
+            {
+                var paymentService = user.GetPaymentService(_globalSettings);
+                billingInfo = await paymentService.GetBillingAsync(user);
+            }
+
+            return billingInfo == null ? new UserLicense(user, _licenseService) :
+                new UserLicense(user, billingInfo, _licenseService);
+        }
+
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)
         {
             if(validatePassword)
