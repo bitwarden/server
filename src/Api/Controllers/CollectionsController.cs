@@ -72,14 +72,13 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("~/collections")]
-        public async Task<ListResponseModel<CollectionResponseModel>> GetUser()
+        public async Task<ListResponseModel<CollectionResponseModel>> GetUser([FromQuery]bool writeOnly = false)
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(
+                _userService.GetProperUserId(User).Value, writeOnly);
             var responses = collections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
-
-
 
         [HttpGet("{id}/users")]
         public async Task<ListResponseModel<CollectionUserResponseModel>> GetUsers(string orgId, string id)

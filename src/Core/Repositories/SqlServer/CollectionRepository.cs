@@ -64,13 +64,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Collection>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Collection>> GetManyByUserIdAsync(Guid userId, bool writeOnly)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Collection>(
                     $"[{Schema}].[Collection_ReadByUserId]",
-                    new { UserId = userId },
+                    new { UserId = userId, WriteOnly = writeOnly },
                     commandType: CommandType.StoredProcedure);
 
                 // Return distinct Id results.
