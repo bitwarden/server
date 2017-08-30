@@ -527,11 +527,11 @@ namespace Bit.Core.Services
                 UseTotp = plan.UseTotp,
                 SelfHost = plan.SelfHost,
                 Plan = plan.Name,
-                Gateway = GatewayType.Stripe,
+                Gateway = plan.Type == PlanType.Free ? null : (GatewayType?)GatewayType.Stripe,
                 GatewayCustomerId = customer?.Id,
                 GatewaySubscriptionId = subscription?.Id,
                 Enabled = true,
-                ExpirationDate = subscription.CurrentPeriodEnd,
+                ExpirationDate = subscription?.CurrentPeriodEnd,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
