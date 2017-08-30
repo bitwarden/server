@@ -152,17 +152,18 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
+        public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
             var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(JsonConvert.SerializeObject(obj));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.ExecuteAsync(
+                var result = await connection.ExecuteScalarAsync<int>(
                     $"[{Schema}].[Cipher_UpdateWithCollections]",
                     objWithCollections,
                     commandType: CommandType.StoredProcedure);
+                return result >= 0;
             }
         }
 

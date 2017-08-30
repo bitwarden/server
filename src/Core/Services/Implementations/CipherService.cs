@@ -338,7 +338,11 @@ namespace Bit.Core.Services
                 cipher.UserId = sharingUserId;
                 cipher.OrganizationId = organizationId;
                 cipher.RevisionDate = DateTime.UtcNow;
-                await _cipherRepository.ReplaceAsync(cipher, collectionIds);
+                if(!await _cipherRepository.ReplaceAsync(cipher, collectionIds))
+                {
+                    throw new BadRequestException("Unable to save.");
+                }
+
                 updatedCipher = true;
 
                 if(hasAttachments)

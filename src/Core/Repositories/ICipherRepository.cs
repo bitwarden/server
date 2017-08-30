@@ -18,7 +18,7 @@ namespace Bit.Core.Repositories
         Task CreateAsync(CipherDetails cipher);
         Task ReplaceAsync(CipherDetails cipher);
         Task UpsertAsync(CipherDetails cipher);
-        Task ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
+        Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
         Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
         Task UpdateAttachmentAsync(CipherAttachment attachment);
         Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
