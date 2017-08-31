@@ -27,12 +27,14 @@ namespace Bit.Api.Utilities
             var fileNumber = 1;
             while(section != null && fileNumber <= fileCount)
             {
-                ContentDispositionHeaderValue content;
-                if(ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out content) &&
+                if(ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var content) &&
                     HasFileContentDisposition(content))
                 {
                     var fileName = HeaderUtilities.RemoveQuotes(content.FileName) ?? string.Empty;
-                    await callback(section.Body, fileName);
+                    using(section.Body)
+                    {
+                        await callback(section.Body, fileName);
+                    }
                 }
 
                 if(fileNumber >= fileCount)
