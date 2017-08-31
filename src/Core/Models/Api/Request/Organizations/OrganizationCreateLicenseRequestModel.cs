@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api
 {
@@ -6,5 +7,8 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public string Key { get; set; }
+        [EncryptedString]
+        [StringLength(1000)]
+        public string CollectionName { get; set; }
     }
 }

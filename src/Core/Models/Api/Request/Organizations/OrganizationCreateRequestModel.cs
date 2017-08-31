@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api
 {
@@ -25,6 +26,9 @@ namespace Bit.Core.Models.Api
         public short AdditionalSeats { get; set; }
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
+        [EncryptedString]
+        [StringLength(1000)]
+        public string CollectionName { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -38,7 +42,8 @@ namespace Bit.Core.Models.Api
                 AdditionalSeats = AdditionalSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),
                 BillingEmail = BillingEmail,
-                BusinessName = BusinessName
+                BusinessName = BusinessName,
+                CollectionName = CollectionName
             };
         }
 

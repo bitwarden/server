@@ -13,5 +13,6 @@ namespace Bit.Core.Models.Business
         public short AdditionalSeats { get; set; }
         public short AdditionalStorageGb { get; set; }
         public string PaymentToken { get; set; }
+        public string CollectionName { get; set; }
     }
 }

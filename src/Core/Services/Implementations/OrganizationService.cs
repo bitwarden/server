@@ -537,11 +537,11 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow
             };
 
-            return await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, true);
+            return await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
         }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
-            OrganizationLicense license, User owner, string ownerKey)
+            OrganizationLicense license, User owner, string ownerKey, string collectionName)
         {
             if(license == null || !_licensingService.VerifyLicense(license))
             {
@@ -584,7 +584,7 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow
             };
 
-            var result = await SignUpAsync(organization, owner.Id, ownerKey, false);
+            var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
@@ -594,7 +594,7 @@ namespace Bit.Core.Services
         }
 
         private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
-            Guid ownerId, string ownerKey, bool withPayment)
+            Guid ownerId, string ownerKey, string collectionName, bool withPayment)
         {
             try
             {
@@ -614,14 +614,17 @@ namespace Bit.Core.Services
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
-                var defaultCollection = new Collection
+                if(!string.IsNullOrWhiteSpace(collectionName))
                 {
-                    Name = "Default Collection",
-                    OrganizationId = organization.Id,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-                await _collectionRepository.CreateAsync(defaultCollection);
+                    var defaultCollection = new Collection
+                    {
+                        Name = collectionName,
+                        OrganizationId = organization.Id,
+                        CreationDate = organization.CreationDate,
+                        RevisionDate = organization.CreationDate
+                    };
+                    await _collectionRepository.CreateAsync(defaultCollection);
+                }
 
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
