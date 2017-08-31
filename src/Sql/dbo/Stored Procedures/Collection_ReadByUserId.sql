@@ -33,6 +33,8 @@ BEGIN
         )
         AND (
             @WriteOnly = 0
+            OR OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
             OR CU.[ReadOnly] = 0
             OR CG.[ReadOnly] = 0
         )
