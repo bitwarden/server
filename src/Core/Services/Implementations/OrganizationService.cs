@@ -608,11 +608,20 @@ namespace Bit.Core.Services
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     AccessAll = true,
-                    CreationDate = DateTime.UtcNow,
-                    RevisionDate = DateTime.UtcNow
+                    CreationDate = organization.CreationDate,
+                    RevisionDate = organization.CreationDate
                 };
 
                 await _organizationUserRepository.CreateAsync(orgUser);
+
+                var defaultCollection = new Collection
+                {
+                    Name = "Default Collection",
+                    OrganizationId = organization.Id,
+                    CreationDate = organization.CreationDate,
+                    RevisionDate = organization.CreationDate
+                };
+                await _collectionRepository.CreateAsync(defaultCollection);
 
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
