@@ -52,8 +52,7 @@ namespace Bit.Api.Middleware
             base.LogBlockedRequest(httpContext, identity, counter, rule);
             var key = $"blockedIp_{identity.ClientIp}";
 
-            int blockedCount;
-            _memoryCache.TryGetValue(key, out blockedCount);
+            _memoryCache.TryGetValue(key, out int blockedCount);
 
             blockedCount++;
             if(blockedCount > 10)
