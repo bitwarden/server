@@ -38,8 +38,7 @@
   "billingSettings": {
     "stripeWebhookKey": "SECRET",
     "stripeWebhookSecret": "SECRET",
-    "braintreeWebhookKey": "SECRET",
-    "jobsKey": "SECRET"
+    "braintreeWebhookKey": "SECRET"
   },
   "braintree": {
     "production": false,
