@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <VersionPrefix>1.8.2</VersionPrefix>
+    <VersionPrefix>1.9.0</VersionPrefix>
     <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
     <AssemblyName>Api</AssemblyName>
     <RootNamespace>Bit.Api</RootNamespace>
