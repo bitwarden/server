@@ -4,7 +4,7 @@
       "vault": "https://vault.bitwarden.com",
       "api": "https://api.bitwarden.com",
       "identity": "https://identity.bitwarden.com",
-      "identityInternal": "https://identity.bitwarden.com"
+      "internalIdentity": "https://identity.bitwarden.com"
     },
     "braintree": {
       "production": true

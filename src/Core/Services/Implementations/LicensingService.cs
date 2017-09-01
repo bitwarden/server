@@ -49,7 +49,7 @@ namespace Bit.Core.Services
                 throw new Exception("Invalid licensing certificate.");
             }
 
-            if(!CoreHelpers.SettingHasValue(_globalSettings.LicenseDirectory))
+            if(_globalSettings.SelfHosted && !CoreHelpers.SettingHasValue(_globalSettings.LicenseDirectory))
             {
                 throw new InvalidOperationException("No license directory.");
             }

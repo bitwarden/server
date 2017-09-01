@@ -4,7 +4,7 @@
       "vault": "https://preview-vault.bitwarden.com",
       "api": "https://preview-api.bitwarden.com",
       "identity": "https://preview-identity.bitwarden.com",
-      "identityInternal": "https://preview-identity.bitwarden.com"
+      "internalIdentity": "https://preview-identity.bitwarden.com"
     }
   }
 }
