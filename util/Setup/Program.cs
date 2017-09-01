@@ -168,9 +168,6 @@ namespace Setup
             Console.Write("(!) Enter your installation key: ");
             _installationKey = Console.ReadLine();
 
-            // validate all installations for now. remove later.
-            return true;
-
             try
             {
                 var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" + _installationId)
