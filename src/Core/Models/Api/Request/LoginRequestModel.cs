@@ -44,6 +44,15 @@ namespace Bit.Core.Models.Api
             });
         }
 
+        public CipherDetails ToOrganizationCipherDetails(Guid orgId)
+        {
+            return ToCipherDetails(new CipherDetails
+            {
+                OrganizationId = orgId,
+                Edit = true
+            });
+        }
+
         public Cipher ToOrganizationCipher()
         {
             if(string.IsNullOrWhiteSpace(OrganizationId))

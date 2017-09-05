@@ -464,6 +464,50 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task ImportCiphersAsync(
+            List<Collection> collections,
+            List<CipherDetails> ciphers,
+            IEnumerable<KeyValuePair<int, int>> collectionRelationships,
+            Guid importingUserId)
+        {
+            // Init. ids for ciphers
+            foreach(var cipher in ciphers)
+            {
+                cipher.SetNewId();
+            }
+
+            // Init. ids for collections
+            foreach(var collection in collections)
+            {
+                collection.SetNewId();
+            }
+
+            // Create associations based on the newly assigned ids
+            var collectionCiphers = new List<CollectionCipher>();
+            foreach(var relationship in collectionRelationships)
+            {
+                var cipher = ciphers.ElementAtOrDefault(relationship.Key);
+                var collection = collections.ElementAtOrDefault(relationship.Value);
+
+                if(cipher == null || collection == null)
+                {
+                    continue;
+                }
+
+                collectionCiphers.Add(new CollectionCipher
+                {
+                    CipherId = cipher.Id,
+                    CollectionId = collection.Id
+                });
+            }
+
+            // Create it all
+            await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers);
+
+            // push
+            await _pushService.PushSyncVaultAsync(importingUserId);
+        }
+
         private async Task<bool> UserCanEditAsync(Cipher cipher, Guid userId)
         {
             if(!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)

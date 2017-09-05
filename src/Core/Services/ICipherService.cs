@@ -25,5 +25,7 @@ namespace Bit.Core.Services
         Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
         Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships);
+        Task ImportCiphersAsync(List<Collection> collections, List<CipherDetails> ciphers,
+            IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
     }
 }

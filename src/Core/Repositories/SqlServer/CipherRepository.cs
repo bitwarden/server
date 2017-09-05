@@ -401,6 +401,65 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, 
+            IEnumerable<CollectionCipher> collectionCiphers)
+        {
+            if(!ciphers.Any())
+            {
+                return;
+            }
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                connection.Open();
+
+                using(var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "[dbo].[Cipher]";
+                            var dataTable = BuildCiphersTable(ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
+
+                        if(collections.Any())
+                        {
+                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[Collection]";
+                                var dataTable = BuildCollectionsTable(collections);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
+
+                            if(collectionCiphers.Any())
+                            {
+                                using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                                {
+                                    bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
+                                    var dataTable = BuildCollectionCiphersTable(collectionCiphers);
+                                    bulkCopy.WriteToServer(dataTable);
+                                }
+                            }
+                        }
+
+                        await connection.ExecuteAsync(
+                                $"[{Schema}].[User_BumpAccountRevisionDateByOrganizationId]",
+                                new { OrganizationId = ciphers.First().OrganizationId },
+                                commandType: CommandType.StoredProcedure, transaction: transaction);
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
         private DataTable BuildCiphersTable(IEnumerable<Cipher> ciphers)
         {
             var c = ciphers.FirstOrDefault();
@@ -496,6 +555,80 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             return foldersTable;
+        }
+
+        private DataTable BuildCollectionsTable(IEnumerable<Collection> collections)
+        {
+            var c = collections.FirstOrDefault();
+            if(c == null)
+            {
+                throw new ApplicationException("Must have some collections to bulk import.");
+            }
+
+            var collectionsTable = new DataTable("CollectionDataTable");
+
+            var idColumn = new DataColumn(nameof(c.Id), c.Id.GetType());
+            collectionsTable.Columns.Add(idColumn);
+            var organizationIdColumn = new DataColumn(nameof(c.OrganizationId), c.OrganizationId.GetType());
+            collectionsTable.Columns.Add(organizationIdColumn);
+            var nameColumn = new DataColumn(nameof(c.Name), typeof(string));
+            collectionsTable.Columns.Add(nameColumn);
+            var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
+            collectionsTable.Columns.Add(creationDateColumn);
+            var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
+            collectionsTable.Columns.Add(revisionDateColumn);
+
+            var keys = new DataColumn[1];
+            keys[0] = idColumn;
+            collectionsTable.PrimaryKey = keys;
+
+            foreach(var collection in collections)
+            {
+                var row = collectionsTable.NewRow();
+
+                row[idColumn] = collection.Id;
+                row[organizationIdColumn] = collection.OrganizationId;
+                row[nameColumn] = collection.Name;
+                row[creationDateColumn] = collection.CreationDate;
+                row[revisionDateColumn] = collection.RevisionDate;
+
+                collectionsTable.Rows.Add(row);
+            }
+
+            return collectionsTable;
+        }
+
+        private DataTable BuildCollectionCiphersTable(IEnumerable<CollectionCipher> collectionCiphers)
+        {
+            var cc = collectionCiphers.FirstOrDefault();
+            if(cc == null)
+            {
+                throw new ApplicationException("Must have some collectionCiphers to bulk import.");
+            }
+
+            var collectionCiphersTable = new DataTable("CollectionCipherDataTable");
+
+            var collectionIdColumn = new DataColumn(nameof(cc.CollectionId), cc.CollectionId.GetType());
+            collectionCiphersTable.Columns.Add(collectionIdColumn);
+            var cipherIdColumn = new DataColumn(nameof(cc.CipherId), cc.CipherId.GetType());
+            collectionCiphersTable.Columns.Add(cipherIdColumn);
+
+            var keys = new DataColumn[2];
+            keys[0] = collectionIdColumn;
+            keys[1] = cipherIdColumn;
+            collectionCiphersTable.PrimaryKey = keys;
+
+            foreach(var collectionCipher in collectionCiphers)
+            {
+                var row = collectionCiphersTable.NewRow();
+
+                row[collectionIdColumn] = collectionCipher.CollectionId;
+                row[cipherIdColumn] = collectionCipher.CipherId;
+
+                collectionCiphersTable.Rows.Add(row);
+            }
+
+            return collectionCiphersTable;
         }
 
         public class CipherWithCollections : Cipher
