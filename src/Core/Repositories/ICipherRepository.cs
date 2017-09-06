@@ -10,6 +10,7 @@ namespace Bit.Core.Repositories
     public interface ICipherRepository : IRepository<Cipher, Guid>
     {
         Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
+        Task<CipherDetails> GetDetailsByIdAsync(Guid id);
         Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
         Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId);
         Task<ICollection<CipherDetails>> GetManyByUserIdHasCollectionsAsync(Guid userId);

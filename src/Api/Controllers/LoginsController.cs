@@ -54,8 +54,7 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}/admin")]
         public async Task<LoginResponseModel> GetAdmin(string id)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var login = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
             if(login == null || !login.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
             {
@@ -131,7 +130,7 @@ namespace Bit.Api.Controllers
         public async Task<LoginResponseModel> PutAdmin(string id, [FromBody]LoginRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var login = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var login = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
             if(login == null || !login.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
             {

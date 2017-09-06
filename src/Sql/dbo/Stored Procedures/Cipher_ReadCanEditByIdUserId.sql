@@ -14,7 +14,7 @@ BEGIN
                 ELSE 0
             END [Edit]
         FROM
-            [dbo].[CipherDetails](@UserId) C
+            [dbo].[Cipher] C
         LEFT JOIN
             [dbo].[Organization] O ON C.[UserId] IS NULL AND O.[Id] = C.[OrganizationId]
         LEFT JOIN

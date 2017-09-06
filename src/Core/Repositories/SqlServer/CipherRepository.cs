@@ -36,6 +36,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<CipherDetails> GetDetailsByIdAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherDetails>(
+                    $"[{Schema}].[CipherDetails_ReadById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.FirstOrDefault();
+            }
+        }
+
         public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
             using(var connection = new SqlConnection(ConnectionString))
@@ -401,7 +414,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, 
+        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
             IEnumerable<CollectionCipher> collectionCiphers)
         {
             if(!ciphers.Any())
