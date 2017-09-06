@@ -120,18 +120,18 @@ namespace Bit.Api.Controllers
             await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
         }
 
-        [HttpPost("{orgId}/import")]
-        public async Task PostImport(string orgId, [FromBody]ImportOrganizationCiphersRequestModel model)
+        [HttpPost("import-organization")]
+        public async Task PostImport([FromQuery]string organizationId, [FromBody]ImportOrganizationCiphersRequestModel model)
         {
-            var organizationId = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(organizationId))
+            var orgId = new Guid(organizationId);
+            if(!_currentContext.OrganizationAdmin(orgId))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User).Value;
-            var collections = model.Collections.Select(c => c.ToCollection(organizationId)).ToList();
-            var ciphers = model.Logins.Select(l => l.ToOrganizationCipherDetails(organizationId)).ToList();
+            var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
+            var ciphers = model.Logins.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
             await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
         }
 
