@@ -42,6 +42,9 @@ namespace Bit.Billing
             // Context
             services.AddScoped<CurrentContext>();
 
+            // Identity
+            services.AddCustomIdentityServices(globalSettings);
+
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
