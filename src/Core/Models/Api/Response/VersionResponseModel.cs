@@ -8,12 +8,9 @@ namespace Bit.Core.Models.Api
         public VersionResponseModel()
             : base("version")
         {
-            var info = CoreHelpers.GetVersionInfo();
-            Version = info.version;
-            VersionWeight = info.versionWeight;
+            Version = CoreHelpers.GetVersion();
         }
 
         public string Version { get; set; }
-        public int VersionWeight { get; set; }
     }
 }

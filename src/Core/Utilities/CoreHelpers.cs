@@ -375,30 +375,16 @@ namespace Bit.Core.Utilities
             return val.ToString();
         }
 
-        public static (string version, int versionWeight) GetVersionInfo()
+        public static string GetVersion()
         {
             if(string.IsNullOrWhiteSpace(_version))
             {
                 _version = Assembly.GetEntryAssembly()
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     .InformationalVersion;
-
-                var dashIndex = _version.IndexOf('-');
-                var trimmedVersion = dashIndex > 0 ? _version.Substring(0, dashIndex) : _version;
-
-                var semVerParts = trimmedVersion.Split('.').Reverse().Select(p => Convert.ToInt32(p)).ToList();
-                if(semVerParts.Count < 4)
-                {
-                    semVerParts.Insert(0, 0);
-                }
-
-                for(var i = 0; i < semVerParts.Count; i++)
-                {
-                    _versionWeight += Convert.ToInt32(Math.Pow(100, (i + 1)) * semVerParts[i]);
-                }
             }
 
-            return (_version, _versionWeight);
+            return _version;
         }
     }
 }

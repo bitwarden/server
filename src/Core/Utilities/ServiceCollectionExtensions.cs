@@ -290,9 +290,7 @@ namespace Bit.Core.Utilities
             {
                 httpContext.Response.OnStarting((state) =>
                 {
-                    var info = CoreHelpers.GetVersionInfo();
-                    httpContext.Response.Headers.Append("Server-Version", info.version);
-                    httpContext.Response.Headers.Append("Server-Version-Weight", info.versionWeight.ToString());
+                    httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
                     return Task.FromResult(0);
                 }, null);
 
