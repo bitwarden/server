@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <RootNamespace>Bit.Server</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

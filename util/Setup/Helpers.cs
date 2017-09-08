@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Setup
+namespace Bit.Setup
 {
     public static class Helpers
     {

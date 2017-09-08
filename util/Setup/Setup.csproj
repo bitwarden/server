@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <NoWarn>1701;1702;1705;NU1701</NoWarn>
+    <RootNamespace>Bit.Setup</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

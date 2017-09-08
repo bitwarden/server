@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Setup
+namespace Bit.Setup
 {
     public class Program
     {
