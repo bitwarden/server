@@ -444,9 +444,9 @@ namespace Bit.Core.Services
 
             if(plan.Type == PlanType.Free)
             {
-                var ownerExistingOrgCount =
+                var adminCount =
                     await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
-                if(ownerExistingOrgCount > 0)
+                if(adminCount > 0)
                 {
                     throw new BadRequestException("You can only be an admin of one free organization.");
                 }
@@ -894,10 +894,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already accepted.");
             }
 
-            var ownerExistingOrgCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
-            if(ownerExistingOrgCount > 0)
+            if(orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
             {
-                throw new BadRequestException("You can only be an admin of one free organization.");
+                var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+                if(org.PlanType == PlanType.Free)
+                {
+                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+                    if(adminCount > 0)
+                    {
+                        throw new BadRequestException("You can only be an admin of one free organization.");
+                    }
+                }
             }
 
             var tokenValidationFailed = true;
@@ -944,17 +951,25 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(org.PlanType == PlanType.Free &&
+                (orgUser.Type == OrganizationUserType.Admin || orgUser.Type == OrganizationUserType.Owner))
+            {
+                var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
+                    orgUser.UserId.Value);
+                if(adminCount > 0)
+                {
+                    throw new BadRequestException("User can only be an admin of one free organization.");
+                }
+            }
+
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
-            if(user != null && org != null)
-            {
-                await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
-            }
+            await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
 
             // self-hosted org users get premium access
             if(_globalSettings.SelfHosted && !user.Premium && org.Enabled)
