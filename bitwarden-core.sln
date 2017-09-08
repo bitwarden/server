@@ -41,7 +41,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobs", "src\Jobs\Jobs.cspro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dapper", "..\Dapper\Dapper\Dapper.csproj", "{6951E73D-1761-41F6-B5D3-BEF4C2F73EA3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingUpdater", "util\BillingUpdater\BillingUpdater.csproj", "{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BillingUpdater", "util\BillingUpdater\BillingUpdater.csproj", "{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Function", "util\Function\Function.csproj", "{A6C44A84-8E51-4C64-B9C4-7B7C23253345}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -95,6 +97,10 @@ Global
 		{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,6 +117,7 @@ Global
 		{7DCEBD8F-E5F3-4A3C-BD35-B64341590B74} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{6951E73D-1761-41F6-B5D3-BEF4C2F73EA3} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{A0FBA4DF-2F24-45A6-B188-EBDBD2FAF445} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{A6C44A84-8E51-4C64-B9C4-7B7C23253345} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}
