@@ -20,7 +20,12 @@ namespace Bit.Core.Utilities
         private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly Random _random = new Random();
         private static string _version;
-        private static int _versionWeight;
+        private static readonly string _qwertyDvorakMap = "-=qwertyuiop[]asdfghjkl;'zxcvbnm,./_+QWERTYUIO" +
+            "P{}ASDFGHJKL:\"ZXCVBNM<>?";
+        private static readonly string _dvorakMap = "[]',.pyfgcrl/=aoeuidhtns-;qjkxbmwvz{}\"<>PYFGC" +
+            "RL?+AOEUIDHTNS_:QJKXBMWVZ";
+        private static readonly string _qwertyColmakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
+        private static readonly string _colmakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -385,6 +390,26 @@ namespace Bit.Core.Utilities
             }
 
             return _version;
+        }
+
+        public static string Dvorak2Qwerty(string value)
+        {
+            return Other2Qwerty(value, _dvorakMap, _qwertyDvorakMap);
+        }
+
+        public static string Colmak2Qwery(string value)
+        {
+            return Other2Qwerty(value, _colmakMap, _qwertyColmakMap);
+        }
+
+        private static string Other2Qwerty(string value, string otherMap, string qwertyMap)
+        {
+            var sb = new StringBuilder();
+            foreach(var c in value)
+            {
+                sb.Append(otherMap.IndexOf(c) > -1 ? qwertyMap[otherMap.IndexOf(c)] : c);
+            }
+            return sb.ToString();
         }
     }
 }
