@@ -397,7 +397,7 @@ namespace Bit.Core.Utilities
             return Other2Qwerty(value, _dvorakMap, _qwertyDvorakMap);
         }
 
-        public static string Colemak2Qwery(string value)
+        public static string Colemak2Qwerty(string value)
         {
             return Other2Qwerty(value, _colemakMap, _qwertyColemakMap);
         }
