@@ -24,8 +24,8 @@ namespace Bit.Core.Utilities
             "P{}ASDFGHJKL:\"ZXCVBNM<>?";
         private static readonly string _dvorakMap = "[]',.pyfgcrl/=aoeuidhtns-;qjkxbmwvz{}\"<>PYFGC" +
             "RL?+AOEUIDHTNS_:QJKXBMWVZ";
-        private static readonly string _qwertyColmakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
-        private static readonly string _colmakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
+        private static readonly string _qwertyColemakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
+        private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -397,9 +397,9 @@ namespace Bit.Core.Utilities
             return Other2Qwerty(value, _dvorakMap, _qwertyDvorakMap);
         }
 
-        public static string Colmak2Qwery(string value)
+        public static string Colemak2Qwery(string value)
         {
-            return Other2Qwerty(value, _colmakMap, _qwertyColmakMap);
+            return Other2Qwerty(value, _colemakMap, _qwertyColemakMap);
         }
 
         private static string Other2Qwerty(string value, string otherMap, string qwertyMap)
