@@ -10,7 +10,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -145,24 +144,6 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        public async Task ValidateYubiKeyAsync(User user, string name, string value)
-        {
-            if(string.IsNullOrWhiteSpace(value) || value.Length == 12)
-            {
-                return;
-            }
-
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.YubiKey.ToString(), value))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException(name, $"{name} is invalid.");
-            }
-            else
-            {
-                await Task.Delay(500);
-            }
-        }
-
         [HttpPost("get-email")]
         public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody]TwoFactorRequestModel model)
         {
@@ -264,6 +245,24 @@ namespace Bit.Api.Controllers
             }
 
             return user;
+        }
+
+        private async Task ValidateYubiKeyAsync(User user, string name, string value)
+        {
+            if(string.IsNullOrWhiteSpace(value) || value.Length == 12)
+            {
+                return;
+            }
+
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.YubiKey.ToString(), value))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException(name, $"{name} is invalid.");
+            }
+            else
+            {
+                await Task.Delay(500);
+            }
         }
     }
 }
