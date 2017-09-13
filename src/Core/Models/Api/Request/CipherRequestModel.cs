@@ -37,16 +37,8 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(1000)]
         public string Totp { get; set; }
-
-        public virtual Cipher ToCipher(Guid userId)
-        {
-            return ToCipher(new Cipher
-            {
-                Id = new Guid(Id),
-                UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
-                Type = Type
-            });
-        }
+        public IEnumerable<FieldDataModel> Fields { get; set; }
+        public Dictionary<string, string> Attachments { get; set; }
 
         public virtual Cipher ToCipher(Cipher existingCipher)
         {
@@ -60,29 +52,23 @@ namespace Bit.Core.Models.Api
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
 
-            return existingCipher;
-        }
-    }
-
-    public class CipherAttachmentRequestModel : CipherRequestModel
-    {
-        public Dictionary<string, string> Attachments { get; set; }
-
-        public override Cipher ToCipher(Cipher existingCipher)
-        {
-            base.ToCipher(existingCipher);
-
-            var attachments = existingCipher.GetAttachments();
-            if((Attachments?.Count ?? 0) > 0 && (attachments?.Count ?? 0) > 0)
+            if((Attachments?.Count ?? 0) == 0)
             {
-                foreach(var attachment in existingCipher.GetAttachments().Where(a => Attachments.ContainsKey(a.Key)))
-                {
-                    attachment.Value.FileName = Attachments[attachment.Key];
-                }
-
-                existingCipher.SetAttachments(attachments);
+                return existingCipher;
             }
 
+            var attachments = existingCipher.GetAttachments();
+            if((attachments?.Count ?? 0) == 0)
+            {
+                return existingCipher;
+            }
+
+            foreach(var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+            {
+                attachment.Value.FileName = Attachments[attachment.Key];
+            }
+
+            existingCipher.SetAttachments(attachments);
             return existingCipher;
         }
     }
@@ -92,7 +78,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public IEnumerable<string> CollectionIds { get; set; }
         [Required]
-        public CipherAttachmentRequestModel Cipher { get; set; }
+        public CipherRequestModel Cipher { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

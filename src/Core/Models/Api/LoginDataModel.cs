@@ -4,27 +4,31 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class LoginDataModel
+    public class LoginDataModel : CipherDataModel
     {
         public LoginDataModel() { }
 
         public LoginDataModel(LoginRequestModel login)
         {
             Name = login.Name;
+            Notes = login.Notes;
+            Fields = login.Fields;
+
             Uri = login.Uri;
             Username = login.Username;
             Password = login.Password;
-            Notes = login.Notes;
             Totp = login.Totp;
         }
 
         public LoginDataModel(CipherRequestModel cipher)
         {
             Name = cipher.Name;
+            Notes = cipher.Notes;
+            Fields = cipher.Fields;
+
             Uri = cipher.Uri;
             Username = cipher.Username;
             Password = cipher.Password;
-            Notes = cipher.Notes;
             Totp = cipher.Totp;
         }
 
@@ -38,18 +42,18 @@ namespace Bit.Core.Models.Api
             var data = JsonConvert.DeserializeObject<LoginDataModel>(cipher.Data);
 
             Name = data.Name;
+            Notes = data.Notes;
+            Fields = data.Fields;
+
             Uri = data.Uri;
             Username = data.Username;
             Password = data.Password;
-            Notes = data.Notes;
             Totp = data.Totp;
         }
 
-        public string Name { get; set; }
         public string Uri { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
-        public string Notes { get; set; }
         public string Totp { get; set; }
     }
 }

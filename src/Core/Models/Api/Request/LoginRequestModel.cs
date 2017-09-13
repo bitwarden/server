@@ -4,6 +4,7 @@ using Bit.Core.Utilities;
 using Newtonsoft.Json;
 using Core.Models.Data;
 using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Core.Models.Api
 {
@@ -33,6 +34,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(1000)]
         public string Totp { get; set; }
+        public IEnumerable<FieldDataModel> Fields { get; set; }
 
         public CipherDetails ToCipherDetails(Guid userId)
         {
