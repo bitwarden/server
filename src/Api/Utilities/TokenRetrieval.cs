@@ -11,14 +11,24 @@ namespace Bit.Api.Utilities
         {
             return (request) =>
             {
-                string authorization = request.Headers["Authorization"].FirstOrDefault();
+                var authorization = request.Headers["Authorization"].FirstOrDefault();
 
                 if(string.IsNullOrWhiteSpace(authorization))
                 {
-                    return request.Query[qsName].FirstOrDefault();
+                    // Bearer token could exist in the 'Content-Language' header on clients that want to avoid pre-flights.
+                    var languageAuth = request.Headers["Content-Language"].FirstOrDefault();
+                    if(string.IsNullOrWhiteSpace(languageAuth) ||
+                        !languageAuth.StartsWith($"{headerScheme} ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return request.Query[qsName].FirstOrDefault();
+                    }
+                    else
+                    {
+                        authorization = languageAuth.Split(',')[0];
+                    }
                 }
 
-                if(authorization.StartsWith(headerScheme + " ", StringComparison.OrdinalIgnoreCase))
+                if(authorization.StartsWith($"{headerScheme} ", StringComparison.OrdinalIgnoreCase))
                 {
                     return authorization.Substring(headerScheme.Length + 1).Trim();
                 }
