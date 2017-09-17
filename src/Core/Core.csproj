@@ -51,6 +51,7 @@
   <ItemGroup>
     <PackageReference Include="Braintree" Version="3.8.0" />
     <PackageReference Include="CommonMark.NET" Version="0.15.1" />
+    <PackageReference Include="Dapper" Version="1.50.4-alpha1-00070" />
     <PackageReference Include="IdentityServer4" Version="1.5.2" />
     <PackageReference Include="IdentityServer4.AspNetIdentity" Version="1.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="1.0.2" />
@@ -85,10 +86,6 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Dapper\Dapper\Dapper.csproj" />
   </ItemGroup>
 
 </Project>
