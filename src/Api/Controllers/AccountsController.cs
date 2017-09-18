@@ -426,7 +426,8 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                return new BillingResponseModel(user);
+                var license = await _userService.GenerateLicenseAsync(user);
+                return new BillingResponseModel(user, license);
             }
         }
 

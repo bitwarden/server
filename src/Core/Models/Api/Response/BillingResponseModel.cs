@@ -23,12 +23,13 @@ namespace Bit.Core.Models.Api
             Expiration = License.Expires;
         }
 
-        public BillingResponseModel(User user)
+        public BillingResponseModel(User user, UserLicense license)
             : base("billing")
         {
             StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
             StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
             MaxStorageGb = user.MaxStorageGb;
+            License = license;
             Expiration = user.PremiumExpirationDate;
         }
 
