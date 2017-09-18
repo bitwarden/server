@@ -132,6 +132,18 @@ namespace Bit.Setup
                 command.ExecuteNonQuery();
             }
 
+            // Namespace changed, so migrate DbUp script names
+            using(var connection = new SqlConnection(vaultConnectionString))
+            {
+                var command = new SqlCommand(
+                    "UPDATE [dbo].[Migration] " +
+                    "SET [ScriptName] = REPLACE([ScriptName], 'Setup.DbScripts.', 'Bit.Setup.DbScripts.') " +
+                    "WHERE [ScriptName] LIKE 'Setup.DbScripts.%'",
+                    connection);
+                command.Connection.Open();
+                command.ExecuteNonQuery();
+            }
+
             var upgrader = DeployChanges.To
                 .SqlDatabase(vaultConnectionString)
                 .JournalToSqlTable("dbo", "Migration")
