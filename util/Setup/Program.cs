@@ -222,17 +222,13 @@ namespace Bit.Setup
         {
             if(!_ssl)
             {
-                Console.Write("(!) Do you want to generate a self-signed SSL certificate? (y/n): ");
-                if(Console.ReadLine().ToLowerInvariant() == "y")
-                {
-                    Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
-                    Console.WriteLine("Generating self signed SSL certificate.");
-                    _ssl = _selfSignedSsl = true;
-                    Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
-                        $"-keyout /bitwarden/ssl/self/{_domain}/private.key " +
-                        $"-out /bitwarden/ssl/self/{_domain}/certificate.crt " +
-                        $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=bitwarden/CN={_domain}\"");
-                }
+                Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
+                Console.WriteLine("Generating self signed SSL certificate.");
+                _ssl = _selfSignedSsl = true;
+                Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
+                    $"-keyout /bitwarden/ssl/self/{_domain}/private.key " +
+                    $"-out /bitwarden/ssl/self/{_domain}/certificate.crt " +
+                    $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=bitwarden/CN={_domain}\"");
             }
 
             if(_letsEncrypt)
