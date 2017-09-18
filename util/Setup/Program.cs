@@ -333,8 +333,8 @@ server {{
                 }
 
                 sw.WriteLine($@"
-  # X-Frame-Options is to prevent from clickJacking attack
-  add_header X-Frame-Options SAMEORIGIN;
+  # X-Frame-Options is to prevent from click-jacking attack
+  #add_header X-Frame-Options SAMEORIGIN;
 
   # disable content-type sniffing on some browsers.
   add_header X-Content-Type-Options nosniff;
