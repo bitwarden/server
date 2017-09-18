@@ -74,6 +74,11 @@ function Download-Docker-Files {
     Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
 }
 
+function Download-All-Files {
+    Download-Run-File
+    Download-Docker-Files
+}
+
 function Check-Output-Dir-Exists {
     if(!(Test-Path -Path $output)) {
         throw "Cannot find a bitwarden installation at $output."
