@@ -35,11 +35,6 @@ then
     OUTPUT=$2
 fi
 
-if [ ! -d "$OUTPUT" ]
-then
-    mkdir $OUTPUT
-fi
-
 OS="linux"
 if [ "$(uname)" == "Darwin" ]
 then
@@ -50,24 +45,31 @@ SCRIPTS_DIR="$OUTPUT/scripts"
 DOCKER_DIR="$OUTPUT/docker"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/core/master"
 
-if [ ! -d "$SCRIPTS_DIR" ]
-then
-    mkdir $SCRIPTS_DIR
-fi
-
 # Functions
 
 function downloadSelf() {
+    if [ ! -d "$SCRIPTS_DIR" ]
+    then
+        mkdir $SCRIPTS_DIR
+    fi
     curl -s -o $SCRIPT_PATH $GITHUB_BASE_URL/scripts/bitwarden.sh
     chmod u+x $SCRIPT_PATH
 }
 
 function downloadInstall() {
+    if [ ! -d "$SCRIPTS_DIR" ]
+    then
+        mkdir $SCRIPTS_DIR
+    fi
     curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
     chmod u+x $SCRIPTS_DIR/install.sh
 }
 
 function downloadRunFile() {
+    if [ ! -d "$SCRIPTS_DIR" ]
+    then
+        mkdir $SCRIPTS_DIR
+    fi
     curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.sh
     chmod u+x $SCRIPTS_DIR/run.sh
 }
@@ -84,14 +86,33 @@ function downloadAllFiles() {
     downloadDockerFiles
 }
 
+function checkOutputDirExists() {
+    if [ ! -d "$OUTPUT" ]
+    then
+        echo "Cannot find a bitwarden installation at $OUTPUT."
+        exit 1
+    fi
+}
+
+function checkOutputDirNotExists() {
+    if [ -d "$OUTPUT" ]
+    then
+        echo "Looks like bitwarden is already installed at $OUTPUT."
+        exit 1
+    fi
+}
+
 # Commands
 
 if [ "$1" == "install" ]
 then
+    checkOutputDirNotExists
+    mkdir $OUTPUT
     downloadInstall
     $SCRIPTS_DIR/install.sh $OUTPUT
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
+    checkOutputDirExists
     if [ ! -d "$DOCKER_DIR" ]
     then
         mkdir $DOCKER_DIR
@@ -101,6 +122,7 @@ then
     $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
 elif [ "$1" == "update" ]
 then
+    checkOutputDirExists
     if [ -d "$DOCKER_DIR" ]
     then
         rm -rf $DOCKER_DIR
@@ -112,12 +134,15 @@ then
     $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
+    checkOutputDirExists
     $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
 elif [ "$1" == "stop" ]
 then
+    checkOutputDirExists
     $SCRIPTS_DIR/run.sh stop $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updateself" ]
 then
+    checkOutputDirExists
     downloadSelf
     echo "Updated self."
 else

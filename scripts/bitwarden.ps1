@@ -40,29 +40,30 @@ if($output -eq "") {
     $output="${dir}\bitwarden"
 }
 
-if(!(Test-Path -Path $output)) {
-    New-Item -ItemType directory -Path $output | Out-Null
-}
-
 $scriptsDir = "${output}\scripts"
 $dockerDir = "${output}\docker"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
 
-if(!(Test-Path -Path $scriptsDir)) {
-    New-Item -ItemType directory -Path $scriptsDir | Out-Null
-}
-
 # Functions
 
 function Download-Self {
+    if(!(Test-Path -Path $scriptsDir)) {
+        New-Item -ItemType directory -Path $scriptsDir | Out-Null
+    }
     Invoke-RestMethod -OutFile $scriptPath -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
 }
 
 function Download-Install {
+    if(!(Test-Path -Path $scriptsDir)) {
+        New-Item -ItemType directory -Path $scriptsDir | Out-Null
+    }
     Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
 }
 
 function Download-Run-File {
+    if(!(Test-Path -Path $scriptsDir)) {
+        New-Item -ItemType directory -Path $scriptsDir | Out-Null
+    }
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
 }
 
@@ -73,18 +74,28 @@ function Download-Docker-Files {
     Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
 }
 
-function Download-All-Files {
-    Download-Run-File
-    Download-Docker-Files
+function Check-Output-Dir-Exists {
+    if(!(Test-Path -Path $output)) {
+        throw "Cannot find a bitwarden installation at $output."
+    }
+}
+
+function Check-Output-Dir-Not-Exists {
+    if(Test-Path -Path $output) {
+        throw "Looks like bitwarden is already installed at $output."
+    }
 }
 
 # Commands
 
 if($install) {
+    Check-Output-Dir-Not-Exists
+    New-Item -ItemType directory -Path $output | Out-Null
     Download-Install
     Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output"
 }
 elseif($start -Or $restart) {
+    Check-Output-Dir-Exists
     if(!(Test-Path -Path $dockerDir)) {
         New-Item -ItemType directory -Path $dockerDir | Out-Null
         Download-All-Files
@@ -93,6 +104,7 @@ elseif($start -Or $restart) {
     Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
 }
 elseif($update) {
+    Check-Output-Dir-Exists
     if(Test-Path -Path $dockerDir) {
         Remove-Item -Recurse -Force $dockerDir | Out-Null
     }
@@ -103,12 +115,15 @@ elseif($update) {
     Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
+    Check-Output-Dir-Exists
     Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
 }
 elseif($stop) {
+    Check-Output-Dir-Exists
     Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updateself) {
+    Check-Output-Dir-Exists
     Download-Self
     echo "Updated self."
 }
