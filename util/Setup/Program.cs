@@ -136,9 +136,11 @@ namespace Bit.Setup
             using(var connection = new SqlConnection(vaultConnectionString))
             {
                 var command = new SqlCommand(
+                    "IF ((SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES " +
+                    "WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Migration') > 0) " +
                     "UPDATE [dbo].[Migration] " +
                     "SET [ScriptName] = REPLACE([ScriptName], 'Setup.DbScripts.', 'Bit.Setup.DbScripts.') " +
-                    "WHERE [ScriptName] LIKE 'Setup.DbScripts.%'",
+                    "WHERE [ScriptName] LIKE 'Setup.DbScripts.%';",
                     connection);
                 command.Connection.Open();
                 command.ExecuteNonQuery();
