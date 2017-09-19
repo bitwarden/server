@@ -111,7 +111,7 @@ namespace Bit.Api.Controllers
                 return true;
             }
 
-            return _currentContext.InstallationId.HasValue && _globalSettings.SelfHosted;
+            return _currentContext.InstallationId.HasValue && !_globalSettings.SelfHosted;
         }
     }
 }
