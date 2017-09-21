@@ -3,7 +3,7 @@
     public enum FieldType : byte
     {
         Text = 0,
-        Password = 1,
+        Hidden = 1,
         Boolean = 2
     }
 }

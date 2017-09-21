@@ -28,6 +28,12 @@ namespace Bit.Core.Models.Api
                 case Enums.CipherType.Login:
                     Data = new LoginDataModel(cipher);
                     break;
+                case Enums.CipherType.SecureNote:
+                    Data = new SecureNoteDataModel(cipher);
+                    break;
+                case Enums.CipherType.Card:
+                    Data = new CardDataModel(cipher);
+                    break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }

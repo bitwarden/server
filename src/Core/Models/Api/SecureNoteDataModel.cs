@@ -9,6 +9,15 @@ namespace Bit.Core.Models.Api
     {
         public SecureNoteDataModel() { }
 
+        public SecureNoteDataModel(CipherRequestModel cipher)
+        {
+            Name = cipher.Name;
+            Notes = cipher.Notes;
+            Fields = cipher.Fields;
+
+            Type = cipher.SecureNote.Type;
+        }
+
         public SecureNoteDataModel(Cipher cipher)
         {
             if(cipher.Type != CipherType.SecureNote)

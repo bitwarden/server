@@ -144,7 +144,7 @@ namespace Bit.Api.Controllers
             var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? (Guid?)null : new Guid(model.OrganizationId);
             if(cipher.OrganizationId != modelOrgId)
             {
-                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this login, " +
+                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this item, " +
                     "then try again.");
             }
 

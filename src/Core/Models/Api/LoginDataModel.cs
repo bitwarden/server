@@ -26,10 +26,20 @@ namespace Bit.Core.Models.Api
             Notes = cipher.Notes;
             Fields = cipher.Fields;
 
-            Uri = cipher.Uri;
-            Username = cipher.Username;
-            Password = cipher.Password;
-            Totp = cipher.Totp;
+            if(cipher.Login == null)
+            {
+                Uri = cipher.Uri;
+                Username = cipher.Username;
+                Password = cipher.Password;
+                Totp = cipher.Totp;
+            }
+            else
+            {
+                Uri = cipher.Login.Uri;
+                Username = cipher.Login.Username;
+                Password = cipher.Login.Password;
+                Totp = cipher.Login.Totp;
+            }
         }
 
         public LoginDataModel(Cipher cipher)

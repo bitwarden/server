@@ -24,21 +24,30 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [EncryptedString]
         [StringLength(10000)]
+        public string Notes { get; set; }
+        public IEnumerable<FieldDataModel> Fields { get; set; }
+        public Dictionary<string, string> Attachments { get; set; }
+
+        public LoginType Login { get; set; }
+        public CardType Card { get; set; }
+        public SecureNoteType SecureNote { get; set; }
+
+        [Obsolete("Use Login property")]
+        [EncryptedString]
+        [StringLength(10000)]
         public string Uri { get; set; }
+        [Obsolete("Use Login property")]
         [EncryptedString]
         [StringLength(1000)]
         public string Username { get; set; }
+        [Obsolete("Use Login property")]
         [EncryptedString]
         [StringLength(1000)]
         public string Password { get; set; }
-        [EncryptedString]
-        [StringLength(10000)]
-        public string Notes { get; set; }
+        [Obsolete("Use Login property")]
         [EncryptedString]
         [StringLength(1000)]
         public string Totp { get; set; }
-        public IEnumerable<FieldDataModel> Fields { get; set; }
-        public Dictionary<string, string> Attachments { get; set; }
 
         public CipherDetails ToCipherDetails(Guid userId)
         {
@@ -67,6 +76,14 @@ namespace Bit.Core.Models.Api
             {
                 case CipherType.Login:
                     existingCipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    break;
+                case CipherType.Card:
+                    existingCipher.Data = JsonConvert.SerializeObject(new CardDataModel(this),
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    break;
+                case CipherType.SecureNote:
+                    existingCipher.Data = JsonConvert.SerializeObject(new SecureNoteDataModel(this),
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 default:
@@ -115,6 +132,49 @@ namespace Bit.Core.Models.Api
                 Type = Type,
                 OrganizationId = new Guid(OrganizationId)
             });
+        }
+
+        public class LoginType
+        {
+            [EncryptedString]
+            [StringLength(10000)]
+            public string Uri { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Username { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Password { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Totp { get; set; }
+        }
+
+        public class CardType
+        {
+            [EncryptedString]
+            [StringLength(1000)]
+            public string CardholderName { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Brand { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Number { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string ExpMonth { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string ExpYear { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Code { get; set; }
+        }
+
+        public class SecureNoteType
+        {
+            public Enums.SecureNoteType Type { get; set; }
         }
     }
 
