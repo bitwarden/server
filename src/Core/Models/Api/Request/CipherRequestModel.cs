@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
@@ -13,11 +14,10 @@ namespace Bit.Core.Models.Api
     {
         public CipherType Type { get; set; }
 
-        [Required]
-        [StringLength(36)]
-        public string Id { get; set; }
         [StringLength(36)]
         public string OrganizationId { get; set; }
+        public string FolderId { get; set; }
+        public bool Favorite { get; set; }
         [Required]
         [EncryptedString]
         [StringLength(1000)]
@@ -40,7 +40,28 @@ namespace Bit.Core.Models.Api
         public IEnumerable<FieldDataModel> Fields { get; set; }
         public Dictionary<string, string> Attachments { get; set; }
 
-        public virtual Cipher ToCipher(Cipher existingCipher)
+        public CipherDetails ToCipherDetails(Guid userId)
+        {
+            var cipher = new CipherDetails
+            {
+                Type = Type,
+                UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
+                OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)null : new Guid(OrganizationId),
+                Edit = true
+            };
+            ToCipherDetails(cipher);
+            return cipher;
+        }
+
+        public CipherDetails ToCipherDetails(CipherDetails existingCipher)
+        {
+            existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
+            existingCipher.Favorite = Favorite;
+            ToCipher(existingCipher);
+            return existingCipher;
+        }
+
+        public Cipher ToCipher(Cipher existingCipher)
         {
             switch(existingCipher.Type)
             {
@@ -70,6 +91,46 @@ namespace Bit.Core.Models.Api
 
             existingCipher.SetAttachments(attachments);
             return existingCipher;
+        }
+
+        public CipherDetails ToOrganizationCipherDetails(Guid orgId)
+        {
+            return ToCipherDetails(new CipherDetails
+            {
+                Type = Type,
+                OrganizationId = orgId,
+                Edit = true
+            });
+        }
+
+        public Cipher ToOrganizationCipher()
+        {
+            if(string.IsNullOrWhiteSpace(OrganizationId))
+            {
+                throw new ArgumentNullException(nameof(OrganizationId));
+            }
+
+            return ToCipher(new Cipher
+            {
+                Type = Type,
+                OrganizationId = new Guid(OrganizationId)
+            });
+        }
+    }
+
+    public class CipherWithIdRequestModel : CipherRequestModel
+    {
+        [Required]
+        [StringLength(36)]
+        public string Id { get; set; }
+
+        public Cipher ToCipher(Guid userId)
+        {
+            return ToCipherDetails(new CipherDetails
+            {
+                UserId = userId,
+                Id = new Guid(Id)
+            });
         }
     }
 

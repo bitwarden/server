@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api
         [StringLength(300)]
         public string MasterPasswordHash { get; set; }
         [Required]
-        public IEnumerable<LoginWithIdRequestModel> Ciphers { get; set; }
+        public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
         [Required]
         public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
         [Required]

@@ -89,18 +89,4 @@ namespace Bit.Core.Models.Api
             return existingLogin;
         }
     }
-
-    public class LoginWithIdRequestModel : LoginRequestModel
-    {
-        public Guid Id { get; set; }
-
-        public Cipher ToCipher(Guid userId)
-        {
-            return ToCipherDetails(new CipherDetails
-            {
-                UserId = userId,
-                Id = Id
-            });
-        }
-    }
 }

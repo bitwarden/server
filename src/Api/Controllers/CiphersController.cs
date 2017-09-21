@@ -10,6 +10,8 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Utilities;
+using Core.Models.Data;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -53,6 +55,19 @@ namespace Bit.Api.Controllers
             return new CipherResponseModel(cipher, _globalSettings);
         }
 
+        [HttpGet("{id}/admin")]
+        public async Task<CipherResponseModel> GetAdmin(string id)
+        {
+            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            return new CipherResponseModel(cipher, _globalSettings);
+        }
+
         [HttpGet("{id}/full-details")]
         [HttpGet("{id}/details")]
         public async Task<CipherDetailsResponseModel> GetDetails(string id)
@@ -70,12 +85,93 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherResponseModel>> Get()
+        public async Task<ListResponseModel<CipherResponseModel>> Get([FromQuery]Core.Enums.CipherType? type = null)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+
+            IEnumerable<CipherDetails> ciphers;
+            if(type.HasValue)
+            {
+                ciphers = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login, userId);
+            }
+            else
+            {
+                ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+            }
+
             var responses = ciphers.Select(c => new CipherResponseModel(c, _globalSettings)).ToList();
             return new ListResponseModel<CipherResponseModel>(responses);
+        }
+
+        [HttpPost("")]
+        public async Task<CipherResponseModel> Post([FromBody]CipherRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = model.ToCipherDetails(userId);
+            await _cipherService.SaveDetailsAsync(cipher, userId);
+
+            var response = new CipherResponseModel(cipher, _globalSettings);
+            return response;
+        }
+
+        [HttpPost("admin")]
+        public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherRequestModel model)
+        {
+            var cipher = model.ToOrganizationCipher();
+            if(!_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SaveAsync(cipher, userId, true);
+
+            var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+            return response;
+        }
+
+        [HttpPut("{id}")]
+        [HttpPost("{id}")]
+        public async Task<CipherResponseModel> Put(string id, [FromBody]CipherRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? (Guid?)null : new Guid(model.OrganizationId);
+            if(cipher.OrganizationId != modelOrgId)
+            {
+                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this login, " +
+                    "then try again.");
+            }
+
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId);
+
+            var response = new CipherResponseModel(cipher, _globalSettings);
+            return response;
+        }
+
+        [HttpPut("{id}/admin")]
+        [HttpPost("{id}/admin")]
+        public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody]CipherRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            // object cannot be a descendant of CipherDetails, so let's clone it.
+            var cipherClone = CoreHelpers.CloneObject(model.ToCipher(cipher));
+            await _cipherService.SaveAsync(cipherClone, userId, true);
+
+            var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
+            return response;
         }
 
         [HttpGet("details")]

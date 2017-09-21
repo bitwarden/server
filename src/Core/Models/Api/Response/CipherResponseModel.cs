@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
 {
     public class CipherMiniResponseModel : ResponseModel
     {
-        public CipherMiniResponseModel(Cipher cipher, GlobalSettings globalSettings, string obj = "cipherMini")
+        public CipherMiniResponseModel(Cipher cipher, GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
             : base(obj)
         {
             if(cipher == null)
@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Api
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+            OrganizationUseTotp = orgUseTotp;
 
             switch(cipher.Type)
             {
@@ -37,24 +38,23 @@ namespace Bit.Core.Models.Api
         public Enums.CipherType Type { get; set; }
         public dynamic Data { get; set; }
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
+        public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 
     public class CipherResponseModel : CipherMiniResponseModel
     {
         public CipherResponseModel(CipherDetails cipher, GlobalSettings globalSettings, string obj = "cipher")
-            : base(cipher, globalSettings, obj)
+            : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
-            OrganizationUseTotp = cipher.OrganizationUseTotp;
         }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public bool Edit { get; set; }
-        public bool OrganizationUseTotp { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel
@@ -87,7 +87,7 @@ namespace Bit.Core.Models.Api
     {
         public CipherMiniDetailsResponseModel(Cipher cipher, GlobalSettings globalSettings,
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
-            : base(cipher, globalSettings, obj)
+            : base(cipher, globalSettings, false, obj)
         {
             if(collectionCiphers.ContainsKey(cipher.Id))
             {

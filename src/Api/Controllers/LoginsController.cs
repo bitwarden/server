@@ -11,6 +11,7 @@ using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
+    [Obsolete("Use ciphers API instead.")]
     [Route("logins")]
     // "sites" route is deprecated
     [Route("sites")]
@@ -51,20 +52,6 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpGet("{id}/admin")]
-        public async Task<LoginResponseModel> GetAdmin(string id)
-        {
-            var login = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
-            if(login == null || !login.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
-            {
-                throw new NotFoundException();
-            }
-
-            var response = new LoginResponseModel(login, _globalSettings, login.OrganizationUseTotp);
-            return response;
-        }
-
         [HttpGet("")]
         public async Task<ListResponseModel<LoginResponseModel>> Get(string[] expand = null)
         {
@@ -84,23 +71,7 @@ namespace Bit.Api.Controllers
             var response = new LoginResponseModel(login, _globalSettings);
             return response;
         }
-
-        [HttpPost("admin")]
-        public async Task<LoginResponseModel> PostAdmin([FromBody]LoginRequestModel model)
-        {
-            var login = model.ToOrganizationCipher();
-            if(!_currentContext.OrganizationAdmin(login.OrganizationId.Value))
-            {
-                throw new NotFoundException();
-            }
-
-            var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.SaveAsync(login, userId, true);
-
-            var response = new LoginResponseModel(login, _globalSettings, false);
-            return response;
-        }
-
+        
         [HttpPut("{id}")]
         [HttpPost("{id}")]
         public async Task<LoginResponseModel> Put(string id, [FromBody]LoginRequestModel model)
@@ -122,26 +93,6 @@ namespace Bit.Api.Controllers
             await _cipherService.SaveDetailsAsync(model.ToCipherDetails(login), userId);
 
             var response = new LoginResponseModel(login, _globalSettings);
-            return response;
-        }
-
-        [HttpPut("{id}/admin")]
-        [HttpPost("{id}/admin")]
-        public async Task<LoginResponseModel> PutAdmin(string id, [FromBody]LoginRequestModel model)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var login = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
-            if(login == null || !login.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(login.OrganizationId.Value))
-            {
-                throw new NotFoundException();
-            }
-
-            // object cannot be a descendant of CipherDetails, so let's clone it.
-            var cipher = Core.Utilities.CoreHelpers.CloneObject(model.ToCipher(login));
-            await _cipherService.SaveAsync(cipher, userId, true);
-
-            var response = new LoginResponseModel(cipher, _globalSettings, login.OrganizationUseTotp);
             return response;
         }
 
