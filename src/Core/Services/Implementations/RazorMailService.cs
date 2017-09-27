@@ -7,6 +7,7 @@ using Bit.Core.Models.Mail;
 using RazorLight.Templating;
 using System.IO;
 using System.Net;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -118,7 +119,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Your Master Password Hint", email);
             var model = new MasterPasswordHintViewModel
             {
-                Hint = hint,
+                Hint = CoreHelpers.SanitizeForEmail(hint),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -146,7 +147,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"User {userEmail} Has Accepted Invite", adminEmails);
             var model = new OrganizationUserAcceptedViewModel
             {
-                OrganizationName = organizationName,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
                 UserEmail = userEmail,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
@@ -161,7 +162,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
             var model = new OrganizationUserConfirmedViewModel
             {
-                OrganizationName = organizationName,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -175,7 +176,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"Join {organizationName}", orgUser.Email);
             var model = new OrganizationUserInvitedViewModel
             {
-                OrganizationName = organizationName,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
                 Email = WebUtility.UrlEncode(orgUser.Email),
                 OrganizationId = orgUser.OrganizationId.ToString(),
                 OrganizationUserId = orgUser.Id.ToString(),

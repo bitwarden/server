@@ -411,5 +411,12 @@ namespace Bit.Core.Utilities
             }
             return sb.ToString();
         }
+
+        public static string SanitizeForEmail(string value)
+        {
+            return value.Replace("@", "[at]")
+                .Replace("http://", string.Empty)
+                .Replace("https://", string.Empty);
+        }
     }
 }
