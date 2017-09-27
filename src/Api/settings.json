@@ -73,16 +73,6 @@
         "Limit": 5
       },
       {
-        "Endpoint": "post:/auth/token",
-        "Period": "1m",
-        "Limit": 10
-      },
-      {
-        "Endpoint": "post:/auth/token/two-factor",
-        "Period": "1m",
-        "Limit": 5
-      },
-      {
         "Endpoint": "post:/accounts/register",
         "Period": "1m",
         "Limit": 2
@@ -99,7 +89,17 @@
       },
       {
         "Endpoint": "post:/account/email",
+        "Period": "10m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "post:/account/verify-email-token",
         "Period": "1m",
+        "Limit": 2
+      },
+      {
+        "Endpoint": "post:/account/verify-email",
+        "Period": "10m",
         "Limit": 5
       },
       {
