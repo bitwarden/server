@@ -88,9 +88,8 @@ namespace Bit.Api.Controllers
             await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
         }
 
-        [HttpPut("email")]
         [HttpPost("email")]
-        public async Task PutEmail([FromBody]EmailRequestModel model)
+        public async Task PostEmail([FromBody]EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -150,9 +149,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPut("password")]
         [HttpPost("password")]
-        public async Task PutPassword([FromBody]PasswordRequestModel model)
+        public async Task PostPassword([FromBody]PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -176,9 +174,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPut("key")]
         [HttpPost("key")]
-        public async Task PutKey([FromBody]UpdateKeyRequestModel model)
+        public async Task PostKey([FromBody]UpdateKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -214,9 +211,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPut("security-stamp")]
         [HttpPost("security-stamp")]
-        public async Task PutSecurityStamp([FromBody]SecurityStampRequestModel model)
+        public async Task PostSecurityStamp([FromBody]SecurityStampRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -293,9 +289,8 @@ namespace Bit.Api.Controllers
             return revisionDate;
         }
 
-        [HttpPut("keys")]
         [HttpPost("keys")]
-        public async Task<KeysResponseModel> PutKeys([FromBody]KeysRequestModel model)
+        public async Task<KeysResponseModel> PostKeys([FromBody]KeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -431,10 +426,9 @@ namespace Bit.Api.Controllers
             }
         }
 
-        [HttpPut("payment")]
         [HttpPost("payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutPayment([FromBody]PaymentRequestModel model)
+        public async Task PostPayment([FromBody]PaymentRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -445,10 +439,9 @@ namespace Bit.Api.Controllers
             await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken);
         }
 
-        [HttpPut("storage")]
         [HttpPost("storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutStorage([FromBody]StorageRequestModel model)
+        public async Task PostStorage([FromBody]StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -459,10 +452,9 @@ namespace Bit.Api.Controllers
             await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
         }
 
-        [HttpPut("license")]
         [HttpPost("license")]
         [SelfHosted(SelfHostedOnly = true)]
-        public async Task PutLicense(LicenseRequestModel model)
+        public async Task PostLicense(LicenseRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -479,10 +471,9 @@ namespace Bit.Api.Controllers
             await _userService.UpdateLicenseAsync(user, license);
         }
 
-        [HttpPut("cancel-premium")]
         [HttpPost("cancel-premium")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutCancel()
+        public async Task PostCancel()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -493,10 +484,9 @@ namespace Bit.Api.Controllers
             await _userService.CancelPremiumAsync(user, true);
         }
 
-        [HttpPut("reinstate-premium")]
         [HttpPost("reinstate-premium")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutReinstate()
+        public async Task PostReinstate()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)

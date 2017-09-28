@@ -79,8 +79,8 @@
       },
       {
         "Endpoint": "post:/account/password-hint",
-        "Period": "1m",
-        "Limit": 2
+        "Period": "60m",
+        "Limit": 5
       },
       {
         "Endpoint": "post:/account/email-token",
@@ -89,7 +89,7 @@
       },
       {
         "Endpoint": "post:/account/email",
-        "Period": "10m",
+        "Period": "60m",
         "Limit": 5
       },
       {
@@ -99,12 +99,17 @@
       },
       {
         "Endpoint": "post:/account/verify-email",
-        "Period": "10m",
+        "Period": "60m",
         "Limit": 5
       },
       {
-        "Endpoint": "put:/account/email",
+        "Endpoint": "post:/account/delete-recover-token",
         "Period": "1m",
+        "Limit": 2
+      },
+      {
+        "Endpoint": "post:/account/delete-recover",
+        "Period": "60m",
         "Limit": 5
       },
       {
