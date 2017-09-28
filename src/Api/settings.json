@@ -78,37 +78,37 @@
         "Limit": 2
       },
       {
-        "Endpoint": "post:/account/password-hint",
+        "Endpoint": "post:/accounts/password-hint",
         "Period": "60m",
         "Limit": 5
       },
       {
-        "Endpoint": "post:/account/email-token",
+        "Endpoint": "post:/accounts/email-token",
         "Period": "1m",
         "Limit": 2
       },
       {
-        "Endpoint": "post:/account/email",
+        "Endpoint": "post:/accounts/email",
         "Period": "60m",
         "Limit": 5
       },
       {
-        "Endpoint": "post:/account/verify-email-token",
+        "Endpoint": "post:/accounts/verify-email-token",
         "Period": "1m",
         "Limit": 2
       },
       {
-        "Endpoint": "post:/account/verify-email",
+        "Endpoint": "post:/accounts/verify-email",
         "Period": "60m",
         "Limit": 5
       },
       {
-        "Endpoint": "post:/account/delete-recover-token",
+        "Endpoint": "post:/accounts/delete-recover-token",
         "Period": "1m",
         "Limit": 2
       },
       {
-        "Endpoint": "post:/account/delete-recover",
+        "Endpoint": "post:/accounts/delete-recover",
         "Period": "60m",
         "Limit": 5
       },
