@@ -809,6 +809,15 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
+            if(type == OrganizationUserType.Owner)
+            {
+                var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId);
+                if(!invitingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
+                {
+                    throw new BadRequestException("Only owners can invite new owners.");
+                }
+            }
+
             if(organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
@@ -995,12 +1004,20 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
+            if(user.Type == OrganizationUserType.Owner)
+            {
+                var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId);
+                if(!savingUserOrgs.Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner))
+                {
+                    throw new BadRequestException("Only owners can update other owners.");
+                }
+            }
+
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
             if(user.Type != OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
-
 
             if(user.AccessAll)
             {
@@ -1021,6 +1038,15 @@ namespace Bit.Core.Services
             if(orgUser.UserId == deletingUserId)
             {
                 throw new BadRequestException("You cannot remove yourself.");
+            }
+
+            if(orgUser.Type == OrganizationUserType.Owner)
+            {
+                var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId);
+                if(!deletingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
+                {
+                    throw new BadRequestException("Only owners can delete other owners.");
+                }
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();

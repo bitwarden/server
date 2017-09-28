@@ -174,6 +174,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            if(organizationUser.Type == Core.Enums.OrganizationUserType.Owner && !_currentContext.OrganizationOwner(orgGuidId))
+            {
+                throw new BadRequestException("Only owners can update other owners.");
+            }
+
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, model.GroupIds.Select(g => new Guid(g)));
         }
 
