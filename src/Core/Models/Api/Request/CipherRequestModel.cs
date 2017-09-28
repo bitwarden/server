@@ -124,6 +124,16 @@ namespace Bit.Core.Models.Api
             });
         }
 
+        public CipherDetails ToOrganizationCipherDetails(Guid orgId)
+        {
+            return ToCipherDetails(new CipherDetails
+            {
+                Type = Type,
+                OrganizationId = orgId,
+                Edit = true
+            });
+        }
+
         public class LoginType
         {
             [EncryptedString]

@@ -212,7 +212,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-            var ciphers = model.Logins.Select(l => l.ToCipherDetails(userId)).ToList();
+            var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId)).ToList();
             await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
         }
 
@@ -227,7 +227,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User).Value;
             var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
-            var ciphers = model.Logins.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
+            var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
             await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
         }
 
