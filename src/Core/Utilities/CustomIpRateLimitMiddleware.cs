@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 
-namespace Bit.Api.Middleware
+namespace Bit.Core.Utilities
 {
     public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
     {

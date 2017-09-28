@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Utilities;
 using Serilog.Events;
+using AspNetCoreRateLimit;
 
 namespace Bit.Identity
 {
@@ -30,6 +31,11 @@ namespace Bit.Identity
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            if(!globalSettings.SelfHosted)
+            {
+                services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
+                services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+            }
 
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);
@@ -39,6 +45,16 @@ namespace Bit.Identity
 
             // Context
             services.AddScoped<CurrentContext>();
+
+            // Caching
+            services.AddMemoryCache();
+
+            if(!globalSettings.SelfHosted)
+            {
+                // Rate limiting
+                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            }
 
             // IdentityServer
             services.AddCustomIdentityServerServices(Environment, globalSettings);
@@ -67,6 +83,11 @@ namespace Bit.Identity
                         return e.Level > LogEventLevel.Error;
                     }
 
+                    if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
+                    {
+                        return true;
+                    }
+
                     return e.Level >= LogEventLevel.Error;
                 })
                 .AddConsole()
@@ -74,6 +95,12 @@ namespace Bit.Identity
 
             // Default Middleware
             app.UseDefaultMiddleware(env);
+
+            if(!globalSettings.SelfHosted)
+            {
+                // Rate limiting
+                app.UseMiddleware<CustomIpRateLimitMiddleware>();
+            }
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();

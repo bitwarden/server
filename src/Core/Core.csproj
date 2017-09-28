@@ -49,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCoreRateLimit" Version="1.0.5" />
     <PackageReference Include="Braintree" Version="3.8.0" />
     <PackageReference Include="CommonMark.NET" Version="0.15.1" />
     <PackageReference Include="Dapper" Version="1.50.4-alpha1-00070" />

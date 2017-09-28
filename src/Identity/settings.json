@@ -47,5 +47,35 @@
       "publicKey": "SECRET",
       "privateKey": "SECRET"
     }
+  },
+  "IpRateLimitOptions": {
+    "EnableEndpointRateLimiting": true,
+    "StackBlockedRequests": false,
+    "RealIpHeader": "CF-Connecting-IP",
+    "ClientIdHeader": "X-ClientId",
+    "HttpStatusCode": 429,
+    "IpWhitelist": [],
+    "EndpointWhitelist": [],
+    "ClientWhitelist": [],
+    "GeneralRules": [
+      {
+        "Endpoint": "*",
+        "Period": "1m",
+        "Limit": 60
+      },
+      {
+        "Endpoint": "*",
+        "Period": "1s",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "post:/connect/token",
+        "Period": "1m",
+        "Limit": 10
+      }
+    ]
+  },
+  "IpRateLimitPolicies": {
+    "IpRules": []
   }
 }
