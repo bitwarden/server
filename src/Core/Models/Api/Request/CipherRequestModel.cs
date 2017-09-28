@@ -110,16 +110,6 @@ namespace Bit.Core.Models.Api
             return existingCipher;
         }
 
-        public CipherDetails ToOrganizationCipherDetails(Guid orgId)
-        {
-            return ToCipherDetails(new CipherDetails
-            {
-                Type = Type,
-                OrganizationId = orgId,
-                Edit = true
-            });
-        }
-
         public Cipher ToOrganizationCipher()
         {
             if(string.IsNullOrWhiteSpace(OrganizationId))
@@ -186,11 +176,9 @@ namespace Bit.Core.Models.Api
 
         public Cipher ToCipher(Guid userId)
         {
-            return ToCipherDetails(new CipherDetails
-            {
-                UserId = userId,
-                Id = new Guid(Id)
-            });
+            var cipher = ToCipherDetails(userId);
+            cipher.Id = new Guid(Id);
+            return cipher;
         }
     }
 
