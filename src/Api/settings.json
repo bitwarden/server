@@ -113,6 +113,26 @@
         "Limit": 5
       },
       {
+        "Endpoint": "post:/two-factor/send-email",
+        "Period": "10m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "post:/two-factor/send-email-login",
+        "Period": "10m",
+        "Limit": 10
+      },
+      {
+        "Endpoint": "post:/two-factor/authenticator",
+        "Period": "1m",
+        "Limit": 3
+      },
+      {
+        "Endpoint": "post:/two-factor/email",
+        "Period": "1m",
+        "Limit": 3
+      },
+      {
         "Endpoint": "get:/alive",
         "Period": "1m",
         "Limit": 5
