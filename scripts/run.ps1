@@ -18,15 +18,15 @@ if($dockerDir -eq "") {
 # Functions
 
 function Docker-Compose-Up {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml up -d
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml up -d
 }
 
 function Docker-Compose-Down {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml down
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml down
 }
 
 function Docker-Compose-Pull {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.macwin.yml pull
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml pull
 }
 
 function Docker-Prune {

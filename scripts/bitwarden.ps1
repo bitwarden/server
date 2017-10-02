@@ -69,7 +69,7 @@ function Download-Run-File {
 
 function Download-Docker-Files {
     Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
-    Invoke-RestMethod -OutFile $dockerDir\docker-compose.macwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.macwin.yml"
+    Invoke-RestMethod -OutFile $dockerDir\docker-compose.linwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.linwin.yml"
     Invoke-RestMethod -OutFile $dockerDir\global.env -Uri "${githubBaseUrl}/docker/global.env"
     Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
 }

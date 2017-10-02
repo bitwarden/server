@@ -17,10 +17,10 @@ then
     DOCKER_DIR=$3
 fi
 
-OS="linux"
+OS="linwin"
 if [ "$(uname)" == "Darwin" ]
 then
-    OS="macwin"
+    OS="mac"
 fi
 
 # Functions

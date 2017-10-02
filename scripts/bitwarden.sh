@@ -35,10 +35,10 @@ then
     OUTPUT=$2
 fi
 
-OS="linux"
+OS="linwin"
 if [ "$(uname)" == "Darwin" ]
 then
-    OS="macwin"
+    OS="mac"
 fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
