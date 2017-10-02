@@ -35,7 +35,6 @@ then
     TAG=$2
     
     echo "Tagging bitwarden as '$TAG'"
-    echo "==========================="
     
     docker tag bitwarden/api bitwarden/api:$TAG
     docker tag bitwarden/identity bitwarden/identity:$TAG
