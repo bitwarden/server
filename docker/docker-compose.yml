@@ -2,34 +2,32 @@ version: '3'
 
 services:
   mssql:
-    image: bitwarden/mssql
+    image: bitwarden/mssql:beta
     container_name: mssql
     restart: always
-    ports:
-      - '1433:1433'
       
   web:
-    image: bitwarden/web
+    image: bitwarden/web:beta
     container_name: web
     restart: always
     
   attachments:
-    image: bitwarden/attachments
+    image: bitwarden/attachments:beta
     container_name: attachments
     restart: always
 
   api:
-    image: bitwarden/api
+    image: bitwarden/api:beta
     container_name: api
     restart: always
 
   identity:
-    image: bitwarden/identity
+    image: bitwarden/identity:beta
     container_name: identity
     restart: always
 
   nginx:
-    image: bitwarden/nginx
+    image: bitwarden/nginx:beta
     container_name: nginx
     restart: always
     ports:
