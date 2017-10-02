@@ -8,19 +8,11 @@ echo ""
 if [ $# -gt 0 -a "$1" == "push" ]
 then
     echo "Pushing bitwarden"
-    echo "=================="
+    echo "================="
     
     if [ $# -gt 1 ]
     then
         TAG=$2
-        
-        docker tag api bitwarden/api:$TAG
-        docker tag identity bitwarden/identity:$TAG
-        docker tag server bitwarden/server:$TAG
-        docker tag attachments bitwarden/attachments:$TAG
-        docker tag nginx bitwarden/nginx:$TAG
-        docker tag mssql bitwarden/mssql:$TAG
-        docker tag setup bitwarden/setup:$TAG
         
         docker push bitwarden/api:$TAG
         docker push bitwarden/identity:$TAG
@@ -38,6 +30,20 @@ then
         docker push bitwarden/mssql
         docker push bitwarden/setup
     fi
+elif [ $# -gt 1 -a "$1" == "tag" ]
+then
+    TAG=$2
+    
+    echo "Tagging bitwarden as '$TAG'"
+    echo "==========================="
+    
+    docker tag bitwarden/api bitwarden/api:$TAG
+    docker tag bitwarden/identity bitwarden/identity:$TAG
+    docker tag bitwarden/server bitwarden/server:$TAG
+    docker tag bitwarden/attachments bitwarden/attachments:$TAG
+    docker tag bitwarden/nginx bitwarden/nginx:$TAG
+    docker tag bitwarden/mssql bitwarden/mssql:$TAG
+    docker tag bitwarden/setup bitwarden/setup:$TAG
 else
     echo "Building bitwarden"
     echo "=================="
