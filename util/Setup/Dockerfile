@@ -2,7 +2,6 @@ FROM microsoft/dotnet:2.0.0-runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-# Dependencies
         openssl \
 && rm -rf /var/lib/apt/lists/*
 
