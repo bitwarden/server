@@ -23,6 +23,9 @@ Desktop
 ## Opera Extension
 <https://addons.opera.com/extensions/details/bitwarden-free-password-manager/?utm_source=welcome_email&utm_medium=email>
 
+## Edge Extension
+<https://www.microsoft.com/store/p/bitwarden-free-password-manager/9p6kxl0svnnl>
+
 Web
 ============
 
