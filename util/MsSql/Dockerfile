@@ -1,4 +1,4 @@
-FROM microsoft/mssql-server-linux:2017-latest
+FROM microsoft/mssql-server-linux:2017-GA
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
