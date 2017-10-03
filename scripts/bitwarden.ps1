@@ -37,7 +37,7 @@ echo ""
 $scriptPath = $MyInvocation.MyCommand.Path
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if($output -eq "") {
-    $output="${dir}\bitwarden"
+    $output="${dir}\bwdata"
 }
 
 $scriptsDir = "${output}\scripts"
