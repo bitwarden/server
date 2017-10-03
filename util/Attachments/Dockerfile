@@ -1,4 +1,4 @@
-FROM bitwarden/server:beta
+FROM bitwarden/server
 
 EXPOSE 80
 
