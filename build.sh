@@ -5,31 +5,20 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo ""
 
-if [ $# -gt 0 -a "$1" == "push" ]
+if [ $# -gt 1 -a "$1" == "push" ]
 then
-    echo "Pushing bitwarden"
-    echo "================="
+    TAG=$2
+
+    echo "Pushing bitwarden ($TAG)"
+    echo "========================"
     
-    if [ $# -gt 1 ]
-    then
-        TAG=$2
-        
-        docker push bitwarden/api:$TAG
-        docker push bitwarden/identity:$TAG
-        docker push bitwarden/server:$TAG
-        docker push bitwarden/attachments:$TAG
-        docker push bitwarden/nginx:$TAG
-        docker push bitwarden/mssql:$TAG
-        docker push bitwarden/setup:$TAG
-    else
-        docker push bitwarden/api
-        docker push bitwarden/identity
-        docker push bitwarden/server
-        docker push bitwarden/attachments
-        docker push bitwarden/nginx
-        docker push bitwarden/mssql
-        docker push bitwarden/setup
-    fi
+    docker push bitwarden/api:$TAG
+    docker push bitwarden/identity:$TAG
+    docker push bitwarden/server:$TAG
+    docker push bitwarden/attachments:$TAG
+    docker push bitwarden/nginx:$TAG
+    docker push bitwarden/mssql:$TAG
+    docker push bitwarden/setup:$TAG
 elif [ $# -gt 1 -a "$1" == "tag" ]
 then
     TAG=$2
