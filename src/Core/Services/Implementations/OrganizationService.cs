@@ -554,8 +554,8 @@ namespace Bit.Core.Services
                     "hosting of organizations and that the installation id matches your current installation.");
             }
 
-            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled);
-            if(plan == null)
+            if(license.PlanType != PlanType.Custom && 
+                StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
             {
                 throw new BadRequestException("Plan not found.");
             }
@@ -589,6 +589,15 @@ namespace Bit.Core.Services
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
             File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+
+            // self-hosted org users get premium access
+            if(!owner.Premium && result.Item1.Enabled)
+            {
+                owner.Premium = true;
+                owner.MaxStorageGb = 10240; // 10 TB
+                owner.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(owner);
+            }
 
             return result;
         }
