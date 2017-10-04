@@ -2,6 +2,8 @@ param (
     [string]$outputDir = "../."
 )
 
+[string]$tag = "1.12.0"
+
 if(!(Test-Path -Path $outputDir )){
     New-Item -ItemType directory -Path $outputDir | Out-Null
 }
@@ -26,8 +28,8 @@ if($domain -ne "localhost") {
     }
 }
 
-docker pull bitwarden/setup
-docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup `
+docker pull bitwarden/setup:$tag
+docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
     dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt}
 
 echo "Setup complete"

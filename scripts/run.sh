@@ -23,6 +23,8 @@ then
     OS="mac"
 fi
 
+TAG="1.12.0"
+
 # Functions
 
 function dockerComposeUp() {
@@ -51,15 +53,15 @@ function updateLetsEncrypt() {
 }
 
 function updateDatabase() {
-    docker pull bitwarden/setup
-    docker run -it --rm --name setup --network container:mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup \
+    docker pull bitwarden/setup:$TAG
+    docker run -it --rm --name setup --network container:mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
         dotnet Setup.dll -update 1 -db 1
     echo "Database update complete"
 }
 
 function printEnvironment() {
-    docker pull bitwarden/setup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup \
+    docker pull bitwarden/setup:$TAG
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
         dotnet Setup.dll -printenv 1 -env $OS
 }
 

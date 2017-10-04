@@ -6,6 +6,9 @@ if [ $# -eq 1 ]
 then
     OUTPUT_DIR=$1
 fi
+
+TAG="1.12.0"
+
 mkdir -p $OUTPUT_DIR
 
 LETS_ENCRYPT="n"
@@ -26,8 +29,8 @@ then
     fi
 fi
 
-docker pull bitwarden/setup
-docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup \
+docker pull bitwarden/setup:$TAG
+docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
     dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT
 
 echo ""

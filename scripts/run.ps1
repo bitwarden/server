@@ -10,6 +10,8 @@ param (
 
 # Setup
 
+[string]$tag = "1.12.0"
+
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if($dockerDir -eq "") {
     $dockerDir="${dir}\..\docker"
@@ -42,15 +44,15 @@ function Update-Lets-Encrypt {
 }
 
 function Update-Database {
-    docker pull bitwarden/setup
-    docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup `
+    docker pull bitwarden/setup:$tag
+    docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
         dotnet Setup.dll -update 1 -db 1
     echo "Database update complete"
 }
 
 function Print-Environment {
-    docker pull bitwarden/setup
-    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup `
+    docker pull bitwarden/setup:$tag
+    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
         dotnet Setup.dll -printenv 1 -env win
 }
 
