@@ -71,9 +71,7 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host) &&
-                CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Username) &&
-                CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Password))
+            else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
             {
                 services.AddSingleton<IMailDeliveryService, SmtpMailDeliveryService>();
             }

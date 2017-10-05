@@ -403,6 +403,7 @@ globalSettings__mail__smtp__username=REPLACE
 globalSettings__mail__smtp__password=REPLACE
 globalSettings__mail__smtp__ssl=true
 globalSettings__mail__smtp__port=587
+globalSettings__mail__smtp__useDefaultCredentials=false
 globalSettings__disableUserRegistration=false");
 
                 if(!_push)

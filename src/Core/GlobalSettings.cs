@@ -92,6 +92,7 @@ namespace Bit.Core
                 public bool Ssl { get; set; } = false;
                 public string Username { get; set; }
                 public string Password { get; set; }
+                public bool UseDefaultCredentials { get; set; } = false;
             }
         }
 

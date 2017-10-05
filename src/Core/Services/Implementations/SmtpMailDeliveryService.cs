@@ -23,11 +23,16 @@ namespace Bit.Core.Services
         public Task SendEmailAsync(Models.Mail.MailMessage message)
         {
             var client = new SmtpClient(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port);
-            client.UseDefaultCredentials = false;
             client.EnableSsl = _globalSettings.Mail.Smtp.Ssl;
+            client.UseDefaultCredentials = _globalSettings.Mail.Smtp.UseDefaultCredentials;
             client.DeliveryMethod = SmtpDeliveryMethod.Network;
-            client.Credentials = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
-                _globalSettings.Mail.Smtp.Password);
+
+            if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Username) &&
+                !string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Password))
+            {
+                client.Credentials = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
+                    _globalSettings.Mail.Smtp.Password);
+            }
 
             var smtpMessage = new MailMessage();
             smtpMessage.From = new MailAddress(_globalSettings.Mail.ReplyToEmail, _globalSettings.SiteName);
