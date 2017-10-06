@@ -65,7 +65,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.3" />
-    <PackageReference Include="RazorLight" Version="1.1.0" />
+    <PackageReference Include="RazorLight" Version="2.0.0-alpha3" />
     <PackageReference Include="Sendgrid" Version="9.9.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />

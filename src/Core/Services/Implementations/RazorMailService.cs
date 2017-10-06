@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using RazorLight;
 using Bit.Core.Models.Mail;
-using RazorLight.Templating;
 using System.IO;
 using System.Net;
 using Bit.Core.Utilities;
+using RazorLight.Razor;
+using System.Linq;
+using System.Reflection;
 
 namespace Bit.Core.Services
 {
@@ -24,11 +26,9 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _mailDeliveryService = mailDeliveryService;
 
-            var manager = new CustomEmbeddedResourceTemplateManager("Bit.Core.MailTemplates.Razor");
-            var core = new EngineCore(manager, EngineConfiguration.Default);
-            var pageFactory = new DefaultPageFactory(core.KeyCompile);
-            var lookup = new DefaultPageLookup(pageFactory);
-            _engine = new RazorLightEngine(core, lookup);
+
+            var factory = new EngineFactory();
+            _engine = factory.Create(new CustomEmbeddedRazorProject());
         }
 
         public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -41,8 +41,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("VerifyEmail", model);
-            message.TextContent = _engine.Parse("VerifyEmail.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("VerifyEmail", model);
+            message.TextContent = await _engine.CompileRenderAsync("VerifyEmail.text", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);
@@ -60,8 +60,8 @@ namespace Bit.Core.Services
                 Email = email,
                 EmailEncoded = WebUtility.UrlEncode(email)
             };
-            message.HtmlContent = _engine.Parse("VerifyDelete", model);
-            message.TextContent = _engine.Parse("VerifyDelete.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("VerifyDelete", model);
+            message.TextContent = await _engine.CompileRenderAsync("VerifyDelete.text", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);
@@ -77,8 +77,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("ChangeEmailAlreadyExists", model);
-            message.TextContent = _engine.Parse("ChangeEmailAlreadyExists.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("ChangeEmailAlreadyExists", model);
+            message.TextContent = await _engine.CompileRenderAsync("ChangeEmailAlreadyExists.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -91,8 +91,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("ChangeEmail", model);
-            message.TextContent = _engine.Parse("ChangeEmail.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("ChangeEmail", model);
+            message.TextContent = await _engine.CompileRenderAsync("ChangeEmail.text", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);
@@ -107,8 +107,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("TwoFactorEmail", model);
-            message.TextContent = _engine.Parse("TwoFactorEmail.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("TwoFactorEmail", model);
+            message.TextContent = await _engine.CompileRenderAsync("TwoFactorEmail.text", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
 
             await _mailDeliveryService.SendEmailAsync(message);
@@ -123,8 +123,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("MasterPasswordHint", model);
-            message.TextContent = _engine.Parse("MasterPasswordHint.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("MasterPasswordHint", model);
+            message.TextContent = await _engine.CompileRenderAsync("MasterPasswordHint.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -136,8 +136,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("NoMasterPasswordHint", model);
-            message.TextContent = _engine.Parse("NoMasterPasswordHint.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("NoMasterPasswordHint", model);
+            message.TextContent = await _engine.CompileRenderAsync("NoMasterPasswordHint.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -152,8 +152,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("OrganizationUserAccepted", model);
-            message.TextContent = _engine.Parse("OrganizationUserAccepted.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("OrganizationUserAccepted", model);
+            message.TextContent = await _engine.CompileRenderAsync("OrganizationUserAccepted.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -166,8 +166,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("OrganizationUserConfirmed", model);
-            message.TextContent = _engine.Parse("OrganizationUserConfirmed.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("OrganizationUserConfirmed", model);
+            message.TextContent = await _engine.CompileRenderAsync("OrganizationUserConfirmed.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -185,8 +185,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("OrganizationUserInvited", model);
-            message.TextContent = _engine.Parse("OrganizationUserInvited.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("OrganizationUserInvited", model);
+            message.TextContent = await _engine.CompileRenderAsync("OrganizationUserInvited.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -198,8 +198,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            message.HtmlContent = _engine.Parse("Welcome", model);
-            message.TextContent = _engine.Parse("Welcome.text", model);
+            message.HtmlContent = await _engine.CompileRenderAsync("Welcome", model);
+            message.TextContent = await _engine.CompileRenderAsync("Welcome.text", model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -218,29 +218,55 @@ namespace Bit.Core.Services
             };
         }
 
-        public class CustomEmbeddedResourceTemplateManager : ITemplateManager
+        public class CustomEmbeddedRazorProject : RazorLightProject
         {
-            public CustomEmbeddedResourceTemplateManager(string rootNamespace)
+            public override Task<RazorLightProjectItem> GetItemAsync(string templateKey)
             {
-                Namespace = rootNamespace ?? throw new ArgumentNullException(nameof(rootNamespace));
+                if(string.IsNullOrEmpty(templateKey))
+                {
+                    throw new ArgumentNullException(nameof(templateKey));
+                }
+
+                var item = new CustomEmbeddedRazorProjectItem(templateKey);
+                return Task.FromResult(item as RazorLightProjectItem);
             }
 
-            public string Namespace { get; }
-
-            public ITemplateSource Resolve(string key)
+            public override Task<IEnumerable<RazorLightProjectItem>> GetImportsAsync(string templateKey)
             {
-                var assembly = GetType().Assembly;
-                using(var stream = assembly.GetManifestResourceStream(Namespace + "." + key + ".cshtml"))
+                return Task.FromResult(Enumerable.Empty<RazorLightProjectItem>());
+            }
+        }
+
+        public class CustomEmbeddedRazorProjectItem : RazorLightProjectItem
+        {
+            private readonly string _fullTemplateKey;
+            private readonly Assembly _assembly;
+
+            public CustomEmbeddedRazorProjectItem(string key)
+            {
+                if(string.IsNullOrEmpty(key))
+                {
+                    throw new ArgumentNullException(nameof(key));
+                }
+
+                Key = key;
+                _assembly = GetType().Assembly;
+                _fullTemplateKey = $"Bit.Core.MailTemplates.Razor.{key}.cshtml";
+            }
+
+            public override string Key { get; set; }
+            public override bool Exists => true;
+
+            public override Stream Read()
+            {
+                using(var stream = _assembly.GetManifestResourceStream(_fullTemplateKey))
                 {
                     if(stream == null)
                     {
-                        throw new RazorLightException(string.Format("Couldn't load resource '{0}.{1}.cshtml'.", Namespace, key));
+                        throw new RazorLightException($"Couldn't load resource '{_fullTemplateKey}'.");
                     }
 
-                    using(var reader = new StreamReader(stream))
-                    {
-                        return new LoadedTemplateSource(reader.ReadToEnd());
-                    }
+                    return stream;
                 }
             }
         }
