@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 
 namespace Bit.Billing
@@ -7,14 +7,11 @@ namespace Bit.Billing
     {
         public static void Main(string[] args)
         {
-            var host = new WebHostBuilder()
-                .UseKestrel()
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseIISIntegration()
+            WebHost
+                .CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .Build();
-
-            host.Run();
+                .Build()
+                .Run();
         }
     }
 }
