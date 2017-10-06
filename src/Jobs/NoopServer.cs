@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace Bit.Jobs
@@ -10,7 +12,14 @@ namespace Bit.Jobs
         public void Dispose()
         { }
 
-        public void Start<TContext>(IHttpApplication<TContext> application)
-        { }
+        public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

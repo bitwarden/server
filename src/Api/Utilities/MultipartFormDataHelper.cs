@@ -5,6 +5,7 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 
 namespace Bit.Api.Utilities
 {
@@ -30,7 +31,7 @@ namespace Bit.Api.Utilities
                 if(ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var content) &&
                     HasFileContentDisposition(content))
                 {
-                    var fileName = HeaderUtilities.RemoveQuotes(content.FileName) ?? string.Empty;
+                    var fileName = HeaderUtilities.RemoveQuotes(content.FileName).ToString();
                     using(section.Body)
                     {
                         await callback(section.Body, fileName);
@@ -52,7 +53,7 @@ namespace Bit.Api.Utilities
         private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
         {
             var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary);
-            if(string.IsNullOrWhiteSpace(boundary))
+            if(StringSegment.IsNullOrEmpty(boundary))
             {
                 throw new InvalidDataException("Missing content-type boundary.");
             }
@@ -62,14 +63,14 @@ namespace Bit.Api.Utilities
                 throw new InvalidDataException($"Multipart boundary length limit {lengthLimit} exceeded.");
             }
 
-            return boundary;
+            return boundary.ToString();
         }
 
         private static bool HasFileContentDisposition(ContentDispositionHeaderValue content)
         {
             // Content-Disposition: form-data; name="myfile1"; filename="Misc 002.jpg"
             return content != null && content.DispositionType.Equals("form-data") &&
-                (!string.IsNullOrEmpty(content.FileName) || !string.IsNullOrEmpty(content.FileNameStar));
+                (!StringSegment.IsNullOrEmpty(content.FileName) || !StringSegment.IsNullOrEmpty(content.FileNameStar));
         }
     }
 }

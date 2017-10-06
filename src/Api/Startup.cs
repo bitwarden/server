@@ -19,6 +19,7 @@ using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
+using IdentityServer4.AccessTokenValidation;
 
 namespace Bit.Api
 {
@@ -75,18 +76,27 @@ namespace Bit.Api
             // Identity
             services.AddCustomIdentityServices(globalSettings);
 
+            services
+                .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                .AddIdentityServerAuthentication(options =>
+                {
+                    options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
+                    options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
+                        globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
+                    options.NameClaimType = ClaimTypes.Email;
+                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer", "access_token");
+                });
+
             services.AddAuthorization(config =>
             {
                 config.AddPolicy("Application", policy =>
                 {
-                    policy.AddAuthenticationSchemes("Bearer", "Bearer3");
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
                     policy.RequireClaim(JwtClaimTypes.Scope, "api");
                 });
                 config.AddPolicy("Web", policy =>
                 {
-                    policy.AddAuthenticationSchemes("Bearer", "Bearer3");
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
                     policy.RequireClaim(JwtClaimTypes.Scope, "api");
@@ -178,32 +188,11 @@ namespace Bit.Api
             // Add Cors
             app.UseCors("All");
 
-            // Add IdentityServer to the request pipeline.
-            app.UseIdentityServerAuthentication(GetIdentityOptions(env, globalSettings, string.Empty));
-            app.UseIdentityServerAuthentication(GetIdentityOptions(env, globalSettings, "3"));
-
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add MVC to the request pipeline.
             app.UseMvc();
-        }
-
-        private IdentityServerAuthenticationOptions GetIdentityOptions(IHostingEnvironment env,
-            GlobalSettings globalSettings, string suffix)
-        {
-            var options = new IdentityServerAuthenticationOptions
-            {
-                Authority = globalSettings.BaseServiceUri.InternalIdentity,
-                AllowedScopes = new string[] { "api", "api.push", "api.licensing" },
-                RequireHttpsMetadata = !env.IsDevelopment() && globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https"),
-                NameClaimType = ClaimTypes.Email,
-                // Suffix until we retire the old jwt schemes.
-                AuthenticationScheme = $"Bearer{suffix}",
-                TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString($"Bearer{suffix}", $"access_token{suffix}")
-            };
-
-            return options;
         }
     }
 }

@@ -4,7 +4,7 @@
     <RootNamespace>Bit.Function</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.2" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.5" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
