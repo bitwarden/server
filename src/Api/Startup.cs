@@ -85,6 +85,7 @@ namespace Bit.Api
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.NameClaimType = ClaimTypes.Email;
                     options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer", "access_token");
+                    options.SupportedTokens = SupportedTokens.Jwt;
                 });
 
             services.AddAuthorization(config =>
@@ -170,8 +171,7 @@ namespace Bit.Api
                     }
 
                     return e.Level >= LogEventLevel.Error;
-                })
-                .AddDebug();
+                });
 
             // Default Middleware
             app.UseDefaultMiddleware(env);
@@ -190,6 +190,9 @@ namespace Bit.Api
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
+
+            // Add authentication to the request pipeline.
+            app.UseAuthentication();
 
             // Add MVC to the request pipeline.
             app.UseMvc();

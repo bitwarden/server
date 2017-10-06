@@ -15,7 +15,8 @@ namespace Bit.Jobs
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Jobs");
+                .AddSettingsConfiguration(env, "bitwarden-Jobs")
+                .AddEnvironmentVariables();
             Configuration = builder.Build();
             Environment = env;
         }

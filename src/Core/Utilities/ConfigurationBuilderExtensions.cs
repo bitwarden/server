@@ -19,8 +19,6 @@ namespace Bit.Core.Utilities
                 builder.AddUserSecrets(userSecretsId);
             }
 
-            builder.AddEnvironmentVariables();
-
             return builder;
         }
     }

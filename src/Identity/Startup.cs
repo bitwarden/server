@@ -89,9 +89,7 @@ namespace Bit.Identity
                     }
 
                     return e.Level >= LogEventLevel.Error;
-                })
-                .AddConsole()
-                .AddDebug();
+                });
 
             // Default Middleware
             app.UseDefaultMiddleware(env);

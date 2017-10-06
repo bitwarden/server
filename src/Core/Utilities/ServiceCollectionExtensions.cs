@@ -145,7 +145,7 @@ namespace Bit.Core.Utilities
                 options.TokenLifespan = TimeSpan.FromDays(30);
             });
 
-            var identityBuilder = services.AddIdentity<User, Role>(options =>
+            var identityBuilder = services.AddIdentityWithoutCookieAuth<User, Role>(options =>
             {
                 options.User = new UserOptions
                 {
