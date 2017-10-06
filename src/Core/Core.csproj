@@ -55,24 +55,23 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.0.0" />
-    <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
-    <PackageReference Include="Braintree" Version="3.9.0" />
-    <PackageReference Include="CommonMark.NET" Version="0.15.1" />
-    <PackageReference Include="Dapper" Version="1.50.4-alpha1-00070" />
-    <PackageReference Include="IdentityServer4" Version="2.0.0" />
-    <PackageReference Include="IdentityServer4.AspNetIdentity" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.3" />
-    <PackageReference Include="RazorLight" Version="2.0.0-alpha3" />
-    <PackageReference Include="Sendgrid" Version="9.9.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />
     <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.7.0" />
+    <PackageReference Include="IdentityServer4" Version="2.0.0" />
+    <PackageReference Include="Dapper" Version="1.50.4-alpha1-00070" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="WindowsAzure.Storage" Version="8.5.0" />
+    <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
+    <PackageReference Include="Braintree" Version="3.9.0" />
+    <PackageReference Include="CommonMark.NET" Version="0.15.1" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.3" />
+    <PackageReference Include="RazorLight" Version="2.0.0-alpha3" />
+    <PackageReference Include="Sendgrid" Version="9.9.0" />
     <PackageReference Include="Stripe.net" Version="10.4.0" />
     <PackageReference Include="U2F.Core" Version="1.0.3" />
-    <PackageReference Include="WindowsAzure.Storage" Version="8.4.0" />
     <PackageReference Include="Otp.NET" Version="1.1.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
   </ItemGroup>
