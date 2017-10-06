@@ -32,23 +32,6 @@ namespace Bit.Core.Models.Api
         public CardType Card { get; set; }
         public SecureNoteType SecureNote { get; set; }
 
-        [Obsolete("Use Login property")]
-        [EncryptedString]
-        [StringLength(10000)]
-        public string Uri { get; set; }
-        [Obsolete("Use Login property")]
-        [EncryptedString]
-        [StringLength(1000)]
-        public string Username { get; set; }
-        [Obsolete("Use Login property")]
-        [EncryptedString]
-        [StringLength(1000)]
-        public string Password { get; set; }
-        [Obsolete("Use Login property")]
-        [EncryptedString]
-        [StringLength(1000)]
-        public string Totp { get; set; }
-
         public CipherDetails ToCipherDetails(Guid userId)
         {
             var cipher = new CipherDetails
