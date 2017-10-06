@@ -222,7 +222,7 @@ namespace Bit.Core.Services
         {
             public override Task<RazorLightProjectItem> GetItemAsync(string templateKey)
             {
-                if(string.IsNullOrEmpty(templateKey))
+                if(string.IsNullOrWhiteSpace(templateKey))
                 {
                     throw new ArgumentNullException(nameof(templateKey));
                 }
@@ -244,7 +244,7 @@ namespace Bit.Core.Services
 
             public CustomEmbeddedRazorProjectItem(string key)
             {
-                if(string.IsNullOrEmpty(key))
+                if(string.IsNullOrWhiteSpace(key))
                 {
                     throw new ArgumentNullException(nameof(key));
                 }
@@ -255,20 +255,8 @@ namespace Bit.Core.Services
             }
 
             public override string Key { get; set; }
-            public override bool Exists => true;
-
-            public override Stream Read()
-            {
-                using(var stream = _assembly.GetManifestResourceStream(_fullTemplateKey))
-                {
-                    if(stream == null)
-                    {
-                        throw new RazorLightException($"Couldn't load resource '{_fullTemplateKey}'.");
-                    }
-
-                    return stream;
-                }
-            }
+            public override bool Exists => _assembly.GetManifestResourceNames().Any(f => f == _fullTemplateKey);
+            public override Stream Read() => _assembly.GetManifestResourceStream(_fullTemplateKey);
         }
     }
 }
