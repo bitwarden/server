@@ -8,6 +8,7 @@ namespace Bit.Api.Controllers
     public class MiscController : Controller
     {
         [HttpGet("~/alive")]
+        [HttpGet("~/now")]
         public DateTime Get()
         {
             return DateTime.UtcNow;
