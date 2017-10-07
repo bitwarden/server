@@ -7,6 +7,7 @@ using Bit.Core.Services;
 using Bit.Core.Repositories;
 using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 
 namespace Bit.Api.Controllers
 {
@@ -38,6 +39,11 @@ namespace Bit.Api.Controllers
         public async Task<SyncResponseModel> Get()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new BadRequestException("User not found.");
+            }
+
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
