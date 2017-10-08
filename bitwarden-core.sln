@@ -41,6 +41,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobs", "src\Jobs\Jobs.cspro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Function", "util\Function\Function.csproj", "{A6C44A84-8E51-4C64-B9C4-7B7C23253345}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Icons", "src\Icons\Icons.csproj", "{9CF59342-3912-4B45-A2BA-0F173666586D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -89,6 +91,10 @@ Global
 		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6C44A84-8E51-4C64-B9C4-7B7C23253345}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CF59342-3912-4B45-A2BA-0F173666586D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CF59342-3912-4B45-A2BA-0F173666586D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CF59342-3912-4B45-A2BA-0F173666586D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CF59342-3912-4B45-A2BA-0F173666586D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -104,6 +110,7 @@ Global
 		{66B0A682-658A-4A82-B606-A077A4871448} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{7DCEBD8F-E5F3-4A3C-BD35-B64341590B74} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{A6C44A84-8E51-4C64-B9C4-7B7C23253345} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{9CF59342-3912-4B45-A2BA-0F173666586D} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}
