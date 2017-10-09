@@ -27,19 +27,19 @@ namespace Bit.Icons.Controllers
         }
 
         [HttpGet("")]
-        public async Task<IActionResult> Get([FromQuery]string domain)
+        public async Task<IActionResult> Get([FromQuery]string url)
         {
-            if(string.IsNullOrWhiteSpace(domain))
+            if(string.IsNullOrWhiteSpace(url))
             {
                 return new BadRequestResult();
             }
 
-            if(!domain.StartsWith("http://") || !domain.StartsWith("https://"))
+            if(!url.StartsWith("http://") || !url.StartsWith("https://"))
             {
-                domain = "http://" + domain;
+                url = "http://" + url;
             }
 
-            if(!Uri.TryCreate(domain, UriKind.Absolute, out Uri uri))
+            if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
             {
                 return new BadRequestResult();
             }
