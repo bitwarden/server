@@ -1,57 +1,65 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Icons.Models;
-using Microsoft.AspNetCore.Hosting;
+using Bit.Icons.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Icons.Controllers
+namespace Bit.Icons.Controllers
 {
-    [Route("[controller]")]
+    [Route("")]
     public class IconController : Controller
     {
-        private readonly IMemoryCache _cache;
+        private readonly IMemoryCache _memoryCache;
 
         public IconController(IMemoryCache memoryCache)
         {
-            this._cache = memoryCache;
+            _memoryCache = memoryCache;
         }
 
-        [HttpGet]
+        [HttpGet("")]
         public async Task<IActionResult> Get([FromQuery] string domain)
         {
-            var uri = BuildUrl(domain);
+            if(!domain.StartsWith("http://") || !domain.StartsWith("https://"))
+            {
+                domain = "http://" + domain;
+            }
 
-            Icon icon = await _cache.GetOrCreateAsync(domain, async entry =>
+            if(!Uri.TryCreate(domain, UriKind.Absolute, out Uri uri))
+            {
+                return new BadRequestResult();
+            }
+
+            var iconUrl = BuildIconUrl(uri);
+            var icon = await _memoryCache.GetOrCreateAsync(domain, async entry =>
             {
                 entry.AbsoluteExpiration = DateTime.Now.AddDays(1);
 
                 var httpClient = new HttpClient();
-                var response = await httpClient.GetAsync(uri);
-
-                if (!response.IsSuccessStatusCode)
+                var response = await httpClient.GetAsync(iconUrl);
+                if(!response.IsSuccessStatusCode)
                 {
                     return null;
                 }
 
-                return new Icon(
-                    await response.Content.ReadAsByteArrayAsync(),
-                    response.Content.Headers.ContentType.MediaType
-                );
+                return new Icon
+                {
+                    Image = await response.Content.ReadAsByteArrayAsync(),
+                    Format = response.Content.Headers.ContentType.MediaType
+                };
             });
 
-            if (icon == null)
+            if(icon == null)
             {
-                return NotFound("Cannot load the icon.");
+                return new NotFoundResult();
             }
 
             return new FileContentResult(icon.Image, icon.Format);
         }
 
-        private static string BuildUrl(string domain)
+        private static string BuildIconUrl(Uri uri)
         {
-            return $"https://icons.bitwarden.com/icon?url={domain}&size=16..24..200";
+            return $"https://icons.bitwarden.com/icon?url={uri.Host}&size=16..24..200";
         }
     }
 }

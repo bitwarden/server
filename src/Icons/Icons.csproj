@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RootNamespace>Bit.Icons</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
