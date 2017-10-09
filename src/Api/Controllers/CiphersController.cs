@@ -92,7 +92,7 @@ namespace Bit.Api.Controllers
             IEnumerable<CipherDetails> ciphers;
             if(type.HasValue)
             {
-                ciphers = await _cipherRepository.GetManyByTypeAndUserIdAsync(Core.Enums.CipherType.Login, userId);
+                ciphers = await _cipherRepository.GetManyByTypeAndUserIdAsync(type.Value, userId);
             }
             else
             {

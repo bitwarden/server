@@ -22,13 +22,16 @@ namespace Bit.Core.Models.Api
             Address2 = cipher.Identity.Address2;
             Address3 = cipher.Identity.Address3;
             City = cipher.Identity.City;
-            State = cipher.Identity.City;
+            State = cipher.Identity.State;
             PostalCode = cipher.Identity.PostalCode;
             Country = cipher.Identity.Country;
             Company = cipher.Identity.Company;
             Email = cipher.Identity.Email;
             Phone = cipher.Identity.Phone;
             SSN = cipher.Identity.SSN;
+            Username = cipher.Identity.Username;
+            PassportNumber = cipher.Identity.PassportNumber;
+            LicenseNumber = cipher.Identity.LicenseNumber;
         }
 
         public IdentityDataModel(Cipher cipher)
@@ -59,6 +62,9 @@ namespace Bit.Core.Models.Api
             Email = data.Email;
             Phone = data.Phone;
             SSN = data.SSN;
+            Username = data.Username;
+            PassportNumber = data.PassportNumber;
+            LicenseNumber = data.LicenseNumber;
         }
 
         public string Title { get; set; }
@@ -76,5 +82,8 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         public string Phone { get; set; }
         public string SSN { get; set; }
+        public string Username { get; set; }
+        public string PassportNumber { get; set; }
+        public string LicenseNumber { get; set; }
     }
 }

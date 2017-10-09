@@ -34,6 +34,9 @@ namespace Bit.Core.Models.Api
                 case Enums.CipherType.Card:
                     Data = new CardDataModel(cipher);
                     break;
+                case Enums.CipherType.Identity:
+                    Data = new IdentityDataModel(cipher);
+                    break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }

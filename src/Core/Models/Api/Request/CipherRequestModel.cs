@@ -207,6 +207,15 @@ namespace Bit.Core.Models.Api
             [EncryptedString]
             [StringLength(1000)]
             public string SSN { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string Username { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string PassportNumber { get; set; }
+            [EncryptedString]
+            [StringLength(1000)]
+            public string LicenseNumber { get; set; }
         }
 
         public class SecureNoteType
