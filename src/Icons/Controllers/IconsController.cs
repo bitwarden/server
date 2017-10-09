@@ -5,7 +5,6 @@ using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Icons.Controllers
 {
@@ -20,11 +19,11 @@ namespace Bit.Icons.Controllers
         public IconsController(
             IMemoryCache memoryCache,
             IDomainMappingService domainMappingService,
-            IOptions<IconsSettings> iconsSettingsOptions)
+            IconsSettings iconsSettings)
         {
             _memoryCache = memoryCache;
             _domainMappingService = domainMappingService;
-            _iconsSettings = iconsSettingsOptions.Value;
+            _iconsSettings = iconsSettings;
         }
 
         [HttpGet("")]

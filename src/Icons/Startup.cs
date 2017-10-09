@@ -18,10 +18,24 @@ namespace Bit.Icons
 
         public void ConfigureServices(IServiceCollection services)
         {
+            // Options
             services.AddOptions();
-            services.Configure<IconsSettings>(Configuration.GetSection("IconsSettings"));
-            services.AddMemoryCache();
+
+            // Settings
+            var iconsSettings = new IconsSettings();
+            ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
+            services.AddSingleton(s => iconsSettings);
+
+            // Cache
+            services.AddMemoryCache(options =>
+            {
+                options.SizeLimit = iconsSettings.CacheSizeLimit;
+            });
+
+            // Services
             services.AddSingleton<IDomainMappingService, DomainMappingService>();
+
+            // Mvc
             services.AddMvc();
         }
 
