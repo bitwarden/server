@@ -4,17 +4,22 @@ using System.Threading.Tasks;
 using Bit.Icons.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Icons.Controllers
 {
     [Route("")]
-    public class IconController : Controller
+    public class IconsController : Controller
     {
         private readonly IMemoryCache _memoryCache;
+        private readonly IconsSettings _iconsSettings;
 
-        public IconController(IMemoryCache memoryCache)
+        public IconsController(
+            IMemoryCache memoryCache,
+            IOptions<IconsSettings> iconsSettingsOptions)
         {
             _memoryCache = memoryCache;
+            _iconsSettings = iconsSettingsOptions.Value;
         }
 
         [HttpGet("")]
@@ -57,9 +62,9 @@ namespace Bit.Icons.Controllers
             return new FileContentResult(icon.Image, icon.Format);
         }
 
-        private static string BuildIconUrl(Uri uri)
+        private string BuildIconUrl(Uri uri)
         {
-            return $"https://icons.bitwarden.com/icon?url={uri.Host}&size=16..24..200";
+            return $"{_iconsSettings.BestIconBaseUrl}/icon?url={uri.Host}&size=16..24..200";
         }
     }
 }
