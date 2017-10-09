@@ -48,7 +48,7 @@ namespace Bit.Icons.Controllers
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
             var icon = await _memoryCache.GetOrCreateAsync(mappedDomain, async entry =>
             {
-                entry.AbsoluteExpiration = DateTime.UtcNow.AddHours(_iconsSettings.CacheHours);
+                entry.AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0);
 
                 var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..32";
                 var response = await _httpClient.GetAsync(iconUrl);
