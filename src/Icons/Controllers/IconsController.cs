@@ -28,10 +28,7 @@ namespace Bit.Icons.Controllers
         }
 
         [HttpGet("")]
-        public async Task<IActionResult> Get(
-            [FromQuery]string domain,
-            [FromQuery]string size = "16..24..200",
-            [FromQuery]string formats = null)
+        public async Task<IActionResult> Get([FromQuery]string domain)
         {
             if(string.IsNullOrWhiteSpace(domain))
             {
@@ -49,12 +46,12 @@ namespace Bit.Icons.Controllers
             }
 
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
-            var cacheKey = $"{mappedDomain}_{size}_{formats}";
+            var cacheKey = $"{mappedDomain}";
             var icon = await _memoryCache.GetOrCreateAsync(cacheKey, async entry =>
             {
                 entry.AbsoluteExpiration = DateTime.UtcNow.AddHours(_iconsSettings.CacheHours);
 
-                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size={size}&formats={formats}";
+                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..32";
                 var response = await _httpClient.GetAsync(iconUrl);
                 if(!response.IsSuccessStatusCode)
                 {
