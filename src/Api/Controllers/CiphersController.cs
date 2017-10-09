@@ -210,6 +210,11 @@ namespace Bit.Api.Controllers
         [HttpPost("import")]
         public async Task PostImport([FromBody]ImportCiphersRequestModel model)
         {
+            if(model.Ciphers.Count() > 5000 || model.FolderRelationships.Count() > 5000 || model.Folders.Count() > 200)
+            {
+                throw new BadRequestException("You cannot import this much data at once.");
+            }
+
             var userId = _userService.GetProperUserId(User).Value;
             var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
             var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId)).ToList();
@@ -219,6 +224,11 @@ namespace Bit.Api.Controllers
         [HttpPost("import-organization")]
         public async Task PostImport([FromQuery]string organizationId, [FromBody]ImportOrganizationCiphersRequestModel model)
         {
+            if(model.Ciphers.Count() > 5000 || model.CollectionRelationships.Count() > 5000 || model.Collections.Count() > 200)
+            {
+                throw new BadRequestException("You cannot import this much data at once.");
+            }
+
             var orgId = new Guid(organizationId);
             if(!_currentContext.OrganizationAdmin(orgId))
             {
@@ -320,6 +330,11 @@ namespace Bit.Api.Controllers
         [HttpPost("delete")]
         public async Task DeleteMany([FromBody]CipherBulkDeleteRequestModel model)
         {
+            if(model.Ids.Count() > 200)
+            {
+                throw new BadRequestException("You can only delete up to 200 items at a time.");
+            }
+
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
         }
@@ -328,6 +343,11 @@ namespace Bit.Api.Controllers
         [HttpPost("move")]
         public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)
         {
+            if(model.Ids.Count() > 200)
+            {
+                throw new BadRequestException("You can only move up to 200 items at a time.");
+            }
+
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.MoveManyAsync(model.Ids.Select(i => new Guid(i)),
                 string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
