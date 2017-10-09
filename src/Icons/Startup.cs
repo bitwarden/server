@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Icons.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,7 @@ namespace Bit.Icons
             services.AddOptions();
             services.Configure<IconsSettings>(Configuration.GetSection("IconsSettings"));
             services.AddMemoryCache();
+            services.AddSingleton<IDomainMappingService, DomainMappingService>();
             services.AddMvc();
         }
 

@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
+using Bit.Icons.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -11,14 +12,18 @@ namespace Bit.Icons.Controllers
     [Route("")]
     public class IconsController : Controller
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
         private readonly IMemoryCache _memoryCache;
+        private readonly IDomainMappingService _domainMappingService;
         private readonly IconsSettings _iconsSettings;
 
         public IconsController(
             IMemoryCache memoryCache,
+            IDomainMappingService domainMappingService,
             IOptions<IconsSettings> iconsSettingsOptions)
         {
             _memoryCache = memoryCache;
+            _domainMappingService = domainMappingService;
             _iconsSettings = iconsSettingsOptions.Value;
         }
 
@@ -35,13 +40,13 @@ namespace Bit.Icons.Controllers
                 return new BadRequestResult();
             }
 
-            var iconUrl = BuildIconUrl(uri);
-            var icon = await _memoryCache.GetOrCreateAsync(domain, async entry =>
+            var mappedDomain = _domainMappingService.MapDomain(uri.Host);
+            var icon = await _memoryCache.GetOrCreateAsync(mappedDomain, async entry =>
             {
-                entry.AbsoluteExpiration = DateTime.Now.AddDays(1);
+                entry.AbsoluteExpiration = DateTime.UtcNow.AddHours(_iconsSettings.CacheHours);
 
-                var httpClient = new HttpClient();
-                var response = await httpClient.GetAsync(iconUrl);
+                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..200";
+                var response = await _httpClient.GetAsync(iconUrl);
                 if(!response.IsSuccessStatusCode)
                 {
                     return null;
@@ -60,11 +65,6 @@ namespace Bit.Icons.Controllers
             }
 
             return new FileContentResult(icon.Image, icon.Format);
-        }
-
-        private string BuildIconUrl(Uri uri)
-        {
-            return $"{_iconsSettings.BestIconBaseUrl}/icon?url={uri.Host}&size=16..24..200";
         }
     }
 }
