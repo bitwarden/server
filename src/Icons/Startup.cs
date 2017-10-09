@@ -17,12 +17,8 @@ namespace Bit.Icons
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // Options
             services.AddOptions();
-
-            // Settings
             services.Configure<IconsSettings>(Configuration.GetSection("IconsSettings"));
-
             services.AddMemoryCache();
             services.AddMvc();
         }
@@ -33,6 +29,7 @@ namespace Bit.Icons
             {
                 app.UseDeveloperExceptionPage();
             }
+
             app.UseMvc();
         }
     }
