@@ -34,7 +34,7 @@ namespace Bit.Icons.Controllers
                 return new BadRequestResult();
             }
 
-            if(!url.StartsWith("http://") || !url.StartsWith("https://"))
+            if(!url.StartsWith("http://") && !url.StartsWith("https://"))
             {
                 url = "http://" + url;
             }
