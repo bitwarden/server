@@ -46,8 +46,7 @@ namespace Bit.Icons.Controllers
             }
 
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
-            var cacheKey = $"{mappedDomain}";
-            var icon = await _memoryCache.GetOrCreateAsync(cacheKey, async entry =>
+            var icon = await _memoryCache.GetOrCreateAsync(mappedDomain, async entry =>
             {
                 entry.AbsoluteExpiration = DateTime.UtcNow.AddHours(_iconsSettings.CacheHours);
 
