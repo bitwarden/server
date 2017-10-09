@@ -188,11 +188,11 @@ namespace Bit.Api
             // Add Cors
             app.UseCors("All");
 
-            // Add current context
-            app.UseMiddleware<CurrentContextMiddleware>();
-
             // Add authentication to the request pipeline.
             app.UseAuthentication();
+
+            // Add current context
+            app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add MVC to the request pipeline.
             app.UseMvc();
