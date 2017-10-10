@@ -3,14 +3,18 @@ using System.Threading.Tasks;
 using System.Net.Mail;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
     public class SmtpMailDeliveryService : IMailDeliveryService
     {
         private readonly GlobalSettings _globalSettings;
+        private readonly ILogger<SmtpMailDeliveryService> _logger;
 
-        public SmtpMailDeliveryService(GlobalSettings globalSettings)
+        public SmtpMailDeliveryService(
+            GlobalSettings globalSettings,
+            ILogger<SmtpMailDeliveryService> logger)
         {
             if(globalSettings.Mail?.Smtp?.Host == null)
             {
@@ -18,6 +22,7 @@ namespace Bit.Core.Services
             }
 
             _globalSettings = globalSettings;
+            _logger = logger;
         }
 
         public Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -58,8 +63,18 @@ namespace Bit.Core.Services
                 smtpMessage.AlternateViews.Add(htmlView);
             }
 
-            client.SendCompleted += (s, e) =>
+            client.SendCompleted += (sender, e) =>
             {
+                if(e.Error != null)
+                {
+                    _logger.LogError(e.Error, "Mail send failed.");
+                }
+
+                if(e.Cancelled)
+                {
+                    _logger.LogWarning("Mail send canceled.");
+                }
+
                 smtpMessage.Dispose();
                 client.Dispose();
             };
