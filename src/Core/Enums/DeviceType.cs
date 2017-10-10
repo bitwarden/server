@@ -17,6 +17,7 @@
         EdgeBrowser = 12,
         IEBrowser = 13,
         UnknownBrowser = 14,
-        AndroidAmazon = 15
+        AndroidAmazon = 15,
+        UWP = 16
     }
 }
