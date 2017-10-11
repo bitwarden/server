@@ -27,6 +27,7 @@ namespace Bit.Icons.Controllers
         }
 
         [HttpGet("")]
+        [ResponseCache(Duration = 86400 /*24 hours*/, VaryByQueryKeys = new string[] { "url" })]
         public async Task<IActionResult> Get([FromQuery]string url)
         {
             if(string.IsNullOrWhiteSpace(url))

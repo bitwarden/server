@@ -31,6 +31,7 @@ namespace Bit.Icons
             {
                 options.SizeLimit = iconsSettings.CacheSizeLimit;
             });
+            services.AddResponseCaching();
 
             // Services
             services.AddSingleton<IDomainMappingService, DomainMappingService>();
@@ -46,6 +47,7 @@ namespace Bit.Icons
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseResponseCaching();
             app.UseMvc();
         }
     }
