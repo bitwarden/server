@@ -42,27 +42,30 @@ namespace Bit.Icons.Controllers
             }
 
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
-            var icon = await _memoryCache.GetOrCreateAsync(mappedDomain, async entry =>
+            if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
-                entry.AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0);
-
                 var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..32";
                 var response = await _httpClient.GetAsync(iconUrl);
                 if(!response.IsSuccessStatusCode)
                 {
-                    return null;
+                    return new NotFoundResult();
                 }
 
-                return new Icon
+                var image = await response.Content.ReadAsByteArrayAsync();
+                icon = new Icon
                 {
-                    Image = await response.Content.ReadAsByteArrayAsync(),
+                    Image = image,
                     Format = response.Content.Headers.ContentType.MediaType
                 };
-            });
 
-            if(icon == null)
-            {
-                return new NotFoundResult();
+                // Only cache smaller images (<= 50kb)
+                if(image.Length <= 50012)
+                {
+                    _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0)
+                    });
+                }
             }
 
             return new FileContentResult(icon.Image, icon.Format);
