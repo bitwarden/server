@@ -11,7 +11,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "?url=bitwarden.com",
+      "launchUrl": "bitwarden.com/icon.png",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -19,7 +19,7 @@
     "Icons": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "?url=bitwarden.com",
+      "launchUrl": "bitwarden.com/icon.png",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
