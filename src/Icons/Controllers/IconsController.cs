@@ -26,20 +26,16 @@ namespace Bit.Icons.Controllers
             _iconsSettings = iconsSettings;
         }
 
-        [HttpGet("")]
-        [ResponseCache(Duration = 86400 /*24 hours*/, VaryByQueryKeys = new string[] { "url" })]
-        public async Task<IActionResult> Get([FromQuery]string url)
+        [HttpGet("{hostname}/icon.png")]
+        [ResponseCache(Duration = 86400 /*24 hours*/)]
+        public async Task<IActionResult> Get(string hostname)
         {
-            if(string.IsNullOrWhiteSpace(url))
+            if(string.IsNullOrWhiteSpace(hostname) || !hostname.Contains("."))
             {
                 return new BadRequestResult();
             }
 
-            if(!url.StartsWith("http://") && !url.StartsWith("https://"))
-            {
-                url = "http://" + url;
-            }
-
+            var url = $"http://{hostname}";
             if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
             {
                 return new BadRequestResult();
