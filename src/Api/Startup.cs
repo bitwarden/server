@@ -84,7 +84,8 @@ namespace Bit.Api
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.NameClaimType = ClaimTypes.Email;
-                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString("Bearer", "access_token");
+                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString(
+                        new string[] { "Bearer", "Bearer3" });
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
 

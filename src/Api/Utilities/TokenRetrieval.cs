@@ -6,8 +6,7 @@ namespace Bit.Api.Utilities
 {
     public static class TokenRetrieval
     {
-        public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString(string headerScheme = "Bearer",
-            string qsName = "access_token")
+        public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString(string[] authHeaderSchemes)
         {
             return (request) =>
             {
@@ -18,9 +17,9 @@ namespace Bit.Api.Utilities
                     // Bearer token could exist in the 'Content-Language' header on clients that want to avoid pre-flights.
                     var languageAuth = request.Headers["Content-Language"].FirstOrDefault();
                     if(string.IsNullOrWhiteSpace(languageAuth) ||
-                        !languageAuth.StartsWith($"{headerScheme} ", StringComparison.OrdinalIgnoreCase))
+                        !languageAuth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                     {
-                        return request.Query[qsName].FirstOrDefault();
+                        return request.Query["access_token"].FirstOrDefault();
                     }
                     else
                     {
@@ -28,9 +27,12 @@ namespace Bit.Api.Utilities
                     }
                 }
 
-                if(authorization.StartsWith($"{headerScheme} ", StringComparison.OrdinalIgnoreCase))
+                foreach(var headerScheme in authHeaderSchemes)
                 {
-                    return authorization.Substring(headerScheme.Length + 1).Trim();
+                    if(authorization.StartsWith($"{headerScheme} ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return authorization.Substring(headerScheme.Length + 1).Trim();
+                    }
                 }
 
                 return null;
