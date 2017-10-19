@@ -15,8 +15,11 @@ namespace Bit.Identity
     {
         public Startup(IHostingEnvironment env)
         {
-            var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Identity");
+            var builder = new ConfigurationBuilder();
+            if(env.IsDevelopment())
+            {
+                builder.AddUserSecrets("bitwarden-Identity");
+            }
             Configuration = builder.Build();
             Environment = env;
         }

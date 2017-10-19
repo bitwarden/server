@@ -27,8 +27,11 @@ namespace Bit.Api
     {
         public Startup(IHostingEnvironment env)
         {
-            var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Api");
+            var builder = new ConfigurationBuilder();
+            if(env.IsDevelopment())
+            {
+                builder.AddUserSecrets("bitwarden-Api");
+            }
             Configuration = builder.Build();
             Environment = env;
         }

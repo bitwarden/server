@@ -15,8 +15,17 @@ namespace Bit.Jobs
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Jobs")
-                .AddEnvironmentVariables();
+                .SetBasePath(env.ContentRootPath)
+                .AddJsonFile("appsettings.json")
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
+
+            if(env.IsDevelopment())
+            {
+                builder.AddUserSecrets("bitwarden-Jobs");
+            }
+
+            builder.AddEnvironmentVariables();
+
             Configuration = builder.Build();
             Environment = env;
         }

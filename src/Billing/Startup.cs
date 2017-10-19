@@ -18,8 +18,11 @@ namespace Bit.Billing
     {
         public Startup(IHostingEnvironment env)
         {
-            var builder = new ConfigurationBuilder()
-                .AddSettingsConfiguration(env, "bitwarden-Billing");
+            var builder = new ConfigurationBuilder();
+            if(env.IsDevelopment())
+            {
+                builder.AddUserSecrets("bitwarden-Billing");
+            }
             Configuration = builder.Build();
         }
 
