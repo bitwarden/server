@@ -259,10 +259,10 @@ namespace Bit.Core.Utilities
         }
 
         public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-            IConfigurationRoot root)
+            IConfiguration configuration)
         {
             var globalSettings = new GlobalSettings();
-            ConfigurationBinder.Bind(root.GetSection("GlobalSettings"), globalSettings);
+            ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
             return globalSettings;
         }

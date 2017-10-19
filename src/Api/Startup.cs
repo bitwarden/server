@@ -25,18 +25,13 @@ namespace Bit.Api
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env)
+        public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
-            var builder = new ConfigurationBuilder();
-            if(env.IsDevelopment())
-            {
-                builder.AddUserSecrets("bitwarden-Api");
-            }
-            Configuration = builder.Build();
+            Configuration = configuration;
             Environment = env;
         }
 
-        public IConfigurationRoot Configuration { get; private set; }
+        public IConfiguration Configuration { get; private set; }
         public IHostingEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
