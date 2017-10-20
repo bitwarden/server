@@ -47,9 +47,6 @@ $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
 # Functions
 
 function Download-Self {
-    if(!(Test-Path -Path $scriptsDir)) {
-        New-Item -ItemType directory -Path $scriptsDir | Out-Null
-    }
     Invoke-RestMethod -OutFile $scriptPath -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
 }
 
@@ -128,7 +125,6 @@ elseif($stop) {
     Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updateself) {
-    Check-Output-Dir-Exists
     Download-Self
     echo "Updated self."
 }

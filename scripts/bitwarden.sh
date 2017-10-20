@@ -48,10 +48,6 @@ GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/core/master"
 # Functions
 
 function downloadSelf() {
-    if [ ! -d "$SCRIPTS_DIR" ]
-    then
-        mkdir $SCRIPTS_DIR
-    fi
     curl -s -o $SCRIPT_PATH $GITHUB_BASE_URL/scripts/bitwarden.sh
     chmod u+x $SCRIPT_PATH
 }
@@ -142,7 +138,6 @@ then
     $SCRIPTS_DIR/run.sh stop $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updateself" ]
 then
-    checkOutputDirExists
     downloadSelf
     echo "Updated self."
 else
