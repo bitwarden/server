@@ -11,6 +11,10 @@ if(!(Test-Path -Path $outputDir )){
 [string]$letsEncrypt = "n"
 [string]$domain = $( Read-Host "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com)" )
 
+if($domain -eq "") {
+    $domain = "localhost"
+}
+
 if($domain -ne "localhost") {
     $letsEncrypt = $( Read-Host "(!) Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n)" )
 

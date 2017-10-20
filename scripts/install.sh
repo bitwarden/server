@@ -14,6 +14,11 @@ mkdir -p $OUTPUT_DIR
 LETS_ENCRYPT="n"
 read -p "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): " DOMAIN
 
+if [ "$DOMAIN" == "" ]
+then
+    DOMAIN="localhost"
+fi
+
 if [ "$DOMAIN" != "localhost" ]
 then
     read -p "(!) Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): " LETS_ENCRYPT
