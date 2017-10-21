@@ -8,6 +8,7 @@ namespace Bit.Icons.Services
         {
             ["login.yahoo.com"] = "yahoo.com",
             ["accounts.google.com"] = "google.com",
+            ["photo.wallgreens.com"] = "wallgreens.com",
             // TODO: Add others here
         };
 
