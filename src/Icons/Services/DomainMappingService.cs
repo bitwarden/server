@@ -6,7 +6,7 @@ namespace Bit.Icons.Services
     {
         private readonly Dictionary<string, string> _map = new Dictionary<string, string>
         {
-            ["vault.bitwarden.com"] = "bitwarden.com",
+            ["login.yahoo.com"] = "yahoo.com",
             ["accounts.google.com"] = "google.com",
             // TODO: Add others here
         };
