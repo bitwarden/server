@@ -45,8 +45,7 @@ namespace Bit.Icons.Controllers
             if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
                 var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..32" +
-                    $"&fallback_icon_url=https://raw.githubusercontent.com/bitwarden/mobile/master/src/Android/Resources/" +
-                    "drawable-xxxhdpi/login.png";
+                    $"&fallback_icon_url=https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png";
                 var response = await _httpClient.GetAsync(iconUrl);
                 if(!response.IsSuccessStatusCode)
                 {
