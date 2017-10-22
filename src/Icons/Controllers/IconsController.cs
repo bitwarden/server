@@ -15,7 +15,8 @@ namespace Bit.Icons.Controllers
     {
         private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         });
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
