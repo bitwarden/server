@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Icons.Services;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -40,8 +41,17 @@ namespace Bit.Icons
             services.AddMvc();
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(
+            IApplicationBuilder app,
+            IHostingEnvironment env,
+            TelemetryConfiguration telemetry)
         {
+            try
+            {
+                telemetry.DisableTelemetry = true;
+            }
+            catch { }
+
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
