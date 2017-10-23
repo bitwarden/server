@@ -43,19 +43,12 @@ namespace Bit.Icons
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            TelemetryConfiguration telemetry)
+            IHostingEnvironment env)
         {
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            try
-            {
-                telemetry.DisableTelemetry = true;
-            }
-            catch { }
 
             app.UseResponseCaching();
             app.UseMvc();
