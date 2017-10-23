@@ -434,6 +434,7 @@ SA_PASSWORD={dbPass}");
                 sw.Write($@"var bitwardenAppSettings = {{
     apiUri: ""{_url}/api"",
     identityUri: ""{_url}/identity"",
+    iconsUri: ""{_url}/icons"",
     stripeKey: null,
     braintreeKey: null,
     whitelistDomains: [""{_domain}""],
