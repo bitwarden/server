@@ -369,6 +369,10 @@ server {{
   location /identity/ {{
     proxy_pass http://identity/;
   }}
+
+  location /icons/ {{
+    proxy_pass http://icons/;
+  }}
 }}");
             }
         }
