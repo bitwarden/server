@@ -72,22 +72,21 @@ namespace Bit.Identity
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings, (e) =>
+            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) =>
+            {
+                var context = e.Properties["SourceContext"].ToString();
+                if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                 {
-                    var context = e.Properties["SourceContext"].ToString();
-                    if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                    {
-                        return e.Level > LogEventLevel.Error;
-                    }
+                    return e.Level > LogEventLevel.Error;
+                }
 
-                    if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
-                    {
-                        return true;
-                    }
+                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
+                {
+                    return true;
+                }
 
-                    return e.Level >= LogEventLevel.Error;
-                });
+                return e.Level >= LogEventLevel.Error;
+            });
 
             // Default Middleware
             app.UseDefaultMiddleware(env);

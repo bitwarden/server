@@ -149,28 +149,27 @@ namespace Bit.Api
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory
-                .AddSerilog(env, appLifetime, globalSettings, (e) =>
+            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) =>
+            {
+                var context = e.Properties["SourceContext"].ToString();
+                if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
+                    e.Exception.Message == "Bad security stamp."))
                 {
-                    var context = e.Properties["SourceContext"].ToString();
-                    if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
-                        e.Exception.Message == "Bad security stamp."))
-                    {
-                        return false;
-                    }
+                    return false;
+                }
 
-                    if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
-                    {
-                        return true;
-                    }
+                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
+                {
+                    return true;
+                }
 
-                    if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                    {
-                        return e.Level > LogEventLevel.Error;
-                    }
+                if(context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
+                {
+                    return e.Level > LogEventLevel.Error;
+                }
 
-                    return e.Level >= LogEventLevel.Error;
-                });
+                return e.Level >= LogEventLevel.Error;
+            });
 
             // Default Middleware
             app.UseDefaultMiddleware(env);

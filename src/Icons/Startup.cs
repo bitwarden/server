@@ -46,16 +46,16 @@ namespace Bit.Icons
             IHostingEnvironment env,
             TelemetryConfiguration telemetry)
         {
+            if(env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
             try
             {
                 telemetry.DisableTelemetry = true;
             }
             catch { }
-
-            if(env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
 
             app.UseResponseCaching();
             app.UseMvc();
