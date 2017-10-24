@@ -5,9 +5,12 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L -o /tmp/iconserver.zip https://github.com/mat/besticon/releases/download/v3.4.0/iconserver_linux_amd64.zip \
-    && unzip /tmp/iconserver.zip -d /etc/iconserver \
-    && rm /tmp/iconserver.zip
+WORKDIR /tmp
+COPY iconserver.sha256 .
+RUN curl -L -o iconserver.zip https://github.com/mat/besticon/releases/download/v3.4.0/iconserver_linux_amd64.zip \
+    && sha256sum -c iconserver.sha256 \
+    && unzip iconserver.zip -d /etc/iconserver \
+    && rm iconserver.*
 
 WORKDIR /app
 EXPOSE 80
