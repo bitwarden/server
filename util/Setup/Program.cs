@@ -15,16 +15,13 @@ namespace Bit.Setup
     {
         private static string[] _args = null;
         private static IDictionary<string, string> _parameters = null;
-        private static string _outputDir = "/etc/bitwarden";
         private static string _domain = null;
-        private static string _url = null;
         private static string _identityCertPassword = null;
         private static bool _ssl = false;
         private static bool _selfSignedSsl = false;
         private static bool _letsEncrypt = false;
         private static Guid? _installationId = null;
         private static string _installationKey = null;
-        private static bool _push = false;
 
         public static void Main(string[] args)
         {
@@ -50,8 +47,8 @@ namespace Bit.Setup
 
         private static void Install()
         {
-            _outputDir = _parameters.ContainsKey("out") ?
-                _parameters["out"].ToLowerInvariant() : _outputDir;
+            var outputDir = _parameters.ContainsKey("out") ?
+                _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
             _domain = _parameters.ContainsKey("domain") ?
                 _parameters["domain"].ToLowerInvariant() : "localhost";
             _letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
@@ -78,15 +75,31 @@ namespace Bit.Setup
             _identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
             MakeCerts();
 
-            _url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
-            BuildNginxConfig();
+            var url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
+            var nginxBuilder = new NginxConfigBuilder(_domain, _ssl, _selfSignedSsl, _letsEncrypt);
+            nginxBuilder.BuildForInstaller();
 
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
-            _push = Console.ReadLine().ToLowerInvariant() == "y";
+            var push = Console.ReadLine().ToLowerInvariant() == "y";
 
-            BuildEnvironmentFiles();
-            BuildAppSettingsFiles();
-            BuildAppId();
+            var environmentFileBuilder = new EnvironmentFileBuilder
+            {
+                DatabasePassword = Helpers.SecureRandomString(32),
+                Domain = _domain,
+                IdentityCertPassword = _identityCertPassword,
+                InstallationId = _installationId,
+                InstallationKey = _installationKey,
+                OutputDirectory = outputDir,
+                Push = push,
+                Url = url
+            };
+            environmentFileBuilder.Build();
+
+            var appSettingsBuilder = new AppSettingsBuilder(url, _domain);
+            appSettingsBuilder.Build();
+
+            var appIdBuilder = new AppIdBuilder(url);
+            appIdBuilder.Build();
         }
 
         private static void Update()
@@ -94,6 +107,10 @@ namespace Bit.Setup
             if(_parameters.ContainsKey("db"))
             {
                 MigrateDatabase();
+            }
+            else
+            {
+                RebuildConfigs();
             }
         }
 
@@ -127,20 +144,6 @@ namespace Bit.Setup
             {
                 var command = new SqlCommand(
                     "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) CREATE DATABASE [vault];",
-                    connection);
-                command.Connection.Open();
-                command.ExecuteNonQuery();
-            }
-
-            // Namespace changed, so migrate DbUp script names
-            using(var connection = new SqlConnection(vaultConnectionString))
-            {
-                var command = new SqlCommand(
-                    "IF ((SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES " +
-                    "WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Migration') > 0) " +
-                    "UPDATE [dbo].[Migration] " +
-                    "SET [ScriptName] = REPLACE([ScriptName], 'Setup.DbScripts.', 'Bit.Setup.DbScripts.') " +
-                    "WHERE [ScriptName] LIKE 'Setup.DbScripts.%';",
                     connection);
                 command.Connection.Open();
                 command.ExecuteNonQuery();
@@ -245,226 +248,25 @@ namespace Bit.Setup
                 $"-in identity.crt -certfile identity.crt -passout pass:{_identityCertPassword}");
         }
 
-        private static void BuildNginxConfig()
+        private static void RebuildConfigs()
         {
-            Directory.CreateDirectory("/bitwarden/nginx/");
-            var sslCiphers = "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:" +
-                "DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:" +
-                "ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:" +
-                "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:" +
-                "AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
-
-            var dh = _letsEncrypt;
-            if(_ssl && !_selfSignedSsl && !_letsEncrypt)
+            var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
+            if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
             {
-                Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
-                dh = Console.ReadLine().ToLowerInvariant() == "y";
+                Console.WriteLine("Unable to determine existing installation url.");
+                return;
             }
+            var domain = uri.Host;
 
-            var trusted = _letsEncrypt;
-            if(_ssl && !_selfSignedSsl && !_letsEncrypt)
-            {
-                Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
-                trusted = Console.ReadLine().ToLowerInvariant() == "y";
-            }
+            var nginxBuilder = new NginxConfigBuilder(domain);
+            nginxBuilder.UpdateContext();
+            nginxBuilder.BuildForUpdater();
 
-            var sslPath = _letsEncrypt ? $"/etc/letsencrypt/live/{_domain}" :
-                _selfSignedSsl ? $"/etc/ssl/self/{_domain}" : $"/etc/ssl/{_domain}";
-            var certFile = _letsEncrypt ? "fullchain.pem" : "certificate.crt";
-            var keyFile = _letsEncrypt ? "privkey.pem" : "private.key";
-            var caFile = _letsEncrypt ? "fullchain.pem" : "ca.crt";
+            var appSettingsBuilder = new AppSettingsBuilder(url, domain);
+            appSettingsBuilder.Build();
 
-            Console.WriteLine("Building nginx config.");
-            using(var sw = File.CreateText("/bitwarden/nginx/default.conf"))
-            {
-                sw.WriteLine($@"server {{
-  listen 80 default_server;
-  listen [::]:80 default_server;
-  server_name {_domain};");
-
-                if(_ssl)
-                {
-                    sw.WriteLine($@"  return 301 https://$server_name$request_uri;
-}}
-
-server {{
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
-  server_name {_domain};
-
-  ssl_certificate {sslPath}/{certFile};
-  ssl_certificate_key {sslPath}/{keyFile};
-
-  ssl_session_timeout 30m;
-  ssl_session_cache shared:SSL:20m;
-  ssl_session_tickets off;");
-
-                    if(dh)
-                    {
-                        sw.WriteLine($@"
-  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
-  ssl_dhparam {sslPath}/dhparam.pem;");
-                    }
-
-                    sw.WriteLine($@"
-  # SSL protocols TLS v1~TLSv1.2 are allowed. Disabed SSLv3
-  ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-  # Disabled insecure ciphers suite. For example, MD5, DES, RC4, PSK
-  ssl_ciphers ""{sslCiphers}"";
-  # enables server-side protection from BEAST attacks
-  ssl_prefer_server_ciphers on;");
-
-                    if(trusted)
-                    {
-                        sw.WriteLine($@"
-  # OCSP Stapling ---
-  # fetch OCSP records from URL in ssl_certificate and cache them
-  ssl_stapling on;
-  ssl_stapling_verify on;
-
-  ## verify chain of trust of OCSP response using Root CA and Intermediate certs
-  ssl_trusted_certificate {sslPath}/{caFile};
-
-  resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
-
-  # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
-  add_header Strict-Transport-Security max-age=15768000;");
-                    }
-                }
-
-                sw.WriteLine($@"
-  # X-Frame-Options is to prevent from click-jacking attack
-  #add_header X-Frame-Options SAMEORIGIN;
-
-  # disable content-type sniffing on some browsers.
-  add_header X-Content-Type-Options nosniff;
-
-  # This header enables the Cross-site scripting (XSS) filter
-  add_header X-XSS-Protection ""1; mode=block"";
-
-  # This header controls what referrer information is shared
-  add_header Referrer-Policy same-origin;
-
-  # Content-Security-Policy is set via meta tag on the website so it is not included here");
-
-                sw.WriteLine($@"
-  location / {{
-    proxy_pass http://web/;
-  }}
-
-  location = /app-id.json {{
-    proxy_pass http://web/app-id.json;
-    proxy_hide_header Content-Type;
-    add_header Content-Type $fido_content_type;
-  }}
-
-  location /attachments/ {{
-    proxy_pass http://attachments/;
-  }}
-
-  location /api/ {{
-    proxy_pass http://api/;
-  }}
-
-  location /identity/ {{
-    proxy_pass http://identity/;
-  }}
-
-  location /icons/ {{
-    proxy_pass http://icons/;
-  }}
-}}");
-            }
-        }
-
-        private static void BuildEnvironmentFiles()
-        {
-            Console.WriteLine("Building docker environment override files.");
-            Directory.CreateDirectory("/bitwarden/env/");
-            var dbPass = Helpers.SecureRandomString(32);
-            var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPass);
-
-            using(var sw = File.CreateText("/bitwarden/env/global.override.env"))
-            {
-                sw.Write($@"globalSettings__baseServiceUri__vault={_url}
-globalSettings__baseServiceUri__api={_url}/api
-globalSettings__baseServiceUri__identity={_url}/identity
-globalSettings__sqlServer__connectionString=""{dbConnectionString}""
-globalSettings__identityServer__certificatePassword={_identityCertPassword}
-globalSettings__attachment__baseDirectory={_outputDir}/core/attachments
-globalSettings__attachment__baseUrl={_url}/attachments
-globalSettings__dataProtection__directory={_outputDir}/core/aspnet-dataprotection
-globalSettings__logDirectory={_outputDir}/core/logs
-globalSettings__licenseDirectory={_outputDir}/core/licenses
-globalSettings__duo__aKey={Helpers.SecureRandomString(64, alpha: true, numeric: true)}
-globalSettings__installation__id={_installationId}
-globalSettings__installation__key={_installationKey}
-globalSettings__yubico__clientId=REPLACE
-globalSettings__yubico__key=REPLACE
-globalSettings__mail__replyToEmail=no-reply@{_domain}
-globalSettings__mail__smtp__host=REPLACE
-globalSettings__mail__smtp__username=REPLACE
-globalSettings__mail__smtp__password=REPLACE
-globalSettings__mail__smtp__ssl=true
-globalSettings__mail__smtp__port=587
-globalSettings__mail__smtp__useDefaultCredentials=false
-globalSettings__disableUserRegistration=false");
-
-                if(!_push)
-                {
-                    sw.Write(@"
-globalSettings__pushRelayBaseUri=REPLACE");
-                }
-            }
-
-            using(var sw = File.CreateText("/bitwarden/env/mssql.override.env"))
-            {
-                sw.Write($@"ACCEPT_EULA=Y
-MSSQL_PID=Express
-SA_PASSWORD={dbPass}");
-            }
-        }
-
-        private static void BuildAppSettingsFiles()
-        {
-            Console.WriteLine("Building app settings.");
-            Directory.CreateDirectory("/bitwarden/web/");
-            using(var sw = File.CreateText("/bitwarden/web/settings.js"))
-            {
-                sw.Write($@"var bitwardenAppSettings = {{
-    apiUri: ""{_url}/api"",
-    identityUri: ""{_url}/identity"",
-    iconsUri: ""{_url}/icons"",
-    stripeKey: null,
-    braintreeKey: null,
-    whitelistDomains: [""{_domain}""],
-    selfHosted: true
-}};");
-            }
-        }
-
-        private static void BuildAppId()
-        {
-            Console.WriteLine("Building FIDO U2F app id.");
-            Directory.CreateDirectory("/bitwarden/web/");
-            using(var sw = File.CreateText("/bitwarden/web/app-id.json"))
-            {
-                sw.Write($@"{{
-  ""trustedFacets"": [
-    {{
-      ""version"": {{
-        ""major"": 1,
-        ""minor"": 0
-      }},
-      ""ids"": [
-        ""{_url}"",
-        ""ios:bundle-id:com.8bit.bitwarden"",
-        ""android:apk-key-hash:dUGFzUzf3lmHSLBDBIv+WaFyZMI""
-      ]
-    }}
-  ]
-}}");
-            }
+            var appIdBuilder = new AppIdBuilder(url);
+            appIdBuilder.Build();
         }
 
         private static IDictionary<string, string> ParseParameters()
@@ -509,7 +311,7 @@ SA_PASSWORD={dbPass}");
             }
 
             process.Start();
-            string result = process.StandardOutput.ReadToEnd();
+            var result = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
             return result;
         }
