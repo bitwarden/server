@@ -16,6 +16,7 @@ then
     docker push bitwarden/identity:$TAG
     docker push bitwarden/server:$TAG
     docker push bitwarden/attachments:$TAG
+    docker push bitwarden/icons:$TAG
     docker push bitwarden/nginx:$TAG
     docker push bitwarden/mssql:$TAG
     docker push bitwarden/setup:$TAG
@@ -29,6 +30,7 @@ then
     docker tag bitwarden/identity bitwarden/identity:$TAG
     docker tag bitwarden/server bitwarden/server:$TAG
     docker tag bitwarden/attachments bitwarden/attachments:$TAG
+    docker tag bitwarden/icons bitwarden/icons:$TAG
     docker tag bitwarden/nginx bitwarden/nginx:$TAG
     docker tag bitwarden/mssql bitwarden/mssql:$TAG
     docker tag bitwarden/setup bitwarden/setup:$TAG
@@ -50,6 +52,9 @@ else
 
     chmod u+x $DIR/util/Attachments/build.sh
     $DIR/util/Attachments/build.sh
+
+    chmod u+x $DIR/util/Icons/build.sh
+    $DIR/util/Icons/build.sh
 
     chmod u+x $DIR/util/MsSql/build.sh
     $DIR/util/MsSql/build.sh
