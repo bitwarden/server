@@ -34,12 +34,32 @@ namespace Bit.Setup
 
         public void BuildForInstaller()
         {
-            Build(true);
+            if(Ssl && !SelfSignedSsl && !LetsEncrypt)
+            {
+                Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
+                DiffieHellman = Console.ReadLine().ToLowerInvariant() == "y";
+            }
+            else
+            {
+                DiffieHellman = LetsEncrypt;
+            }
+
+            if(Ssl && !SelfSignedSsl && !LetsEncrypt)
+            {
+                Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
+                Trusted = Console.ReadLine().ToLowerInvariant() == "y";
+            }
+            else
+            {
+                Trusted = LetsEncrypt;
+            }
+
+            Build();
         }
 
         public void BuildForUpdater()
         {
-            Build(false);
+            Build();
         }
 
         public bool UpdateContext()
@@ -58,31 +78,8 @@ namespace Bit.Setup
             return true;
         }
 
-        private void Build(bool installer)
+        private void Build()
         {
-            if(installer)
-            {
-                if(Ssl && !SelfSignedSsl && !LetsEncrypt)
-                {
-                    Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
-                    DiffieHellman = Console.ReadLine().ToLowerInvariant() == "y";
-                }
-                else
-                {
-                    DiffieHellman = LetsEncrypt;
-                }
-
-                if(Ssl && !SelfSignedSsl && !LetsEncrypt)
-                {
-                    Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
-                    Trusted = Console.ReadLine().ToLowerInvariant() == "y";
-                }
-                else
-                {
-                    Trusted = LetsEncrypt;
-                }
-            }
-
             Directory.CreateDirectory("/bitwarden/nginx/");
 
             var sslPath = LetsEncrypt ? $"/etc/letsencrypt/live/{Domain}" :

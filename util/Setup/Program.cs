@@ -3,11 +3,8 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Diagnostics;
-using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace Bit.Setup
 {
@@ -15,11 +12,6 @@ namespace Bit.Setup
     {
         private static string[] _args = null;
         private static IDictionary<string, string> _parameters = null;
-        private static string _domain = null;
-        private static string _identityCertPassword = null;
-        private static bool _ssl = false;
-        private static bool _selfSignedSsl = false;
-        private static bool _letsEncrypt = false;
         private static Guid? _installationId = null;
         private static string _installationKey = null;
 
@@ -49,9 +41,9 @@ namespace Bit.Setup
         {
             var outputDir = _parameters.ContainsKey("out") ?
                 _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
-            _domain = _parameters.ContainsKey("domain") ?
+            var domain = _parameters.ContainsKey("domain") ?
                 _parameters["domain"].ToLowerInvariant() : "localhost";
-            _letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
+            var letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
                 _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
 
             if(!ValidateInstallation())
@@ -59,24 +51,26 @@ namespace Bit.Setup
                 return;
             }
 
-            _ssl = _letsEncrypt;
-            if(!_letsEncrypt)
+            var ssl = letsEncrypt;
+            if(!letsEncrypt)
             {
                 Console.Write("(!) Do you have a SSL certificate to use? (y/n): ");
-                _ssl = Console.ReadLine().ToLowerInvariant() == "y";
+                ssl = Console.ReadLine().ToLowerInvariant() == "y";
 
-                if(_ssl)
+                if(ssl)
                 {
                     Console.WriteLine("Make sure 'certificate.crt' and 'private.key' are provided in the " +
                         "appropriate directory (see setup instructions).");
                 }
             }
 
-            _identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
-            MakeCerts();
+            var identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
+            var certBuilder = new CertBuilder(domain, identityCertPassword, letsEncrypt, ssl);
+            var selfSignedSsl = certBuilder.BuildForInstall();
+            ssl = certBuilder.Ssl; // Ssl prop can get flipped during the build
 
-            var url = _ssl ? $"https://{_domain}" : $"http://{_domain}";
-            var nginxBuilder = new NginxConfigBuilder(_domain, _ssl, _selfSignedSsl, _letsEncrypt);
+            var url = ssl ? $"https://{domain}" : $"http://{domain}";
+            var nginxBuilder = new NginxConfigBuilder(domain, ssl, selfSignedSsl, letsEncrypt);
             nginxBuilder.BuildForInstaller();
 
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
@@ -85,8 +79,8 @@ namespace Bit.Setup
             var environmentFileBuilder = new EnvironmentFileBuilder
             {
                 DatabasePassword = Helpers.SecureRandomString(32),
-                Domain = _domain,
-                IdentityCertPassword = _identityCertPassword,
+                Domain = domain,
+                IdentityCertPassword = identityCertPassword,
                 InstallationId = _installationId,
                 InstallationKey = _installationKey,
                 OutputDirectory = outputDir,
@@ -95,7 +89,7 @@ namespace Bit.Setup
             };
             environmentFileBuilder.Build();
 
-            var appSettingsBuilder = new AppSettingsBuilder(url, _domain);
+            var appSettingsBuilder = new AppSettingsBuilder(url, domain);
             appSettingsBuilder.Build();
 
             var appIdBuilder = new AppIdBuilder(url);
@@ -221,33 +215,6 @@ namespace Bit.Setup
             }
         }
 
-        private static void MakeCerts()
-        {
-            if(!_ssl)
-            {
-                Directory.CreateDirectory($"/bitwarden/ssl/self/{_domain}/");
-                Console.WriteLine("Generating self signed SSL certificate.");
-                _ssl = _selfSignedSsl = true;
-                Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
-                    $"-keyout /bitwarden/ssl/self/{_domain}/private.key " +
-                    $"-out /bitwarden/ssl/self/{_domain}/certificate.crt " +
-                    $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=bitwarden/CN={_domain}\"");
-            }
-
-            if(_letsEncrypt)
-            {
-                Directory.CreateDirectory($"/bitwarden/letsencrypt/live/{_domain}/");
-                Exec($"openssl dhparam -out /bitwarden/letsencrypt/live/{_domain}/dhparam.pem 2048");
-            }
-
-            Console.WriteLine("Generating key for IdentityServer.");
-            Directory.CreateDirectory("/bitwarden/identity/");
-            Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
-                "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
-            Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -certfile identity.crt -passout pass:{_identityCertPassword}");
-        }
-
         private static void RebuildConfigs()
         {
             var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
@@ -283,37 +250,6 @@ namespace Bit.Setup
             }
 
             return dict;
-        }
-
-        private static string Exec(string cmd)
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                }
-            };
-
-            if(!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var escapedArgs = cmd.Replace("\"", "\\\"");
-                process.StartInfo.FileName = "/bin/bash";
-                process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
-            }
-            else
-            {
-                process.StartInfo.FileName = "powershell";
-                process.StartInfo.Arguments = cmd;
-            }
-
-            process.Start();
-            var result = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            return result;
         }
     }
 }
