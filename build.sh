@@ -53,8 +53,8 @@ else
     chmod u+x $DIR/util/Attachments/build.sh
     $DIR/util/Attachments/build.sh
 
-    chmod u+x $DIR/util/Icons/build.sh
-    $DIR/util/Icons/build.sh
+    chmod u+x $DIR/src/Icons/build.sh
+    $DIR/src/Icons/build.sh
 
     chmod u+x $DIR/util/MsSql/build.sh
     $DIR/util/MsSql/build.sh
