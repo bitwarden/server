@@ -50,7 +50,7 @@ namespace Bit.Icons.Controllers
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
             if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
-                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..24..32" +
+                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..32..200" +
                     $"&fallback_icon_url=https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png";
                 var response = await _httpClient.GetAsync(iconUrl);
 
