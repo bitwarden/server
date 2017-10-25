@@ -16,6 +16,7 @@ using jsreport.AspNetCore;
 using jsreport.Types;
 using Bit.Api.Models;
 using Stripe;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Api.Controllers
 {
@@ -29,6 +30,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly ApiSettings _apiSettings;
         private readonly UserManager<User> _userManager;
 
         public OrganizationsController(
@@ -38,6 +40,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             CurrentContext currentContext,
             GlobalSettings globalSettings,
+            IOptions<ApiSettings> apiSettings,
             UserManager<User> userManager)
         {
             _organizationRepository = organizationRepository;
@@ -47,6 +50,7 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
             _userManager = userManager;
             _globalSettings = globalSettings;
+            _apiSettings = apiSettings.Value;
         }
 
         [HttpGet("{id}")]
@@ -123,8 +127,10 @@ namespace Bit.Api.Controllers
                     throw new NotFoundException();
                 }
 
-                var model = new InvoiceModel(organization, invoice);
-                HttpContext.JsReportFeature().Recipe(Recipe.PhantomPdf);
+                var model = new InvoiceModel(organization, invoice, _apiSettings);
+                HttpContext.JsReportFeature().Recipe(Recipe.PhantomPdf)
+                    .OnAfterRender((r) => HttpContext.Response.Headers["Content-Disposition"] =
+                        $"attachment; filename=\"bitwarden_{model.InvoiceNumber}.pdf\"");
                 return View("Invoice", model);
             }
             catch(StripeException)

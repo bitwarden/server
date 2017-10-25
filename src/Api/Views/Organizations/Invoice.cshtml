@@ -78,10 +78,6 @@
                     <h2>To</h2>
                     <p>
                         <b>@Model.CustomerName</b><br />
-                        @if(Model.UsesVat)
-                        {
-                            @:VAT @Model.CustomerVatNumber<br />
-                        }
                         @if(!string.IsNullOrWhiteSpace(Model.CustomerAddress1))
                         {
                             @Model.CustomerAddress1<br />
@@ -92,9 +88,17 @@
                         }
                         @if(!string.IsNullOrWhiteSpace(Model.CustomerAddress3))
                         {
-                            @Model.CustomerAddress3
+                            @Model.CustomerAddress3<br />
+                        }
+                        @if(!string.IsNullOrWhiteSpace(Model.CustomerAddress4))
+                        {
+                            @Model.CustomerAddress4
                         }
                     </p>
+                    @if(Model.UsesVat)
+                    {
+                        <p>VAT @Model.CustomerVatNumber</p>
+                    }
                 </td>
             </tr>
         </tbody>
@@ -104,7 +108,6 @@
         <thead>
             <tr>
                 <th>Description</th>
-                <th class="right" style="width: 100px;">Qty</th>
                 @if(Model.UsesVat)
                 {
                     <th class="right" style="width: 100px;">VAT %</th>
@@ -118,7 +121,6 @@
             {
                 <tr>
                     <td>@item.Description</td>
-                    <td class="right">@item.Quantity</td>
                     @if(Model.UsesVat)
                     {
                         <td class="right">0</td>

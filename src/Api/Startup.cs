@@ -44,6 +44,7 @@ namespace Bit.Api
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            services.Configure<ApiSettings>(Configuration.GetSection("apiSettings"));
             if(!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
@@ -145,8 +146,7 @@ namespace Bit.Api
             // PDF generation
             if(!globalSettings.SelfHosted)
             {
-                services
-                    .AddJsReport(new jsreport.Local.LocalReporting()
+                services.AddJsReport(new jsreport.Local.LocalReporting()
                     .UseBinary(jsreport.Binary.JsReportBinary.GetBinary())
                     .AsUtility()
                     .Create());

@@ -7,19 +7,19 @@ namespace Bit.Api.Models
 {
     public class InvoiceModel
     {
-        public InvoiceModel(Organization organization, StripeInvoice invoice)
+        public InvoiceModel(Organization organization, StripeInvoice invoice, ApiSettings apiSettings)
         {
-            // TODO: address
-            OurAddress1 = "567 Green St";
-            OurAddress2 = "Jacksonville, FL 32256";
-            OurAddress3 = "United States";
+            OurAddress1 = apiSettings.OurAddress1;
+            OurAddress2 = apiSettings.OurAddress2;
+            OurAddress3 = apiSettings.OurAddress3;
 
             CustomerName = organization.BusinessName ?? "--";
             // TODO: address and vat
             CustomerAddress1 = "123 Any St";
             CustomerAddress2 = "New York, NY 10001";
             CustomerAddress3 = "United States";
-            CustomerVatNumber = "PT 123456789";
+            CustomerAddress4 = null;
+            CustomerVatNumber = "PT123456789";
 
             InvoiceDate = invoice.Date?.ToLongDateString();
             InvoiceDueDate = invoice.DueDate?.ToLongDateString();
@@ -43,6 +43,7 @@ namespace Bit.Api.Models
         public string CustomerAddress1 { get; set; }
         public string CustomerAddress2 { get; set; }
         public string CustomerAddress3 { get; set; }
+        public string CustomerAddress4 { get; set; }
         public IEnumerable<Item> Items { get; set; }
         public string SubtotalAmount { get; set; }
         public string VatTotalAmount { get; set; }
@@ -54,13 +55,11 @@ namespace Bit.Api.Models
         {
             public Item(StripeInvoiceLineItem item)
             {
-                Quantity = item.Quantity?.ToString() ?? "-";
                 Amount = (item.Amount / 100).ToString("F");
                 Description = item.Description ?? "--";
             }
 
             public string Description { get; set; }
-            public string Quantity { get; set; }
             public string Amount { get; set; }
         }
     }
