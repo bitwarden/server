@@ -5,7 +5,8 @@ param (
     [switch] $restart,
     [switch] $stop,
     [switch] $pull,
-    [switch] $updatedb
+    [switch] $updatedb,
+    [switch] $update
 )
 
 # Setup
@@ -44,27 +45,41 @@ function Update-Lets-Encrypt {
 }
 
 function Update-Database {
-    docker pull bitwarden/setup:$tag
+    Pull-Setup
     docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
         dotnet Setup.dll -update 1 -db 1
     echo "Database update complete"
 }
 
+function Update {
+    Pull-Setup
+    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
+        dotnet Setup.dll -update 1
+}
+
 function Print-Environment {
-    docker pull bitwarden/setup:$tag
+    Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
         dotnet Setup.dll -printenv 1 -env win
 }
 
-# Commands
-
-if($start -Or $restart) {
+function Restart {
     Docker-Compose-Down
     Docker-Compose-Pull
     Update-Lets-Encrypt
     Docker-Compose-Up
     Docker-Prune
     Print-Environment
+}
+
+function Pull-Setup {
+    docker pull bitwarden/setup:$tag
+}
+
+# Commands
+
+if($start -Or $restart) {
+    Restart
 }
 elseif($pull) {
     Docker-Compose-Pull
@@ -73,5 +88,11 @@ elseif($stop) {
     Docker-Compose-Down
 }
 elseif($updatedb) {
+    Update-Database
+}
+elseif($update) {
+    Docker-Compose-Down
+    Update
+    Restart
     Update-Database
 }

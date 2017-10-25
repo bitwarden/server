@@ -53,28 +53,42 @@ function updateLetsEncrypt() {
 }
 
 function updateDatabase() {
-    docker pull bitwarden/setup:$TAG
+    pullSetup
     docker run -it --rm --name setup --network container:mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
         dotnet Setup.dll -update 1 -db 1
     echo "Database update complete"
 }
 
+function update() {
+    pullSetup
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
+        dotnet Setup.dll -update 1
+}
+
 function printEnvironment() {
-    docker pull bitwarden/setup:$TAG
+    pullSetup
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
         dotnet Setup.dll -printenv 1 -env $OS
 }
 
-# Commands
-
-if [ "$1" == "start" -o "$1" == "restart" ]
-then
+function restart() {
     dockerComposeDown
     dockerComposePull
     updateLetsEncrypt
     dockerComposeUp
     dockerPrune
     printEnvironment
+}
+
+function pullSetup() {
+    docker pull bitwarden/setup:$TAG
+}
+
+# Commands
+
+if [ "$1" == "start" -o "$1" == "restart" ]
+then
+    restart
 elif [ "$1" == "pull" ]
 then
     dockerComposePull
@@ -83,5 +97,11 @@ then
     dockerComposeDown
 elif [ "$1" == "updatedb" ]
 then
+    updateDatabase
+elif [ "$1" == "update" ]
+then
+    dockerComposeDown
+    update
+    restart
     updateDatabase
 fi

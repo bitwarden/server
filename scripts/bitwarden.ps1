@@ -113,8 +113,7 @@ elseif($update) {
     New-Item -ItemType directory -Path $dockerDir | Out-Null
 
     Download-All-Files
-    Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
-    Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -update -outputDir $output -dockerDir $dockerDir"
 }
 elseif($updatedb) {
     Check-Output-Dir-Exists

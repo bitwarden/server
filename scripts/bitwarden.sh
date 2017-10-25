@@ -126,8 +126,7 @@ then
 
     mkdir $DOCKER_DIR
     downloadAllFiles
-    $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
-    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh update $OUTPUT $DOCKER_DIR
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists
