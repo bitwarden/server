@@ -3,12 +3,12 @@
 <head>
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             font-size: 18px;
         }
 
-        h1, h2, h3, h4 {
-            font-family: Arial, Helvetica, sans-serif;
+        h1, h2, h3, h4, h5 {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
         }
 
         table {
@@ -45,7 +45,7 @@
         .number {
             float: right;
             text-align: right;
-            font-family: Courier New, Courier, monospace;
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
         }
     </style>
 </head>
@@ -90,9 +90,9 @@
                         {
                             @Model.CustomerAddress3<br />
                         }
-                        @if(!string.IsNullOrWhiteSpace(Model.CustomerAddress4))
+                        @if(!string.IsNullOrWhiteSpace(Model.CustomerCountry))
                         {
-                            @Model.CustomerAddress4
+                            @Model.CustomerCountry
                         }
                     </p>
                     @if(Model.UsesVat)

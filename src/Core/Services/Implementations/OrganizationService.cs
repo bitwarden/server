@@ -517,6 +517,7 @@ namespace Bit.Core.Services
                 Name = signup.Name,
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
+                BusinessCountry = signup.BusinessCountry,
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,

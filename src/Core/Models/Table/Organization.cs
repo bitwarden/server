@@ -11,6 +11,11 @@ namespace Bit.Core.Models.Table
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string BusinessName { get; set; }
+        public string BusinessAddress1 { get; set; }
+        public string BusinessAddress2 { get; set; }
+        public string BusinessAddress3 { get; set; }
+        public string BusinessCountry { get; set; }
+        public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }

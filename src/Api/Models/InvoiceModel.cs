@@ -14,12 +14,11 @@ namespace Bit.Api.Models
             OurAddress3 = apiSettings.OurAddress3;
 
             CustomerName = organization.BusinessName ?? "--";
-            // TODO: address and vat
-            CustomerAddress1 = "123 Any St";
-            CustomerAddress2 = "New York, NY 10001";
-            CustomerAddress3 = "United States";
-            CustomerAddress4 = null;
-            CustomerVatNumber = "PT123456789";
+            CustomerAddress1 = organization.BusinessAddress1;
+            CustomerAddress2 = organization.BusinessAddress2;
+            CustomerAddress3 = organization.BusinessAddress3;
+            CustomerCountry = organization.BusinessCountry;
+            CustomerVatNumber = organization.BusinessTaxNumber;
 
             InvoiceDate = invoice.Date?.ToLongDateString();
             InvoiceDueDate = invoice.DueDate?.ToLongDateString();
@@ -43,7 +42,7 @@ namespace Bit.Api.Models
         public string CustomerAddress1 { get; set; }
         public string CustomerAddress2 { get; set; }
         public string CustomerAddress3 { get; set; }
-        public string CustomerAddress4 { get; set; }
+        public string CustomerCountry { get; set; }
         public IEnumerable<Item> Items { get; set; }
         public string SubtotalAmount { get; set; }
         public string VatTotalAmount { get; set; }

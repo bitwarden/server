@@ -19,6 +19,11 @@ namespace Bit.Core.Models.Api
             Id = organization.Id.ToString();
             Name = organization.Name;
             BusinessName = organization.BusinessName;
+            BusinessAddress1 = organization.BusinessAddress1;
+            BusinessAddress2 = organization.BusinessAddress2;
+            BusinessAddress3 = organization.BusinessAddress3;
+            BusinessCountry = organization.BusinessCountry;
+            BusinessTaxNumber = organization.BusinessTaxNumber;
             BillingEmail = organization.BillingEmail;
             Plan = organization.Plan;
             PlanType = organization.PlanType;
@@ -32,6 +37,11 @@ namespace Bit.Core.Models.Api
         public string Id { get; set; }
         public string Name { get; set; }
         public string BusinessName { get; set; }
+        public string BusinessAddress1 { get; set; }
+        public string BusinessAddress2 { get; set; }
+        public string BusinessAddress3 { get; set; }
+        public string BusinessCountry { get; set; }
+        public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public Enums.PlanType PlanType { get; set; }

@@ -6,6 +6,7 @@ namespace Bit.Core.Models.Business
     {
         public string Name { get; set; }
         public string BusinessName { get; set; }
+        public string BusinessCountry { get; set; }
         public string BillingEmail { get; set; }
         public User Owner { get; set; }
         public string OwnerKey { get; set; }
