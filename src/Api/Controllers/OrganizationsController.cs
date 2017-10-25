@@ -12,6 +12,10 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
+using jsreport.AspNetCore;
+using jsreport.Types;
+using Bit.Api.Models;
+using Stripe;
 
 namespace Bit.Api.Controllers
 {
@@ -91,6 +95,41 @@ namespace Bit.Api.Controllers
             else
             {
                 return new OrganizationBillingResponseModel(organization);
+            }
+        }
+
+        [HttpGet("{id}/billing-invoice/{invoiceId}")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        [MiddlewareFilter(typeof(JsReportPipeline))]
+        public async Task<IActionResult> GetBillingInvoice(string id, string invoiceId)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            try
+            {
+                var invoice = await new StripeInvoiceService().GetAsync(invoiceId);
+                if(invoice == null || invoice.CustomerId != organization.GatewayCustomerId)
+                {
+                    throw new NotFoundException();
+                }
+
+                var model = new InvoiceModel(organization, invoice);
+                HttpContext.JsReportFeature().Recipe(Recipe.PhantomPdf);
+                return View("Invoice", model);
+            }
+            catch(StripeException)
+            {
+                throw new NotFoundException();
             }
         }
 

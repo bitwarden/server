@@ -20,6 +20,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
+using jsreport.AspNetCore;
 
 namespace Bit.Api
 {
@@ -140,6 +141,16 @@ namespace Bit.Api
                     jsonFormatter.SupportedMediaTypes.Add(textPlainMediaType);
                 }
             }).AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+
+            // PDF generation
+            if(!globalSettings.SelfHosted)
+            {
+                services
+                    .AddJsReport(new jsreport.Local.LocalReporting()
+                    .UseBinary(jsreport.Binary.JsReportBinary.GetBinary())
+                    .AsUtility()
+                    .Create());
+            }
         }
 
         public void Configure(

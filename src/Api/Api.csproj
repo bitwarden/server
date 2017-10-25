@@ -13,6 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="jsreport.AspNetCore" Version="1.0.0" />
+    <PackageReference Include="jsreport.Binary" Version="1.8.2" />
+    <PackageReference Include="jsreport.Local" Version="1.0.3" />
     <PackageReference Include="System.Net.Http" Version="4.3.3" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.0" />
