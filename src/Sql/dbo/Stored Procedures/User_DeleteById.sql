@@ -64,7 +64,6 @@ BEGIN
         [dbo].[OrganizationUser]
     WHERE
         [UserId] = @Id
-        AND [Type] != 0 -- 0 = owner
 
     -- Finally, delete the user
     DELETE

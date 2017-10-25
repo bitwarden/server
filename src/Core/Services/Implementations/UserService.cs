@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using System.Linq;
-using Microsoft.AspNetCore.Builder;
 using Bit.Core.Enums;
 using System.Security.Claims;
 using Bit.Core.Models;
@@ -161,13 +160,13 @@ namespace Bit.Core.Services
 
         public override async Task<IdentityResult> DeleteAsync(User user)
         {
-            // Check if user is the owner of any organizations.
-            var organizationOwnerCount = await _organizationUserRepository.GetCountByOrganizationOwnerUserAsync(user.Id);
-            if(organizationOwnerCount > 0)
+            // Check if user is the only owner of any organizations.
+            var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+            if(onlyOwnerCount > 0)
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "You must leave or delete any organizations that you are the owner of first."
+                    Description = "You must leave or delete any organizations that you are the only owner of first."
                 });
             }
 

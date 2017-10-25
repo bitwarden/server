@@ -49,12 +49,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<int> GetCountByOrganizationOwnerUserAsync(Guid userId)
+        public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteScalarAsync<int>(
-                    "[dbo].[OrganizationUser_ReadCountByOrganizationOwnerUser]",
+                    "[dbo].[OrganizationUser_ReadCountByOnlyOwner]",
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 

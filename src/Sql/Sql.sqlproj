@@ -114,7 +114,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationOwnerUser.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadByOrganizationId.sql" />
