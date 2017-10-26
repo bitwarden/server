@@ -12,6 +12,8 @@ using Bit.Api.Utilities;
 using Bit.Core.Utilities;
 using Core.Models.Data;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Identity;
+using Bit.Core.Models.Table;
 
 namespace Bit.Api.Controllers
 {
@@ -23,6 +25,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
+        private readonly UserManager<User> _userManager;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -31,6 +34,7 @@ namespace Bit.Api.Controllers
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
+            UserManager<User> userManager,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -38,6 +42,7 @@ namespace Bit.Api.Controllers
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
+            _userManager = userManager;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -354,10 +359,22 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("purge")]
-        public async Task PostPurge()
+        public async Task PostPurge([FromBody]CipherPurgeRequestModel model)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            await _cipherRepository.DeleteByUserIdAsync(userId);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                await Task.Delay(2000);
+                throw new BadRequestException(ModelState);
+            }
+
+            await _cipherRepository.DeleteByUserIdAsync(user.Id);
         }
 
         [HttpPost("{id}/attachment")]
