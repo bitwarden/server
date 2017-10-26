@@ -213,5 +213,6 @@
     <Build Include="dbo\Stored Procedures\Organization_ReadByEnabled.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadByPremium.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_DeleteByUserId.sql" />
   </ItemGroup>
 </Project>

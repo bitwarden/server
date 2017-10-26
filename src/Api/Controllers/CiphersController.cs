@@ -353,6 +353,13 @@ namespace Bit.Api.Controllers
                 string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
         }
 
+        [HttpPost("purge")]
+        public async Task PostPurge()
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherRepository.DeleteByUserIdAsync(userId);
+        }
+
         [HttpPost("{id}/attachment")]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
