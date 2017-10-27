@@ -174,6 +174,12 @@ namespace Bit.Api
                     return true;
                 }
 
+                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
+                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
+                {
+                    return e.Level > LogEventLevel.Error;
+                }
+
                 return e.Level >= LogEventLevel.Error;
             });
 
