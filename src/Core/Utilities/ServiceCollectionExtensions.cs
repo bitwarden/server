@@ -56,15 +56,7 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            if(globalSettings.SelfHosted)
-            {
-                services.AddSingleton<IMailService, MarkdownMailService>();
-            }
-            else
-            {
-                services.AddSingleton<IMailService, RazorMailService>();
-            }
-
+            services.AddSingleton<IMailService, RazorMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
 
             if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
