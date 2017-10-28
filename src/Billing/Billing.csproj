@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <Version>1.13.0</Version>
-    <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
-    <AssemblyName>Billing</AssemblyName>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Bit.Billing</RootNamespace>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
   </PropertyGroup>
@@ -13,16 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Net.Http" Version="4.3.3" />
-    <PackageReference Include="Microsoft.AspNetCore" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.0.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <AssemblyName>Mail</AssemblyName>
     <RootNamespace>Bit.Mail</RootNamespace>
   </PropertyGroup>
 
