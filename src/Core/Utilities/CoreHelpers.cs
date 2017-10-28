@@ -305,15 +305,6 @@ namespace Bit.Core.Utilities
             return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(obj));
         }
 
-        public static bool FullFramework()
-        {
-#if NET461
-            return true;
-#else
-            return false;
-#endif
-        }
-
         public static bool SettingHasValue(string setting)
         {
             if(string.IsNullOrWhiteSpace(setting) || setting.Equals("SECRET") || setting.Equals("REPLACE"))

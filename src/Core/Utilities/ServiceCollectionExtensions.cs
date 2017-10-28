@@ -16,9 +16,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
-#if NET461
 using Microsoft.WindowsAzure.Storage;
-#endif
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
@@ -238,7 +236,6 @@ namespace Bit.Core.Utilities
                     .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
-#if NET461
             if(!globalSettings.SelfHosted)
             {
                 var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
@@ -247,7 +244,6 @@ namespace Bit.Core.Utilities
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
-#endif
         }
 
         public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
