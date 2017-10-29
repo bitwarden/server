@@ -121,6 +121,19 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH('[dbo].[Organization]', 'BusinessAddress1') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[Organization]
+    ADD 
+        [BusinessAddress1]  NVARCHAR(50) NULL,
+        [BusinessAddress2]  NVARCHAR(50) NULL,
+        [BusinessAddress3]  NVARCHAR(50) NULL,
+        [BusinessCountry]   VARCHAR(2)   NULL,
+        [BusinessTaxNumber] NVARCHAR(30) NULL
+END
+GO
+
 IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Organization_Create]
