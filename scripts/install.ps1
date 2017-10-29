@@ -2,7 +2,7 @@ param (
     [string]$outputDir = "../."
 )
 
-[string]$tag = "1.12.1"
+[string]$tag = "1.13.1"
 
 if(!(Test-Path -Path $outputDir )){
     New-Item -ItemType directory -Path $outputDir | Out-Null

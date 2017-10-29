@@ -11,7 +11,7 @@ param (
 
 # Setup
 
-[string]$tag = "1.12.1"
+[string]$tag = "1.13.1"
 
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if($dockerDir -eq "") {
