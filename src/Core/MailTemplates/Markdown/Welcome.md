@@ -1,0 +1,40 @@
+﻿Thank you for creating an account with bitwarden. You may now log in with your new account.
+
+Did you know that bitwarden is free to sync with all of your devices? Download bitwarden today on:
+
+Mobile
+============
+
+## iOS
+<https://itunes.apple.com/us/app/bitwarden-free-password-manager/id1137397744?mt=8>
+
+## Android
+<https://play.google.com/store/apps/details?id=com.x8bit.bitwarden>
+
+Desktop
+============
+
+## Chrome Extension
+<https://chrome.google.com/webstore/detail/bitwarden-free-password-m/nngceckbapebfimnlniiiahkandclblb?utm_source=welcome_email&utm_medium=email>
+
+## Firefox Extension
+<https://addons.mozilla.org/firefox/addon/bitwarden-password-manager/>
+
+## Opera Extension
+<https://addons.opera.com/extensions/details/bitwarden-free-password-manager/?utm_source=welcome_email&utm_medium=email>
+
+## Edge Extension
+<https://www.microsoft.com/store/p/bitwarden-free-password-manager/9p6kxl0svnnl>
+
+Web
+============
+
+You can also access your vault from any web-enabled device using our web vault at: <{{vaultUrl}}?utm_source=welcome_email&utm_medium=email>
+
+------------
+
+If you have any questions or problems you can email us from our website at:
+<https://bitwarden.com/contact/?utm_source=welcome_email&utm_medium=email>
+
+Thank you!  
+The bitwarden Team
