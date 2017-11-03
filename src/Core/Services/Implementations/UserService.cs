@@ -245,9 +245,10 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException("No email.");
             }
 
+            var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-                "2faEmail:" + provider.MetaData["Email"]);
-            await _mailService.SendTwoFactorEmailAsync((string)provider.MetaData["Email"], token);
+                "2faEmail:" + email);
+            await _mailService.SendTwoFactorEmailAsync(email, token);
         }
 
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -258,8 +259,9 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException("No email.");
             }
 
+            var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-                "2faEmail:" + provider.MetaData["Email"], token);
+                "2faEmail:" + email, token);
         }
 
         public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)

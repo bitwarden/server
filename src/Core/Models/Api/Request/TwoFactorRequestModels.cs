@@ -190,7 +190,7 @@ namespace Bit.Core.Models.Api
 
             providers.Add(TwoFactorProviderType.Email, new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, object> { ["Email"] = Email },
+                MetaData = new Dictionary<string, object> { ["Email"] = Email.ToLowerInvariant() },
                 Enabled = true
             });
             extistingUser.SetTwoFactorProviders(providers);
