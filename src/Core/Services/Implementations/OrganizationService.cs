@@ -555,10 +555,16 @@ namespace Bit.Core.Services
                     "hosting of organizations and that the installation id matches your current installation.");
             }
 
-            if(license.PlanType != PlanType.Custom && 
+            if(license.PlanType != PlanType.Custom &&
                 StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
             {
                 throw new BadRequestException("Plan not found.");
+            }
+
+            var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
+            if(enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey)))
+            {
+                throw new BadRequestException("License is already in use by another organization.");
             }
 
             var organization = new Organization
@@ -681,6 +687,12 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
                     "hosting of organizations and that the installation id matches your current installation.");
+            }
+
+            var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
+            if(enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organizationId))
+            {
+                throw new BadRequestException("License is already in use by another organization.");
             }
 
             if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
