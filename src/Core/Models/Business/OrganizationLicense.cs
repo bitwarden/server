@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, BillingInfo billingInfo, Guid installationId,
             ILicensingService licenseService)
         {
-            Version = 1;
+            Version = 2;
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -36,6 +36,7 @@ namespace Bit.Core.Models.Business
             UseTotp = org.UseTotp;
             MaxStorageGb = org.MaxStorageGb;
             SelfHost = org.SelfHost;
+            UsersGetPremium = org.UsersGetPremium;
             Issued = DateTime.UtcNow;
 
             if(billingInfo?.Subscription == null)
@@ -91,6 +92,7 @@ namespace Bit.Core.Models.Business
         public bool UseTotp { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool SelfHost { get; set; }
+        public bool UsersGetPremium { get; set; }
         public int Version { get; set; }
         public DateTime Issued { get; set; }
         public DateTime? Refresh { get; set; }
@@ -104,7 +106,7 @@ namespace Bit.Core.Models.Business
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if(Version == 1)
+            if(Version == 1 || Version == 2)
             {
                 var props = typeof(OrganizationLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -147,7 +149,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version == 1)
+            if(Version == 1 || Version == 2)
             {
                 return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
@@ -164,9 +166,9 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version == 1)
+            if(Version == 1 || Version == 2)
             {
-                return
+                var valid =
                     globalSettings.Installation.Id == InstallationId &&
                     organization.LicenseKey.Equals(LicenseKey) &&
                     organization.Enabled == Enabled &&
@@ -178,6 +180,13 @@ namespace Bit.Core.Models.Business
                     organization.UseTotp == UseTotp &&
                     organization.SelfHost == SelfHost &&
                     organization.Name.Equals(Name);
+
+                if(valid && Version == 2)
+                {
+                    valid = organization.UsersGetPremium = UsersGetPremium;
+                }
+
+                return valid;
             }
             else
             {

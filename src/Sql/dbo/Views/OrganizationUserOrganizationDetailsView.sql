@@ -8,6 +8,8 @@ SELECT
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseTotp],
+    O.[SelfHost],
+    O.[UsersGetPremium],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],

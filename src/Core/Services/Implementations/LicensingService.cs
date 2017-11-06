@@ -112,10 +112,10 @@ namespace Bit.Core.Services
             foreach(var user in nonPremiumUsers)
             {
                 var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
-                if(details.Any(d => d.Enabled))
+                if(details.Any(d => d.SelfHost && d.UsersGetPremium && d.Enabled))
                 {
-                    _logger.LogInformation("Granting premium to user {0}({1}) because they are in an active organization.",
-                        user.Id, user.Email);
+                    _logger.LogInformation("Granting premium to user {0}({1}) because they are in an active organization " +
+                        "with premium features.", user.Id, user.Email);
 
                     user.Premium = true;
                     user.MaxStorageGb = 10240; // 10 TB
@@ -170,7 +170,7 @@ namespace Bit.Core.Services
             if(!valid)
             {
                 var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
-                valid = details.Any(d => d.Enabled);
+                valid = details.Any(d => d.SelfHost && d.UsersGetPremium && d.Enabled);
 
                 if(valid && (!string.IsNullOrWhiteSpace(user.LicenseKey) || user.PremiumExpirationDate.HasValue))
                 {

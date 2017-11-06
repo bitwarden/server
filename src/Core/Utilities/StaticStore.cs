@@ -101,20 +101,18 @@ namespace Bit.Core.Utilities
                 },
                 new Plan
                 {
-                    Type = PlanType.PersonalAnnually,
+                    Type = PlanType.FamilyAnnually,
                     BaseSeats = 5,
                     BasePrice = 12,
-                    SeatPrice = 12,
-                    CanBuyAdditionalSeats = true,
-                    MaxAdditionalSeats = 5,
-                    Name = "Personal",
+                    CanBuyAdditionalSeats = false,
+                    Name = "Family",
                     StripePlanId = "personal-org-annually",
-                    StripeSeatPlanId = "personal-org-seat-annually",
                     StripStoragePlanId = "storage-gb-annually",
                     UpgradeSortOrder = 1,
                     TrialPeriodDays = 7,
                     UseTotp = true,
-                    MaxStorageGb = 1
+                    MaxStorageGb = 1,
+                    SelfHost = true
                 },
                 new Plan
                 {
@@ -165,7 +163,8 @@ namespace Bit.Core.Utilities
                     UseDirectory = true,
                     UseTotp = true,
                     MaxStorageGb = 1,
-                    SelfHost = true
+                    SelfHost = true,
+                    UsersGetPremium = true
                 },
                 new Plan
                 {
@@ -184,7 +183,8 @@ namespace Bit.Core.Utilities
                     UseDirectory = true,
                     UseTotp = true,
                     MaxStorageGb = 1,
-                    SelfHost = true
+                    SelfHost = true,
+                    UsersGetPremium = true
                 }
             };
 

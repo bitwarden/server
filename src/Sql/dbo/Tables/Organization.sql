@@ -16,6 +16,7 @@
     [UseDirectory]          BIT              NOT NULL,
     [UseTotp]               BIT              NOT NULL,
     [SelfHost]              BIT              NOT NULL,
+    [UsersGetPremium]       BIT              NOT NULL,
     [Storage]               BIGINT           NULL,
     [MaxStorageGb]          SMALLINT         NULL,
     [Gateway]               TINYINT          NULL,

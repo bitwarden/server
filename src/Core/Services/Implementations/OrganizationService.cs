@@ -527,6 +527,7 @@ namespace Bit.Core.Services
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
                 SelfHost = plan.SelfHost,
+                UsersGetPremium = plan.UsersGetPremium,
                 Plan = plan.Name,
                 Gateway = plan.Type == PlanType.Free ? null : (GatewayType?)GatewayType.Stripe,
                 GatewayCustomerId = customer?.Id,
@@ -581,6 +582,7 @@ namespace Bit.Core.Services
                 UseTotp = license.UseTotp,
                 Plan = license.Plan,
                 SelfHost = license.SelfHost,
+                UsersGetPremium = license.UsersGetPremium,
                 Gateway = null,
                 GatewayCustomerId = null,
                 GatewaySubscriptionId = null,
@@ -597,8 +599,8 @@ namespace Bit.Core.Services
             Directory.CreateDirectory(dir);
             File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
 
-            // self-hosted org users get premium access
-            if(!owner.Premium && result.Item1.Enabled)
+            // self-hosted org users get premium access on some plans
+            if(organization.UsersGetPremium && !owner.Premium && result.Item1.Enabled)
             {
                 owner.Premium = true;
                 owner.MaxStorageGb = 10240; // 10 TB
@@ -1003,7 +1005,7 @@ namespace Bit.Core.Services
             await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
 
             // self-hosted org users get premium access
-            if(_globalSettings.SelfHosted && !user.Premium && org.Enabled)
+            if(_globalSettings.SelfHosted && !user.Premium && org.UsersGetPremium && org.Enabled)
             {
                 user.Premium = true;
                 user.MaxStorageGb = 10240; // 10 TB

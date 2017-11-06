@@ -23,5 +23,6 @@ namespace Bit.Core.Models.StaticStore
         public bool Disabled { get; set; }
         public int? TrialPeriodDays { get; set; }
         public bool SelfHost { get; set; }
+        public bool UsersGetPremium { get; set; }
     }
 }

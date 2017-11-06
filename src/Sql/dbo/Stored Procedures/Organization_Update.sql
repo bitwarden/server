@@ -16,6 +16,7 @@
     @UseDirectory BIT,
     @UseTotp BIT,
     @SelfHost BIT,
+    @UsersGetPremium BIT,
     @Storage BIGINT,
     @MaxStorageGb SMALLINT,
     @Gateway TINYINT,
@@ -26,7 +27,6 @@
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
-
 AS
 BEGIN
     SET NOCOUNT ON
@@ -50,6 +50,7 @@ BEGIN
         [UseDirectory] = @UseDirectory,
         [UseTotp] = @UseTotp,
         [SelfHost] = @SelfHost,
+        [UsersGetPremium] = @UsersGetPremium,
         [Storage] = @Storage,
         [MaxStorageGb] = @MaxStorageGb,
         [Gateway] = @Gateway,

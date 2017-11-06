@@ -25,6 +25,7 @@ namespace Bit.Core.Models.Table
         public bool UseDirectory { get; set; }
         public bool UseTotp { get; set; }
         public bool SelfHost { get; set; }
+        public bool UsersGetPremium { get; set; }
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }
