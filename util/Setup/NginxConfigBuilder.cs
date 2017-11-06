@@ -59,23 +59,17 @@ namespace Bit.Setup
 
         public void BuildForUpdater()
         {
-            Build();
-        }
-
-        public bool UpdateContext()
-        {
-            if(!File.Exists("/bitwarden/nginx/default.conf"))
+            if(File.Exists("/bitwarden/nginx/default.conf"))
             {
-                return false;
+                var confContent = File.ReadAllText("/bitwarden/nginx/default.conf");
+                Ssl = confContent.Contains("listen 443 ssl http2;");
+                SelfSignedSsl = confContent.Contains("/etc/ssl/self/");
+                LetsEncrypt = !SelfSignedSsl && confContent.Contains("/etc/letsencrypt/live/");
+                DiffieHellman = confContent.Contains("/dhparam.pem;");
+                Trusted = confContent.Contains("ssl_trusted_certificate ");
             }
 
-            var confContent = File.ReadAllText("/bitwarden/nginx/default.conf");
-            Ssl = confContent.Contains("listen 443 ssl http2;");
-            SelfSignedSsl = confContent.Contains("/etc/ssl/self/");
-            LetsEncrypt = !SelfSignedSsl && confContent.Contains("/etc/letsencrypt/live/");
-            DiffieHellman = confContent.Contains("/dhparam.pem;");
-            Trusted = confContent.Contains("ssl_trusted_certificate ");
-            return true;
+            Build();
         }
 
         private void Build()

@@ -14,11 +14,17 @@ namespace Bit.Setup
         private static IDictionary<string, string> _parameters = null;
         private static Guid? _installationId = null;
         private static string _installationKey = null;
+        private static string _hostOs = "win";
 
         public static void Main(string[] args)
         {
             _args = args;
             _parameters = ParseParameters();
+            if(_parameters.ContainsKey("os"))
+            {
+                _hostOs = _parameters["os"];
+            }
+
             if(_parameters.ContainsKey("install"))
             {
                 Install();
@@ -73,6 +79,30 @@ namespace Bit.Setup
             var nginxBuilder = new NginxConfigBuilder(domain, ssl, selfSignedSsl, letsEncrypt);
             nginxBuilder.BuildForInstaller();
 
+            Console.Write("(!) Do you want to use the default HTTP (80) and HTTPS (443) ports? (y/n): ");
+            var defaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
+            int httpPort = default(int), httpsPort = default(int);
+            if(!defaultPorts)
+            {
+                Console.Write("(!) HTTP port: ");
+                if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpPort))
+                {
+                    Console.Write("(!) HTTPS port: ");
+                    if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
+                    {
+                        url += (":" + httpsPort);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid HTTPS port.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Invalid HTTP port.");
+                }
+            }
+
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
             var push = Console.ReadLine().ToLowerInvariant() == "y";
 
@@ -94,6 +124,9 @@ namespace Bit.Setup
 
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
+
+            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs);
+            dockerComposeBuilder.BuildForInstaller(httpPort, httpsPort);
         }
 
         private static void Update()
@@ -115,7 +148,7 @@ namespace Bit.Setup
             Console.WriteLine("===================================================");
             Console.WriteLine("\n- visit {0}", vaultUrl);
             Console.Write("- to update, run ");
-            if(_parameters.ContainsKey("env") && _parameters["env"] == "win")
+            if(_hostOs == "win")
             {
                 Console.Write("'.\\bitwarden.ps1 -update'");
             }
@@ -223,10 +256,10 @@ namespace Bit.Setup
                 Console.WriteLine("Unable to determine existing installation url.");
                 return;
             }
+
             var domain = uri.Host;
 
             var nginxBuilder = new NginxConfigBuilder(domain);
-            nginxBuilder.UpdateContext();
             nginxBuilder.BuildForUpdater();
 
             var appSettingsBuilder = new AppSettingsBuilder(url, domain);
@@ -234,6 +267,9 @@ namespace Bit.Setup
 
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
+
+            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs);
+            dockerComposeBuilder.BuildForUpdater();
         }
 
         private static IDictionary<string, string> ParseParameters()
