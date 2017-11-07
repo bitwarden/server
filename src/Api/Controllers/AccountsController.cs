@@ -419,10 +419,14 @@ namespace Bit.Api.Controllers
                 var license = await _userService.GenerateLicenseAsync(user, billingInfo);
                 return new BillingResponseModel(user, billingInfo, license);
             }
-            else
+            else if(!_globalSettings.SelfHosted)
             {
                 var license = await _userService.GenerateLicenseAsync(user);
                 return new BillingResponseModel(user, license);
+            }
+            else
+            {
+                return new BillingResponseModel(user);
             }
         }
 
