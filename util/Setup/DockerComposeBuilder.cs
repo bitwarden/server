@@ -5,17 +5,25 @@ namespace Bit.Setup
 {
     public class DockerComposeBuilder
     {
-        private const string CoreVersion = "1.13.1";
-        private const string WebVersion = "1.19.0";
-
-        public DockerComposeBuilder(string os)
+        public DockerComposeBuilder(string os, string webVersion, string coreVersion)
         {
             MssqlDataDockerVolume = os == "mac";
+
+            if(!string.IsNullOrWhiteSpace(webVersion))
+            {
+                WebVersion = webVersion;
+            }
+            if(!string.IsNullOrWhiteSpace(coreVersion))
+            {
+                CoreVersion = coreVersion;
+            }
         }
 
         public bool MssqlDataDockerVolume { get; private set; }
         public int HttpPort { get; private set; } = 80;
         public int HttpsPort { get; private set; } = 443;
+        public string CoreVersion { get; private set; } = "latest";
+        public string WebVersion { get; private set; } = "latest";
 
         public void BuildForInstaller(int httpPort, int httpsPort)
         {
@@ -162,8 +170,7 @@ volumes:
                 }
 
                 // New line at end of file.
-                sw.Write(@"
-");
+                sw.Write("\n");
             }
         }
     }

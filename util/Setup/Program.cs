@@ -15,6 +15,8 @@ namespace Bit.Setup
         private static Guid? _installationId = null;
         private static string _installationKey = null;
         private static string _hostOs = "win";
+        private static string _coreVersion = "latest";
+        private static string _webVersion = "latest";
 
         public static void Main(string[] args)
         {
@@ -23,6 +25,14 @@ namespace Bit.Setup
             if(_parameters.ContainsKey("os"))
             {
                 _hostOs = _parameters["os"];
+            }
+            if(_parameters.ContainsKey("corev"))
+            {
+                _coreVersion = _parameters["corev"];
+            }
+            if(_parameters.ContainsKey("webv"))
+            {
+                _webVersion = _parameters["webv"];
             }
 
             if(_parameters.ContainsKey("install"))
@@ -125,7 +135,7 @@ namespace Bit.Setup
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
 
-            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs);
+            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs, _webVersion, _coreVersion);
             dockerComposeBuilder.BuildForInstaller(httpPort, httpsPort);
         }
 
@@ -271,7 +281,7 @@ namespace Bit.Setup
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
 
-            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs);
+            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs, _webVersion, _coreVersion);
             dockerComposeBuilder.BuildForUpdater();
         }
 
