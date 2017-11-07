@@ -9,14 +9,14 @@ namespace Bit.Setup
         private IDictionary<string, string> _globalValues;
         private IDictionary<string, string> _mssqlValues;
 
-        public string Url { get; set; }
-        public string Domain { get; set; }
-        public string IdentityCertPassword { get; set; }
+        public string Url { get; set; } = "https://localhost";
+        public string Domain { get; set; } = "localhost";
+        public string IdentityCertPassword { get; set; } = "REPLACE";
         public Guid? InstallationId { get; set; }
         public string InstallationKey { get; set; }
         public bool Push { get; set; }
-        public string DatabasePassword { get; set; }
-        public string OutputDirectory { get; set; }
+        public string DatabasePassword { get; set; } = "REPLACE";
+        public string OutputDirectory { get; set; } = ".";
 
         public void BuildForInstaller()
         {
