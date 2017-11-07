@@ -147,6 +147,7 @@ SA_PASSWORD=SECRET
                 {
                     sw.WriteLine($"{item.Key}={item.Value}");
                 }
+                sw.WriteLine(string.Empty);
             }
 
             using(var sw = File.CreateText("/bitwarden/env/mssql.override.env"))
@@ -155,6 +156,7 @@ SA_PASSWORD=SECRET
                 {
                     sw.WriteLine($"{item.Key}={item.Value}");
                 }
+                sw.WriteLine(string.Empty);
             }
         }
     }
