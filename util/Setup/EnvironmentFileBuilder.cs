@@ -21,19 +21,19 @@ namespace Bit.Setup
         public void BuildForInstaller()
         {
             Directory.CreateDirectory("/bitwarden/env/");
-            Init();
+            Init(true);
             Build();
         }
 
         public void BuildForUpdater()
         {
-            Init();
+            Init(false);
             LoadExistingValues(_globalValues, "/bitwarden/env/global.override.env");
             LoadExistingValues(_mssqlValues, "/bitwarden/env/mssql.override.env");
             Build();
         }
 
-        private void Init()
+        private void Init(bool forInstall)
         {
             var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", DatabasePassword);
             _globalValues = new Dictionary<string, string>
@@ -63,7 +63,7 @@ namespace Bit.Setup
                 ["globalSettings__disableUserRegistration"] = "false",
             };
 
-            if(!Push)
+            if(!forInstall && !Push)
             {
                 _globalValues.Add("globalSettings__pushRelayBaseUri", "REPLACE");
             }
