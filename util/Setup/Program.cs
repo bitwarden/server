@@ -117,7 +117,7 @@ namespace Bit.Setup
                 Push = push,
                 Url = url
             };
-            environmentFileBuilder.Build();
+            environmentFileBuilder.BuildForInstaller();
 
             var appSettingsBuilder = new AppSettingsBuilder(url, domain);
             appSettingsBuilder.Build();
@@ -250,6 +250,9 @@ namespace Bit.Setup
 
         private static void RebuildConfigs()
         {
+            var environmentFileBuilder = new EnvironmentFileBuilder();
+            environmentFileBuilder.BuildForUpdater();
+
             var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
             if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
             {
