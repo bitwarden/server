@@ -101,11 +101,11 @@ namespace Bit.Core.Utilities
                 },
                 new Plan
                 {
-                    Type = PlanType.FamilyAnnually,
+                    Type = PlanType.FamiliesAnnually,
                     BaseSeats = 5,
                     BasePrice = 12,
                     CanBuyAdditionalSeats = false,
-                    Name = "Family",
+                    Name = "Families",
                     StripePlanId = "personal-org-annually",
                     StripStoragePlanId = "storage-gb-annually",
                     UpgradeSortOrder = 1,

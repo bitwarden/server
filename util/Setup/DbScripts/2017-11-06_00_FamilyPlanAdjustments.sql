@@ -16,7 +16,7 @@ GO
 UPDATE
     [dbo].[Organization]
 SET
-    [Plan] = 'Family'
+    [Plan] = 'Families'
 WHERE
     [PlanType] = 1
 GO

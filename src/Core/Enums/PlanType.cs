@@ -3,7 +3,7 @@
     public enum PlanType : byte
     {
         Free = 0,
-        FamilyAnnually = 1,
+        FamiliesAnnually = 1,
         TeamsMonthly = 2,
         TeamsAnnually = 3,
         EnterpriseMonthly = 4,
