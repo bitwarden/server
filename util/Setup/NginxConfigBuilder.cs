@@ -12,23 +12,26 @@ namespace Bit.Setup
             "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:" +
             "AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
 
-        public NginxConfigBuilder(string domain, bool ssl, bool selfSignedSsl, bool letsEncrypt)
+        public NginxConfigBuilder(string domain, string url, bool ssl, bool selfSignedSsl, bool letsEncrypt)
         {
             Domain = domain;
+            Url = url;
             Ssl = ssl;
             SelfSignedSsl = selfSignedSsl;
             LetsEncrypt = letsEncrypt;
         }
 
-        public NginxConfigBuilder(string domain)
+        public NginxConfigBuilder(string domain, string url)
         {
             Domain = domain;
+            Url = url;
         }
 
         public bool Ssl { get; private set; }
         public bool SelfSignedSsl { get; private set; }
         public bool LetsEncrypt { get; private set; }
         public string Domain { get; private set; }
+        public string Url { get; private set; }
         public bool DiffieHellman { get; private set; }
         public bool Trusted { get; private set; }
 
@@ -90,6 +93,7 @@ namespace Bit.Setup
 # Parameter:SelfSignedSsl={SelfSignedSsl}
 # Parameter:LetsEncrypt={LetsEncrypt}
 # Parameter:Domain={Domain}
+# Parameter:Url={Url}
 # Parameter:DiffieHellman={DiffieHellman}
 # Parameter:Trusted={Trusted}
 
@@ -100,7 +104,7 @@ server {{
 
                 if(Ssl)
                 {
-                    sw.WriteLine($@"  return 301 https://$server_name$request_uri;
+                    sw.WriteLine($@"  return 301 ${Url}$request_uri;
 }}
 
 server {{

@@ -86,10 +86,7 @@ namespace Bit.Setup
             ssl = certBuilder.Ssl; // Ssl prop can get flipped during the build
 
             var url = ssl ? $"https://{domain}" : $"http://{domain}";
-            var nginxBuilder = new NginxConfigBuilder(domain, ssl, selfSignedSsl, letsEncrypt);
-            nginxBuilder.BuildForInstaller();
-
-            Console.Write("(!) Do you want to use the default HTTP (80) and HTTPS (443) ports? (y/n): ");
+            Console.Write("(!) Do you want to use the default ports for HTTP (80) and HTTPS (443)? (y/n): ");
             var defaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
             int httpPort = default(int), httpsPort = default(int);
             if(!defaultPorts)
@@ -97,14 +94,25 @@ namespace Bit.Setup
                 Console.Write("(!) HTTP port: ");
                 if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpPort))
                 {
-                    Console.Write("(!) HTTPS port: ");
-                    if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
+                    if(ssl)
                     {
-                        url += (":" + httpsPort);
+                        Console.Write("(!) HTTPS port: ");
+                        if(!int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
+                        {
+                            if(httpPort != 443)
+                            {
+                                url += (":" + httpsPort);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid HTTPS port.");
+                            httpPort = default(int);
+                        }
                     }
-                    else
+                    else if(httpPort != 80)
                     {
-                        Console.WriteLine("Invalid HTTPS port.");
+                        url += (":" + httpPort);
                     }
                 }
                 else
@@ -115,6 +123,9 @@ namespace Bit.Setup
 
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
             var push = Console.ReadLine().ToLowerInvariant() == "y";
+
+            var nginxBuilder = new NginxConfigBuilder(domain, url, ssl, selfSignedSsl, letsEncrypt);
+            nginxBuilder.BuildForInstaller();
 
             var environmentFileBuilder = new EnvironmentFileBuilder
             {
@@ -272,7 +283,7 @@ namespace Bit.Setup
 
             var domain = uri.Host;
 
-            var nginxBuilder = new NginxConfigBuilder(domain);
+            var nginxBuilder = new NginxConfigBuilder(domain, url);
             nginxBuilder.BuildForUpdater();
 
             var appSettingsBuilder = new AppSettingsBuilder(url, domain);
