@@ -114,7 +114,7 @@ namespace Bit.Core.Models.Business
                         !p.Name.Equals(nameof(Signature)) &&
                         !p.Name.Equals(nameof(SignatureBytes)) &&
                         // UsersGetPremium was added in Version 2
-                        (Version == 1 || !p.Name.Equals(nameof(UsersGetPremium))) &&
+                        (Version > 1 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                         (
                             !forHash ||
                             (
