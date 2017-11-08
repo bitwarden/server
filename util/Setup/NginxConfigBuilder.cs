@@ -104,7 +104,7 @@ server {{
 
                 if(Ssl)
                 {
-                    sw.WriteLine($@"  return 301 ${Url}$request_uri;
+                    sw.WriteLine($@"  return 301 {Url}$request_uri;
 }}
 
 server {{
