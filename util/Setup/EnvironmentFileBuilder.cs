@@ -63,7 +63,7 @@ namespace Bit.Setup
                 ["globalSettings__disableUserRegistration"] = "false",
             };
 
-            if(!forInstall && !Push)
+            if(forInstall && !Push)
             {
                 _globalValues.Add("globalSettings__pushRelayBaseUri", "REPLACE");
             }
