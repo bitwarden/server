@@ -55,7 +55,18 @@ namespace Bit.Api.Models
             public Item(StripeInvoiceLineItem item)
             {
                 Amount = (item.Amount / 100).ToString("F");
-                Description = item.Description ?? "--";
+                if(!string.IsNullOrWhiteSpace(item.Description))
+                {
+                    Description = item.Description;
+                }
+                else if(!string.IsNullOrWhiteSpace(item.Plan?.Name) && item.Quantity.GetValueOrDefault() > 0)
+                {
+                    Description = $"{item.Quantity} x {item.Plan.Name}";
+                }
+                else
+                {
+                    Description = "--";
+                }
             }
 
             public string Description { get; set; }
