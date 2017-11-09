@@ -2,19 +2,19 @@
 set -e
 
 OUTPUT_DIR="../."
-if [ $# -eq 1 ]
+if [ $# -gt 0 ]
 then
     OUTPUT_DIR=$1
 fi
 
 COREVERSION="latest"
-if [ $# -gt 2 ]
+if [ $# -gt 1 ]
 then
     COREVERSION=$2
 fi
 
 WEBVERSION="latest"
-if [ $# -gt 3 ]
+if [ $# -gt 2 ]
 then
     WEBVERSION=$3
 fi
