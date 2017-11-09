@@ -7,7 +7,23 @@ then
     OUTPUT_DIR=$1
 fi
 
-TAG="1.13.1"
+COREVERSION="latest"
+if [ $# -gt 2 ]
+then
+    COREVERSION=$2
+fi
+
+WEBVERSION="latest"
+if [ $# -gt 3 ]
+then
+    WEBVERSION=$3
+fi
+
+OS="lin"
+if [ "$(uname)" == "Darwin" ]
+then
+    OS="mac"
+fi
 
 mkdir -p $OUTPUT_DIR
 
@@ -34,9 +50,9 @@ then
     fi
 fi
 
-docker pull bitwarden/setup:$TAG
-docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$TAG \
-    dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT
+docker pull bitwarden/setup:$COREVERSION
+docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+    dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
 
 echo ""
 echo "Setup complete"

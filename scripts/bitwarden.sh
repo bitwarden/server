@@ -35,15 +35,10 @@ then
     OUTPUT=$2
 fi
 
-OS="linwin"
-if [ "$(uname)" == "Darwin" ]
-then
-    OS="mac"
-fi
-
 SCRIPTS_DIR="$OUTPUT/scripts"
-DOCKER_DIR="$OUTPUT/docker"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/core/master"
+COREVERSION="1.14.0"
+WEBVERSION="1.20.0"
 
 # Functions
 
@@ -70,18 +65,6 @@ function downloadRunFile() {
     chmod u+x $SCRIPTS_DIR/run.sh
 }
 
-function downloadDockerFiles() {
-    curl -s -o $DOCKER_DIR/docker-compose.yml $GITHUB_BASE_URL/docker/docker-compose.yml
-    curl -s -o $DOCKER_DIR/docker-compose.$OS.yml $GITHUB_BASE_URL/docker/docker-compose.$OS.yml
-    curl -s -o $DOCKER_DIR/global.env $GITHUB_BASE_URL/docker/global.env
-    curl -s -o $DOCKER_DIR/mssql.env $GITHUB_BASE_URL/docker/mssql.env
-}
-
-function downloadAllFiles() {
-    downloadRunFile
-    downloadDockerFiles
-}
-
 function checkOutputDirExists() {
     if [ ! -d "$OUTPUT" ]
     then
@@ -105,36 +88,24 @@ then
     checkOutputDirNotExists
     mkdir $OUTPUT
     downloadInstall
-    $SCRIPTS_DIR/install.sh $OUTPUT
+    $SCRIPTS_DIR/install.sh $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     checkOutputDirExists
-    if [ ! -d "$DOCKER_DIR" ]
-    then
-        mkdir $DOCKER_DIR
-        downloadAllFiles
-    fi
-    
-    $SCRIPTS_DIR/run.sh restart $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "update" ]
 then
     checkOutputDirExists
-    if [ -d "$DOCKER_DIR" ]
-    then
-        rm -rf $DOCKER_DIR
-    fi
-
-    mkdir $DOCKER_DIR
-    downloadAllFiles
-    $SCRIPTS_DIR/run.sh update $OUTPUT $DOCKER_DIR
+    downloadRunFile
+    $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists
-    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "stop" ]
 then
     checkOutputDirExists
-    $SCRIPTS_DIR/run.sh stop $OUTPUT $DOCKER_DIR
+    $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updateself" ]
 then
     downloadSelf

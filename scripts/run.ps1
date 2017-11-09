@@ -1,6 +1,7 @@
 param (
     [string]$outputDir = "../.",
-    [string]$dockerDir = "",
+    [string]$coreVersion = "latest",
+    [string]$webVersion = "latest",
     [switch] $start,
     [switch] $restart,
     [switch] $stop,
@@ -11,25 +12,20 @@ param (
 
 # Setup
 
-[string]$tag = "1.13.1"
-
-$dir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if($dockerDir -eq "") {
-    $dockerDir="${dir}\..\docker"
-}
+$dockerDir="${outputDir}\docker"
 
 # Functions
 
 function Docker-Compose-Up {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml up -d
+    docker-compose -f ${dockerDir}\docker-compose.yml up -d
 }
 
 function Docker-Compose-Down {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml down
+    docker-compose -f ${dockerDir}\docker-compose.yml down
 }
 
 function Docker-Compose-Pull {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.linwin.yml pull
+    docker-compose -f ${dockerDir}\docker-compose.yml pull
 }
 
 function Docker-Prune {
@@ -46,21 +42,21 @@ function Update-Lets-Encrypt {
 
 function Update-Database {
     Pull-Setup
-    docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
-        dotnet Setup.dll -update 1 -db 1
+    docker run -it --rm --name setup --network container:mssql -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
+        dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion
     echo "Database update complete"
 }
 
 function Update {
     Pull-Setup
-    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
-        dotnet Setup.dll -update 1
+    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
+        dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion
 }
 
 function Print-Environment {
     Pull-Setup
-    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$tag `
-        dotnet Setup.dll -printenv 1 -env win
+    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
+        dotnet Setup.dll -printenv 1 -os win -corev $coreVersion -webv $webVersion
 }
 
 function Restart {
@@ -73,7 +69,7 @@ function Restart {
 }
 
 function Pull-Setup {
-    docker pull bitwarden/setup:$tag
+    docker pull bitwarden/setup:$coreVersion
 }
 
 # Commands

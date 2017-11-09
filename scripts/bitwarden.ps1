@@ -41,8 +41,9 @@ if($output -eq "") {
 }
 
 $scriptsDir = "${output}\scripts"
-$dockerDir = "${output}\docker"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
+$coreVersion = "1.14.0"
+$webVersion = "1.20.0"
 
 # Functions
 
@@ -64,18 +65,6 @@ function Download-Run-File {
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
 }
 
-function Download-Docker-Files {
-    Invoke-RestMethod -OutFile $dockerDir\docker-compose.yml -Uri "${githubBaseUrl}/docker/docker-compose.yml"
-    Invoke-RestMethod -OutFile $dockerDir\docker-compose.linwin.yml ` -Uri "${githubBaseUrl}/docker/docker-compose.linwin.yml"
-    Invoke-RestMethod -OutFile $dockerDir\global.env -Uri "${githubBaseUrl}/docker/global.env"
-    Invoke-RestMethod -OutFile $dockerDir\mssql.env -Uri "${githubBaseUrl}/docker/mssql.env"
-}
-
-function Download-All-Files {
-    Download-Run-File
-    Download-Docker-Files
-}
-
 function Check-Output-Dir-Exists {
     if(!(Test-Path -Path $output)) {
         throw "Cannot find a bitwarden installation at $output."
@@ -94,34 +83,24 @@ if($install) {
     Check-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output | Out-Null
     Download-Install
-    Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output"
+    Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($start -Or $restart) {
     Check-Output-Dir-Exists
-    if(!(Test-Path -Path $dockerDir)) {
-        New-Item -ItemType directory -Path $dockerDir | Out-Null
-        Download-All-Files
-    }
-
-    Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($update) {
     Check-Output-Dir-Exists
-    if(Test-Path -Path $dockerDir) {
-        Remove-Item -Recurse -Force $dockerDir | Out-Null
-    }
-    New-Item -ItemType directory -Path $dockerDir | Out-Null
-
-    Download-All-Files
-    Invoke-Expression "$scriptsDir\run.ps1 -update -outputDir $output -dockerDir $dockerDir"
+    Download-Run-File
+    Invoke-Expression "$scriptsDir\run.ps1 -update -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($updatedb) {
     Check-Output-Dir-Exists
-    Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($stop) {
     Check-Output-Dir-Exists
-    Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -dockerDir $dockerDir"
+    Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($updateself) {
     Download-Self
