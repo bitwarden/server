@@ -97,9 +97,9 @@ namespace Bit.Setup
                     if(ssl)
                     {
                         Console.Write("(!) HTTPS port: ");
-                        if(!int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
+                        if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
                         {
-                            if(httpPort != 443)
+                            if(httpsPort != 443)
                             {
                                 url += (":" + httpsPort);
                             }
@@ -107,7 +107,7 @@ namespace Bit.Setup
                         else
                         {
                             Console.WriteLine("Invalid HTTPS port.");
-                            httpPort = default(int);
+                            httpPort = httpsPort = default(int);
                         }
                     }
                     else if(httpPort != 80)
