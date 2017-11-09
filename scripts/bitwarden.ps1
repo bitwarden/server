@@ -83,6 +83,7 @@ if($install) {
     Check-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output | Out-Null
     Download-Install
+    Download-Run-File
     Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($start -Or $restart) {

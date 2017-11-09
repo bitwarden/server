@@ -88,6 +88,7 @@ then
     checkOutputDirNotExists
     mkdir $OUTPUT
     downloadInstall
+    downloadRunFile
     $SCRIPTS_DIR/install.sh $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
