@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net.Http;
 using System.Reflection;
+using System.IO;
 
 namespace Bit.Setup
 {
@@ -75,6 +76,7 @@ namespace Bit.Setup
 
                 if(ssl)
                 {
+                    Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
                     Console.WriteLine("Make sure 'certificate.crt' and 'private.key' are provided in the " +
                         "appropriate directory (see setup instructions).");
                 }
