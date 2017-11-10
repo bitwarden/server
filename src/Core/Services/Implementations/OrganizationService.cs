@@ -940,6 +940,12 @@ namespace Bit.Core.Services
                 }
             }
 
+            var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(orgUser.OrganizationId, user.Email);
+            if(existingOrgUser != null)
+            {
+                throw new BadRequestException("You are already part of this organization.");
+            }
+
             var tokenValidationFailed = true;
             try
             {
