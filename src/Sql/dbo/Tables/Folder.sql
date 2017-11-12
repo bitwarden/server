@@ -8,3 +8,9 @@
     CONSTRAINT [FK_Folder_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Folder_UserId_IncludeAll]
+    ON [dbo].[Folder]([UserId] ASC)
+    INCLUDE ([Name], [CreationDate], [RevisionDate]);
+
