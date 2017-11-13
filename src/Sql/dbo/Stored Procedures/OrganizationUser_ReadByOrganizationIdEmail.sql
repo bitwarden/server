@@ -1,15 +1,21 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdEmail]
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50)
+    @Email NVARCHAR(50),
+    @OnlyUsers BIT
 AS
 BEGIN
     SET NOCOUNT ON
 
     SELECT
-        *
+        COUNT(1)
     FROM
-        [dbo].[OrganizationUserView]
+        [dbo].[OrganizationUser] OU
+    LEFT JOIN
+        [dbo].[User] U ON OU.[UserId] = U.[Id]
     WHERE
-        [OrganizationId] = @OrganizationId
-        AND [Email] = @Email
+        OU.[OrganizationId] = @OrganizationId
+        AND (
+            (@OnlyUsers = 0 AND (OU.[Email] = @Email OR U.[Email] = @Email))
+            OR (@OnlyUsers = 1 AND U.[Email] = @Email)
+        )
 END

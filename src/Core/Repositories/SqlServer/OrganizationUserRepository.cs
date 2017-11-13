@@ -62,16 +62,16 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, string email)
+        public async Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.QueryAsync<OrganizationUser>(
-                    "[dbo].[OrganizationUser_ReadByOrganizationIdEmail]",
-                    new { OrganizationId = organizationId, Email = email },
+                var result = await connection.ExecuteScalarAsync<int>(
+                    "[dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]",
+                    new { OrganizationId = organizationId, Email = email, OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 
-                return results.SingleOrDefault();
+                return result;
             }
         }
 

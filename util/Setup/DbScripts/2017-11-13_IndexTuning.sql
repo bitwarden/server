@@ -1,4 +1,39 @@
-﻿IF EXISTS (
+﻿IF OBJECT_ID('[dbo].[OrganizationUser_ReadByOrganizationIdEmail]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdEmail]
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Email NVARCHAR(50),
+    @OnlyUsers BIT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        COUNT(1)
+    FROM
+        [dbo].[OrganizationUser] OU
+    LEFT JOIN
+        [dbo].[User] U ON OU.[UserId] = U.[Id]
+    WHERE
+        OU.[OrganizationId] = @OrganizationId
+        AND (
+            (@OnlyUsers = 0 AND (OU.[Email] = @Email OR U.[Email] = @Email))
+            OR (@OnlyUsers = 1 AND U.[Email] = @Email)
+        )
+END
+GO
+
+IF EXISTS (
     SELECT *  FROM sys.indexes  WHERE [Name]='IX_Cipher_UserId_Type'
     AND object_id = OBJECT_ID('[dbo].[Cipher]')
 )
@@ -39,4 +74,3 @@ BEGIN
         INCLUDE ([AccessAll])
 END
 GO
-

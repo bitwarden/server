@@ -857,8 +857,9 @@ namespace Bit.Core.Services
             foreach(var email in emails)
             {
                 // Make sure user is not already invited
-                var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, email);
-                if(existingOrgUser != null)
+                var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
+                    organizationId, email, false);
+                if(existingOrgUserCount > 0)
                 {
                     throw new BadRequestException("User already invited.");
                 }
@@ -940,8 +941,9 @@ namespace Bit.Core.Services
                 }
             }
 
-            var existingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(orgUser.OrganizationId, user.Email);
-            if(existingOrgUser != null)
+            var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
+                orgUser.OrganizationId, user.Email, true);
+            if(existingOrgUserCount > 0)
             {
                 throw new BadRequestException("You are already part of this organization.");
             }
