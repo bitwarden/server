@@ -69,9 +69,10 @@
         Ebay = 64,
         Techdata = 65,
         Schwab = 66,
-        Mozilla = 67,
+        Mozilla = 67, // deprecated
         Tesla = 68,
         MorganStanley = 69,
-        TaxAct = 70
+        TaxAct = 70,
+        Wikimedia = 71
     }
 }
