@@ -1168,6 +1168,7 @@ namespace Bit.Core.Services
             var existingExternalUsersIdDict = existingExternalUsers.ToDictionary(u => u.ExternalId, u => u.Id);
 
             // Users
+
             // Remove Users
             if(removeUserExternalIds?.Any() ?? false)
             {
@@ -1243,6 +1244,7 @@ namespace Bit.Core.Services
             }
 
             // Groups
+
             if(groups?.Any() ?? false)
             {
                 if(!organization.UseGroups)
