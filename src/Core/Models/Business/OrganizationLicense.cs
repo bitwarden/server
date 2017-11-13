@@ -185,7 +185,7 @@ namespace Bit.Core.Models.Business
 
                 if(valid && Version == 2)
                 {
-                    valid = organization.UsersGetPremium = UsersGetPremium;
+                    valid = organization.UsersGetPremium == UsersGetPremium;
                 }
 
                 return valid;
