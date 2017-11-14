@@ -1321,7 +1321,7 @@ namespace Bit.Core.Services
         private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
         {
             var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-            return devices.Select(d => d.Id.ToString());
+            return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
         }
     }
 }
