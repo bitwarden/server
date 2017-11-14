@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Enums;
 using System.Linq;
+using System;
 
 namespace Bit.Core.Services
 {
@@ -18,7 +19,7 @@ namespace Bit.Core.Services
                 globalSettings.NotificationHub.HubName);
         }
 
-        public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId, 
+        public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
             string identifier, DeviceType type)
         {
             if(string.IsNullOrWhiteSpace(pushToken))
@@ -110,7 +111,17 @@ namespace Bit.Core.Services
 
         public async Task DeleteRegistrationAsync(string deviceId)
         {
-            await _client.DeleteInstallationAsync(deviceId);
+            try
+            {
+                await _client.DeleteInstallationAsync(deviceId);
+            }
+            catch(Exception e)
+            {
+                if(!e.Message.Contains("(400) Bad Request"))
+                {
+                    throw e;
+                }
+            }
         }
 
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -140,7 +151,17 @@ namespace Bit.Core.Services
 
             foreach(var id in deviceIds)
             {
-                await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
+                try
+                {
+                    await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
+                }
+                catch(Exception e)
+                {
+                    if(!e.Message.Contains("(400) Bad Request"))
+                    {
+                        throw e;
+                    }
+                }
             }
         }
     }
