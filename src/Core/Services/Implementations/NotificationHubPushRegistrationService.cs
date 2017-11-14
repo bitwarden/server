@@ -117,7 +117,7 @@ namespace Bit.Core.Services
             }
             catch(Exception e)
             {
-                if(!e.Message.Contains("(400) Bad Request"))
+                if(e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                 {
                     throw e;
                 }
@@ -145,9 +145,17 @@ namespace Bit.Core.Services
             var operation = new PartialUpdateOperation
             {
                 Operation = op,
-                Path = "/tags",
-                Value = tag
+                Path = "/tags"
             };
+
+            if(op == UpdateOperationType.Add)
+            {
+                operation.Value = tag;
+            }
+            else if(op == UpdateOperationType.Remove)
+            {
+                operation.Path += $"/{tag}";
+            }
 
             foreach(var id in deviceIds)
             {
@@ -157,7 +165,7 @@ namespace Bit.Core.Services
                 }
                 catch(Exception e)
                 {
-                    if(!e.Message.Contains("(400) Bad Request"))
+                    if(e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                     {
                         throw e;
                     }
