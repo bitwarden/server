@@ -10,9 +10,9 @@ namespace Bit.Function
     public static class DatabaseMaintenance
     {
         [FunctionName("DatabaseMaintenance")]
-        public static void Run([TimerTrigger("0 0 * * *")]TimerInfo myTimer, TraceWriter log)
+        public static void Run([TimerTrigger("0 0 4 * * *")]TimerInfo myTimer, TraceWriter log)
         {
-            var connectionString = ConfigurationManager.ConnectionStrings["vault_db"].ConnectionString;
+            var connectionString = ConfigurationManager.ConnectionStrings["Vault"].ConnectionString;
             using(var connection = new SqlConnection(connectionString))
             {
                 connection.Open();
@@ -33,6 +33,8 @@ namespace Bit.Function
                 // Asynchronous BeginExecuteNonQuery for this long running sproc to avoid timeouts
                 var result = cmd.BeginExecuteNonQuery();
                 cmd.EndExecuteNonQuery(result);
+
+                log.Info($"Started [dbo].[AzureSQLMaintenance] at {DateTime.UtcNow}.");
             }
         }
     }
