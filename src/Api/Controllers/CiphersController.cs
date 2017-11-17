@@ -335,9 +335,9 @@ namespace Bit.Api.Controllers
         [HttpPost("delete")]
         public async Task DeleteMany([FromBody]CipherBulkDeleteRequestModel model)
         {
-            if(model.Ids.Count() > 200)
+            if(!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
-                throw new BadRequestException("You can only delete up to 200 items at a time.");
+                throw new BadRequestException("You can only delete up to 500 items at a time.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
@@ -348,9 +348,9 @@ namespace Bit.Api.Controllers
         [HttpPost("move")]
         public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)
         {
-            if(model.Ids.Count() > 200)
+            if(!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
-                throw new BadRequestException("You can only move up to 200 items at a time.");
+                throw new BadRequestException("You can only move up to 500 items at a time.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
