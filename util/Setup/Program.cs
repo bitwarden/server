@@ -137,12 +137,12 @@ namespace Bit.Setup
                 else
                 {
                     int httpReversePort = default(int), httpsReversePort = default(int);
-                    Console.Write("(!) HTTP port: ");
+                    Console.Write("(!) Proxy HTTP port: ");
                     if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpReversePort))
                     {
                         if(ssl)
                         {
-                            Console.Write("(!) HTTPS port: ");
+                            Console.Write("(!) Proxy HTTPS port: ");
                             if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsReversePort))
                             {
                                 if(httpsReversePort != 443)
@@ -152,7 +152,7 @@ namespace Bit.Setup
                             }
                             else
                             {
-                                Console.WriteLine("Invalid HTTPS port.");
+                                Console.WriteLine("Invalid proxy HTTPS port.");
                                 httpReversePort = httpsReversePort = default(int);
                             }
                         }
@@ -163,7 +163,7 @@ namespace Bit.Setup
                     }
                     else
                     {
-                        Console.WriteLine("Invalid HTTP port.");
+                        Console.WriteLine("Invalid proxy HTTP port.");
                     }
                 }
             }
