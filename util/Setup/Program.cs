@@ -168,7 +168,6 @@ namespace Bit.Setup
                 }
             }
 
-            Console.WriteLine($"url: {url}");
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
             var push = Console.ReadLine().ToLowerInvariant() == "y";
 
