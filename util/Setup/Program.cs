@@ -123,6 +123,52 @@ namespace Bit.Setup
                 }
             }
 
+            Console.Write("(!) Is your installation behind a reverse proxy? (y/n): ");
+            var reverseProxy = Console.ReadLine().ToLowerInvariant() == "y";
+            if(reverseProxy)
+            {
+                Console.Write("(!) Do you use the default ports on your reverse proxy (80/443)? (y/n): ");
+                var proxyDefaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
+
+                if(proxyDefaultPorts)
+                {
+                    url = ssl ? $"https://{domain}" : $"http://{domain}";
+                }
+                else
+                {
+                    int httpReversePort = default(int), httpsReversePort = default(int);
+                    Console.Write("(!) HTTP port: ");
+                    if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpReversePort))
+                    {
+                        if(ssl)
+                        {
+                            Console.Write("(!) HTTPS port: ");
+                            if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsReversePort))
+                            {
+                                if(httpsReversePort != 443)
+                                {
+                                    url += (":" + httpsReversePort);
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid HTTPS port.");
+                                httpReversePort = httpsReversePort = default(int);
+                            }
+                        }
+                        else if(httpReversePort != 80)
+                        {
+                            url += (":" + httpReversePort);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid HTTP port.");
+                    }
+                }
+            }
+
+            Console.WriteLine($"url: {url}");
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
             var push = Console.ReadLine().ToLowerInvariant() == "y";
 
