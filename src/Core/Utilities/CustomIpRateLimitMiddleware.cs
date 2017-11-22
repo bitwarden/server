@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
+using System.Linq;
+using System;
 
 namespace Bit.Core.Utilities
 {
@@ -58,13 +60,39 @@ namespace Bit.Core.Utilities
             if(blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
-                _logger.LogInformation($"Blocked {identity.ClientIp}");
+                _logger.LogInformation($"Blocked {identity.ClientIp} with token {GetToken(httpContext.Request)}");
             }
             else
             {
                 _memoryCache.Set(key, blockedCount,
-                    new MemoryCacheEntryOptions().SetSlidingExpiration(new System.TimeSpan(0, 5, 0)));
+                    new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
+        }
+
+        private string GetToken(HttpRequest request)
+        {
+            if(request == null)
+            {
+                return null;
+            }
+
+            var authorization = request.Headers["Authorization"].FirstOrDefault();
+            if(string.IsNullOrWhiteSpace(authorization))
+            {
+                // Bearer token could exist in the 'Content-Language' header on clients that want to avoid pre-flights.
+                var languageAuth = request.Headers["Content-Language"].FirstOrDefault();
+                if(string.IsNullOrWhiteSpace(languageAuth) ||
+                    !languageAuth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    return request.Query["access_token"].FirstOrDefault();
+                }
+                else
+                {
+                    authorization = languageAuth.Split(',')[0];
+                }
+            }
+
+            return authorization;
         }
     }
 }
