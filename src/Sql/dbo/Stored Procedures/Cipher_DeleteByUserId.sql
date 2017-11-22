@@ -22,6 +22,13 @@ BEGIN
         COMMIT TRANSACTION Cipher_DeleteByUserId_Ciphers
     END
 
+    -- Delete folders
+    DELETE
+    FROM
+        [dbo].[Folder]
+    WHERE
+        [UserId] = @UserId
+
     -- Cleanup user
     EXEC [dbo].[User_UpdateStorage] @UserId
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
