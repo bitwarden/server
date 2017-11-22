@@ -72,7 +72,7 @@ namespace Bit.Core.Models.Api
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
             : base(cipher, globalSettings, obj)
         {
-            if(collectionCiphers.ContainsKey(cipher.Id))
+            if(collectionCiphers?.ContainsKey(cipher.Id) ?? false)
             {
                 CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }
@@ -86,7 +86,7 @@ namespace Bit.Core.Models.Api
             IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
             : base(cipher, globalSettings, obj)
         {
-            CollectionIds = collectionCiphers.Select(c => c.CollectionId);
+            CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
         }
 
         public IEnumerable<Guid> CollectionIds { get; set; }
@@ -98,7 +98,7 @@ namespace Bit.Core.Models.Api
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
             : base(cipher, globalSettings, false, obj)
         {
-            if(collectionCiphers.ContainsKey(cipher.Id))
+            if(collectionCiphers?.ContainsKey(cipher.Id) ?? false)
             {
                 CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }

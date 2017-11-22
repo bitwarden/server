@@ -8,6 +8,9 @@ using Bit.Core.Repositories;
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using System.Linq;
+using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -18,6 +21,8 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IFolderRepository _folderRepository;
         private readonly ICipherRepository _cipherRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly GlobalSettings _globalSettings;
 
@@ -25,12 +30,16 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IFolderRepository folderRepository,
             ICipherRepository cipherRepository,
+            ICollectionRepository collectionRepository,
+            ICollectionCipherRepository collectionCipherRepository,
             IOrganizationUserRepository organizationUserRepository,
             GlobalSettings globalSettings)
         {
             _userService = userService;
             _folderRepository = folderRepository;
             _cipherRepository = cipherRepository;
+            _collectionRepository = collectionRepository;
+            _collectionCipherRepository = collectionCipherRepository;
             _organizationUserRepository = organizationUserRepository;
             _globalSettings = globalSettings;
         }
@@ -48,7 +57,19 @@ namespace Bit.Api.Controllers
                 OrganizationUserStatusType.Confirmed);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-            var response = new SyncResponseModel(_globalSettings, user, organizationUserDetails, folders, ciphers);
+
+            IEnumerable<Collection> collections = new List<Collection>();
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = 
+                new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>();
+            if(organizationUserDetails.Any(o => o.Enabled))
+            {
+                collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, false);
+                var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
+                collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+            }
+
+            var response = new SyncResponseModel(_globalSettings, user, organizationUserDetails, folders,
+                collections, ciphers, collectionCiphersGroupDict);
             return response;
         }
     }
