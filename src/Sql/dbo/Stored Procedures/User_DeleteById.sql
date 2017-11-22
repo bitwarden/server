@@ -65,6 +65,13 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Delete U2F logins
+    DELETE
+    FROM
+        [dbo].[U2f]
+    WHERE
+        [UserId] = @Id
+
     -- Finally, delete the user
     DELETE
     FROM
