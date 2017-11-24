@@ -34,5 +34,4 @@ BEGIN
         [Id] IN (SELECT * FROM [IdsToMoveCTE])
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-    -- TODO: What if some that were updated were organization ciphers? Then bump by org ids.
 END

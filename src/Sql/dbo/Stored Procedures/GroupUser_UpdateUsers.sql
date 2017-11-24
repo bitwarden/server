@@ -42,5 +42,5 @@ BEGIN
         DELETE
     ;
 
-    -- TODO: Bump account revision date for all @OrganizationUserIds
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
 END

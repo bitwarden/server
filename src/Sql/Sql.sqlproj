@@ -214,5 +214,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadByPremium.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCipherId.sql" />
   </ItemGroup>
 </Project>

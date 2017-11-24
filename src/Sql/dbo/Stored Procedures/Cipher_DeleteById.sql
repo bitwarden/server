@@ -30,7 +30,7 @@ BEGIN
         BEGIN
             EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
         END
-        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
     END
     ELSE IF @UserId IS NOT NULL
     BEGIN

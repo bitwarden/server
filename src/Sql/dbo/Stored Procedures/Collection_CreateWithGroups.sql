@@ -33,4 +33,6 @@ BEGIN
         @Groups
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableGroupsCTE])
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END

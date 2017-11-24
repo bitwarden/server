@@ -35,4 +35,6 @@ BEGIN
         @Collections
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END

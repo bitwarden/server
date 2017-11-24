@@ -43,5 +43,5 @@ BEGIN
         DELETE
     ;
 
-    -- TODO: Update user revision date times that this affects
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END

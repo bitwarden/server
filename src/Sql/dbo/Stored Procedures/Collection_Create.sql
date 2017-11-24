@@ -24,4 +24,6 @@ BEGIN
         @CreationDate,
         @RevisionDate
     )
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END

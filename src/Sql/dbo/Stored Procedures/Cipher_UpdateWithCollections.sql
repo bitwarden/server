@@ -84,7 +84,7 @@ BEGIN
         EXEC [dbo].[User_UpdateStorage] @UserId
     END
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
 
     SELECT 0 -- 0 = Success
 END

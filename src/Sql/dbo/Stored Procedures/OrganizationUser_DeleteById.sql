@@ -3,6 +3,8 @@
 AS
 BEGIN
     SET NOCOUNT ON
+    
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 
     DELETE
     FROM
