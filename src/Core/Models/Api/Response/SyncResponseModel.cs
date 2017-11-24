@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Api
             Profile = new ProfileResponseModel(user, organizationUserDetails);
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
-            Collections = collections.Select(c => new CollectionResponseModel(c));
+            Collections = collections?.Select(c => new CollectionResponseModel(c)) ?? new List<CollectionResponseModel>();
             Domains = new DomainsResponseModel(user, false);
         }
 

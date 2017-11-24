@@ -58,9 +58,8 @@ namespace Bit.Api.Controllers
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
 
-            IEnumerable<Collection> collections = new List<Collection>();
-            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = 
-                new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>();
+            IEnumerable<Collection> collections = null;
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
             if(organizationUserDetails.Any(o => o.Enabled))
             {
                 collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, false);
