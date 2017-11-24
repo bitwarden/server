@@ -50,15 +50,7 @@ namespace Bit.Core.Services
             else
             {
                 group.RevisionDate = DateTime.UtcNow;
-
-                if(collections == null)
-                {
-                    await _groupRepository.ReplaceAsync(group);
-                }
-                else
-                {
-                    await _groupRepository.ReplaceAsync(group, collections);
-                }
+                await _groupRepository.ReplaceAsync(group, collections ?? new List<SelectionReadOnly>());
             }
         }
     }

@@ -61,13 +61,13 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(groups == null || !org.UseGroups)
+                if(!org.UseGroups)
                 {
                     await _collectionRepository.ReplaceAsync(collection);
                 }
                 else
                 {
-                    await _collectionRepository.ReplaceAsync(collection, groups);
+                    await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>());
                 }
             }
         }
