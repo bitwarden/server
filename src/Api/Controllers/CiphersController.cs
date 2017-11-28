@@ -350,7 +350,8 @@ namespace Bit.Api.Controllers
         {
             if(!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
-                throw new BadRequestException("You can only delete up to 500 items at a time.");
+                throw new BadRequestException("You can only delete up to 500 items at a time. " +
+                    "Consider using the \"Purge Vault\" option instead.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
