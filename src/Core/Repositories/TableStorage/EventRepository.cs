@@ -21,26 +21,31 @@ namespace Bit.Core.Repositories.TableStorage
 
         protected CloudTable Table { get; set; }
 
-        public ICollection<EventTableEntiity> GetManyByUser(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<ICollection<EventTableEntiity>> GetManyByUserAsync(Guid userId,
+            DateTime startDate, DateTime endDate)
         {
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
 
-            return Table.CreateQuery<EventTableEntiity>().Where(e =>
-                e.PartitionKey == $"UserId={userId}" &&
-                e.RowKey.CompareTo($"{start}_") >= 0 &&
-                e.RowKey.CompareTo($"{end}`") <= 0).ToList();
-        }
+            var query = new TableQuery<EventTableEntiity>().Where(
+                TableQuery.CombineFilters(
+                    TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"UserId={userId}"),
+                        TableOperators.And,
+                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_")),
+                    TableOperators.And,
+                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`")));
 
-        public ICollection<EventTableEntiity> GetManyByOrganization(Guid organizationId, DateTime startDate, DateTime endDate)
-        {
-            var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
-            var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+            var results = new List<EventTableEntiity>();
+            TableContinuationToken continuationToken = null;
+            do
+            {
+                var queryResults = await Table.ExecuteQuerySegmentedAsync(query, continuationToken);
+                continuationToken = queryResults.ContinuationToken;
+                results.AddRange(queryResults.Results);
+            } while(continuationToken != null);
 
-            return Table.CreateQuery<EventTableEntiity>().Where(e =>
-                e.PartitionKey == $"OrganizationId={organizationId}" &&
-                e.RowKey.CompareTo($"{start}_") >= 0 &&
-                e.RowKey.CompareTo($"{end}`") <= 0).ToList();
+            return results;
         }
 
         public async Task CreateAsync(ITableEntity entity)
@@ -48,7 +53,7 @@ namespace Bit.Core.Repositories.TableStorage
             await Table.ExecuteAsync(TableOperation.Insert(entity));
         }
 
-        public void CreateManyAsync(IEnumerable<ITableEntity> entities)
+        public async Task CreateManyAsync(IEnumerable<ITableEntity> entities)
         {
             if(!entities?.Any() ?? true)
             {
@@ -71,7 +76,7 @@ namespace Bit.Core.Repositories.TableStorage
                     batch.InsertOrReplace(entity);
                 }
 
-                Table.ExecuteBatch(batch);
+                await Table.ExecuteBatchAsync(batch);
             }
         }
     }
