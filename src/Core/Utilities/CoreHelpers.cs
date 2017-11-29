@@ -409,5 +409,15 @@ namespace Bit.Core.Utilities
                 .Replace("http://", string.Empty)
                 .Replace("https://", string.Empty);
         }
+
+        public static string DateTimeToTableStorageKey(DateTime? date = null)
+        {
+            if(date == null)
+            {
+                date = DateTime.UtcNow;
+            }
+
+            return date.Value.ToString("yyyy-MM-dd HH:mm:ss.fff");
+        }
     }
 }
