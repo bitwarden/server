@@ -60,10 +60,11 @@ namespace Bit.Core.Utilities
             if(blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
-                _logger.LogInformation($"Blocked {identity.ClientIp}. Request Info: {GetRequestInfo(httpContext)}");
+                _logger.LogInformation($"Banned {identity.ClientIp}. Info: {GetRequestInfo(httpContext)}");
             }
             else
             {
+                _logger.LogInformation($"Request blocked {identity.ClientIp}. Info: {GetRequestInfo(httpContext)}");
                 _memoryCache.Set(key, blockedCount,
                     new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
