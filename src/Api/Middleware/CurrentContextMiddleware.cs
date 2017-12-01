@@ -25,12 +25,17 @@ namespace Bit.Api.Middleware
                     .GroupBy(c => c.Type)
                     .ToDictionary(c => c.Key, c => c.Select(v => v));
 
+                var subject = GetClaimValue(claimsDict, "sub");
+                if(Guid.TryParse(subject, out var subIdGuid))
+                {
+                    currentContext.UserId = subIdGuid;
+                }
+
                 var clientId = GetClaimValue(claimsDict, "client_id");
                 var clientSubject = GetClaimValue(claimsDict, "client_sub");
                 if((clientId?.StartsWith("installation.") ?? false) && clientSubject != null)
                 {
-                    Guid idGuid;
-                    if(Guid.TryParse(clientSubject, out idGuid))
+                    if(Guid.TryParse(clientSubject, out var idGuid))
                     {
                         currentContext.InstallationId = idGuid;
                     }

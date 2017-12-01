@@ -22,6 +22,7 @@ namespace Bit.Core.Services
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushNotificationService _pushService;
         private readonly IAttachmentStorageService _attachmentStorageService;
+        private readonly IEventService _eventService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -31,7 +32,8 @@ namespace Bit.Core.Services
             IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IPushNotificationService pushService,
-            IAttachmentStorageService attachmentStorageService)
+            IAttachmentStorageService attachmentStorageService,
+            IEventService eventService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -41,6 +43,7 @@ namespace Bit.Core.Services
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
             _attachmentStorageService = attachmentStorageService;
+            _eventService = eventService;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
@@ -53,6 +56,7 @@ namespace Bit.Core.Services
             if(cipher.Id == default(Guid))
             {
                 await _cipherRepository.CreateAsync(cipher);
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
 
                 // push
                 await _pushService.PushSyncCipherCreateAsync(cipher);
@@ -61,6 +65,7 @@ namespace Bit.Core.Services
             {
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
                 await _pushService.PushSyncCipherUpdateAsync(cipher);
@@ -78,6 +83,7 @@ namespace Bit.Core.Services
             if(cipher.Id == default(Guid))
             {
                 await _cipherRepository.CreateAsync(cipher);
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
 
                 if(cipher.OrganizationId.HasValue)
                 {
@@ -92,6 +98,7 @@ namespace Bit.Core.Services
             {
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
                 await _pushService.PushSyncCipherUpdateAsync(cipher);
@@ -159,6 +166,7 @@ namespace Bit.Core.Services
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentCreated);
                 cipher.AddAttachment(attachmentId, data);
             }
             catch
@@ -222,6 +230,7 @@ namespace Bit.Core.Services
 
             await _cipherRepository.DeleteAsync(cipher);
             await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
+            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Deleted);
 
             // push
             await _pushService.PushSyncCipherDeleteAsync(cipher);
@@ -249,6 +258,7 @@ namespace Bit.Core.Services
             await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
             cipher.DeleteAttachment(attachmentId);
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentId);
+            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);
@@ -344,6 +354,7 @@ namespace Bit.Core.Services
                 }
 
                 updatedCipher = true;
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Shared);
 
                 if(hasAttachments)
                 {
@@ -412,6 +423,8 @@ namespace Bit.Core.Services
             {
                 await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
             }
+
+            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_UpdatedCollections);
 
             // push
             await _pushService.PushSyncCipherUpdateAsync(cipher);

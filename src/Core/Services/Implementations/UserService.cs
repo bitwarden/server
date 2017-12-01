@@ -90,8 +90,7 @@ namespace Bit.Core.Services
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
         {
-            Guid userIdGuid;
-            if(!Guid.TryParse(GetUserId(principal), out userIdGuid))
+            if(!Guid.TryParse(GetUserId(principal), out var userIdGuid))
             {
                 return null;
             }
@@ -107,8 +106,7 @@ namespace Bit.Core.Services
                 return _currentContext.User;
             }
 
-            Guid userIdGuid;
-            if(!Guid.TryParse(userId, out userIdGuid))
+            if(!Guid.TryParse(userId, out var userIdGuid))
             {
                 return null;
             }
@@ -425,7 +423,7 @@ namespace Bit.Core.Services
                 user.Key = key;
 
                 await _userRepository.ReplaceAsync(user);
-                await _eventService.LogUserEventAsync(user.Id, _currentContext, EventType.User_ChangedPassword);
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
                 return IdentityResult.Success;
             }
@@ -503,7 +501,7 @@ namespace Bit.Core.Services
                 user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             }
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, _currentContext, EventType.User_Enabled2fa);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_Enabled2fa);
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
@@ -517,7 +515,7 @@ namespace Bit.Core.Services
             providers.Remove(type);
             user.SetTwoFactorProviders(providers);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, _currentContext, EventType.User_Disabled2fa);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
         }
 
         public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode)
@@ -542,7 +540,7 @@ namespace Bit.Core.Services
             user.TwoFactorProviders = null;
             user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, _currentContext, EventType.User_Recovered2fa);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
 
             return true;
         }

@@ -54,13 +54,13 @@ namespace Bit.Core.Utilities
 
         public static void AddBaseServices(this IServiceCollection services)
         {
-            services.AddSingleton<ICipherService, CipherService>();
+            services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IOrganizationService, OrganizationService>();
             services.AddSingleton<ICollectionService, CollectionService>();
             services.AddSingleton<IGroupService, GroupService>();
-            services.AddSingleton<Services.IEventService, EventService>();
+            services.AddScoped<Services.IEventService, EventService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)

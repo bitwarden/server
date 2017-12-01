@@ -6,6 +6,7 @@ using Bit.Core.Models.Data;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.WindowsAzure.Storage.Table;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
@@ -13,24 +14,37 @@ namespace Bit.Core.Services
     {
         private readonly IEventRepository _eventRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public EventService(
             IEventRepository eventRepository,
             IOrganizationUserRepository organizationUserRepository,
+            CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _eventRepository = eventRepository;
             _organizationUserRepository = organizationUserRepository;
+            _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
 
         public async Task LogUserEventAsync(Guid userId, EventType type)
         {
             var events = new List<ITableEntity> { new UserEvent(userId, type) };
-            var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
-            var orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
-                .Select(o => new UserEvent(userId, o.Id, type));
+
+            IEnumerable<UserEvent> orgEvents;
+            if(_currentContext.UserId.HasValue)
+            {
+                orgEvents = _currentContext.Organizations.Select(o => new UserEvent(userId, o.Id, type));
+            }
+            else
+            {
+                var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
+                orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
+                    .Select(o => new UserEvent(userId, o.Id, type));
+            }
+
             if(orgEvents.Any())
             {
                 events.AddRange(orgEvents);
@@ -42,19 +56,15 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task LogUserEventAsync(Guid userId, CurrentContext currentContext, EventType type)
+        public async Task LogCipherEventAsync(Cipher cipher, EventType type)
         {
-            var events = new List<ITableEntity> { new UserEvent(userId, type) };
-            var orgEvents = currentContext.Organizations.Select(o => new UserEvent(userId, o.Id, type));
-            if(orgEvents.Any())
+            if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
             {
-                events.AddRange(orgEvents);
-                await _eventRepository.CreateManyAsync(events);
+                return;
             }
-            else
-            {
-                await _eventRepository.CreateAsync(events.First());
-            }
+
+            var e = new CipherEvent(cipher, type, _currentContext?.UserId);
+            await _eventRepository.CreateAsync(e);
         }
     }
 }

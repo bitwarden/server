@@ -11,5 +11,6 @@ namespace Bit.Core.Models.Data
         public Guid? OrganizationId { get; set; }
         public Guid? CipherId { get; set; }
         public ICollection<Guid> CipherIds { get; set; }
+        public Guid? ActingUserId { get; set; }
     }
 }
