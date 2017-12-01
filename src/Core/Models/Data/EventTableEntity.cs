@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Enums;
 using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Bit.Core.Models.Data

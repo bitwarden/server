@@ -190,9 +190,8 @@ namespace Bit.Core.IdentityServer
             var deviceName = context.Request.Raw["DeviceName"]?.ToString();
             var devicePushToken = context.Request.Raw["DevicePushToken"]?.ToString();
 
-            DeviceType type;
             if(string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrWhiteSpace(deviceType) ||
-                string.IsNullOrWhiteSpace(deviceName) || !Enum.TryParse(deviceType, out type))
+                string.IsNullOrWhiteSpace(deviceName) || !Enum.TryParse(deviceType, out DeviceType type))
             {
                 return null;
             }

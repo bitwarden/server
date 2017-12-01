@@ -54,30 +54,47 @@ namespace Bit.Core.Repositories.TableStorage
             await Table.ExecuteAsync(TableOperation.Insert(entity));
         }
 
-        public async Task CreateManyAsync(IEnumerable<ITableEntity> entities)
+        public async Task CreateManyAsync(IList<ITableEntity> entities)
         {
             if(!entities?.Any() ?? true)
             {
                 return;
             }
 
-            // A batch insert can only contain 100 entities at a time
-            var iterations = entities.Count() / 100;
-            for(var i = 0; i <= iterations; i++)
+            if(entities.Count == 1)
             {
-                var batch = new TableBatchOperation();
-                var batchEntities = entities.Skip(i * 100).Take(100);
-                if(!batchEntities.Any())
+                await CreateAsync(entities.First());
+                return;
+            }
+
+            var entityGroups = entities.GroupBy(e => e.PartitionKey);
+            foreach(var group in entityGroups)
+            {
+                var groupEntities = group.ToList();
+                if(groupEntities.Count == 1)
                 {
-                    break;
+                    await CreateAsync(groupEntities.First());
+                    continue;
                 }
 
-                foreach(var entity in batchEntities)
+                // A batch insert can only contain 100 entities at a time
+                var iterations = groupEntities.Count / 100;
+                for(var i = 0; i <= iterations; i++)
                 {
-                    batch.InsertOrReplace(entity);
-                }
+                    var batch = new TableBatchOperation();
+                    var batchEntities = groupEntities.Skip(i * 100).Take(100);
+                    if(!batchEntities.Any())
+                    {
+                        break;
+                    }
 
-                await Table.ExecuteBatchAsync(batch);
+                    foreach(var entity in batchEntities)
+                    {
+                        batch.InsertOrReplace(entity);
+                    }
+
+                    await Table.ExecuteBatchAsync(batch);
+                }
             }
         }
     }

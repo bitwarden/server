@@ -10,6 +10,6 @@ namespace Bit.Core.Repositories
     {
         Task<ICollection<EventTableEntity>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate);
         Task CreateAsync(ITableEntity entity);
-        Task CreateManyAsync(IEnumerable<ITableEntity> entities);
+        Task CreateManyAsync(IList<ITableEntity> entities);
     }
 }

@@ -10,5 +10,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task LogUserEventAsync(Guid userId, CurrentContext currentContext, EventType type)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
