@@ -135,7 +135,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _collectionRepository.DeleteAsync(collection);
+            await _collectionService.DeleteAsync(collection);
         }
 
         [HttpDelete("{id}/user/{orgUserId}")]

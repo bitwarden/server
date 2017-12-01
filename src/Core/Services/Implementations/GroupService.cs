@@ -10,13 +10,16 @@ namespace Bit.Core.Services
 {
     public class GroupService : IGroupService
     {
+        private readonly IEventService _eventService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IGroupRepository _groupRepository;
 
         public GroupService(
+            IEventService eventService,
             IOrganizationRepository organizationRepository,
             IGroupRepository groupRepository)
         {
+            _eventService = eventService;
             _organizationRepository = organizationRepository;
             _groupRepository = groupRepository;
         }
@@ -46,12 +49,21 @@ namespace Bit.Core.Services
                 {
                     await _groupRepository.CreateAsync(group, collections);
                 }
+
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
             }
             else
             {
                 group.RevisionDate = DateTime.UtcNow;
                 await _groupRepository.ReplaceAsync(group, collections ?? new List<SelectionReadOnly>());
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
             }
+        }
+
+        public async Task DeleteAsync(Group group)
+        {
+            await _groupRepository.DeleteAsync(group);
+            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
         }
     }
 }

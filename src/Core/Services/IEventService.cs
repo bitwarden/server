@@ -9,5 +9,9 @@ namespace Bit.Core.Services
     {
         Task LogUserEventAsync(Guid userId, EventType type);
         Task LogCipherEventAsync(Cipher cipher, EventType type);
+        Task LogCollectionEventAsync(Collection collection, EventType type);
+        Task LogGroupEventAsync(Group group, EventType type);
+        Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type);
+        Task LogOrganizationEventAsync(Organization organization, EventType type);
     }
 }

@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Data
 {
     public class CipherEvent : EventTableEntity
     {
-        public CipherEvent(Cipher cipher, EventType type, Guid? actingUserId = null)
+        public CipherEvent(Cipher cipher, Guid? actingUserId, EventType type)
         {
             OrganizationId = cipher.OrganizationId;
             UserId = cipher.UserId;

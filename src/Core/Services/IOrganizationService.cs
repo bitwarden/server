@@ -36,6 +36,7 @@ namespace Bit.Core.Services
         Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
+        Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds);
         Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId);
         Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId);
         Task ImportAsync(Guid organizationId, Guid importingUserId, IEnumerable<ImportedGroup> groups,

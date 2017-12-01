@@ -5,11 +5,12 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data
 {
-    public class OrganizationEvent : EventTableEntity
+    public class GroupEvent : EventTableEntity
     {
-        public OrganizationEvent(Organization organization, Guid actingUserId, EventType type)
+        public GroupEvent(Group group, Guid actingUserId, EventType type)
         {
-            OrganizationId = organization.Id;
+            OrganizationId = group.OrganizationId;
+            GroupId = group.Id;
             Type = (int)type;
             ActingUserId = actingUserId;
 

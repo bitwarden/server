@@ -178,8 +178,8 @@ namespace Bit.Api.Controllers
             {
                 throw new BadRequestException("Only owners can update other owners.");
             }
-
-            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, model.GroupIds.Select(g => new Guid(g)));
+            
+            await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)));
         }
 
         [HttpDelete("{id}")]

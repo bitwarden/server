@@ -57,9 +57,9 @@ namespace Bit.Core.Utilities
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddSingleton<IDeviceService, DeviceService>();
-            services.AddSingleton<IOrganizationService, OrganizationService>();
-            services.AddSingleton<ICollectionService, CollectionService>();
-            services.AddSingleton<IGroupService, GroupService>();
+            services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<ICollectionService, CollectionService>();
+            services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<Services.IEventService, EventService>();
         }
 

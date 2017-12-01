@@ -10,6 +10,7 @@ namespace Bit.Core.Services
 {
     public class CollectionService : ICollectionService
     {
+        private readonly IEventService _eventService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionRepository _collectionRepository;
@@ -17,12 +18,14 @@ namespace Bit.Core.Services
         private readonly IMailService _mailService;
 
         public CollectionService(
+            IEventService eventService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IMailService mailService)
         {
+            _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _collectionRepository = collectionRepository;
@@ -58,6 +61,8 @@ namespace Bit.Core.Services
                 {
                     await _collectionRepository.CreateAsync(collection, groups);
                 }
+
+                await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
             }
             else
             {
@@ -69,7 +74,15 @@ namespace Bit.Core.Services
                 {
                     await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>());
                 }
+
+                await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
             }
+        }
+
+        public async Task DeleteAsync(Collection collection)
+        {
+            await _collectionRepository.DeleteAsync(collection);
+            await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
         }
     }
 }

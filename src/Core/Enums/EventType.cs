@@ -29,6 +29,9 @@
         OrganizationUser_Invited = 1500,
         OrganizationUser_Confirmed = 1501,
         OrganizationUser_Updated = 1502,
-        OrganizationUser_Removed = 1503
+        OrganizationUser_Removed = 1503,
+        OrganizationUser_UpdatedGroups = 1504,
+
+        Organization_Updated = 1600
     }
 }

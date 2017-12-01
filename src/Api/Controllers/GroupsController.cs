@@ -121,7 +121,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _groupRepository.DeleteAsync(group);
+            await _groupService.DeleteAsync(group);
         }
 
         [HttpDelete("{id}/user/{orgUserId}")]

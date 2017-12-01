@@ -29,6 +29,7 @@ namespace Bit.Core.Services
         private readonly IPushRegistrationService _pushRegistrationService;
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILicensingService _licensingService;
+        private readonly IEventService _eventService;
         private readonly IInstallationRepository _installationRepository;
         private readonly StripePaymentService _stripePaymentService;
         private readonly GlobalSettings _globalSettings;
@@ -45,6 +46,7 @@ namespace Bit.Core.Services
             IPushRegistrationService pushRegistrationService,
             IDeviceRepository deviceRepository,
             ILicensingService licensingService,
+            IEventService eventService,
             IInstallationRepository installationRepository,
             GlobalSettings globalSettings)
         {
@@ -59,6 +61,7 @@ namespace Bit.Core.Services
             _pushRegistrationService = pushRegistrationService;
             _deviceRepository = deviceRepository;
             _licensingService = licensingService;
+            _eventService = eventService;
             _installationRepository = installationRepository;
             _stripePaymentService = new StripePaymentService();
             _globalSettings = globalSettings;
@@ -803,6 +806,7 @@ namespace Bit.Core.Services
             }
 
             await _organizationRepository.ReplaceAsync(organization);
+            await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_Updated);
 
             if(updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
@@ -1008,6 +1012,7 @@ namespace Bit.Core.Services
             orgUser.Key = key;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
 
             var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
             await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
@@ -1057,6 +1062,7 @@ namespace Bit.Core.Services
                 collections = new List<SelectionReadOnly>();
             }
             await _organizationUserRepository.ReplaceAsync(user, collections);
+            await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
         }
 
         public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -1088,6 +1094,7 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.DeleteAsync(orgUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
 
             if(orgUser.UserId.HasValue)
             {
@@ -1112,6 +1119,7 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.DeleteAsync(orgUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
 
             if(orgUser.UserId.HasValue)
             {
@@ -1119,6 +1127,12 @@ namespace Bit.Core.Services
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                 await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
             }
+        }
+
+        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
+        {
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
         }
 
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
