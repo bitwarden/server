@@ -36,7 +36,7 @@ namespace Bit.Billing
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
 
             // Repositories
-            services.AddSqlServerRepositories();
+            services.AddSqlServerRepositories(globalSettings);
 
             // Context
             services.AddScoped<CurrentContext>();

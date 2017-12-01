@@ -39,7 +39,7 @@ namespace Bit.Identity
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Repositories
-            services.AddSqlServerRepositories();
+            services.AddSqlServerRepositories(globalSettings);
 
             // Context
             services.AddScoped<CurrentContext>();

@@ -45,7 +45,7 @@ namespace Bit.Jobs
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Repositories
-            services.AddSqlServerRepositories();
+            services.AddSqlServerRepositories(globalSettings);
 
             // Context
             services.AddScoped<CurrentContext>();
