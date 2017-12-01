@@ -8,23 +8,25 @@ namespace Bit.Core.Models.Data
     {
         public OrganizationEvent(Guid organizationId, EventType type)
         {
-            PartitionKey = $"OrganizationId={organizationId}";
-            RowKey = string.Format("Date={0}__Type={1}",
-                CoreHelpers.DateTimeToTableStorageKey(), type);
-
             OrganizationId = organizationId;
-            Type = type;
+            Type = (int)type;
+
+            Timestamp = DateTime.UtcNow;
+            PartitionKey = $"OrganizationId={OrganizationId}";
+            RowKey = string.Format("Date={0}__Type={1}",
+                CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), Type);
         }
 
         public OrganizationEvent(Guid organizationId, Guid userId, EventType type)
         {
-            PartitionKey = $"OrganizationId={organizationId}";
-            RowKey = string.Format("Date={0}__UserId={1}__Type={2}",
-                CoreHelpers.DateTimeToTableStorageKey(), userId, type);
-
             OrganizationId = organizationId;
             UserId = userId;
-            Type = type;
+            Type = (int)type;
+
+            Timestamp = DateTime.UtcNow;
+            PartitionKey = $"OrganizationId={OrganizationId}";
+            RowKey = string.Format("Date={0}__UserId={1}__Type={2}",
+                CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), UserId, Type);
         }
     }
 }

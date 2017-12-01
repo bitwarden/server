@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Data
 {
     public class EventTableEntity : TableEntity
     {
-        public EventType Type { get; set; }
+        public int Type { get; set; }
         public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
         public Guid? CipherId { get; set; }

@@ -21,17 +21,20 @@ namespace Bit.Core.IdentityServer
         private readonly IDeviceRepository _deviceRepository;
         private readonly IDeviceService _deviceService;
         private readonly IUserService _userService;
+        private readonly IEventService _eventService;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
             IDeviceService deviceService,
-            IUserService userService)
+            IUserService userService,
+            IEventService eventService)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
             _deviceService = deviceService;
             _userService = userService;
+            _eventService = eventService;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -43,14 +46,14 @@ namespace Bit.Core.IdentityServer
 
             if(string.IsNullOrWhiteSpace(context.UserName))
             {
-                await BuildErrorResultAsync(false, context);
+                await BuildErrorResultAsync(false, context, null);
                 return;
             }
 
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
             if(user == null || !await _userManager.CheckPasswordAsync(user, context.Password))
             {
-                await BuildErrorResultAsync(false, context);
+                await BuildErrorResultAsync(false, context, user);
                 return;
             }
 
@@ -66,7 +69,7 @@ namespace Bit.Core.IdentityServer
                 var verified = await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken);
                 if(!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
-                    await BuildErrorResultAsync(true, context);
+                    await BuildErrorResultAsync(true, context, user);
                     return;
                 }
                 else if(!verified && twoFactorProviderType == TwoFactorProviderType.Remember)
@@ -91,6 +94,8 @@ namespace Bit.Core.IdentityServer
         private async Task BuildSuccessResultAsync(User user, ResourceOwnerPasswordValidationContext context,
             Device device, bool sendRememberToken)
         {
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
+
             var claims = new List<Claim>();
 
             if(device != null)
@@ -128,7 +133,7 @@ namespace Bit.Core.IdentityServer
             var enabledProviders = user.GetTwoFactorProviders()?.Where(p => user.TwoFactorProviderIsEnabled(p.Key));
             if(enabledProviders == null)
             {
-                await BuildErrorResultAsync(false, context);
+                await BuildErrorResultAsync(false, context, user);
                 return;
             }
 
@@ -153,8 +158,15 @@ namespace Bit.Core.IdentityServer
             }
         }
 
-        private async Task BuildErrorResultAsync(bool twoFactorRequest, ResourceOwnerPasswordValidationContext context)
+        private async Task BuildErrorResultAsync(bool twoFactorRequest,
+            ResourceOwnerPasswordValidationContext context, User user)
         {
+            if(user != null)
+            {
+                await _eventService.LogUserEventAsync(user.Id,
+                    twoFactorRequest ? EventType.User_FailedLogIn2fa : EventType.User_FailedLogIn);
+            }
+
             await Task.Delay(2000); // Delay for brute force.
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
                 customResponse: new Dictionary<string, object>
