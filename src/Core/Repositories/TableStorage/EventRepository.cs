@@ -27,15 +27,17 @@ namespace Bit.Core.Repositories.TableStorage
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
 
-            var query = new TableQuery<EventTableEntiity>().Where(
-                TableQuery.CombineFilters(
-                    TableQuery.CombineFilters(
-                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"UserId={userId}"),
-                        TableOperators.And,
-                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_")),
-                    TableOperators.And,
-                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`")));
+            var rowFilter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_"),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`"));
 
+            var filter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"UserId={userId}"),
+                TableOperators.And,
+                rowFilter);
+
+            var query = new TableQuery<EventTableEntiity>().Where(filter);
             var results = new List<EventTableEntiity>();
             TableContinuationToken continuationToken = null;
             do
