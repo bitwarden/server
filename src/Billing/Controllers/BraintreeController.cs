@@ -95,6 +95,10 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
+                    // A race condition is happening between the time of purchase and receiving this webhook. Add some
+                    // artificial delay here to help combat that.
+                    await Task.Delay(2000);
+
                     // org
                     if(ids.Item1.HasValue)
                     {
