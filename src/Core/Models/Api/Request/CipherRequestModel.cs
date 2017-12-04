@@ -33,7 +33,7 @@ namespace Bit.Core.Models.Api
         public IdentityType Identity { get; set; }
         public SecureNoteType SecureNote { get; set; }
 
-        public CipherDetails ToCipherDetails(Guid userId, bool noOrg = false)
+        public CipherDetails ToCipherDetails(Guid userId)
         {
             var cipher = new CipherDetails
             {
