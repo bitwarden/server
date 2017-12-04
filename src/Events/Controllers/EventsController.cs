@@ -5,8 +5,7 @@ namespace Events.Controllers
 {
     public class EventsController : Controller
     {
-        [HttpPost]
-        [Route("~/")]
+        [HttpPost("~/")]
         public void Post([FromBody]string value)
         {
         }
