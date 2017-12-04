@@ -33,13 +33,13 @@ namespace Bit.Core.Models.Api
         public IdentityType Identity { get; set; }
         public SecureNoteType SecureNote { get; set; }
 
-        public CipherDetails ToCipherDetails(Guid userId)
+        public CipherDetails ToCipherDetails(Guid userId, bool noOrg = false)
         {
             var cipher = new CipherDetails
             {
                 Type = Type,
                 UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
-                OrganizationId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)null : new Guid(OrganizationId),
+                OrganizationId = null,
                 Edit = true
             };
             ToCipherDetails(cipher);
