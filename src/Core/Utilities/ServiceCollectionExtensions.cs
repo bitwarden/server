@@ -59,7 +59,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
-            services.AddScoped<Services.IEventService, EventService>();
+            services.AddScoped<Services.IEventService, NoopEventService>();
             services.AddSingleton<IDeviceService, DeviceService>();
         }
 
