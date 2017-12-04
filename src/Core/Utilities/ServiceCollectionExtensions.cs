@@ -56,11 +56,11 @@ namespace Bit.Core.Utilities
         {
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddSingleton<IDeviceService, DeviceService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<Services.IEventService, EventService>();
+            services.AddSingleton<IDeviceService, DeviceService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
