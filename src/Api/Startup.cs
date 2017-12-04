@@ -125,8 +125,9 @@ namespace Bit.Api
             // Cors
             services.AddCors(config =>
             {
-                config.AddPolicy("All", policy =>
-                    policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().SetPreflightMaxAge(TimeSpan.FromDays(1)));
+                config.AddPolicy("All", policy => policy
+                    .AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().AllowCredentials()
+                    .SetPreflightMaxAge(TimeSpan.FromDays(1)));
             });
 
             // MVC
