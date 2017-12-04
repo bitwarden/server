@@ -105,10 +105,12 @@ namespace Bit.Core.Utilities
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             }
             else
             {
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
             }
 
             if(CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))

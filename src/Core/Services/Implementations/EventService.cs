@@ -12,18 +12,18 @@ namespace Bit.Core.Services
 {
     public class EventService : IEventService
     {
-        private readonly IEventRepository _eventRepository;
+        private readonly IEventWriteService _eventWriteService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public EventService(
-            IEventRepository eventRepository,
+            IEventWriteService eventWriteService,
             IOrganizationUserRepository organizationUserRepository,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
-            _eventRepository = eventRepository;
+            _eventWriteService = eventWriteService;
             _organizationUserRepository = organizationUserRepository;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
@@ -48,11 +48,11 @@ namespace Bit.Core.Services
             if(orgEvents.Any())
             {
                 events.AddRange(orgEvents);
-                await _eventRepository.CreateManyAsync(events);
+                await _eventWriteService.CreateManyAsync(events);
             }
             else
             {
-                await _eventRepository.CreateAsync(events.First());
+                await _eventWriteService.CreateAsync(events.First());
             }
         }
 
@@ -64,31 +64,31 @@ namespace Bit.Core.Services
             }
 
             var e = new CipherEvent(cipher, _currentContext?.UserId, type);
-            await _eventRepository.CreateAsync(e);
+            await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogCollectionEventAsync(Collection collection, EventType type)
         {
             var e = new CollectionEvent(collection, _currentContext.UserId.Value, type);
-            await _eventRepository.CreateAsync(e);
+            await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogGroupEventAsync(Group group, EventType type)
         {
             var e = new GroupEvent(group, _currentContext.UserId.Value, type);
-            await _eventRepository.CreateAsync(e);
+            await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
         {
             var e = new OrganizationUserEvent(organizationUser, _currentContext.UserId.Value, type);
-            await _eventRepository.CreateAsync(e);
+            await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type)
         {
             var e = new OrganizationEvent(organization, _currentContext.UserId.Value, type);
-            await _eventRepository.CreateAsync(e);
+            await _eventWriteService.CreateAsync(e);
         }
     }
 }
