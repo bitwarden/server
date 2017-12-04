@@ -105,13 +105,15 @@ namespace Bit.Core.Utilities
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+                //services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             }
             else
             {
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+                //services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
             }
+
+            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
 
             if(CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
             {
@@ -136,6 +138,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
             services.AddSingleton<ILicensingService, NoopLicensingService>();
+            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
         }
 
         public static IdentityBuilder AddCustomIdentityServices(
