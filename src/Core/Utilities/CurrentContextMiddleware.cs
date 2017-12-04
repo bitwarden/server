@@ -1,12 +1,11 @@
-﻿using Bit.Core;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace Bit.Api.Middleware
+namespace Bit.Core.Utilities
 {
     public class CurrentContextMiddleware
     {

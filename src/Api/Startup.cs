@@ -14,13 +14,13 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
-using Bit.Api.Middleware;
 using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using jsreport.AspNetCore;
+using Bit.Core.IdentityServer;
 
 namespace Bit.Api
 {
