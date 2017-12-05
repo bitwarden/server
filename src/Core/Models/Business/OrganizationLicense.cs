@@ -41,8 +41,16 @@ namespace Bit.Core.Models.Business
 
             if(billingInfo?.Subscription == null)
             {
-                Expires = Refresh = Issued.AddDays(7);
-                Trial = true;
+                if(org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
+                {
+                    Expires = Refresh = org.ExpirationDate.Value;
+                    Trial = false;
+                }
+                else
+                {
+                    Expires = Refresh = Issued.AddDays(7);
+                    Trial = true;
+                }
             }
             else if(billingInfo.Subscription.TrialEndDate.HasValue &&
                 billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
