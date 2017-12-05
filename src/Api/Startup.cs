@@ -122,14 +122,6 @@ namespace Bit.Api
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
 
-            // Cors
-            services.AddCors(config =>
-            {
-                config.AddPolicy("All", policy => policy
-                    .AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().AllowCredentials()
-                    .SetPreflightMaxAge(TimeSpan.FromDays(1)));
-            });
-
             // MVC
             services.AddMvc(config =>
             {
@@ -197,7 +189,7 @@ namespace Bit.Api
             app.UseStaticFiles();
 
             // Add Cors
-            app.UseCors("All");
+            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();
