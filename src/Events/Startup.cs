@@ -105,7 +105,7 @@ namespace Bit.Events
             app.UseDefaultMiddleware(env);
 
             // Add Cors
-            app.UseCors("All");
+            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();
