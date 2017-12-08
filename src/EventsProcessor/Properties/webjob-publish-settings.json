@@ -1,0 +1,5 @@
+﻿{
+  "$schema": "http://schemastore.org/schemas/json/webjob-publish-settings.json",
+  "webJobName": "EventsProcessor",
+  "runMode": "Continuous"
+}
