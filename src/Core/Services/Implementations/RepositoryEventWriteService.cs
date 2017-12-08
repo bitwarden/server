@@ -8,14 +8,11 @@ namespace Bit.Core.Services
     public class RepositoryEventWriteService : IEventWriteService
     {
         private readonly IEventRepository _eventRepository;
-        private readonly GlobalSettings _globalSettings;
 
         public RepositoryEventWriteService(
-            IEventRepository eventRepository,
-            GlobalSettings globalSettings)
+            IEventRepository eventRepository)
         {
             _eventRepository = eventRepository;
-            _globalSettings = globalSettings;
         }
 
         public async Task CreateAsync(EventTableEntity entity)

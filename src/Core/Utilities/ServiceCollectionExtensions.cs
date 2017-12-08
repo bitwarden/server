@@ -20,8 +20,8 @@ using Microsoft.WindowsAzure.Storage;
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
-using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using System.Threading.Tasks;
+using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 
 namespace Bit.Core.Utilities
 {
@@ -44,7 +44,7 @@ namespace Bit.Core.Utilities
 
             if(globalSettings.SelfHosted)
             {
-                // TODO: Sql server repo
+                // TODO: Sql server event repo
             }
             else
             {
@@ -59,7 +59,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
-            services.AddScoped<Services.IEventService, NoopEventService>();
+            services.AddScoped<Services.IEventService, EventService>();
             services.AddSingleton<IDeviceService, DeviceService>();
         }
 
@@ -105,15 +105,24 @@ namespace Bit.Core.Utilities
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-                //services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             }
             else
             {
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-                //services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
             }
 
-            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
+            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
+            else if(globalSettings.SelfHosted)
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, NoopEventWriteService>();
+            }
 
             if(CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
             {

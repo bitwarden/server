@@ -12,8 +12,12 @@ namespace Bit.Core.Repositories.TableStorage
     public class EventRepository : IEventRepository
     {
         public EventRepository(GlobalSettings globalSettings)
+            : this(globalSettings.Storage.ConnectionString)
+        { }
+
+        public EventRepository(string storageConnectionString)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+            var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
             var tableClient = storageAccount.CreateCloudTableClient();
             Table = tableClient.GetTableReference("event");
         }
