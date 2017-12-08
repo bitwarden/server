@@ -57,7 +57,7 @@ namespace Bit.Core.Services
 
         public async Task LogCipherEventAsync(Cipher cipher, EventType type)
         {
-            if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
+            if(!cipher.OrganizationId.HasValue && (!_currentContext?.UserId.HasValue ?? true))
             {
                 return;
             }
