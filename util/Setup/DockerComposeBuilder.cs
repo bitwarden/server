@@ -89,7 +89,7 @@ version: '3'
 services:
   mssql:
     image: bitwarden/mssql:{CoreVersion}
-    container_name: mssql
+    container_name: bitwarden-mssql
     restart: always
     volumes:");
 
@@ -112,21 +112,21 @@ services:
 
   web:
     image: bitwarden/web:{WebVersion}
-    container_name: web
+    container_name: bitwarden-web
     restart: always
     volumes:
       - ../web:/etc/bitwarden/web
 
   attachments:
     image: bitwarden/attachments:{CoreVersion}
-    container_name: attachments
+    container_name: bitwarden-attachments
     restart: always
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
 
   api:
     image: bitwarden/api:{CoreVersion}
-    container_name: api
+    container_name: bitwarden-api
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
@@ -136,7 +136,7 @@ services:
 
   identity:
     image: bitwarden/identity:{CoreVersion}
-    container_name: identity
+    container_name: bitwarden-identity
     restart: always
     volumes:
       - ../identity:/etc/bitwarden/identity
@@ -147,12 +147,12 @@ services:
 
   icons:
     image: bitwarden/icons:{CoreVersion}
-    container_name: icons
+    container_name: bitwarden-icons
     restart: always
 
   nginx:
     image: bitwarden/nginx:{CoreVersion}
-    container_name: nginx
+    container_name: bitwarden-nginx
     restart: always
     ports:
       - '{HttpPort}:80'
