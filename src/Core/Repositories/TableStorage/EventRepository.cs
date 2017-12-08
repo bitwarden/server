@@ -49,12 +49,12 @@ namespace Bit.Core.Repositories.TableStorage
             return results;
         }
 
-        public async Task CreateAsync(ITableEntity entity)
+        public async Task CreateAsync(EventTableEntity entity)
         {
             await Table.ExecuteAsync(TableOperation.Insert(entity));
         }
 
-        public async Task CreateManyAsync(IList<ITableEntity> entities)
+        public async Task CreateManyAsync(IList<EventTableEntity> entities)
         {
             if(!entities?.Any() ?? true)
             {

@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using System.Collections.Generic;
-using Microsoft.WindowsAzure.Storage.Table;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
@@ -18,12 +18,12 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task CreateAsync(ITableEntity entity)
+        public async Task CreateAsync(EventTableEntity entity)
         {
             await _eventRepository.CreateAsync(entity);
         }
 
-        public async Task CreateManyAsync(IList<ITableEntity> entities)
+        public async Task CreateManyAsync(IList<EventTableEntity> entities)
         {
             await _eventRepository.CreateManyAsync(entities);
         }

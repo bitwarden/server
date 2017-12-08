@@ -1,17 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Table;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
     public class NoopEventWriteService : IEventWriteService
     {
-        public Task CreateAsync(ITableEntity entity)
+        public Task CreateAsync(EventTableEntity entity)
         {
             return Task.FromResult(0);
         }
 
-        public Task CreateManyAsync(IList<ITableEntity> entities)
+        public Task CreateManyAsync(IList<EventTableEntity> entities)
         {
             return Task.FromResult(0);
         }

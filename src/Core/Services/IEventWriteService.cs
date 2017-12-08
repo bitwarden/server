@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Table;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
     public interface IEventWriteService
     {
-        Task CreateAsync(ITableEntity entity);
-        Task CreateManyAsync(IList<ITableEntity> entities);
+        Task CreateAsync(EventTableEntity entity);
+        Task CreateManyAsync(IList<EventTableEntity> entities);
     }
 }

@@ -10,11 +10,11 @@ namespace Bit.Core.Models.Data
         {
             UserId = userId;
             Type = (int)type;
+            Date = DateTime.UtcNow;
 
-            Timestamp = DateTime.UtcNow;
             PartitionKey = $"UserId={UserId}";
             RowKey = string.Format("Date={0}__Type={1}",
-                CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), Type);
+                CoreHelpers.DateTimeToTableStorageKey(Date), Type);
         }
 
         public UserEvent(Guid userId, Guid organizationId, EventType type)
@@ -22,11 +22,11 @@ namespace Bit.Core.Models.Data
             OrganizationId = organizationId;
             UserId = userId;
             Type = (int)type;
-
-            Timestamp = DateTime.UtcNow;
+            Date = DateTime.UtcNow;
+            
             PartitionKey = $"OrganizationId={OrganizationId}";
             RowKey = string.Format("Date={0}__UserId={1}__Type={2}",
-                CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), UserId, Type);
+                CoreHelpers.DateTimeToTableStorageKey(Date), UserId, Type);
         }
     }
 }

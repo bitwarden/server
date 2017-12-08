@@ -14,20 +14,20 @@ namespace Bit.Core.Models.Data
             CipherId = cipher.Id;
             Type = (int)type;
             ActingUserId = actingUserId;
+            Date = DateTime.UtcNow;
 
-            Timestamp = DateTime.UtcNow;
             if(OrganizationId.HasValue)
             {
                 UserId = null;
                 PartitionKey = $"OrganizationId={OrganizationId}";
                 RowKey = string.Format("Date={0}__CipherId={1}__ActingUserId={2}__Type={3}",
-                    CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), CipherId, ActingUserId, Type);
+                    CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, ActingUserId, Type);
             }
             else
             {
                 PartitionKey = $"UserId={UserId}";
                 RowKey = string.Format("Date={0}__CipherId={1}__Type={2}",
-                    CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), CipherId, Type);
+                    CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, Type);
             }
         }
     }

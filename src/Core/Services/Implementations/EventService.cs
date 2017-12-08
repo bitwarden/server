@@ -5,7 +5,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Models.Data;
 using System.Linq;
 using System.Collections.Generic;
-using Microsoft.WindowsAzure.Storage.Table;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
@@ -31,7 +30,7 @@ namespace Bit.Core.Services
 
         public async Task LogUserEventAsync(Guid userId, EventType type)
         {
-            var events = new List<ITableEntity> { new UserEvent(userId, type) };
+            var events = new List<EventTableEntity> { new UserEvent(userId, type) };
 
             IEnumerable<UserEvent> orgEvents;
             if(_currentContext.UserId.HasValue)

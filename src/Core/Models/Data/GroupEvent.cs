@@ -13,11 +13,11 @@ namespace Bit.Core.Models.Data
             GroupId = group.Id;
             Type = (int)type;
             ActingUserId = actingUserId;
+            Date = DateTime.UtcNow;
 
-            Timestamp = DateTime.UtcNow;
             PartitionKey = $"OrganizationId={OrganizationId}";
             RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                CoreHelpers.DateTimeToTableStorageKey(Timestamp.DateTime), ActingUserId, Type);
+                CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, Type);
         }
     }
 }
