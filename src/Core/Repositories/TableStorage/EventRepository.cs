@@ -24,7 +24,7 @@ namespace Bit.Core.Repositories.TableStorage
 
         protected CloudTable Table { get; set; }
 
-        public async Task<ICollection<EventTableEntity>> GetManyByUserAsync(Guid userId,
+        public async Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId,
             DateTime startDate, DateTime endDate)
         {
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
@@ -50,34 +50,40 @@ namespace Bit.Core.Repositories.TableStorage
                 results.AddRange(queryResults.Results);
             } while(continuationToken != null);
 
-            return results;
+            return results.Select(r => r as IEvent).ToList();
         }
 
-        public async Task CreateAsync(EventTableEntity entity)
+        public async Task CreateAsync(IEvent e)
         {
-            await Table.ExecuteAsync(TableOperation.Insert(entity));
+            if(!(e is EventTableEntity entity))
+            {
+                throw new ArgumentException(nameof(e));
+            }
+
+            await CreateEntityAsync(entity);
         }
 
-        public async Task CreateManyAsync(IList<EventTableEntity> entities)
+        public async Task CreateManyAsync(IList<IEvent> e)
         {
-            if(!entities?.Any() ?? true)
+            if(!e?.Any() ?? true)
             {
                 return;
             }
 
-            if(entities.Count == 1)
+            if(e.Count == 1)
             {
-                await CreateAsync(entities.First());
+                await CreateAsync(e.First());
                 return;
             }
 
-            var entityGroups = entities.GroupBy(e => e.PartitionKey);
+            var entities = e.Where(ev => ev is EventTableEntity).Select(ev => ev as EventTableEntity);
+            var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
             foreach(var group in entityGroups)
             {
                 var groupEntities = group.ToList();
                 if(groupEntities.Count == 1)
                 {
-                    await CreateAsync(groupEntities.First());
+                    await CreateEntityAsync(groupEntities.First());
                     continue;
                 }
 
@@ -100,6 +106,11 @@ namespace Bit.Core.Repositories.TableStorage
                     await Table.ExecuteBatchAsync(batch);
                 }
             }
+        }
+
+        public async Task CreateEntityAsync(ITableEntity entity)
+        {
+            await Table.ExecuteAsync(TableOperation.Insert(entity));
         }
     }
 }

@@ -7,8 +7,8 @@ namespace Bit.Core.Repositories
 {
     public interface IEventRepository
     {
-        Task<ICollection<EventTableEntity>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate);
-        Task CreateAsync(EventTableEntity entity);
-        Task CreateManyAsync(IList<EventTableEntity> entities);
+        Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate);
+        Task CreateAsync(IEvent entity);
+        Task CreateManyAsync(IList<IEvent> entities);
     }
 }

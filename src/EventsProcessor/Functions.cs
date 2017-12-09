@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
@@ -29,7 +30,7 @@ namespace Bit.EventsProcessor
         }
 
         public async static Task ProcessQueueMessageAsync([QueueTrigger("event")] string message,
-            TextWriter logger, CancellationToken token)
+            TextWriter logger, CancellationToken cancellationToken)
         {
             if(_eventWriteService == null || message == null || message.Length == 0)
             {
@@ -38,16 +39,17 @@ namespace Bit.EventsProcessor
 
             try
             {
-                var jToken = JToken.Parse(message);
-                if(jToken is JArray)
+                var token = JToken.Parse(message);
+                if(token is JArray)
                 {
-                    var entities = jToken.ToObject<IList<EventTableEntity>>();
-                    await _eventWriteService.CreateManyAsync(entities);
+                    var events = token.ToObject<List<Event>>()
+                        .Select(e => new EventTableEntity(e) as IEvent).ToList();
+                    await _eventWriteService.CreateManyAsync(events);
                 }
-                else if(jToken is JObject)
+                else if(token is JObject)
                 {
-                    var entity = jToken.ToObject<EventTableEntity>();
-                    await _eventWriteService.CreateAsync(entity);
+                    var e = token.ToObject<Event>();
+                    await _eventWriteService.CreateAsync(new EventTableEntity(e));
                 }
             }
             catch(JsonReaderException)

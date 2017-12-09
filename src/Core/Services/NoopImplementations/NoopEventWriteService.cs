@@ -6,12 +6,12 @@ namespace Bit.Core.Services
 {
     public class NoopEventWriteService : IEventWriteService
     {
-        public Task CreateAsync(EventTableEntity entity)
+        public Task CreateAsync(IEvent e)
         {
             return Task.FromResult(0);
         }
 
-        public Task CreateManyAsync(IList<EventTableEntity> entities)
+        public Task CreateManyAsync(IList<IEvent> e)
         {
             return Task.FromResult(0);
         }

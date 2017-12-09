@@ -6,7 +6,7 @@ namespace Bit.Core.Services
 {
     public interface IEventWriteService
     {
-        Task CreateAsync(EventTableEntity entity);
-        Task CreateManyAsync(IList<EventTableEntity> entities);
+        Task CreateAsync(IEvent e);
+        Task CreateManyAsync(IList<IEvent> e);
     }
 }

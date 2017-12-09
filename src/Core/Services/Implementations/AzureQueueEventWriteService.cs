@@ -29,16 +29,16 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task CreateAsync(EventTableEntity entity)
+        public async Task CreateAsync(IEvent e)
         {
-            var json = JsonConvert.SerializeObject(entity, _jsonSettings);
+            var json = JsonConvert.SerializeObject(e, _jsonSettings);
             var message = new CloudQueueMessage(json);
             await _queue.AddMessageAsync(message);
         }
 
-        public async Task CreateManyAsync(IList<EventTableEntity> entities)
+        public async Task CreateManyAsync(IList<IEvent> e)
         {
-            var json = JsonConvert.SerializeObject(entities, _jsonSettings);
+            var json = JsonConvert.SerializeObject(e, _jsonSettings);
             var message = new CloudQueueMessage(json);
             await _queue.AddMessageAsync(message);
         }

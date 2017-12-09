@@ -30,18 +30,39 @@ namespace Bit.Core.Services
 
         public async Task LogUserEventAsync(Guid userId, EventType type)
         {
-            var events = new List<EventTableEntity> { new UserEvent(userId, type) };
+            var now = DateTime.UtcNow;
+            var events = new List<IEvent>
+            {
+                new Event
+                {
+                    UserId = userId,
+                    Type = type,
+                    Date = now
+                }
+            };
 
-            IEnumerable<UserEvent> orgEvents;
+            IEnumerable<IEvent> orgEvents;
             if(_currentContext.UserId.HasValue)
             {
-                orgEvents = _currentContext.Organizations.Select(o => new UserEvent(userId, o.Id, type));
+                orgEvents = _currentContext.Organizations.Select(o => new Event
+                {
+                    OrganizationId = o.Id,
+                    UserId = userId,
+                    Type = type,
+                    Date = DateTime.UtcNow
+                });
             }
             else
             {
                 var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
                 orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
-                    .Select(o => new UserEvent(userId, o.Id, type));
+                    .Select(o => new Event
+                    {
+                        OrganizationId = o.Id,
+                        UserId = userId,
+                        Type = type,
+                        Date = DateTime.UtcNow
+                    });
             }
 
             if(orgEvents.Any())
@@ -62,31 +83,67 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var e = new CipherEvent(cipher, _currentContext?.UserId, type);
+            var e = new Event
+            {
+                OrganizationId = cipher.OrganizationId,
+                UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId,
+                CipherId = cipher.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = DateTime.UtcNow
+            };
             await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogCollectionEventAsync(Collection collection, EventType type)
         {
-            var e = new CollectionEvent(collection, _currentContext.UserId.Value, type);
+            var e = new Event
+            {
+                OrganizationId = collection.OrganizationId,
+                CollectionId = collection.Id,
+                Type = type,
+                ActingUserId = _currentContext.UserId.Value,
+                Date = DateTime.UtcNow
+            };
             await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogGroupEventAsync(Group group, EventType type)
         {
-            var e = new GroupEvent(group, _currentContext.UserId.Value, type);
+            var e = new Event
+            {
+                OrganizationId = group.OrganizationId,
+                GroupId = group.Id,
+                Type = type,
+                ActingUserId = _currentContext.UserId.Value,
+                Date = DateTime.UtcNow
+            };
             await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
         {
-            var e = new OrganizationUserEvent(organizationUser, _currentContext.UserId.Value, type);
+            var e = new Event
+            {
+                OrganizationId = organizationUser.OrganizationId,
+                UserId = organizationUser.UserId,
+                OrganizationUserId = organizationUser.Id,
+                Type = type,
+                ActingUserId = _currentContext.UserId.Value,
+                Date = DateTime.UtcNow
+            };
             await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type)
         {
-            var e = new OrganizationEvent(organization, _currentContext.UserId.Value, type);
+            var e = new Event
+            {
+                OrganizationId = organization.Id,
+                Type = type,
+                ActingUserId = _currentContext.UserId.Value,
+                Date = DateTime.UtcNow
+            };
             await _eventWriteService.CreateAsync(e);
         }
     }

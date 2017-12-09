@@ -15,14 +15,14 @@ namespace Bit.Core.Services
             _eventRepository = eventRepository;
         }
 
-        public async Task CreateAsync(EventTableEntity entity)
+        public async Task CreateAsync(IEvent e)
         {
-            await _eventRepository.CreateAsync(entity);
+            await _eventRepository.CreateAsync(e);
         }
 
-        public async Task CreateManyAsync(IList<EventTableEntity> entities)
+        public async Task CreateManyAsync(IList<IEvent> e)
         {
-            await _eventRepository.CreateManyAsync(entities);
+            await _eventRepository.CreateManyAsync(e);
         }
     }
 }
