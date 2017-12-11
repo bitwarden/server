@@ -87,7 +87,7 @@ namespace Bit.Setup
 version: '3'
 
 services:
-  mssql:
+  bitwarden-mssql:
     image: bitwarden/mssql:{CoreVersion}
     container_name: bitwarden-mssql
     restart: always
@@ -110,21 +110,21 @@ services:
       - mssql.env
       - ../env/mssql.override.env
 
-  web:
+  bitwarden-web:
     image: bitwarden/web:{WebVersion}
     container_name: bitwarden-web
     restart: always
     volumes:
       - ../web:/etc/bitwarden/web
 
-  attachments:
+  bitwarden-attachments:
     image: bitwarden/attachments:{CoreVersion}
     container_name: bitwarden-attachments
     restart: always
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
 
-  api:
+  bitwarden-api:
     image: bitwarden/api:{CoreVersion}
     container_name: bitwarden-api
     restart: always
@@ -134,7 +134,7 @@ services:
       - global.env
       - ../env/global.override.env
 
-  identity:
+  bitwarden-identity:
     image: bitwarden/identity:{CoreVersion}
     container_name: bitwarden-identity
     restart: always
@@ -145,12 +145,12 @@ services:
       - global.env
       - ../env/global.override.env
 
-  icons:
+  bitwarden-icons:
     image: bitwarden/icons:{CoreVersion}
     container_name: bitwarden-icons
     restart: always
 
-  nginx:
+  bitwarden-nginx:
     image: bitwarden/nginx:{CoreVersion}
     container_name: bitwarden-nginx
     restart: always

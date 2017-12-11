@@ -169,29 +169,29 @@ server {{
 
                 sw.WriteLine($@"
   location / {{
-    proxy_pass http://web/;
+    proxy_pass http://bitwarden-web/;
   }}
 
   location = /app-id.json {{
-    proxy_pass http://web/app-id.json;
+    proxy_pass http://bitwarden-web/app-id.json;
     proxy_hide_header Content-Type;
     add_header Content-Type $fido_content_type;
   }}
 
   location /attachments/ {{
-    proxy_pass http://attachments/;
+    proxy_pass http://bitwarden-attachments/;
   }}
 
   location /api/ {{
-    proxy_pass http://api/;
+    proxy_pass http://bitwarden-api/;
   }}
 
   location /identity/ {{
-    proxy_pass http://identity/;
+    proxy_pass http://bitwarden-identity/;
   }}
 
   location /icons/ {{
-    proxy_pass http://icons/;
+    proxy_pass http://bitwarden-icons/;
   }}
 }}");
             }

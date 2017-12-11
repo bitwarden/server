@@ -35,7 +35,7 @@ namespace Bit.Setup
 
         private void Init(bool forInstall)
         {
-            var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", DatabasePassword);
+            var dbConnectionString = Helpers.MakeSqlConnectionString("bitwarden-mssql", "vault", "sa", DatabasePassword);
             _globalValues = new Dictionary<string, string>
             {
                 ["globalSettings__baseServiceUri__vault"] = Url,
@@ -125,7 +125,7 @@ globalSettings__selfHosted=true
 globalSettings__baseServiceUri__vault=http://localhost
 globalSettings__baseServiceUri__api=http://localhost/api
 globalSettings__baseServiceUri__identity=http://localhost/identity
-globalSettings__baseServiceUri__internalIdentity=http://identity
+globalSettings__baseServiceUri__internalIdentity=http://bitwarden-identity
 globalSettings__pushRelayBaseUri=https://push.bitwarden.com
 globalSettings__installation__identityUri=https://identity.bitwarden.com
 ");
