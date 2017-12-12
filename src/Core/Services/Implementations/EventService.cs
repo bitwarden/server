@@ -103,7 +103,7 @@ namespace Bit.Core.Services
                 OrganizationId = collection.OrganizationId,
                 CollectionId = collection.Id,
                 Type = type,
-                ActingUserId = _currentContext.UserId.Value,
+                ActingUserId = _currentContext?.UserId,
                 Date = DateTime.UtcNow
             };
             await _eventWriteService.CreateAsync(e);
@@ -116,7 +116,7 @@ namespace Bit.Core.Services
                 OrganizationId = group.OrganizationId,
                 GroupId = group.Id,
                 Type = type,
-                ActingUserId = _currentContext.UserId.Value,
+                ActingUserId = _currentContext?.UserId,
                 Date = DateTime.UtcNow
             };
             await _eventWriteService.CreateAsync(e);
@@ -130,7 +130,7 @@ namespace Bit.Core.Services
                 UserId = organizationUser.UserId,
                 OrganizationUserId = organizationUser.Id,
                 Type = type,
-                ActingUserId = _currentContext.UserId.Value,
+                ActingUserId = _currentContext?.UserId,
                 Date = DateTime.UtcNow
             };
             await _eventWriteService.CreateAsync(e);
@@ -142,7 +142,7 @@ namespace Bit.Core.Services
             {
                 OrganizationId = organization.Id,
                 Type = type,
-                ActingUserId = _currentContext.UserId.Value,
+                ActingUserId = _currentContext?.UserId,
                 Date = DateTime.UtcNow
             };
             await _eventWriteService.CreateAsync(e);
