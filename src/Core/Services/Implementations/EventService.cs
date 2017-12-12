@@ -78,7 +78,8 @@ namespace Bit.Core.Services
 
         public async Task LogCipherEventAsync(Cipher cipher, EventType type)
         {
-            if(!cipher.OrganizationId.HasValue && (!_currentContext?.UserId.HasValue ?? true))
+            // Only logging organization cipher events for now.
+            if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
             {
                 return;
             }

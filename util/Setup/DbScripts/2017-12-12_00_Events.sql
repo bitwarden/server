@@ -9,12 +9,13 @@ BEGIN
         [CollectionId]          UNIQUEIDENTIFIER NULL,
         [GroupId]               UNIQUEIDENTIFIER NULL,
         [OrganizationUserId]    UNIQUEIDENTIFIER NULL,
+        [ActingUserId]          UNIQUEIDENTIFIER NULL,
         [Date]                  DATETIME2 (7)    NOT NULL,
         CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
     );
 
-    CREATE UNIQUE NONCLUSTERED INDEX [IX_Event_Date]
-        ON [dbo].[Event]([Date] ASC);
+    CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
+        ON [dbo].[Event]([Date] ASC, [OrganizationId] ASC, [UserId] ASC);
 END
 GO
 
@@ -33,6 +34,7 @@ CREATE PROCEDURE [dbo].[Event_Create]
     @CollectionId UNIQUEIDENTIFIER,
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
     @Date DATETIME2(7)
 AS
 BEGIN
@@ -48,6 +50,7 @@ BEGIN
         [CollectionId],
         [GroupId],
         [OrganizationUserId],
+        [ActingUserId],
         [Date]
     )
     VALUES
@@ -60,6 +63,7 @@ BEGIN
         @CollectionId,
         @GroupId,
         @OrganizationUserId,
+        @ActingUserId,
         @Date
     )
 END

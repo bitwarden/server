@@ -68,22 +68,22 @@ namespace Bit.Core.Repositories.SqlServer
             eventsTable.Columns.Add(idColumn);
             var typeColumn = new DataColumn(nameof(e.Type), typeof(int));
             eventsTable.Columns.Add(typeColumn);
-            var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
-            eventsTable.Columns.Add(dateColumn);
             var userIdColumn = new DataColumn(nameof(e.UserId), typeof(Guid));
             eventsTable.Columns.Add(userIdColumn);
             var organizationIdColumn = new DataColumn(nameof(e.OrganizationId), typeof(Guid));
             eventsTable.Columns.Add(organizationIdColumn);
             var cipherIdColumn = new DataColumn(nameof(e.CipherId), typeof(Guid));
             eventsTable.Columns.Add(cipherIdColumn);
-            var groupIdColumn = new DataColumn(nameof(e.GroupId), typeof(Guid));
-            eventsTable.Columns.Add(groupIdColumn);
             var collectionIdColumn = new DataColumn(nameof(e.CollectionId), typeof(Guid));
             eventsTable.Columns.Add(collectionIdColumn);
+            var groupIdColumn = new DataColumn(nameof(e.GroupId), typeof(Guid));
+            eventsTable.Columns.Add(groupIdColumn);
             var actingUserIdColumn = new DataColumn(nameof(e.ActingUserId), typeof(Guid));
             eventsTable.Columns.Add(actingUserIdColumn);
             var organizationUserIdColumn = new DataColumn(nameof(e.OrganizationUserId), typeof(Guid));
             eventsTable.Columns.Add(organizationUserIdColumn);
+            var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
+            eventsTable.Columns.Add(dateColumn);
 
             var keys = new DataColumn[1];
             keys[0] = idColumn;
@@ -96,15 +96,16 @@ namespace Bit.Core.Repositories.SqlServer
                 var row = eventsTable.NewRow();
 
                 row[idColumn] = ev.Id;
-                row[typeColumn] = ev.Type;
+                row[typeColumn] = (int)ev.Type;
                 row[dateColumn] = ev.Date;
-                row[userIdColumn] = ev.UserId;
-                row[organizationIdColumn] = ev.OrganizationId;
-                row[cipherIdColumn] = ev.CipherId;
-                row[groupIdColumn] = ev.GroupId;
-                row[collectionIdColumn] = ev.CollectionId;
-                row[actingUserIdColumn] = ev.ActingUserId;
-                row[organizationUserIdColumn] = ev.OrganizationUserId;
+                row[userIdColumn] = ev.UserId.HasValue ? (object)ev.UserId.Value : DBNull.Value;
+                row[organizationIdColumn] = ev.OrganizationId.HasValue ? (object)ev.OrganizationId.Value : DBNull.Value;
+                row[cipherIdColumn] = ev.CipherId.HasValue ? (object)ev.CipherId.Value : DBNull.Value;
+                row[groupIdColumn] = ev.GroupId.HasValue ? (object)ev.GroupId.Value : DBNull.Value;
+                row[collectionIdColumn] = ev.CollectionId.HasValue ? (object)ev.CollectionId.Value : DBNull.Value;
+                row[actingUserIdColumn] = ev.ActingUserId.HasValue ? (object)ev.ActingUserId.Value : DBNull.Value;
+                row[organizationUserIdColumn] = ev.OrganizationUserId.HasValue ?
+                    (object)ev.OrganizationUserId.Value : DBNull.Value;
 
                 eventsTable.Rows.Add(row);
             }

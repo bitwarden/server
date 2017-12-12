@@ -7,6 +7,7 @@
     @CollectionId UNIQUEIDENTIFIER,
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
     @Date DATETIME2(7)
 AS
 BEGIN
@@ -22,6 +23,7 @@ BEGIN
         [CollectionId],
         [GroupId],
         [OrganizationUserId],
+        [ActingUserId],
         [Date]
     )
     VALUES
@@ -34,6 +36,7 @@ BEGIN
         @CollectionId,
         @GroupId,
         @OrganizationUserId,
+        @ActingUserId,
         @Date
     )
 END
