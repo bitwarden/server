@@ -5,7 +5,6 @@ namespace Bit.Core.Models.Data
 {
     public interface IEvent
     {
-        DateTime Date { get; set; }
         EventType Type { get; set; }
         Guid? UserId { get; set; }
         Guid? OrganizationId { get; set; }
@@ -14,5 +13,6 @@ namespace Bit.Core.Models.Data
         Guid? GroupId { get; set; }
         Guid? OrganizationUserId { get; set; }
         Guid? ActingUserId { get; set; }
+        DateTime Date { get; set; }
     }
 }

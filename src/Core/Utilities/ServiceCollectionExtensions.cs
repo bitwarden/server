@@ -44,7 +44,7 @@ namespace Bit.Core.Utilities
 
             if(globalSettings.SelfHosted)
             {
-                // TODO: Sql server event repo
+                services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
             }
             else
             {

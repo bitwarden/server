@@ -392,8 +392,7 @@ namespace Bit.Core.Repositories.SqlServer
                     {
                         if(folders.Any())
                         {
-                            using(var bulkCopy = new SqlBulkCopy(connection,
-                                SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "[dbo].[Folder]";
                                 var dataTable = BuildFoldersTable(folders);
@@ -401,8 +400,7 @@ namespace Bit.Core.Repositories.SqlServer
                             }
                         }
 
-                        using(var bulkCopy = new SqlBulkCopy(connection,
-                            SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.FireTriggers, transaction))
+                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
                             var dataTable = BuildCiphersTable(ciphers);

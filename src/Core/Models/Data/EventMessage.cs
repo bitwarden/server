@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data
 {
-    public class Event : IEvent
+    public class EventMessage : IEvent
     {
         public DateTime Date { get; set; }
         public EventType Type { get; set; }

@@ -42,13 +42,13 @@ namespace Bit.EventsProcessor
                 var token = JToken.Parse(message);
                 if(token is JArray)
                 {
-                    var events = token.ToObject<List<Event>>()
+                    var events = token.ToObject<List<EventMessage>>()
                         .Select(e => new EventTableEntity(e) as IEvent).ToList();
                     await _eventWriteService.CreateManyAsync(events);
                 }
                 else if(token is JObject)
                 {
-                    var e = token.ToObject<Event>();
+                    var e = token.ToObject<EventMessage>();
                     await _eventWriteService.CreateAsync(new EventTableEntity(e));
                 }
             }
