@@ -216,5 +216,7 @@
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCipherId.sql" />
+    <Build Include="dbo\Tables\Event.sql" />
+    <Build Include="dbo\Stored Procedures\Event_Create.sql" />
   </ItemGroup>
 </Project>

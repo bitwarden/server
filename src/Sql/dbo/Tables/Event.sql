@@ -11,3 +11,8 @@
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Event_Date]
+    ON [dbo].[Event]([Date] ASC);
+

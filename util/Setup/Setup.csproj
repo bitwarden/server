@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="DbScripts\2017-12-12_00_Events.sql" />
     <EmbeddedResource Include="DbScripts\2017-11-24_00_UpdateProcs.sql" />
     <EmbeddedResource Include="DbScripts\2017-11-13_00_IndexTuning.sql" />
     <EmbeddedResource Include="DbScripts\2017-11-06_00_FamilyPlanAdjustments.sql" />
