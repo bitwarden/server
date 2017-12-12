@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Table
 {
-    public class OrganizationUser : ITableObject<Guid>
+    public class OrganizationUser : ITableObject<Guid>, IExternal
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }

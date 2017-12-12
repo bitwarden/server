@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class Group : ITableObject<Guid>
+    public class Group : ITableObject<Guid>, IExternal
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }

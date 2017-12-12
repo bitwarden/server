@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Data
 {
-    public class OrganizationUserUserDetails
+    public class OrganizationUserUserDetails : IExternal
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }

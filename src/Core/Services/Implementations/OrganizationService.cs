@@ -819,7 +819,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid invitingUserId, string email,
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {
             var result = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email }, type, accessAll,
@@ -827,7 +827,7 @@ namespace Bit.Core.Services
             return result.FirstOrDefault();
         }
 
-        public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid invitingUserId,
+        public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<string> emails, OrganizationUserType type, bool accessAll, string externalId,
             IEnumerable<SelectionReadOnly> collections)
         {
@@ -837,9 +837,9 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(type == OrganizationUserType.Owner)
+            if(type == OrganizationUserType.Owner && invitingUserId.HasValue)
             {
-                var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId);
+                var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId.Value);
                 if(!invitingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
                 {
                     throw new BadRequestException("Only owners can invite new owners.");
@@ -1065,7 +1065,7 @@ namespace Bit.Core.Services
             await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
         }
 
-        public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
+        public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId)
@@ -1073,14 +1073,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
-            if(orgUser.UserId == deletingUserId)
+            if(deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
             {
                 throw new BadRequestException("You cannot remove yourself.");
             }
 
-            if(orgUser.Type == OrganizationUserType.Owner)
+            if(orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue)
             {
-                var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId);
+                var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId.Value);
                 if(!deletingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
                 {
                     throw new BadRequestException("Only owners can delete other owners.");
