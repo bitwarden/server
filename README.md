@@ -15,7 +15,7 @@
 
 -------------------
 
-The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all other bitwarden projects.
+The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all bitwarden client applications.
 
 The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
@@ -24,7 +24,7 @@ The core infrastructure is written in C# using .NET Core with ASP.NET Core. The 
 ### Requirements
 
 - [.NET Core 2.x SDK](https://www.microsoft.com/net/download/core)
-- [SQL Server 2016 or 2017](https://docs.microsoft.com/en-us/sql/index) (2017 for cross-platform)
+- [SQL Server 2017](https://docs.microsoft.com/en-us/sql/index)
 
 *These dependencies are free to use.*
 
@@ -101,4 +101,4 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
 
 Code contributions are welcome! Visual Studio or VS Code is highly recommended if you are working on this project. Please commit any pull requests against the `master` branch.
 
-Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file.
+Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file. We also run a program on [HackerOne](https://hackerone.com/bitwarden).
