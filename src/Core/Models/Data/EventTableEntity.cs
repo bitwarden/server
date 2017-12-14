@@ -36,13 +36,13 @@ namespace Bit.Core.Models.Data
                     {
                         PartitionKey = $"OrganizationId={OrganizationId}";
                         RowKey = string.Format("Date={0}__UserId={1}__Type={2}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), UserId, Type);
+                            CoreHelpers.DateTimeToTableStorageKey(Date), UserId, (int)Type);
                     }
                     else
                     {
                         PartitionKey = $"UserId={UserId}";
                         RowKey = string.Format("Date={0}__Type={1}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), Type);
+                            CoreHelpers.DateTimeToTableStorageKey(Date), (int)Type);
                     }
                     break;
                 case EventType.Cipher_Created:
@@ -56,13 +56,13 @@ namespace Bit.Core.Models.Data
                     {
                         PartitionKey = $"OrganizationId={OrganizationId}";
                         RowKey = string.Format("Date={0}__CipherId={1}__ActingUserId={2}__Type={3}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, ActingUserId, Type);
+                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, ActingUserId, (int)Type);
                     }
                     else
                     {
                         PartitionKey = $"UserId={UserId}";
                         RowKey = string.Format("Date={0}__CipherId={1}__Type={2}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, Type);
+                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, (int)Type);
                     }
                     break;
                 case EventType.Collection_Created:
@@ -70,14 +70,14 @@ namespace Bit.Core.Models.Data
                 case EventType.Collection_Deleted:
                     PartitionKey = $"OrganizationId={OrganizationId}";
                     RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, Type);
+                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
                     break;
                 case EventType.Group_Created:
                 case EventType.Group_Updated:
                 case EventType.Group_Deleted:
                     PartitionKey = $"OrganizationId={OrganizationId}";
                     RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, Type);
+                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
                     break;
                 case EventType.OrganizationUser_Invited:
                 case EventType.OrganizationUser_Confirmed:
@@ -86,12 +86,12 @@ namespace Bit.Core.Models.Data
                 case EventType.OrganizationUser_UpdatedGroups:
                     PartitionKey = $"OrganizationId={OrganizationId}";
                     RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, Type);
+                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
                     break;
                 case EventType.Organization_Updated:
                     PartitionKey = $"OrganizationId={OrganizationId}";
                     RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, Type);
+                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
                     break;
                 default:
                     break;
