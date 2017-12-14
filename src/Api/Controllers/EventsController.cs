@@ -29,7 +29,7 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
         }
 
-        [HttpGet("user")]
+        [HttpGet("")]
         public async Task<ListResponseModel<EventResponseModel>> GetUser(
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null)
         {
