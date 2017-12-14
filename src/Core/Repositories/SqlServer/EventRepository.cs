@@ -42,8 +42,14 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateManyAsync(IList<IEvent> entities)
         {
-            if(!entities.Any())
+            if(!entities?.Any() ?? true)
             {
+                return;
+            }
+
+            if(entities.Count == 1)
+            {
+                await CreateAsync(entities.First());
                 return;
             }
 

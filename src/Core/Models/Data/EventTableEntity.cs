@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Data
     {
         public EventTableEntity() { }
 
-        public EventTableEntity(IEvent e)
+        private EventTableEntity(IEvent e)
         {
             Date = e.Date;
             Type = e.Type;
@@ -22,80 +22,6 @@ namespace Bit.Core.Models.Data
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             ActingUserId = e.ActingUserId;
-
-            switch(e.Type)
-            {
-                case EventType.User_LoggedIn:
-                case EventType.User_ChangedPassword:
-                case EventType.User_Enabled2fa:
-                case EventType.User_Disabled2fa:
-                case EventType.User_Recovered2fa:
-                case EventType.User_FailedLogIn:
-                case EventType.User_FailedLogIn2fa:
-                    if(e.OrganizationId.HasValue)
-                    {
-                        PartitionKey = $"OrganizationId={OrganizationId}";
-                        RowKey = string.Format("Date={0}__UserId={1}__Type={2}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), UserId, (int)Type);
-                    }
-                    else
-                    {
-                        PartitionKey = $"UserId={UserId}";
-                        RowKey = string.Format("Date={0}__Type={1}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), (int)Type);
-                    }
-                    break;
-                case EventType.Cipher_Created:
-                case EventType.Cipher_Updated:
-                case EventType.Cipher_Deleted:
-                case EventType.Cipher_AttachmentCreated:
-                case EventType.Cipher_AttachmentDeleted:
-                case EventType.Cipher_Shared:
-                case EventType.Cipher_UpdatedCollections:
-                    if(OrganizationId.HasValue)
-                    {
-                        PartitionKey = $"OrganizationId={OrganizationId}";
-                        RowKey = string.Format("Date={0}__CipherId={1}__ActingUserId={2}__Type={3}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, ActingUserId, (int)Type);
-                    }
-                    else
-                    {
-                        PartitionKey = $"UserId={UserId}";
-                        RowKey = string.Format("Date={0}__CipherId={1}__Type={2}",
-                            CoreHelpers.DateTimeToTableStorageKey(Date), CipherId, (int)Type);
-                    }
-                    break;
-                case EventType.Collection_Created:
-                case EventType.Collection_Updated:
-                case EventType.Collection_Deleted:
-                    PartitionKey = $"OrganizationId={OrganizationId}";
-                    RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
-                    break;
-                case EventType.Group_Created:
-                case EventType.Group_Updated:
-                case EventType.Group_Deleted:
-                    PartitionKey = $"OrganizationId={OrganizationId}";
-                    RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
-                    break;
-                case EventType.OrganizationUser_Invited:
-                case EventType.OrganizationUser_Confirmed:
-                case EventType.OrganizationUser_Updated:
-                case EventType.OrganizationUser_Removed:
-                case EventType.OrganizationUser_UpdatedGroups:
-                    PartitionKey = $"OrganizationId={OrganizationId}";
-                    RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
-                    break;
-                case EventType.Organization_Updated:
-                    PartitionKey = $"OrganizationId={OrganizationId}";
-                    RowKey = string.Format("Date={0}__ActingUserId={1}__Type={2}",
-                        CoreHelpers.DateTimeToTableStorageKey(Date), ActingUserId, (int)Type);
-                    break;
-                default:
-                    break;
-            }
         }
 
         public DateTime Date { get; set; }
@@ -129,6 +55,64 @@ namespace Bit.Core.Models.Data
             {
                 Type = (EventType)properties[nameof(Type)].Int32Value;
             }
+        }
+
+        public static List<EventTableEntity> IndexEvent(IEvent e)
+        {
+            if(e.OrganizationId.HasValue)
+            {
+                return IndexOrgEvent(e);
+            }
+            else
+            {
+                return new List<EventTableEntity> { IndexUserEvent(e) };
+            }
+        }
+
+        private static List<EventTableEntity> IndexOrgEvent(IEvent e)
+        {
+            var uniquifier = Guid.NewGuid();
+            var pKey = $"OrganizationId={e.OrganizationId}";
+            var dateKey = CoreHelpers.DateTimeToTableStorageKey(e.Date);
+
+            var entities = new List<EventTableEntity>
+            {
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey = string.Format("Date={0}__Uniquifier={1}", dateKey, uniquifier)
+                }
+            };
+
+            if(e.ActingUserId.HasValue)
+            {
+                entities.Add(new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey = string.Format("ActingUserId={0}__Date={1}__Uniquifier={2}", e.ActingUserId, dateKey, uniquifier)
+                });
+            }
+
+            if(e.CipherId.HasValue)
+            {
+                entities.Add(new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey = string.Format("CipherId={0}__Date={1}__Uniquifier={2}", e.CipherId, dateKey, uniquifier)
+                });
+            }
+
+            return entities;
+        }
+
+        private static EventTableEntity IndexUserEvent(IEvent e)
+        {
+            var uniquifier = Guid.NewGuid();
+            return new EventTableEntity(e)
+            {
+                PartitionKey = $"UserId={e.UserId}",
+                RowKey = string.Format("Date={0}__Uniquifier={1}", CoreHelpers.DateTimeToTableStorageKey(e.Date), uniquifier)
+            };
         }
     }
 }

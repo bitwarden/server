@@ -39,18 +39,22 @@ namespace Bit.EventsProcessor
 
             try
             {
+                var events = new List<IEvent>();
+
                 var token = JToken.Parse(message);
                 if(token is JArray)
                 {
-                    var events = token.ToObject<List<EventMessage>>()
-                        .Select(e => new EventTableEntity(e) as IEvent).ToList();
-                    await _eventWriteService.CreateManyAsync(events);
+                    var indexedEntities = token.ToObject<List<EventMessage>>()
+                        .SelectMany(e => EventTableEntity.IndexEvent(e));
+                    events.AddRange(indexedEntities);
                 }
                 else if(token is JObject)
                 {
-                    var e = token.ToObject<EventMessage>();
-                    await _eventWriteService.CreateAsync(new EventTableEntity(e));
+                    var eventMessage = token.ToObject<EventMessage>();
+                    events.AddRange(EventTableEntity.IndexEvent(eventMessage));
                 }
+
+                await _eventWriteService.CreateManyAsync(events);
             }
             catch(JsonReaderException)
             {
