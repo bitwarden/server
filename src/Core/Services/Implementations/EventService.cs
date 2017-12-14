@@ -58,7 +58,7 @@ namespace Bit.Core.Services
                 orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
                     .Select(o => new EventMessage
                     {
-                        OrganizationId = o.Id,
+                        OrganizationId = o.OrganizationId,
                         UserId = userId,
                         Type = type,
                         Date = DateTime.UtcNow

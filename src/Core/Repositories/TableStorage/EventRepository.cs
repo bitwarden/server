@@ -30,9 +30,9 @@ namespace Bit.Core.Repositories.TableStorage
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
 
             var rowFilter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_"),
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"Date={start}_"),
                 TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`"));
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"Date={end}`"));
 
             var filter = TableQuery.CombineFilters(
                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"UserId={userId}"),
@@ -60,9 +60,9 @@ namespace Bit.Core.Repositories.TableStorage
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
 
             var rowFilter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_"),
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"Date={start}_"),
                 TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`"));
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"Date={end}`"));
 
             var filter = TableQuery.CombineFilters(
                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"OrganizationId={organizationId}"),

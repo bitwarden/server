@@ -40,7 +40,7 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<EventResponseModel>(responses);
         }
 
-        [HttpGet("~/organization/{id}/events")]
+        [HttpGet("~/organizations/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetOrganization(string id,
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null)
         {
@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
                 start = end.Value.AddDays(-30);
                 if(endSet)
                 {
-                    start = end.Value.AddMilliseconds(1);
+                    start = start.Value.AddMilliseconds(1);
                 }
             }
 

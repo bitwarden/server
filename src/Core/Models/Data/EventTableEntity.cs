@@ -121,5 +121,14 @@ namespace Bit.Core.Models.Data
             }
             return result;
         }
+
+        public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
+        {
+            base.ReadEntity(properties, operationContext);
+            if(properties.ContainsKey(nameof(Type)) && properties[nameof(Type)].Int32Value.HasValue)
+            {
+                Type = (EventType)properties[nameof(Type)].Int32Value;
+            }
+        }
     }
 }
