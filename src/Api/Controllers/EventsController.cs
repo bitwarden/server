@@ -74,9 +74,16 @@ namespace Bit.Api.Controllers
                 }
             }
 
-            if(start.Value > end.Value || (end.Value - start.Value) > TimeSpan.FromDays(32))
+            if(start.Value > end.Value)
             {
-                throw new BadRequestException("Invalid date range.");
+                var newEnd = start;
+                start = end;
+                end = newEnd;
+            }
+
+            if((end.Value - start.Value) > TimeSpan.FromDays(367))
+            {
+                throw new BadRequestException("Range too large.");
             }
 
             return new Tuple<DateTime, DateTime>(start.Value, end.Value);
