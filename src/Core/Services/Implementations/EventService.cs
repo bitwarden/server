@@ -36,6 +36,7 @@ namespace Bit.Core.Services
                 new EventMessage
                 {
                     UserId = userId,
+                    ActingUserId = userId,
                     Type = type,
                     Date = now
                 }
@@ -48,6 +49,7 @@ namespace Bit.Core.Services
                 {
                     OrganizationId = o.Id,
                     UserId = userId,
+                    ActingUserId = userId,
                     Type = type,
                     Date = DateTime.UtcNow
                 });
@@ -60,6 +62,7 @@ namespace Bit.Core.Services
                     {
                         OrganizationId = o.OrganizationId,
                         UserId = userId,
+                        ActingUserId = userId,
                         Type = type,
                         Date = DateTime.UtcNow
                     });
