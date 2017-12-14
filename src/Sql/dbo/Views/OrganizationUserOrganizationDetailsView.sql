@@ -7,6 +7,7 @@ SELECT
     O.[Enabled],
     O.[UseGroups],
     O.[UseDirectory],
+    O.[UseEvents],
     O.[UseTotp],
     O.[SelfHost],
     O.[UsersGetPremium],

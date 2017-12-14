@@ -527,6 +527,7 @@ namespace Bit.Core.Services
                 MaxStorageGb = !plan.MaxStorageGb.HasValue ?
                     (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
                 UseGroups = plan.UseGroups,
+                UseEvents = plan.UseEvents,
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
                 SelfHost = plan.SelfHost,
@@ -582,6 +583,7 @@ namespace Bit.Core.Services
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
+                UseEvents = license.UseEvents,
                 UseTotp = license.UseTotp,
                 Plan = license.Plan,
                 SelfHost = license.SelfHost,
@@ -744,6 +746,7 @@ namespace Bit.Core.Services
             organization.MaxCollections = license.MaxCollections;
             organization.UseGroups = license.UseGroups;
             organization.UseDirectory = license.UseDirectory;
+            organization.UseEvents = license.UseEvents;
             organization.UseTotp = license.UseTotp;
             organization.Plan = license.Plan;
             organization.Enabled = license.Enabled;

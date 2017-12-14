@@ -218,5 +218,6 @@
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCipherId.sql" />
     <Build Include="dbo\Tables\Event.sql" />
     <Build Include="dbo\Stored Procedures\Event_Create.sql" />
+    <Build Include="dbo\Views\EventView.sql" />
   </ItemGroup>
 </Project>

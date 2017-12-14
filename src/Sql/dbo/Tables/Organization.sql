@@ -14,6 +14,7 @@
     [MaxCollections]        SMALLINT         NULL,
     [UseGroups]             BIT              NOT NULL,
     [UseDirectory]          BIT              NOT NULL,
+    [UseEvents]             BIT              NOT NULL,
     [UseTotp]               BIT              NOT NULL,
     [SelfHost]              BIT              NOT NULL,
     [UsersGetPremium]       BIT              NOT NULL,

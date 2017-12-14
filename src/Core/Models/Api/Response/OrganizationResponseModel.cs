@@ -31,6 +31,7 @@ namespace Bit.Core.Models.Api
             MaxCollections = organization.MaxCollections;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
+            UseEvents = organization.UseEvents;
             UseTotp = organization.UseTotp;
         }
 
@@ -49,6 +50,7 @@ namespace Bit.Core.Models.Api
         public short? MaxCollections { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
+        public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
     }
 
