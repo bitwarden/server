@@ -24,8 +24,7 @@ namespace Bit.Core.Repositories.TableStorage
             _table = tableClient.GetTableReference("event");
         }
 
-        public async Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId,
-            DateTime startDate, DateTime endDate)
+        public async Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
@@ -48,7 +47,38 @@ namespace Bit.Core.Repositories.TableStorage
                 var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
                 continuationToken = queryResults.ContinuationToken;
                 results.AddRange(queryResults.Results);
-            } while(continuationToken != null);
+            }
+            while(continuationToken != null);
+
+            return results.Select(r => r as IEvent).ToList();
+        }
+
+        public async Task<ICollection<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
+            DateTime startDate, DateTime endDate)
+        {
+            var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+            var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+
+            var rowFilter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{start}_"),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{end}`"));
+
+            var filter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"OrganizationId={organizationId}"),
+                TableOperators.And,
+                rowFilter);
+
+            var query = new TableQuery<EventTableEntity>().Where(filter);
+            var results = new List<EventTableEntity>();
+            TableContinuationToken continuationToken = null;
+            do
+            {
+                var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
+                continuationToken = queryResults.ContinuationToken;
+                results.AddRange(queryResults.Results);
+            }
+            while(continuationToken != null);
 
             return results.Select(r => r as IEvent).ToList();
         }

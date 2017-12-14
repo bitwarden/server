@@ -25,6 +25,11 @@ namespace Bit.Core.Repositories.SqlServer
             throw new NotImplementedException();
         }
 
+        public Task<ICollection<IEvent>> GetManyByOrganizationAsync(Guid organizationId, DateTime startDate, DateTime endDate)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task CreateAsync(IEvent e)
         {
             if(!(e is Event ev))
