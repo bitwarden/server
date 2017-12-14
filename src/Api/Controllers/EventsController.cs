@@ -40,7 +40,7 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<EventResponseModel>(responses);
         }
 
-        [HttpGet("organization/{id}")]
+        [HttpGet("~/organization/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetOrganization(string id,
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null)
         {
