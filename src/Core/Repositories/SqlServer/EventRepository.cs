@@ -29,6 +29,21 @@ namespace Bit.Core.Repositories.SqlServer
         public Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
             DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
+            // TODO
+            throw new NotImplementedException();
+        }
+
+        public Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            // TODO
+            throw new NotImplementedException();
+        }
+
+        public Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions)
+        {
+            // TODO
             throw new NotImplementedException();
         }
 

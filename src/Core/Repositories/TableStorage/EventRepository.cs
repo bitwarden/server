@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -27,37 +28,28 @@ namespace Bit.Core.Repositories.TableStorage
         public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
             PageOptions pageOptions)
         {
-            var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
-            var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
-            var filter = MakeFilter($"UserId={userId}", $"Date={start}", $"Date={end}");
-
-            var query = new TableQuery<EventTableEntity>().Where(filter).Take(pageOptions.PageSize);
-            var result = new PagedResult<IEvent>();
-            var continuationToken = DeserializeContinuationToken(pageOptions?.ContinuationToken);
-
-            var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
-            result.ContinuationToken = SerializeContinuationToken(queryResults.ContinuationToken);
-            result.Data.AddRange(queryResults.Results);
-
-            return result;
+            return await GetManyAsync($"UserId={userId}", "Date={{0}}", startDate, endDate, pageOptions);
         }
 
         public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
             DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
-            var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
-            var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
-            var filter = MakeFilter($"OrganizationId={organizationId}", $"Date={start}", $"Date={end}");
+            return await GetManyAsync($"OrganizationId={organizationId}", "Date={{0}}", startDate, endDate, pageOptions);
+        }
 
-            var query = new TableQuery<EventTableEntity>().Where(filter).Take(pageOptions.PageSize);
-            var result = new PagedResult<IEvent>();
-            var continuationToken = DeserializeContinuationToken(pageOptions?.ContinuationToken);
+        public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"OrganizationId={organizationId}",
+                $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+        }
 
-            var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
-            result.ContinuationToken = SerializeContinuationToken(queryResults.ContinuationToken);
-            result.Data.AddRange(queryResults.Results);
-
-            return result;
+        public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions)
+        {
+            var partitionKey = cipher.OrganizationId.HasValue ?
+                $"OrganizationId={cipher.OrganizationId}" : $"UserId={cipher.UserId}";
+            return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
         }
 
         public async Task CreateAsync(IEvent e)
@@ -118,6 +110,24 @@ namespace Bit.Core.Repositories.TableStorage
         public async Task CreateEntityAsync(ITableEntity entity)
         {
             await _table.ExecuteAsync(TableOperation.Insert(entity));
+        }
+
+        public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+            var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+            var filter = MakeFilter(partitionKey, string.Format(rowKey, start), string.Format(rowKey, end));
+
+            var query = new TableQuery<EventTableEntity>().Where(filter).Take(pageOptions.PageSize);
+            var result = new PagedResult<IEvent>();
+            var continuationToken = DeserializeContinuationToken(pageOptions?.ContinuationToken);
+
+            var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
+            result.ContinuationToken = SerializeContinuationToken(queryResults.ContinuationToken);
+            result.Data.AddRange(queryResults.Results);
+
+            return result;
         }
 
         private string MakeFilter(string partitionKey, string rowStart, string rowEnd)

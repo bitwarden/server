@@ -17,15 +17,21 @@ namespace Bit.Api.Controllers
     public class EventsController : Controller
     {
         private readonly IUserService _userService;
+        private readonly ICipherRepository _cipherRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IEventRepository _eventRepository;
         private readonly CurrentContext _currentContext;
 
         public EventsController(
             IUserService userService,
+            ICipherRepository cipherRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IEventRepository eventRepository,
             CurrentContext currentContext)
         {
             _userService = userService;
+            _cipherRepository = cipherRepository;
+            _organizationUserRepository = organizationUserRepository;
             _eventRepository = eventRepository;
             _currentContext = currentContext;
         }
@@ -37,6 +43,25 @@ namespace Bit.Api.Controllers
             var dateRange = GetDateRange(start, end);
             var userId = _userService.GetProperUserId(User).Value;
             var result = await _eventRepository.GetManyByUserAsync(userId, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+        }
+
+        [HttpGet("~/ciphers/{id}/events")]
+        public async Task<ListResponseModel<EventResponseModel>> GetCipher(string id,
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if(cipher == null ||
+                (cipher.OrganizationId.HasValue && !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value)))
+            {
+                throw new NotFoundException();
+            }
+
+            var dateRange = GetDateRange(start, end);
+            var result = await _eventRepository.GetManyByCipherAsync(cipher, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = continuationToken });
             var responses = result.Data.Select(e => new EventResponseModel(e));
             return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
@@ -54,6 +79,25 @@ namespace Bit.Api.Controllers
 
             var dateRange = GetDateRange(start, end);
             var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+        }
+
+        [HttpGet("~/organizations/{orgId}/users/{id}/events")]
+        public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+        {
+            var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if(organizationUser == null || !organizationUser.UserId.HasValue ||
+                !_currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var dateRange = GetDateRange(start, end);
+            var result = await _eventRepository.GetManyByOrganizationActingUserAsync(organizationUser.OrganizationId,
+                organizationUser.UserId.Value, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = continuationToken });
             var responses = result.Data.Select(e => new EventResponseModel(e));
             return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
