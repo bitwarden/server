@@ -259,12 +259,14 @@ BEGIN
         [GroupId]               UNIQUEIDENTIFIER NULL,
         [OrganizationUserId]    UNIQUEIDENTIFIER NULL,
         [ActingUserId]          UNIQUEIDENTIFIER NULL,
+        [DeviceType]            SMALLINT         NULL,
+        [IpAddress]             VARCHAR(50)      NULL,
         [Date]                  DATETIME2 (7)    NOT NULL,
         CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
     );
 
     CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
-        ON [dbo].[Event]([Date] ASC, [OrganizationId] ASC, [UserId] ASC);
+        ON [dbo].[Event]([Date] ASC, [OrganizationId] ASC, [UserId] ASC, [CipherId] ASC);
 END
 GO
 
@@ -284,6 +286,8 @@ CREATE PROCEDURE [dbo].[Event_Create]
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ActingUserId UNIQUEIDENTIFIER,
+    @DeviceType SMALLINT,
+    @IpAddress VARCHAR(50),
     @Date DATETIME2(7)
 AS
 BEGIN
@@ -300,6 +304,8 @@ BEGIN
         [GroupId],
         [OrganizationUserId],
         [ActingUserId],
+        [DeviceType],
+        [IpAddress],
         [Date]
     )
     VALUES
@@ -313,6 +319,8 @@ BEGIN
         @GroupId,
         @OrganizationUserId,
         @ActingUserId,
+        @DeviceType,
+        @IpAddress,
         @Date
     )
 END

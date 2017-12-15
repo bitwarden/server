@@ -33,7 +33,7 @@ namespace Bit.Core.Services
             var now = DateTime.UtcNow;
             var events = new List<IEvent>
             {
-                new EventMessage
+                new EventMessage(_currentContext)
                 {
                     UserId = userId,
                     ActingUserId = userId,
@@ -45,7 +45,7 @@ namespace Bit.Core.Services
             IEnumerable<IEvent> orgEvents;
             if(_currentContext.UserId.HasValue)
             {
-                orgEvents = _currentContext.Organizations.Select(o => new EventMessage
+                orgEvents = _currentContext.Organizations.Select(o => new EventMessage(_currentContext)
                 {
                     OrganizationId = o.Id,
                     UserId = userId,
@@ -58,7 +58,7 @@ namespace Bit.Core.Services
             {
                 var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
                 orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
-                    .Select(o => new EventMessage
+                    .Select(o => new EventMessage(_currentContext)
                     {
                         OrganizationId = o.OrganizationId,
                         UserId = userId,
@@ -87,7 +87,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var e = new EventMessage
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = cipher.OrganizationId,
                 UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId,
@@ -101,7 +101,7 @@ namespace Bit.Core.Services
 
         public async Task LogCollectionEventAsync(Collection collection, EventType type)
         {
-            var e = new EventMessage
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = collection.OrganizationId,
                 CollectionId = collection.Id,
@@ -114,7 +114,7 @@ namespace Bit.Core.Services
 
         public async Task LogGroupEventAsync(Group group, EventType type)
         {
-            var e = new EventMessage
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = group.OrganizationId,
                 GroupId = group.Id,
@@ -127,7 +127,7 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
         {
-            var e = new EventMessage
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organizationUser.OrganizationId,
                 UserId = organizationUser.UserId,
@@ -141,7 +141,7 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type)
         {
-            var e = new EventMessage
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organization.Id,
                 Type = type,

@@ -13,6 +13,8 @@ namespace Bit.Core.Models.Data
         Guid? GroupId { get; set; }
         Guid? OrganizationUserId { get; set; }
         Guid? ActingUserId { get; set; }
+        DeviceType? DeviceType { get; set; }
+        string IpAddress { get; set; }
         DateTime Date { get; set; }
     }
 }

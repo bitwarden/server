@@ -21,6 +21,8 @@ namespace Bit.Core.Models.Data
             CollectionId = e.CollectionId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
+            DeviceType = e.DeviceType;
+            IpAddress = e.IpAddress;
             ActingUserId = e.ActingUserId;
         }
 
@@ -32,47 +34,58 @@ namespace Bit.Core.Models.Data
         public Guid? CollectionId { get; set; }
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
+        public DeviceType? DeviceType { get; set; }
+        public string IpAddress { get; set; }
         public Guid? ActingUserId { get; set; }
 
         public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
             var result = base.WriteEntity(operationContext);
-            if(result.ContainsKey(nameof(Type)))
+
+            var typeName = nameof(Type);
+            if(result.ContainsKey(typeName))
             {
-                result[nameof(Type)] = new EntityProperty((int)Type);
+                result[typeName] = new EntityProperty((int)Type);
             }
             else
             {
-                result.Add(nameof(Type), new EntityProperty((int)Type));
+                result.Add(typeName, new EntityProperty((int)Type));
             }
+
+            var deviceTypeName = nameof(DeviceType);
+            if(result.ContainsKey(deviceTypeName))
+            {
+                result[deviceTypeName] = new EntityProperty((int?)DeviceType);
+            }
+            else
+            {
+                result.Add(deviceTypeName, new EntityProperty((int?)DeviceType));
+            }
+
             return result;
         }
 
         public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
             base.ReadEntity(properties, operationContext);
-            if(properties.ContainsKey(nameof(Type)) && properties[nameof(Type)].Int32Value.HasValue)
+
+            var typeName = nameof(Type);
+            if(properties.ContainsKey(typeName) && properties[typeName].Int32Value.HasValue)
             {
-                Type = (EventType)properties[nameof(Type)].Int32Value;
+                Type = (EventType)properties[typeName].Int32Value.Value;
+            }
+
+            var deviceTypeName = nameof(DeviceType);
+            if(properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
+            {
+                DeviceType = (DeviceType)properties[deviceTypeName].Int32Value.Value;
             }
         }
 
         public static List<EventTableEntity> IndexEvent(IEvent e)
         {
-            if(e.OrganizationId.HasValue)
-            {
-                return IndexOrgEvent(e);
-            }
-            else
-            {
-                return new List<EventTableEntity> { IndexUserEvent(e) };
-            }
-        }
-
-        private static List<EventTableEntity> IndexOrgEvent(IEvent e)
-        {
             var uniquifier = Guid.NewGuid();
-            var pKey = $"OrganizationId={e.OrganizationId}";
+            var pKey = e.OrganizationId.HasValue ? $"OrganizationId={e.OrganizationId}" : $"UserId={e.UserId}";
             var dateKey = CoreHelpers.DateTimeToTableStorageKey(e.Date);
 
             var entities = new List<EventTableEntity>
@@ -84,7 +97,7 @@ namespace Bit.Core.Models.Data
                 }
             };
 
-            if(e.ActingUserId.HasValue)
+            if(e.OrganizationId.HasValue && e.ActingUserId.HasValue)
             {
                 entities.Add(new EventTableEntity(e)
                 {
@@ -103,16 +116,6 @@ namespace Bit.Core.Models.Data
             }
 
             return entities;
-        }
-
-        private static EventTableEntity IndexUserEvent(IEvent e)
-        {
-            var uniquifier = Guid.NewGuid();
-            return new EventTableEntity(e)
-            {
-                PartitionKey = $"UserId={e.UserId}",
-                RowKey = string.Format("Date={0}__Uniquifier={1}", CoreHelpers.DateTimeToTableStorageKey(e.Date), uniquifier)
-            };
         }
     }
 }

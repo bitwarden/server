@@ -8,6 +8,8 @@
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ActingUserId UNIQUEIDENTIFIER,
+    @DeviceType SMALLINT,
+    @IpAddress VARCHAR(50),
     @Date DATETIME2(7)
 AS
 BEGIN
@@ -24,6 +26,8 @@ BEGIN
         [GroupId],
         [OrganizationUserId],
         [ActingUserId],
+        [DeviceType],
+        [IpAddress],
         [Date]
     )
     VALUES
@@ -37,6 +41,8 @@ BEGIN
         @GroupId,
         @OrganizationUserId,
         @ActingUserId,
+        @DeviceType,
+        @IpAddress,
         @Date
     )
 END

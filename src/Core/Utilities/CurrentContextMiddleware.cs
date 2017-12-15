@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Bit.Core.Enums;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,9 @@ namespace Bit.Core.Utilities
 
         public async Task Invoke(HttpContext httpContext, CurrentContext currentContext)
         {
-            if(httpContext.User != null)
+            currentContext.HttpContext = httpContext;
+
+            if(httpContext.User != null && httpContext.User.Claims.Any())
             {
                 var claimsDict = httpContext.User.Claims
                     .GroupBy(c => c.Type)
@@ -48,7 +51,7 @@ namespace Bit.Core.Utilities
                         new CurrentContext.CurrentContentOrganization
                         {
                             Id = new Guid(c.Value),
-                            Type = Core.Enums.OrganizationUserType.Owner
+                            Type = OrganizationUserType.Owner
                         }));
                 }
 
@@ -58,7 +61,7 @@ namespace Bit.Core.Utilities
                         new CurrentContext.CurrentContentOrganization
                         {
                             Id = new Guid(c.Value),
-                            Type = Core.Enums.OrganizationUserType.Admin
+                            Type = OrganizationUserType.Admin
                         }));
                 }
 
@@ -68,7 +71,7 @@ namespace Bit.Core.Utilities
                         new CurrentContext.CurrentContentOrganization
                         {
                             Id = new Guid(c.Value),
-                            Type = Core.Enums.OrganizationUserType.User
+                            Type = OrganizationUserType.User
                         }));
                 }
             }
@@ -76,6 +79,12 @@ namespace Bit.Core.Utilities
             if(currentContext.DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
             {
                 currentContext.DeviceIdentifier = httpContext.Request.Headers["Device-Identifier"];
+            }
+
+            if(httpContext.Request.Headers.ContainsKey("Device-Type") &&
+                Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
+            {
+                currentContext.DeviceType = dType;
             }
 
             await _next.Invoke(httpContext);

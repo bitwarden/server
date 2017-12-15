@@ -98,6 +98,9 @@ namespace Bit.Identity
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
             }
 
+            // Add current context
+            app.UseMiddleware<CurrentContextMiddleware>();
+
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
         }

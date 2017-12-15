@@ -19,6 +19,8 @@ namespace Bit.Core.Models.Table
             CollectionId = e.CollectionId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
+            DeviceType = e.DeviceType;
+            IpAddress = e.IpAddress;
             ActingUserId = e.ActingUserId;
         }
 
@@ -31,6 +33,8 @@ namespace Bit.Core.Models.Table
         public Guid? CollectionId { get; set; }
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
+        public DeviceType? DeviceType { get; set; }
+        public string IpAddress { get; set; }
         public Guid? ActingUserId { get; set; }
 
         public void SetNewId()

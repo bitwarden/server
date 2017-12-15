@@ -5,6 +5,14 @@ namespace Bit.Core.Models.Data
 {
     public class EventMessage : IEvent
     {
+        public EventMessage() { }
+
+        public EventMessage(CurrentContext currentContext)
+        {
+            IpAddress = currentContext.IpAddress;
+            DeviceType = currentContext.DeviceType;
+        }
+
         public DateTime Date { get; set; }
         public EventType Type { get; set; }
         public Guid? UserId { get; set; }
@@ -14,5 +22,7 @@ namespace Bit.Core.Models.Data
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ActingUserId { get; set; }
+        public DeviceType? DeviceType { get; set; }
+        public string IpAddress { get; set; }
     }
 }
