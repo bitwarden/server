@@ -34,7 +34,7 @@ namespace Bit.Core.Repositories.TableStorage
         public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
             DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
-            return await GetManyAsync($"OrganizationId={organizationId}", "Date={{0}}", startDate, endDate, pageOptions);
+            return await GetManyAsync($"OrganizationId={organizationId}", "Date={0}", startDate, endDate, pageOptions);
         }
 
         public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
