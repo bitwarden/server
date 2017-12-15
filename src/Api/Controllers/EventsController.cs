@@ -58,23 +58,12 @@ namespace Bit.Api.Controllers
 
         private Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
         {
-            var endSet = false;
-            if(!end.HasValue)
+            if(!end.HasValue || !start.HasValue)
             {
-                endSet = true;
                 end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
+                start = DateTime.UtcNow.Date.AddDays(-30);
             }
-
-            if(!start.HasValue)
-            {
-                start = end.Value.AddDays(-30);
-                if(endSet)
-                {
-                    start = start.Value.AddMilliseconds(1);
-                }
-            }
-
-            if(start.Value > end.Value)
+            else if(start.Value > end.Value)
             {
                 var newEnd = start;
                 start = end;

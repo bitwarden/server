@@ -417,7 +417,7 @@ namespace Bit.Core.Utilities
                 date = DateTime.UtcNow;
             }
 
-            return date.Value.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            return date.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
         }
     }
 }
