@@ -12,6 +12,8 @@ namespace Bit.EventsProcessor
                 config.UseDevelopmentSettings();
             }
 
+            config.Queues.BatchSize = 5;
+
             var host = new JobHost(config);
             host.RunAndBlock();
         }
