@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using Dapper;
+using System.Globalization;
 
 namespace Bit.Core.Utilities
 {
@@ -18,6 +19,7 @@ namespace Bit.Core.Utilities
     {
         private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
         private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly Random _random = new Random();
         private static string _version;
         private static readonly string _qwertyDvorakMap = "-=qwertyuiop[]asdfghjkl;'zxcvbnm,./_+QWERTYUIO" +
@@ -412,12 +414,16 @@ namespace Bit.Core.Utilities
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
         {
-            if(date == null)
+            if(date.HasValue)
+            {
+                date = date.Value.ToUniversalTime();
+            }
+            else
             {
                 date = DateTime.UtcNow;
             }
 
-            return date.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+            return _max.Subtract(date.Value).TotalMilliseconds.ToString(CultureInfo.InvariantCulture);
         }
     }
 }

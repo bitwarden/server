@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -31,18 +32,19 @@ namespace Bit.Api.Controllers
 
         [HttpGet("")]
         public async Task<ListResponseModel<EventResponseModel>> GetUser(
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null)
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var dateRange = GetDateRange(start, end);
             var userId = _userService.GetProperUserId(User).Value;
-            var events = await _eventRepository.GetManyByUserAsync(userId, dateRange.Item1, dateRange.Item2);
-            var responses = events.Select(e => new EventResponseModel(e));
-            return new ListResponseModel<EventResponseModel>(responses);
+            var result = await _eventRepository.GetManyByUserAsync(userId, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
         }
 
         [HttpGet("~/organizations/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetOrganization(string id,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null)
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var orgId = new Guid(id);
             if(!_currentContext.OrganizationAdmin(orgId))
@@ -51,9 +53,10 @@ namespace Bit.Api.Controllers
             }
 
             var dateRange = GetDateRange(start, end);
-            var events = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2);
-            var responses = events.Select(e => new EventResponseModel(e));
-            return new ListResponseModel<EventResponseModel>(responses);
+            var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
         }
 
         private Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)

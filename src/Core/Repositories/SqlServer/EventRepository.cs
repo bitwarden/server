@@ -19,13 +19,15 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString)
         { }
 
-        public Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions)
         {
             // TODO
             throw new NotImplementedException();
         }
 
-        public Task<ICollection<IEvent>> GetManyByOrganizationAsync(Guid organizationId, DateTime startDate, DateTime endDate)
+        public Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             throw new NotImplementedException();
         }

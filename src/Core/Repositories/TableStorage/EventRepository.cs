@@ -24,63 +24,40 @@ namespace Bit.Core.Repositories.TableStorage
             _table = tableClient.GetTableReference("event");
         }
 
-        public async Task<ICollection<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions)
         {
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+            var filter = MakeFilter($"UserId={userId}", $"Date={start}", $"Date={end}");
 
-            var rowFilter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"Date={start}_"),
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"Date={end}`"));
+            var query = new TableQuery<EventTableEntity>().Where(filter).Take(pageOptions.PageSize);
+            var result = new PagedResult<IEvent>();
+            var continuationToken = DeserializeContinuationToken(pageOptions?.ContinuationToken);
 
-            var filter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"UserId={userId}"),
-                TableOperators.And,
-                rowFilter);
+            var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
+            result.ContinuationToken = SerializeContinuationToken(queryResults.ContinuationToken);
+            result.Data.AddRange(queryResults.Results);
 
-            var query = new TableQuery<EventTableEntity>().Where(filter);
-            var results = new List<EventTableEntity>();
-            TableContinuationToken continuationToken = null;
-            do
-            {
-                var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
-                continuationToken = queryResults.ContinuationToken;
-                results.AddRange(queryResults.Results);
-            }
-            while(continuationToken != null);
-
-            return results.Select(r => r as IEvent).ToList();
+            return result;
         }
 
-        public async Task<ICollection<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
-            DateTime startDate, DateTime endDate)
+        public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
             var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+            var filter = MakeFilter($"OrganizationId={organizationId}", $"Date={start}", $"Date={end}");
 
-            var rowFilter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"Date={start}_"),
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"Date={end}`"));
+            var query = new TableQuery<EventTableEntity>().Where(filter).Take(pageOptions.PageSize);
+            var result = new PagedResult<IEvent>();
+            var continuationToken = DeserializeContinuationToken(pageOptions?.ContinuationToken);
 
-            var filter = TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"OrganizationId={organizationId}"),
-                TableOperators.And,
-                rowFilter);
+            var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
+            result.ContinuationToken = SerializeContinuationToken(queryResults.ContinuationToken);
+            result.Data.AddRange(queryResults.Results);
 
-            var query = new TableQuery<EventTableEntity>().Where(filter);
-            var results = new List<EventTableEntity>();
-            TableContinuationToken continuationToken = null;
-            do
-            {
-                var queryResults = await _table.ExecuteQuerySegmentedAsync(query, continuationToken);
-                continuationToken = queryResults.ContinuationToken;
-                results.AddRange(queryResults.Results);
-            }
-            while(continuationToken != null);
-
-            return results.Select(r => r as IEvent).ToList();
+            return result;
         }
 
         public async Task CreateAsync(IEvent e)
@@ -141,6 +118,52 @@ namespace Bit.Core.Repositories.TableStorage
         public async Task CreateEntityAsync(ITableEntity entity)
         {
             await _table.ExecuteAsync(TableOperation.Insert(entity));
+        }
+
+        private string MakeFilter(string partitionKey, string rowStart, string rowEnd)
+        {
+            var rowFilter = TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, $"{rowStart}`"),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, $"{rowEnd}_"));
+
+            return TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey),
+                TableOperators.And,
+                rowFilter);
+        }
+
+        private string SerializeContinuationToken(TableContinuationToken token)
+        {
+            if(token == null)
+            {
+                return null;
+            }
+
+            return string.Format("{0}__{1}__{2}__{3}", (int)token.TargetLocation, token.NextTableName,
+                token.NextPartitionKey, token.NextRowKey);
+        }
+
+        private TableContinuationToken DeserializeContinuationToken(string token)
+        {
+            if(string.IsNullOrWhiteSpace(token))
+            {
+                return null;
+            }
+
+            var tokenParts = token.Split(new string[] { "__" }, StringSplitOptions.None);
+            if(tokenParts.Length < 4 || !Enum.TryParse(tokenParts[0], out StorageLocation tLoc))
+            {
+                return null;
+            }
+
+            return new TableContinuationToken
+            {
+                TargetLocation = tLoc,
+                NextTableName = string.IsNullOrWhiteSpace(tokenParts[1]) ? null : tokenParts[1],
+                NextPartitionKey = string.IsNullOrWhiteSpace(tokenParts[2]) ? null : tokenParts[2],
+                NextRowKey = string.IsNullOrWhiteSpace(tokenParts[3]) ? null : tokenParts[3]
+            };
         }
     }
 }
