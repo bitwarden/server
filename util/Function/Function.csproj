@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net461</TargetFramework>
+    <TargetFramework>net47</TargetFramework>
     <RootNamespace>Bit.Function</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
