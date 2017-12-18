@@ -21,6 +21,7 @@
         UWP = 16,
         SafariBrowser = 17,
         VivaldiBrowser = 18,
-        VivaldiExtension = 19
+        VivaldiExtension = 19,
+        SafariExtension = 20
     }
 }
