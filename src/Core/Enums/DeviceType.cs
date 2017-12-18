@@ -18,6 +18,9 @@
         IEBrowser = 13,
         UnknownBrowser = 14,
         AndroidAmazon = 15,
-        UWP = 16
+        UWP = 16,
+        SafariBrowser = 17,
+        VivaldiBrowser = 18,
+        VivaldiExtension = 19
     }
 }

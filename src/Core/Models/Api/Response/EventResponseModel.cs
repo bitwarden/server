@@ -23,6 +23,8 @@ namespace Bit.Core.Models.Api
             OrganizationUserId = ev.OrganizationUserId;
             ActingUserId = ev.ActingUserId;
             Date = ev.Date;
+            DeviceType = ev.DeviceType;
+            IpAddress = ev.IpAddress;
         }
 
         public EventType Type { get; set; }
@@ -34,5 +36,7 @@ namespace Bit.Core.Models.Api
         public Guid? OrganizationUserId { get; set; }
         public Guid? ActingUserId { get; set; }
         public DateTime Date { get; set; }
+        public DeviceType? DeviceType { get; set; }
+        public string IpAddress { get; set; }
     }
 }
