@@ -54,7 +54,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(cipher == null ||
+            if(cipher == null || (cipher.UserId.HasValue && userId != cipher.UserId) ||
                 (cipher.OrganizationId.HasValue && !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value)))
             {
                 throw new NotFoundException();
