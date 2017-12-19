@@ -219,5 +219,9 @@
     <Build Include="dbo\Tables\Event.sql" />
     <Build Include="dbo\Stored Procedures\Event_Create.sql" />
     <Build Include="dbo\Views\EventView.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByCipherId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByOrganizationIdActingUserId.sql" />
   </ItemGroup>
 </Project>

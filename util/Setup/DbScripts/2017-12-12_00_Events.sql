@@ -266,7 +266,7 @@ BEGIN
     );
 
     CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
-        ON [dbo].[Event]([Date] ASC, [OrganizationId] ASC, [UserId] ASC, [CipherId] ASC);
+        ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC);
 END
 GO
 
@@ -323,6 +323,143 @@ BEGIN
         @IpAddress,
         @Date
     )
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByCipherId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Event_ReadPageByCipherId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByCipherId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @CipherId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND (
+            (@OrganizationId IS NULL AND [OrganizationId] IS NULL)
+            OR (@OrganizationId IS NOT NULL AND [OrganizationId] = @OrganizationId)
+        )
+        AND (
+            (@UserId IS NULL AND [UserId] IS NULL)
+            OR (@UserId IS NOT NULL AND [UserId] = @UserId)
+        )
+        AND [CipherId]  = @CipherId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByOrganizationId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Event_ReadPageByOrganizationId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [OrganizationId] = @OrganizationId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByOrganizationIdActingUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Event_ReadPageByOrganizationIdActingUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByOrganizationIdActingUserId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [OrganizationId] = @OrganizationId
+        AND [ActingUserId] = @ActingUserId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Event_ReadPageByUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByUserId]
+    @UserId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [OrganizationId] IS NULL
+        AND [ActingUserId] = @UserId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
 END
 GO
 
