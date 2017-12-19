@@ -67,6 +67,7 @@ namespace Bit.Core.Utilities
         {
             services.AddSingleton<IMailService, BackupMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
+            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
 
             if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
             {

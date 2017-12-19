@@ -223,5 +223,6 @@
     <Build Include="dbo\Stored Procedures\Event_ReadPageByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Event_ReadPageByCipherId.sql" />
     <Build Include="dbo\Stored Procedures\Event_ReadPageByOrganizationIdActingUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadAbilities.sql" />
   </ItemGroup>
 </Project>

@@ -202,6 +202,26 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[Organization_ReadAbilities]') IS NULL
+BEGIN
+    EXEC('CREATE PROCEDURE [dbo].[Organization_ReadAbilities] AS BEGIN SET NOCOUNT ON; END')
+END
+GO
+
+ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [Id],
+        [UseEvents],
+        [Enabled]
+    FROM
+        [dbo].[Organization]
+END
+GO
+
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationView')
 BEGIN
     DROP VIEW [dbo].[OrganizationView]

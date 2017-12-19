@@ -6,6 +6,7 @@ using System.Data;
 using Dapper;
 using System.Linq;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -53,6 +54,18 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Id = id },
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 180);
+            }
+        }
+
+        public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationAbility>(
+                    "[dbo].[Organization_ReadAbilities]",
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
             }
         }
     }

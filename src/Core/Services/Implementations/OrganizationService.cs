@@ -31,6 +31,7 @@ namespace Bit.Core.Services
         private readonly ILicensingService _licensingService;
         private readonly IEventService _eventService;
         private readonly IInstallationRepository _installationRepository;
+        private readonly IApplicationCacheService _applicationCacheService;
         private readonly StripePaymentService _stripePaymentService;
         private readonly GlobalSettings _globalSettings;
 
@@ -48,6 +49,7 @@ namespace Bit.Core.Services
             ILicensingService licensingService,
             IEventService eventService,
             IInstallationRepository installationRepository,
+            IApplicationCacheService applicationCacheService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -63,13 +65,14 @@ namespace Bit.Core.Services
             _licensingService = licensingService;
             _eventService = eventService;
             _installationRepository = installationRepository;
+            _applicationCacheService = applicationCacheService;
             _stripePaymentService = new StripePaymentService();
             _globalSettings = globalSettings;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -78,13 +81,13 @@ namespace Bit.Core.Services
             var updated = await _stripePaymentService.UpdatePaymentMethodAsync(organization, paymentToken);
             if(updated)
             {
-                await _organizationRepository.ReplaceAsync(organization);
+                await ReplaceAndUpdateCache(organization);
             }
         }
 
         public async Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -95,7 +98,7 @@ namespace Bit.Core.Services
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -106,7 +109,7 @@ namespace Bit.Core.Services
 
         public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -243,7 +246,7 @@ namespace Bit.Core.Services
 
         public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -262,12 +265,12 @@ namespace Bit.Core.Services
 
             await BillingHelpers.AdjustStorageAsync(_stripePaymentService, organization, storageAdjustmentGb,
                 plan.StripStoragePlanId);
-            await _organizationRepository.ReplaceAsync(organization);
+            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -361,12 +364,12 @@ namespace Bit.Core.Services
             }
 
             organization.Seats = (short?)newSeatTotal;
-            await _organizationRepository.ReplaceAsync(organization);
+            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -622,6 +625,7 @@ namespace Bit.Core.Services
             try
             {
                 await _organizationRepository.CreateAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
                 var orgUser = new OrganizationUser
                 {
@@ -666,6 +670,7 @@ namespace Bit.Core.Services
                 if(organization.Id != default(Guid))
                 {
                     await _organizationRepository.DeleteAsync(organization);
+                    await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
                 }
 
                 throw;
@@ -674,7 +679,7 @@ namespace Bit.Core.Services
 
         public async Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -753,7 +758,7 @@ namespace Bit.Core.Services
             organization.ExpirationDate = license.Expires;
             organization.LicenseKey = license.LicenseKey;
             organization.RevisionDate = DateTime.UtcNow;
-            await _organizationRepository.ReplaceAsync(organization);
+            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task DeleteAsync(Organization organization)
@@ -764,17 +769,18 @@ namespace Bit.Core.Services
             }
 
             await _organizationRepository.DeleteAsync(organization);
+            await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
         }
 
         public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
         {
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            var org = await GetOrgById(organizationId);
             if(org != null && org.Enabled)
             {
                 org.Enabled = false;
                 org.ExpirationDate = expirationDate;
                 org.RevisionDate = DateTime.UtcNow;
-                await _organizationRepository.ReplaceAsync(org);
+                await ReplaceAndUpdateCache(org);
 
                 // TODO: send email to owners?
             }
@@ -782,22 +788,22 @@ namespace Bit.Core.Services
 
         public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
         {
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            var org = await GetOrgById(organizationId);
             if(org != null)
             {
                 org.ExpirationDate = expirationDate;
                 org.RevisionDate = DateTime.UtcNow;
-                await _organizationRepository.ReplaceAsync(org);
+                await ReplaceAndUpdateCache(org);
             }
         }
 
         public async Task EnableAsync(Guid organizationId)
         {
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            var org = await GetOrgById(organizationId);
             if(org != null && !org.Enabled)
             {
                 org.Enabled = true;
-                await _organizationRepository.ReplaceAsync(org);
+                await ReplaceAndUpdateCache(org);
             }
         }
 
@@ -808,8 +814,7 @@ namespace Bit.Core.Services
                 throw new ApplicationException("Cannot create org this way. Call SignUpAsync.");
             }
 
-            await _organizationRepository.ReplaceAsync(organization);
-            await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_Updated);
+            await ReplaceAndUpdateCache(organization, EventType.Organization_Updated);
 
             if(updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
@@ -834,7 +839,7 @@ namespace Bit.Core.Services
             IEnumerable<string> emails, OrganizationUserType type, bool accessAll, string externalId,
             IEnumerable<SelectionReadOnly> collections)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -915,7 +920,7 @@ namespace Bit.Core.Services
 
         private async Task SendInviteAsync(OrganizationUser orgUser)
         {
-            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+            var org = await GetOrgById(orgUser.OrganizationId);
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
@@ -937,7 +942,7 @@ namespace Bit.Core.Services
 
             if(orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
             {
-                var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+                var org = await GetOrgById(orgUser.OrganizationId);
                 if(org.PlanType == PlanType.Free)
                 {
                     var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
@@ -999,7 +1004,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
 
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            var org = await GetOrgById(organizationId);
             if(org.PlanType == PlanType.Free &&
                 (orgUser.Type == OrganizationUserType.Admin || orgUser.Type == OrganizationUserType.Owner))
             {
@@ -1140,7 +1145,7 @@ namespace Bit.Core.Services
 
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             return await GenerateLicenseAsync(organization, installationId);
         }
 
@@ -1168,7 +1173,7 @@ namespace Bit.Core.Services
             IEnumerable<ImportedOrganizationUser> newUsers,
             IEnumerable<string> removeUserExternalIds)
         {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var organization = await GetOrgById(organizationId);
             if(organization == null)
             {
                 throw new NotFoundException();
@@ -1339,6 +1344,22 @@ namespace Bit.Core.Services
         {
             var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
             return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
+        }
+
+        private async Task ReplaceAndUpdateCache(Organization org, EventType? orgEvent = null)
+        {
+            await _organizationRepository.ReplaceAsync(org);
+            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+            if(orgEvent.HasValue)
+            {
+                await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            }
+        }
+
+        private async Task<Organization> GetOrgById(Guid id)
+        {
+            return await _organizationRepository.GetByIdAsync(id);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories
@@ -10,5 +11,6 @@ namespace Bit.Core.Repositories
         Task<ICollection<Organization>> GetManyByEnabledAsync();
         Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
         Task UpdateStorageAsync(Guid id);
+        Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
     }
 }

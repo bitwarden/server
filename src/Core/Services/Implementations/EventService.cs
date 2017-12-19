@@ -13,17 +13,20 @@ namespace Bit.Core.Services
     {
         private readonly IEventWriteService _eventWriteService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IApplicationCacheService _applicationCacheService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public EventService(
             IEventWriteService eventWriteService,
             IOrganizationUserRepository organizationUserRepository,
+            IApplicationCacheService applicationCacheService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _eventWriteService = eventWriteService;
             _organizationUserRepository = organizationUserRepository;
+            _applicationCacheService = applicationCacheService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -42,22 +45,26 @@ namespace Bit.Core.Services
                 }
             };
 
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             IEnumerable<IEvent> orgEvents;
             if(_currentContext.UserId.HasValue)
             {
-                orgEvents = _currentContext.Organizations.Select(o => new EventMessage(_currentContext)
-                {
-                    OrganizationId = o.Id,
-                    UserId = userId,
-                    ActingUserId = userId,
-                    Type = type,
-                    Date = DateTime.UtcNow
-                });
+                orgEvents = _currentContext.Organizations
+                    .Where(o => CanUseEvents(orgAbilities, o.Id))
+                    .Select(o => new EventMessage(_currentContext)
+                    {
+                        OrganizationId = o.Id,
+                        UserId = userId,
+                        ActingUserId = userId,
+                        Type = type,
+                        Date = DateTime.UtcNow
+                    });
             }
             else
             {
                 var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
-                orgEvents = orgs.Where(o => o.Status == OrganizationUserStatusType.Confirmed)
+                orgEvents = orgs
+                    .Where(o => o.Status == OrganizationUserStatusType.Confirmed && CanUseEvents(orgAbilities, o.Id))
                     .Select(o => new EventMessage(_currentContext)
                     {
                         OrganizationId = o.OrganizationId,
@@ -87,6 +94,15 @@ namespace Bit.Core.Services
                 return;
             }
 
+            if(cipher.OrganizationId.HasValue)
+            {
+                var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+                if(!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
+                {
+                    return;
+                }
+            }
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = cipher.OrganizationId,
@@ -101,6 +117,12 @@ namespace Bit.Core.Services
 
         public async Task LogCollectionEventAsync(Collection collection, EventType type)
         {
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            if(!CanUseEvents(orgAbilities, collection.OrganizationId))
+            {
+                return;
+            }
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = collection.OrganizationId,
@@ -114,6 +136,12 @@ namespace Bit.Core.Services
 
         public async Task LogGroupEventAsync(Group group, EventType type)
         {
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            if(!CanUseEvents(orgAbilities, group.OrganizationId))
+            {
+                return;
+            }
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = group.OrganizationId,
@@ -127,6 +155,12 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
         {
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            {
+                return;
+            }
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organizationUser.OrganizationId,
@@ -141,6 +175,11 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type)
         {
+            if(!organization.Enabled || !organization.UseEvents)
+            {
+                return;
+            }
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organization.Id,
@@ -149,6 +188,12 @@ namespace Bit.Core.Services
                 Date = DateTime.UtcNow
             };
             await _eventWriteService.CreateAsync(e);
+        }
+
+        private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+        {
+            return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
+                orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
         }
     }
 }
