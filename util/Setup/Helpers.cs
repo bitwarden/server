@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -124,6 +126,37 @@ namespace Bit.Setup
             }
 
             return null;
+        }
+
+        public static string Exec(string cmd, bool returnStdout = false)
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                }
+            };
+
+            if(!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var escapedArgs = cmd.Replace("\"", "\\\"");
+                process.StartInfo.FileName = "/bin/bash";
+                process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
+            }
+            else
+            {
+                process.StartInfo.FileName = "powershell";
+                process.StartInfo.Arguments = cmd;
+            }
+
+            process.Start();
+            var result = returnStdout ? process.StandardOutput.ReadToEnd() : null;
+            process.WaitForExit();
+            return result;
         }
     }
 }

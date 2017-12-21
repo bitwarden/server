@@ -131,6 +131,8 @@ globalSettings__installation__identityUri=https://identity.bitwarden.com
 ");
             }
 
+            Helpers.Exec("chmod 600 /bitwarden/docker/global.env");
+
             using(var sw = File.CreateText("/bitwarden/docker/mssql.env"))
             {
                 sw.Write($@"ACCEPT_EULA=Y
@@ -138,6 +140,8 @@ MSSQL_PID=Express
 SA_PASSWORD=SECRET
 ");
             }
+
+            Helpers.Exec("chmod 600 /bitwarden/docker/mssql.env");
 
             Console.WriteLine("Building docker environment override files.");
             Directory.CreateDirectory(" /bitwarden/env/");
@@ -149,6 +153,8 @@ SA_PASSWORD=SECRET
                 }
             }
 
+            Helpers.Exec("chmod 600 /bitwarden/env/global.override.env");
+
             using(var sw = File.CreateText("/bitwarden/env/mssql.override.env"))
             {
                 foreach(var item in _mssqlValues)
@@ -156,6 +162,8 @@ SA_PASSWORD=SECRET
                     sw.WriteLine($"{item.Key}={item.Value}");
                 }
             }
+
+            Helpers.Exec("chmod 600 /bitwarden/env/mssql.override.env");
         }
     }
 }
