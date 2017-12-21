@@ -60,7 +60,7 @@ function updateLetsEncrypt() {
 
 function updateDatabase() {
     pullSetup
-    docker run -it --rm --name setup --network container:mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+    docker run -it --rm --name setup --network container:bitwarden-mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     echo "Database update complete"
 }
