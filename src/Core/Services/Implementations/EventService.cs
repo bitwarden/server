@@ -64,7 +64,8 @@ namespace Bit.Core.Services
             {
                 var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
                 orgEvents = orgs
-                    .Where(o => o.Status == OrganizationUserStatusType.Confirmed && CanUseEvents(orgAbilities, o.Id))
+                    .Where(o => o.Status == OrganizationUserStatusType.Confirmed &&
+                        CanUseEvents(orgAbilities, o.OrganizationId))
                     .Select(o => new EventMessage(_currentContext)
                     {
                         OrganizationId = o.OrganizationId,
