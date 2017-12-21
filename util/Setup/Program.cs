@@ -233,9 +233,9 @@ namespace Bit.Setup
 
             var dbPass = Helpers.GetValueFronEnvFile("mssql", "SA_PASSWORD");
             var masterConnectionString = Helpers.MakeSqlConnectionString(
-                "bitwarden-mssql", "master", "sa", dbPass ?? string.Empty);
+                "mssql", "master", "sa", dbPass ?? string.Empty);
             var vaultConnectionString = Helpers.MakeSqlConnectionString(
-                "bitwarden-mssql", "vault", "sa", dbPass ?? string.Empty);
+                "mssql", "vault", "sa", dbPass ?? string.Empty);
 
             using(var connection = new SqlConnection(masterConnectionString))
             {
