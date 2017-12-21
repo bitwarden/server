@@ -187,7 +187,7 @@ namespace Bit.Setup
             };
             environmentFileBuilder.BuildForInstaller();
 
-            var appSettingsBuilder = new AppSettingsBuilder(url, domain);
+            var appSettingsBuilder = new AppSettingsBuilder();
             appSettingsBuilder.Build();
 
             var appIdBuilder = new AppIdBuilder(url);
@@ -333,7 +333,7 @@ namespace Bit.Setup
             var nginxBuilder = new NginxConfigBuilder(domain, url);
             nginxBuilder.BuildForUpdater();
 
-            var appSettingsBuilder = new AppSettingsBuilder(url, domain);
+            var appSettingsBuilder = new AppSettingsBuilder();
             appSettingsBuilder.Build();
 
             var appIdBuilder = new AppIdBuilder(url);
