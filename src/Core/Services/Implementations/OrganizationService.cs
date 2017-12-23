@@ -765,7 +765,7 @@ namespace Bit.Core.Services
         {
             if(!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                await _stripePaymentService.CancelSubscriptionAsync(organization, false);
+                await _stripePaymentService.CancelSubscriptionAsync(organization, true);
             }
 
             await _organizationRepository.DeleteAsync(organization);
