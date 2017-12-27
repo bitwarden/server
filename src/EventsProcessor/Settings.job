@@ -1,0 +1,22 @@
+{
+
+  //    Examples:
+
+  //    Runs every minute
+  //    "schedule": "0 * * * * *"
+
+  //    Runs every 15 minutes
+  //    "schedule": "0 */15 * * * *"
+
+  //    Runs every hour (i.e. whenever the count of minutes is 0)
+  //    "schedule": "0 0 * * * *"
+
+  //    Runs every hour from 9 AM to 5 PM
+  //    "schedule": "0 0 9-17 * * *"
+
+  //    Runs at 9:30 AM every day
+  //    "schedule": "0 30 9 * * *"
+
+  //    Runs at 9:30 AM every week day
+  //    "schedule": "0 30 9 * * 1-5"
+}
