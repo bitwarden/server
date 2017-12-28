@@ -22,7 +22,7 @@ namespace Bit.Core.Services
             IEventRepository eventRepository,
             GlobalSettings globalSettings)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+            var storageAccount = CloudStorageAccount.Parse(globalSettings.Events.ConnectionString);
             var queueClient = storageAccount.CreateCloudQueueClient();
 
             _queue = queueClient.GetQueueReference("event");

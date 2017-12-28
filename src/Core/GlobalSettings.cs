@@ -17,6 +17,7 @@ namespace Bit.Core
         public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
+        public virtual StorageSettings Events { get; set; } = new StorageSettings();
         public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();

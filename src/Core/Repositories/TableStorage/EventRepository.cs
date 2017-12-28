@@ -15,7 +15,7 @@ namespace Bit.Core.Repositories.TableStorage
         private readonly CloudTable _table;
 
         public EventRepository(GlobalSettings globalSettings)
-            : this(globalSettings.Storage.ConnectionString)
+            : this(globalSettings.Events.ConnectionString)
         { }
 
         public EventRepository(string storageConnectionString)
