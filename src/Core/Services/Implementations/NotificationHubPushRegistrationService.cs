@@ -1,4 +1,4 @@
-﻿#if NET47
+﻿#if NET471
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.NotificationHubs;

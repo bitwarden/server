@@ -90,7 +90,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPushNotificationService, RelayPushNotificationService>();
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
-#if NET47
+#if NET471
             else if(!globalSettings.SelfHosted)
             {
                 services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();

@@ -75,7 +75,7 @@
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net47' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net471' ">
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="1.0.9" />
   </ItemGroup>
 

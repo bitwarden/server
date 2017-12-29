@@ -1,4 +1,4 @@
-﻿#if NET47
+﻿#if NET471
 using System;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
