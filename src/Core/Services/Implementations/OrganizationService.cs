@@ -930,7 +930,7 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if(orgUser == null || !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+            if(orgUser == null)
             {
                 throw new BadRequestException("User invalid.");
             }
@@ -938,6 +938,12 @@ namespace Bit.Core.Services
             if(orgUser.Status != OrganizationUserStatusType.Invited)
             {
                 throw new BadRequestException("Already accepted.");
+            }
+
+            if(string.IsNullOrWhiteSpace(orgUser.Email) ||
+                !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new BadRequestException("User email does not match invite.");
             }
 
             if(orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
