@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.IdentityServer;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -48,8 +47,6 @@ namespace Bit.Events
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.NameClaimType = ClaimTypes.Email;
-                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString(
-                        new string[] { "Bearer", "Bearer3" });
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
 

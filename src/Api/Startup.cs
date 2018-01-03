@@ -9,9 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Identity;
-using System.Linq;
-using Microsoft.AspNetCore.Mvc.Formatters;
-using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Serilog.Events;
@@ -20,7 +17,6 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using jsreport.AspNetCore;
-using Bit.Core.IdentityServer;
 
 namespace Bit.Api
 {
@@ -84,8 +80,6 @@ namespace Bit.Api
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.NameClaimType = ClaimTypes.Email;
-                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString(
-                        new string[] { "Bearer", "Bearer3" });
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
 
@@ -127,14 +121,7 @@ namespace Bit.Api
             {
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
-
-                // Allow JSON of content type "text/plain" to avoid cors preflight
-                var textPlainMediaType = MediaTypeHeaderValue.Parse("text/plain");
-                foreach(var jsonFormatter in config.InputFormatters.OfType<JsonInputFormatter>())
-                {
-                    jsonFormatter.SupportedMediaTypes.Add(textPlainMediaType);
-                }
-            }).AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            }).AddJsonOptions(o => o.SerializerSettings.ContractResolver = new DefaultContractResolver());
 
             // PDF generation
             if(!globalSettings.SelfHosted)
