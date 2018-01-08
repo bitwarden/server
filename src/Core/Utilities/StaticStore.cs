@@ -83,6 +83,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.MorganStanley, new List<string> { "morganstanley.com", "morganstanleyclientserv.com", "stockplanconnect.com", "ms.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.TaxAct, new List<string> { "taxact.com", "taxactonline.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Wikimedia, new List<string> { "mediawiki.org", "wikibooks.org", "wikidata.org", "wikimedia.org", "wikinews.org", "wikipedia.org", "wikiquote.org", "wikisource.org", "wikiversity.org", "wikivoyage.org", "wiktionary.org", });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Airbnb, new List<string> { "airbnb.com.ar", "airbnb.com.au", "airbnb.at", "airbnb.be", "airbnb.com.bz", "airbnb.com.bo", "airbnb.com.br", "airbnb.ca", "airbnb.cl", "airbnb.com.co", "airbnb.co.kr", "airbnb.co.cr", "airbnb.dk", "airbnb.com.ec", "airbnb.com.sv", "airbnb.fi", "airbnb.fr", "airbnb.de", "airbnb.jp", "airbnb.gr", "airbnb.com.gt", "airbnb.gy", "airbnb.com.hn", "airbnb.com.hk", "airbnb.co.in", "airbnb.co.id", "airbnb.ie", "airbnb.is", "airbnb.it", "airbnb.com.my", "airbnb.com.mt", "airbnb.mx", "airbnb.com.ni", "airbnb.no", "airbnb.co.nz", "airbnb.nl", "airbnb.com.pa", "airbnb.com.py", "airbnb.com.pe", "airbnb.pl", "airbnb.pt", "airbnb.co.uk", "airbnb.cz", "airbnb.ru", "airbnb.com.sg", "airbnb.es", "airbnb.com", "airbnb.se", "airbnb.ch", "airbnb.com.tw", "airbnb.com.tr", "airbnb.hu", "airbnb.co.ve" });
 
             #endregion
 
