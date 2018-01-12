@@ -53,27 +53,27 @@ function updateLetsEncrypt() {
     if [ -d "${OUTPUT_DIR}/letsencrypt/live" ]
     then
         docker pull certbot/certbot
-        docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+        docker run -i --rm --name certbot -p 443:443 -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
     fi
 }
 
 function updateDatabase() {
     pullSetup
-    docker run -it --rm --name setup --network container:bitwarden-mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+    docker run -i --rm --name setup --network container:bitwarden-mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     echo "Database update complete"
 }
 
 function update() {
     pullSetup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
 }
 
 function printEnvironment() {
     pullSetup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
 }
 
