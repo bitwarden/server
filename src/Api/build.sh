@@ -2,6 +2,9 @@
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJRROOT="$( cd "$( dirname "$DIR/../../.." )" && pwd )"
+alias dotnet='docker run --rm -v $PROJRROOT:$PROJRROOT -w $DIR microsoft/dotnet dotnet'
+shopt -s expand_aliases
 
 echo -e "\n## Building API"
 
