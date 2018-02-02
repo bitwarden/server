@@ -75,6 +75,6 @@
         TaxAct = 70,
         Wikimedia = 71,
         Airbnb = 72,
-        Eventbrite = 73,
+        Eventbrite = 73
     }
 }
