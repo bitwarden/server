@@ -2,7 +2,7 @@
 {
     public enum GlobalEquivalentDomainsType : byte
     {
-        Google = 0,
+        Google = 0, //deprecated
         Apple = 1,
         Ameritrade = 2,
         BoA = 3,
@@ -75,6 +75,6 @@
         TaxAct = 70,
         Wikimedia = 71,
         Airbnb = 72,
-        Eventbrite = 73,
+        Eventbrite = 73
     }
 }
