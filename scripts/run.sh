@@ -34,15 +34,15 @@ DOCKER_DIR="$OUTPUT_DIR/docker"
 # Functions
 
 function dockerComposeUp() {
-    docker-compose $DOCKER_DIR/docker-compose.yml up -d
+    cd $DOCKER_DIR;docker-compose up -d
 }
 
 function dockerComposeDown() {
-    docker-compose $DOCKER_DIR/docker-compose.yml down
+    cd $DOCKER_DIR;docker-compose down
 }
 
 function dockerComposePull() {
-    docker-compose $DOCKER_DIR/docker-compose.yml pull
+    cd $DOCKER_DIR;docker-compose pull
 }
 
 function dockerPrune() {
