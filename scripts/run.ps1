@@ -17,15 +17,24 @@ $dockerDir="${outputDir}\docker"
 # Functions
 
 function Docker-Compose-Up {
-    docker-compose -f ${dockerDir}\docker-compose.yml up -d
+    $ORIGINAL_PATH=pwd
+    cd ${dockerDir}
+    docker-compose up -d
+    cd ${ORIGINAL_PATH}
 }
 
 function Docker-Compose-Down {
-    docker-compose -f ${dockerDir}\docker-compose.yml down
+    $ORIGINAL_PATH=pwd
+    cd ${dockerDir}
+    docker-compose down
+    cd ${ORIGINAL_PATH}
 }
 
 function Docker-Compose-Pull {
-    docker-compose -f ${dockerDir}\docker-compose.yml pull
+    $ORIGINAL_PATH=pwd
+    cd ${dockerDir}
+    docker-compose pull
+    cd ${ORIGINAL_PATH}
 }
 
 function Docker-Prune {

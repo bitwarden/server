@@ -34,15 +34,21 @@ DOCKER_DIR="$OUTPUT_DIR/docker"
 # Functions
 
 function dockerComposeUp() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
+    ORIGINAL_PATH=$(pwd)
+    cd $DOCKER_DIR;docker-compose up -d
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerComposeDown() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml down
+    ORIGINAL_PATH=$(pwd)
+    cd $DOCKER_DIR;docker-compose down
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerComposePull() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml pull
+    ORIGINAL_PATH=$(pwd)
+    cd $DOCKER_DIR;docker-compose pull
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerPrune() {
