@@ -36,19 +36,19 @@ DOCKER_DIR="$OUTPUT_DIR/docker"
 function dockerComposeUp() {
     ORIGINAL_PATH=$(pwd)
     cd $DOCKER_DIR;docker-compose up -d
-    cd $ORIGINAL_PATH
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerComposeDown() {
     ORIGINAL_PATH=$(pwd)
     cd $DOCKER_DIR;docker-compose down
-    cd $ORIGINAL_PATH
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerComposePull() {
     ORIGINAL_PATH=$(pwd)
     cd $DOCKER_DIR;docker-compose pull
-    cd $ORIGINAL_PATH
+    cd "$ORIGINAL_PATH"
 }
 
 function dockerPrune() {
