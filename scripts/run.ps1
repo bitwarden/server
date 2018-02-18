@@ -17,15 +17,15 @@ $dockerDir="${outputDir}\docker"
 # Functions
 
 function Docker-Compose-Up {
-    docker-compose -f ${dockerDir}\docker-compose.yml up -d
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml up -d
 }
 
 function Docker-Compose-Down {
-    docker-compose -f ${dockerDir}\docker-compose.yml down
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml down
 }
 
 function Docker-Compose-Pull {
-    docker-compose -f ${dockerDir}\docker-compose.yml pull
+    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml pull
 }
 
 function Docker-Prune {
