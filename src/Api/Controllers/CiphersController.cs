@@ -415,6 +415,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
+        [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
         public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
         {
