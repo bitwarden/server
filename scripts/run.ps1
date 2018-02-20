@@ -17,15 +17,31 @@ $dockerDir="${outputDir}\docker"
 # Functions
 
 function Docker-Compose-Up {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml up -d
+    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml up -d
+    }
+    else {
+        docker-compose -f ${dockerDir}\docker-compose.yml up -d
+    }
 }
 
 function Docker-Compose-Down {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml down
+    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml down
+    }
+    else {
+        docker-compose -f ${dockerDir}\docker-compose.yml down
+    }
 }
 
 function Docker-Compose-Pull {
-    docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml pull
+    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml pull
+    }
+    else {
+        docker-compose -f ${dockerDir}\docker-compose.yml pull
+    }
+    
 }
 
 function Docker-Prune {
