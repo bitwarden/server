@@ -34,15 +34,30 @@ DOCKER_DIR="$OUTPUT_DIR/docker"
 # Functions
 
 function dockerComposeUp() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
+    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    then
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
+    else
+        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
+    fi
 }
 
 function dockerComposeDown() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml down
+    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    then
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml down
+    else
+        docker-compose -f $DOCKER_DIR/docker-compose.yml down
+    fi
 }
 
 function dockerComposePull() {
-    docker-compose -f $DOCKER_DIR/docker-compose.yml pull
+    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    then
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml pull
+    else
+        docker-compose -f $DOCKER_DIR/docker-compose.yml pull
+    fi
 }
 
 function dockerPrune() {
