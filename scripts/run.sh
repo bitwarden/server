@@ -34,7 +34,7 @@ DOCKER_DIR="$OUTPUT_DIR/docker"
 # Functions
 
 function dockerComposeUp() {
-    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
         docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
     else
@@ -43,7 +43,7 @@ function dockerComposeUp() {
 }
 
 function dockerComposeDown() {
-    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
         docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml down
     else
@@ -52,7 +52,7 @@ function dockerComposeDown() {
 }
 
 function dockerComposePull() {
-    if [ -f "$DOCKER_DIR/docker-compose.override.yml" ]
+    if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
         docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml pull
     else
