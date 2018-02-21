@@ -15,8 +15,8 @@ namespace Bit.Function
         // Desktop
         const string DesktopCurrentVersion = "0.0.7";
 
-        const string DesktopWindowsPortableFileName = "bitwarden-{0}.exe";
-        const string DesktopWindowsWebInstallerFileName = "bitwarden-web-setup-{0}.exe";
+        const string DesktopWindowsPortableFileName = "Bitwarden-Portable-{0}.exe";
+        const string DesktopWindowsWebInstallerFileName = "Bitwarden-Installer-{0}.exe";
         const string DesktopWindowsStoreUrl = "https://www.microsoft.com/en-us/store/b/home";
         const string DesktopWindowsChocoUrl = "https://chocolatey.org/search?q=bitwarden";
 
@@ -25,10 +25,10 @@ namespace Bit.Function
         const string DesktopMacOsStoreUrl = "https://itunes.com";
         const string DesktopMacOsCaskUrl = "https://caskroom.github.io/search";
 
-        const string DesktopLinuxAppImageFileName = "bitwarden-{0}-x86_64.AppImage";
-        const string DesktopLinuxDebFileName = "bitwarden_{0}_amd64.deb";
-        const string DesktopLinuxRpmFileName = "bitwarden-{0}.x86_64.rpm";
-        const string DesktopLinuxFreeBsdFileName = "bitwarden-{0}.freebsd";
+        const string DesktopLinuxAppImageFileName = "Bitwarden-{0}-x86_64.AppImage";
+        const string DesktopLinuxDebFileName = "Bitwarden_{0}_amd64.deb";
+        const string DesktopLinuxRpmFileName = "Bitwarden-{0}.x86_64.rpm";
+        const string DesktopLinuxFreeBsdFileName = "Bitwarden-{0}.freebsd";
         const string DesktopLinuxSnapUrl = "https://snapcraft.io/";
 
         // Browser
