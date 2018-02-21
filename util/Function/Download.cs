@@ -31,6 +31,10 @@ namespace Bit.Function
         const string DesktopLinuxFreeBsdFileName = "bitwarden-{0}.freebsd";
         const string DesktopLinuxSnapUrl = "https://snapcraft.io/";
 
+        // Browser
+        const string BrowserSafariFileUrl = "https://cdn.bitwarden.com/safari-extension/bitwarden-1.24.1.safariextz";
+        const string BrowserSafariStoreUrl = "https://safari-extensions.apple.com";
+
         [FunctionName("Download")]
         public static HttpResponseMessage Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/download")]HttpRequestMessage req,
@@ -112,6 +116,20 @@ namespace Bit.Function
                     else if(variant == "snap")
                     {
                         return GetRedirectResponse(req, DesktopLinuxSnapUrl);
+                    }
+                }
+            }
+            else if(app == "browser")
+            {
+                if(platform == "safari")
+                {
+                    if(variant == null || variant == "safariextz")
+                    {
+                        return GetRedirectResponse(req, BrowserSafariFileUrl);
+                    }
+                    else if(variant == "store")
+                    {
+                        return GetRedirectResponse(req, BrowserSafariStoreUrl);
                     }
                 }
             }
