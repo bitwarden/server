@@ -7,7 +7,7 @@ RUN apt-get update \
 
 WORKDIR /tmp
 COPY iconserver.sha256 .
-RUN curl -L -o iconserver.zip https://github.com/mat/besticon/releases/download/v3.4.0/iconserver_linux_amd64.zip \
+RUN curl -L -o iconserver.zip https://github.com/mat/besticon/releases/download/v3.6.0/iconserver_linux_amd64.zip \
     && sha256sum -c iconserver.sha256 \
     && unzip iconserver.zip -d /etc/iconserver \
     && rm iconserver.*
