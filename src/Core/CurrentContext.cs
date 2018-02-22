@@ -47,11 +47,6 @@ namespace Bit.Core
                 return null;
             }
 
-            if(HttpContext.Request?.Headers?.TryGetValue("X-Forwarded-For", out StringValues forwardHeader) ?? false)
-            {
-                _ip = forwardHeader.FirstOrDefault()?.Trim();
-            }
-
             if(string.IsNullOrWhiteSpace(_ip))
             {
                 _ip = HttpContext.Connection?.RemoteIpAddress?.ToString();

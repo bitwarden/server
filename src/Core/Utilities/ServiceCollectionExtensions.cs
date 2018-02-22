@@ -283,20 +283,6 @@ namespace Bit.Core.Utilities
 
         public static void UseDefaultMiddleware(this IApplicationBuilder app, IHostingEnvironment env)
         {
-            if(!env.IsDevelopment())
-            {
-                // Adjust headers for proxy.
-                // ref: https://github.com/aspnet/Docs/issues/2384
-                var forwardOptions = new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-                    RequireHeaderSymmetry = false
-                };
-                forwardOptions.KnownNetworks.Clear();
-                forwardOptions.KnownProxies.Clear();
-                app.UseForwardedHeaders(forwardOptions);
-            }
-
             // Add version information to response headers
             app.Use(async (httpContext, next) =>
             {
