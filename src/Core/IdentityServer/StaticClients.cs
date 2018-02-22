@@ -32,7 +32,7 @@ namespace Bit.Core.IdentityServer
                 RefreshTokenExpiration = TokenExpiration.Sliding;
                 RefreshTokenUsage = TokenUsage.ReUse;
                 SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
-                AbsoluteRefreshTokenLifetime = int.MaxValue; // forever
+                AbsoluteRefreshTokenLifetime = 0; // forever
                 UpdateAccessTokenClaimsOnRefresh = true;
                 AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;

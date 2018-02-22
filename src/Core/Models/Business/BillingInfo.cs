@@ -163,7 +163,7 @@ namespace Bit.Core.Models.Business
                 {
                     if(item.Plan != null)
                     {
-                        Name = item.Plan.Name;
+                        Name = item.Plan.Nickname;
                         Amount = item.Plan.Amount / 100M;
                         Interval = item.Plan.Interval;
                     }

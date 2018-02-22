@@ -59,9 +59,9 @@ namespace Bit.Api.Models
                 {
                     Description = item.Description;
                 }
-                else if(!string.IsNullOrWhiteSpace(item.Plan?.Name) && item.Quantity.GetValueOrDefault() > 0)
+                else if(!string.IsNullOrWhiteSpace(item.Plan?.Nickname) && item.Quantity.GetValueOrDefault() > 0)
                 {
-                    Description = $"{item.Quantity} x {item.Plan.Name}";
+                    Description = $"{item.Quantity} x {item.Plan.Nickname}";
                 }
                 else
                 {
