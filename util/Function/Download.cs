@@ -105,7 +105,7 @@ namespace Bit.Function
                     {
                         return GetRedirectResponse(req, DesktopMacOsStoreUrl);
                     }
-                    else if(variant == "cask")
+                    else if(variant == "cask" || variant == "brew")
                     {
                         return GetRedirectResponse(req, DesktopMacOsCaskUrl);
                     }
