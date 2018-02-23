@@ -17,17 +17,20 @@ namespace Bit.Function
 
         const string DesktopWindowsPortableFileName = "Bitwarden-Portable-{0}.exe";
         const string DesktopWindowsWebInstallerFileName = "Bitwarden-Installer-{0}.exe";
+        const string DesktopWindowsAppxFileName = "Bitwarden-{0}.appx";
+        const string DesktopWindowsAppx32FileName = "Bitwarden-{0}-ia32.appx";
         const string DesktopWindowsStoreUrl = "https://www.microsoft.com/en-us/store/b/home";
         const string DesktopWindowsChocoUrl = "https://chocolatey.org/search?q=bitwarden";
 
         const string DesktopMacOsDmgFileName = "Bitwarden-{0}.dmg";
+        const string DesktopMacOsPkgFileName = "Bitwarden-{0}.pkg";
         const string DesktopMacOsZipFileName = "bitwarden-{0}-mac.zip";
         const string DesktopMacOsStoreUrl = "https://itunes.com";
         const string DesktopMacOsCaskUrl = "https://caskroom.github.io/search";
 
         const string DesktopLinuxAppImageFileName = "Bitwarden-{0}-x86_64.AppImage";
-        const string DesktopLinuxDebFileName = "Bitwarden_{0}_amd64.deb";
-        const string DesktopLinuxRpmFileName = "Bitwarden-{0}.x86_64.rpm";
+        const string DesktopLinuxDebFileName = "Bitwarden-{0}-amd64.deb";
+        const string DesktopLinuxRpmFileName = "Bitwarden-{0}-x86_64.rpm";
         const string DesktopLinuxFreeBsdFileName = "Bitwarden-{0}.freebsd";
         const string DesktopLinuxSnapUrl = "https://snapcraft.io/";
 
@@ -67,6 +70,14 @@ namespace Bit.Function
                     {
                         return GetDesktopDownloadResponse(req, DesktopWindowsPortableFileName);
                     }
+                    else if(variant == "appx")
+                    {
+                        return GetDesktopDownloadResponse(req, DesktopWindowsAppxFileName);
+                    }
+                    else if(variant == "appx32")
+                    {
+                        return GetDesktopDownloadResponse(req, DesktopWindowsAppx32FileName);
+                    }
                     else if(variant == "store")
                     {
                         return GetRedirectResponse(req, DesktopWindowsStoreUrl);
@@ -81,6 +92,10 @@ namespace Bit.Function
                     if(variant == null || variant == "dmg")
                     {
                         return GetDesktopDownloadResponse(req, DesktopMacOsDmgFileName);
+                    }
+                    else if(variant == "pkg")
+                    {
+                        return GetDesktopDownloadResponse(req, DesktopMacOsPkgFileName);
                     }
                     else if(variant == "zip")
                     {
