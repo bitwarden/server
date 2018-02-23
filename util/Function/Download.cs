@@ -87,7 +87,7 @@ namespace Bit.Function
                         return GetRedirectResponse(req, DesktopWindowsChocoUrl);
                     }
                 }
-                else if(platform == "mac")
+                else if(platform == "mac" || platform == "macos")
                 {
                     if(variant == null || variant == "dmg")
                     {
