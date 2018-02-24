@@ -414,6 +414,29 @@ namespace Bit.Api.Controllers
             return new CipherResponseModel(cipher, _globalSettings);
         }
 
+        [HttpPost("{id}/attachment-admin")]
+        [DisableFormValueModelBinding]
+        public async Task<CipherResponseModel> PostAttachmentAdmin(string id)
+        {
+            ValidateAttachment();
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await Request.GetFileAsync(async (stream, fileName) =>
+            {
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
+                        Request.ContentLength.GetValueOrDefault(0), userId);
+            });
+
+            return new CipherResponseModel(cipher, _globalSettings);
+        }
+
         [HttpPost("{id}/attachment/{attachmentId}/share")]
         [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
@@ -443,6 +466,22 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
             if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+        }
+
+        [HttpDelete("{id}/attachment/{attachmentId}/admin")]
+        [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
+        public async Task DeleteAttachmentAdmin(string id, string attachmentId)
+        {
+            var idGuid = new Guid(id);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(idGuid);
+            if(cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
