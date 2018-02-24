@@ -420,8 +420,9 @@ namespace Bit.Api.Controllers
         {
             ValidateAttachment();
 
+            var idGuid = new Guid(id);
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetDetailsByIdAsync(idGuid);
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
