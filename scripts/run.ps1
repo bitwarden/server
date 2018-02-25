@@ -106,5 +106,6 @@ elseif($update) {
     Docker-Compose-Down
     Update
     Restart
+	Start-Sleep -s 7
     Update-Database
 }
