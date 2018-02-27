@@ -9,7 +9,7 @@ if [ $# -gt 1 -a "$1" == "push" ]
 then
     TAG=$2
 
-    echo "Pushing bitwarden ($TAG)"
+    echo "Pushing Bitwarden ($TAG)"
     echo "========================"
     
     docker push bitwarden/api:$TAG
@@ -24,7 +24,7 @@ elif [ $# -gt 1 -a "$1" == "tag" ]
 then
     TAG=$2
     
-    echo "Tagging bitwarden as '$TAG'"
+    echo "Tagging Bitwarden as '$TAG'"
     
     docker tag bitwarden/api bitwarden/api:$TAG
     docker tag bitwarden/identity bitwarden/identity:$TAG
@@ -35,7 +35,7 @@ then
     docker tag bitwarden/mssql bitwarden/mssql:$TAG
     docker tag bitwarden/setup bitwarden/setup:$TAG
 else
-    echo "Building bitwarden"
+    echo "Building Bitwarden"
     echo "=================="
 
     chmod u+x $DIR/src/Api/build.sh

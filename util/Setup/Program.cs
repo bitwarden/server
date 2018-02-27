@@ -212,7 +212,7 @@ namespace Bit.Setup
         private static void PrintEnvironment()
         {
             var vaultUrl = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
-            Console.WriteLine("\nbitwarden is up and running!");
+            Console.WriteLine("\nBitwarden is up and running!");
             Console.WriteLine("===================================================");
             Console.WriteLine("\nvisit {0}", vaultUrl);
             Console.Write("to update, run ");
@@ -313,7 +313,7 @@ namespace Bit.Setup
             }
             catch
             {
-                Console.WriteLine("Unable to validate installation id. Problem contacting bitwarden server.");
+                Console.WriteLine("Unable to validate installation id. Problem contacting Bitwarden server.");
                 return false;
             }
         }

@@ -29,7 +29,7 @@ namespace Bit.Setup
                 Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
                     $"-keyout /bitwarden/ssl/self/{Domain}/private.key " +
                     $"-out /bitwarden/ssl/self/{Domain}/certificate.crt " +
-                    $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=bitwarden/CN={Domain}\"");
+                    $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=Bitwarden/CN={Domain}\"");
             }
 
             if(LetsEncrypt)
@@ -41,7 +41,7 @@ namespace Bit.Setup
             Console.WriteLine("Generating key for IdentityServer.");
             Directory.CreateDirectory("/bitwarden/identity/");
             Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
-                "-out identity.crt -subj \"/CN=bitwarden IdentityServer\" -days 10950");
+                "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 10950");
             Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -certfile identity.crt -passout pass:{IdentityCertPassword}");
 

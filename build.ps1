@@ -1,7 +1,7 @@
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 echo $dir
 
-echo "`nBuilding bitwarden"
+echo "`nBuilding Bitwarden"
 echo "=================="
 
 & $dir\src\Api\build.ps1

@@ -20,7 +20,7 @@ namespace Bit.Function
         const string DesktopWindowsAppxFileName = "Bitwarden-{0}.appx";
         const string DesktopWindowsAppx32FileName = "Bitwarden-{0}-ia32.appx";
         const string DesktopWindowsStoreUrl = "https://www.microsoft.com/en-us/store/b/home";
-        const string DesktopWindowsChocoUrl = "https://chocolatey.org/search?q=bitwarden";
+        const string DesktopWindowsChocoUrl = "https://chocolatey.org/packages/bitwarden";
 
         const string DesktopMacOsDmgFileName = "Bitwarden-{0}.dmg";
         const string DesktopMacOsPkgFileName = "Bitwarden-{0}.pkg";

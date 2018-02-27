@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.imgur.com/lcoBQEZ.png" alt="bitwarden" />
+  <img src="https://i.imgur.com/lcoBQEZ.png" alt="Bitwarden" />
 </p>
 <p align="center">
   <a href="https://ci.appveyor.com/project/bitwarden/core/branch/master" target="_blank">
@@ -15,7 +15,7 @@
 
 -------------------
 
-The bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all bitwarden client applications.
+The Bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all bitwarden client applications.
 
 The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
@@ -65,9 +65,9 @@ visit http://localhost:33657/.well-known/openid-configuration
   </a>
 </p>
 
-You can deploy bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
+You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
 
-Full documentation for deploying bitwarden with Docker can be found in our help center at: https://help.bitwarden.com/article/install-on-premise/
+Full documentation for deploying Bitwarden with Docker can be found in our help center at: https://help.bitwarden.com/article/install-on-premise/
 
 ### Requirements
 

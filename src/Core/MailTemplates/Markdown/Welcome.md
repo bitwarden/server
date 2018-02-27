@@ -1,6 +1,6 @@
-﻿Thank you for creating an account with bitwarden. You may now log in with your new account.
+﻿Thank you for creating an account with Bitwarden. You may now log in with your new account.
 
-Did you know that bitwarden is free to sync with all of your devices? Download bitwarden today on:
+Did you know that Bitwarden is free to sync with all of your devices? Download Bitwarden today on:
 
 Mobile
 ============
@@ -37,4 +37,4 @@ If you have any questions or problems you can email us from our website at:
 <https://bitwarden.com/contact/?utm_source=welcome_email&utm_medium=email>
 
 Thank you!  
-The bitwarden Team
+The Bitwarden Team

@@ -83,7 +83,7 @@ namespace Bit.Function
                         status = 2,
                         priority = 2,
                         source = 1,
-                        subject = "bitwarden.com Website Contact",
+                        subject = "Bitwarden.com Website Contact",
                         description = FormatMessage(message)
                     });
 
@@ -103,7 +103,7 @@ namespace Bit.Function
             var fromAddress = new MailAddress(email, name, Encoding.UTF8);
             var mailMessage = new MailMessage(fromAddress, new MailAddress("bitwardencomsupport@bitwarden.freshdesk.com"))
             {
-                Subject = "bitwarden.com Website Contact",
+                Subject = "Bitwarden.com Website Contact",
                 Body = FormatMessage(message),
                 IsBodyHtml = true
             };
