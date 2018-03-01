@@ -41,7 +41,7 @@ namespace Bit.Core.Models.Data
             }
 
             public string Uri { get; set; }
-            public UriMatchType? Match { get; set; }
+            public UriMatchType? Match { get; set; } = null;
         }
     }
 }

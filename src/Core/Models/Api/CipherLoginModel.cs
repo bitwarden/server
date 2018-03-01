@@ -74,7 +74,7 @@ namespace Bit.Core.Models.Api
             [EncryptedString]
             [StringLength(10000)]
             public string Uri { get; set; }
-            public UriMatchType? Match { get; set; }
+            public UriMatchType? Match { get; set; } = null;
         }
     }
 }
