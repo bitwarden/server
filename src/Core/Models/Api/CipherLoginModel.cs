@@ -50,19 +50,19 @@ namespace Bit.Core.Models.Api
             public LoginApiUriModel(string uri)
             {
                 Uri = uri;
-                MatchType = UriMatchType.BaseDomain;
+                Match = UriMatchType.BaseDomain;
             }
 
             public LoginApiUriModel(CipherLoginData.LoginDataUriModel uri)
             {
                 Uri = uri.Uri;
-                MatchType = uri.MatchType;
+                Match = uri.Match;
             }
 
             [EncryptedString]
             [StringLength(10000)]
             public string Uri { get; set; }
-            public UriMatchType MatchType { get; set; }
+            public UriMatchType Match { get; set; }
         }
     }
 }

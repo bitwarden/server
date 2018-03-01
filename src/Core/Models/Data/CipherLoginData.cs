@@ -30,11 +30,11 @@ namespace Bit.Core.Models.Data
             public LoginDataUriModel(CipherLoginModel.LoginApiUriModel uri)
             {
                 Uri = uri.Uri;
-                MatchType = uri.MatchType;
+                Match = uri.Match;
             }
 
             public string Uri { get; set; }
-            public UriMatchType MatchType { get; set; }
+            public UriMatchType Match { get; set; }
         }
     }
 }
