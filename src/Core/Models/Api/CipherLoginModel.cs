@@ -4,14 +4,22 @@ using Bit.Core.Enums;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
     public class CipherLoginModel
     {
+        public CipherLoginModel() { }
+
         public CipherLoginModel(CipherLoginData data)
         {
-            Uris = data.Uris.Select(u => new LoginApiUriModel(u));
+            Uris = data.Uris?.Select(u => new CipherLoginUriModel(u))?.ToList();
+            if(!Uris?.Any() ?? true)
+            {
+                Uri = data.Uri;
+            }
+
             Username = data.Username;
             Password = data.Password;
             Totp = data.Totp;
@@ -24,15 +32,20 @@ namespace Bit.Core.Models.Api
             get => Uris?.FirstOrDefault()?.Uri;
             set
             {
-                if(Uris == null)
+                if(string.IsNullOrWhiteSpace(value))
                 {
-                    Uris = new List<LoginApiUriModel>();
+                    return;
                 }
 
-                Uris.Append(new LoginApiUriModel(value));
+                if(Uris == null)
+                {
+                    Uris = new List<CipherLoginUriModel>();
+                }
+
+                Uris.Add(new CipherLoginUriModel(value));
             }
         }
-        public IEnumerable<LoginApiUriModel> Uris { get; set; }
+        public List<CipherLoginUriModel> Uris { get; set; }
         [EncryptedString]
         [StringLength(1000)]
         public string Username { get; set; }
@@ -43,17 +56,16 @@ namespace Bit.Core.Models.Api
         [StringLength(1000)]
         public string Totp { get; set; }
 
-        public class LoginApiUriModel
+        public class CipherLoginUriModel
         {
-            public LoginApiUriModel() { }
+            public CipherLoginUriModel() { }
 
-            public LoginApiUriModel(string uri)
+            public CipherLoginUriModel(string uri)
             {
                 Uri = uri;
-                Match = UriMatchType.BaseDomain;
             }
 
-            public LoginApiUriModel(CipherLoginData.LoginDataUriModel uri)
+            public CipherLoginUriModel(CipherLoginData.CipherLoginUriData uri)
             {
                 Uri = uri.Uri;
                 Match = uri.Match;
@@ -62,7 +74,7 @@ namespace Bit.Core.Models.Api
             [EncryptedString]
             [StringLength(10000)]
             public string Uri { get; set; }
-            public UriMatchType Match { get; set; }
+            public UriMatchType? Match { get; set; }
         }
     }
 }

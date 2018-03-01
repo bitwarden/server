@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Data
         {
             Name = cipher.Name;
             Notes = cipher.Notes;
-            Fields = cipher.Fields.Select(f => new CipherFieldData(f));
+            Fields = cipher.Fields?.Select(f => new CipherFieldData(f));
         }
 
         public string Name { get; set; }

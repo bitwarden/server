@@ -6,6 +6,8 @@ namespace Bit.Core.Models.Api
 {
     public class CipherFieldModel
     {
+        public CipherFieldModel() { }
+
         public CipherFieldModel(CipherFieldData data)
         {
             Type = data.Type;

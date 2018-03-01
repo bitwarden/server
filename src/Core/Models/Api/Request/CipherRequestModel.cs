@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Models.Data;
 using Bit.Core.Models.Data;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Models.Api
 {
@@ -60,8 +61,10 @@ namespace Bit.Core.Models.Api
             switch(existingCipher.Type)
             {
                 case CipherType.Login:
-                    existingCipher.Data = JsonConvert.SerializeObject(new CipherLoginData(this),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    var loginObj = JObject.FromObject(new CipherLoginData(this),
+                        new JsonSerializer { NullValueHandling = NullValueHandling.Ignore });
+                    loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
+                    existingCipher.Data = loginObj.ToString(Formatting.None);
                     break;
                 case CipherType.Card:
                     existingCipher.Data = JsonConvert.SerializeObject(new CipherCardData(this),

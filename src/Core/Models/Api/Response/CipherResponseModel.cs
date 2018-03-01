@@ -54,7 +54,7 @@ namespace Bit.Core.Models.Api
 
             Name = cipherData.Name;
             Notes = cipherData.Notes;
-            Fields = cipherData.Fields.Select(f => new CipherFieldModel(f));
+            Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
