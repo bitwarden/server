@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Models.Data;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
@@ -25,13 +26,13 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(10000)]
         public string Notes { get; set; }
-        public IEnumerable<FieldDataModel> Fields { get; set; }
+        public IEnumerable<CipherFieldModel> Fields { get; set; }
         public Dictionary<string, string> Attachments { get; set; }
 
-        public LoginType Login { get; set; }
-        public CardType Card { get; set; }
-        public IdentityType Identity { get; set; }
-        public SecureNoteType SecureNote { get; set; }
+        public CipherLoginModel Login { get; set; }
+        public CipherCardModel Card { get; set; }
+        public CipherIdentityModel Identity { get; set; }
+        public CipherSecureNoteModel SecureNote { get; set; }
 
         public CipherDetails ToCipherDetails(Guid userId)
         {
@@ -59,19 +60,19 @@ namespace Bit.Core.Models.Api
             switch(existingCipher.Type)
             {
                 case CipherType.Login:
-                    existingCipher.Data = JsonConvert.SerializeObject(new LoginDataModel(this),
+                    existingCipher.Data = JsonConvert.SerializeObject(new CipherLoginData(this),
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 case CipherType.Card:
-                    existingCipher.Data = JsonConvert.SerializeObject(new CardDataModel(this),
+                    existingCipher.Data = JsonConvert.SerializeObject(new CipherCardData(this),
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 case CipherType.Identity:
-                    existingCipher.Data = JsonConvert.SerializeObject(new IdentityDataModel(this),
+                    existingCipher.Data = JsonConvert.SerializeObject(new CipherIdentityData(this),
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 case CipherType.SecureNote:
-                    existingCipher.Data = JsonConvert.SerializeObject(new SecureNoteDataModel(this),
+                    existingCipher.Data = JsonConvert.SerializeObject(new CipherSecureNoteData(this),
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     break;
                 default:
@@ -120,107 +121,6 @@ namespace Bit.Core.Models.Api
                 OrganizationId = orgId,
                 Edit = true
             });
-        }
-
-        public class LoginType
-        {
-            [EncryptedString]
-            [StringLength(10000)]
-            public string Uri { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Username { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Password { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Totp { get; set; }
-        }
-
-        public class CardType
-        {
-            [EncryptedString]
-            [StringLength(1000)]
-            public string CardholderName { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Brand { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Number { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string ExpMonth { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string ExpYear { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Code { get; set; }
-        }
-
-        public class IdentityType
-        {
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Title { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string FirstName { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string MiddleName { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string LastName { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Address1 { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Address2 { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Address3 { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string City { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string State { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string PostalCode { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Country { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Company { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Email { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Phone { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string SSN { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string Username { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string PassportNumber { get; set; }
-            [EncryptedString]
-            [StringLength(1000)]
-            public string LicenseNumber { get; set; }
-        }
-
-        public class SecureNoteType
-        {
-            public Enums.SecureNoteType Type { get; set; }
         }
     }
 

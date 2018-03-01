@@ -3,6 +3,8 @@ using Core.Models.Data;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using System.Linq;
+using Newtonsoft.Json;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
@@ -18,34 +20,58 @@ namespace Bit.Core.Models.Api
 
             Id = cipher.Id.ToString();
             Type = cipher.Type;
-            RevisionDate = cipher.RevisionDate;
-            OrganizationId = cipher.OrganizationId?.ToString();
-            Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
-            OrganizationUseTotp = orgUseTotp;
 
+            CipherData cipherData;
             switch(cipher.Type)
             {
                 case Enums.CipherType.Login:
-                    Data = new LoginDataModel(cipher);
+                    var loginData = JsonConvert.DeserializeObject<CipherLoginData>(cipher.Data);
+                    cipherData = loginData;
+                    Data = loginData;
+                    Login = new CipherLoginModel(loginData);
                     break;
                 case Enums.CipherType.SecureNote:
-                    Data = new SecureNoteDataModel(cipher);
+                    var secureNoteData = JsonConvert.DeserializeObject<CipherSecureNoteData>(cipher.Data);
+                    Data = secureNoteData;
+                    cipherData = secureNoteData;
+                    SecureNote = new CipherSecureNoteModel(secureNoteData);
                     break;
                 case Enums.CipherType.Card:
-                    Data = new CardDataModel(cipher);
+                    var cardData = JsonConvert.DeserializeObject<CipherCardData>(cipher.Data);
+                    Data = cardData;
+                    cipherData = cardData;
+                    Card = new CipherCardModel(cardData);
                     break;
                 case Enums.CipherType.Identity:
-                    Data = new IdentityDataModel(cipher);
+                    var identityData = JsonConvert.DeserializeObject<CipherIdentityData>(cipher.Data);
+                    Data = identityData;
+                    cipherData = identityData;
+                    Identity = new CipherIdentityModel(identityData);
                     break;
                 default:
                     throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
+
+            Name = cipherData.Name;
+            Notes = cipherData.Notes;
+            Fields = cipherData.Fields.Select(f => new CipherFieldModel(f));
+            RevisionDate = cipher.RevisionDate;
+            OrganizationId = cipher.OrganizationId?.ToString();
+            Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+            OrganizationUseTotp = orgUseTotp;
         }
 
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public Enums.CipherType Type { get; set; }
         public dynamic Data { get; set; }
+        public string Name { get; set; }
+        public string Notes { get; set; }
+        public CipherLoginModel Login { get; set; }
+        public CipherCardModel Card { get; set; }
+        public CipherIdentityModel Identity { get; set; }
+        public CipherSecureNoteModel SecureNote { get; set; }
+        public IEnumerable<CipherFieldModel> Fields { get; set; }
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }
