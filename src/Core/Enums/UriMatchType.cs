@@ -2,7 +2,7 @@
 {
     public enum UriMatchType : byte
     {
-        BaseDomain = 0,
+        Domain = 0,
         FullHostname = 1,
         StartsWith = 2,
         Exact = 3,
