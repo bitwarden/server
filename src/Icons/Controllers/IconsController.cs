@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,6 +19,15 @@ namespace Bit.Icons.Controllers
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         });
+        static readonly List<byte[]> _validImageData = new List<byte[]>
+        {
+            // png
+            new byte[] { 137, 80, 78, 71 },
+            // ico
+            new byte[] { 00, 00, 01, 00 },
+            // jpeg
+            new byte[] { 255, 216, 255 }
+        };
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
         private readonly IconsSettings _iconsSettings;
@@ -60,6 +70,11 @@ namespace Bit.Icons.Controllers
                 }
 
                 var image = await response.Content.ReadAsByteArrayAsync();
+                if(!_validImageData.Any(d => d.SequenceEqual(image.Take(d.Length))))
+                {
+                    return new NotFoundResult();
+                }
+
                 icon = new Icon
                 {
                     Image = image,
