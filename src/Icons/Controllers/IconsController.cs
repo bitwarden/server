@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,6 +19,11 @@ namespace Bit.Icons.Controllers
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         });
+        private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
+            "image/png",
+            "image/x-icon",
+            "image/jpeg"
+        };
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
         private readonly IconsSettings _iconsSettings;
@@ -54,7 +60,8 @@ namespace Bit.Icons.Controllers
                     $"&fallback_icon_url=https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png";
                 var response = await _httpClient.GetAsync(iconUrl);
                 response = await FollowRedirectsAsync(response, 1);
-                if(!response.IsSuccessStatusCode)
+                if(!response.IsSuccessStatusCode ||
+                    !_allowedMediaTypes.Contains(response.Content.Headers.ContentType.MediaType))
                 {
                     return new NotFoundResult();
                 }
