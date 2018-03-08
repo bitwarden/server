@@ -124,6 +124,6 @@ then
     dockerComposeDown
     update
     restart
-	sleep 7
+    sleep 7
     updateDatabase
 fi
