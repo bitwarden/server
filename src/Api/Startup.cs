@@ -17,6 +17,7 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using jsreport.AspNetCore;
+using Bit.Core.IdentityServer;
 
 namespace Bit.Api
 {
@@ -79,6 +80,7 @@ namespace Bit.Api
                     options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
+                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
                     options.NameClaimType = ClaimTypes.Email;
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
