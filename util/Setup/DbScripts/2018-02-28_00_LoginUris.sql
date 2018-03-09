@@ -12,8 +12,7 @@
     "Password":"2.aa",
     "Uris": [
         {
-            "Uri": "2.yy",
-            "Match": 0
+            "Uri": "2.yy"
         }
     ]
 }
