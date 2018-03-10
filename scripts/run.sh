@@ -124,6 +124,7 @@ then
     dockerComposeDown
     update
     restart
+    echo "Waiting for database to come online..."
     sleep 30
     updateDatabase
 fi
