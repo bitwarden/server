@@ -1,3 +1,4 @@
+
 <!--
 Please do not submit feature requests here on GitHub.
 
@@ -7,5 +8,3 @@ discussing product feature requests.
 
 [1]: https://community.bitwarden.com
 -->
-
-TYPE_YOUR_ISSUE_HERE
