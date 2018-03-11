@@ -54,14 +54,14 @@ BEGIN
     UPDATE
         [CTE]
     SET
-        [Data] = JSON_MODIFY(
+        [Data] = CAST(JSON_MODIFY(
             [Data],
             @UrisPath,
-            JSON_QUERY(
-                '[{"Uri":"' + JSON_VALUE([Data], @UriPath) + '"}]',
+            CAST(JSON_QUERY(
+                '[{"Uri":"' + CAST(JSON_VALUE([Data], @UriPath) AS VARCHAR(MAX)) + '"}]',
                 '$'
-            )
-        )
+            ) AS VARCHAR(MAX))
+        ) AS VARCHAR(MAX))
     OUTPUT INSERTED.[Id] INTO [CompletedIds]
 
     SET @BatchSize = @@ROWCOUNT
