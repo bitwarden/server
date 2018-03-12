@@ -63,10 +63,14 @@ BEGIN
     SET @BatchSize = @@ROWCOUNT
     RAISERROR('Updated %d ciphers with Uris', 0, 1, @BatchSize) WITH NOWAIT
 END
+GO
 
 -- Reset
 TRUNCATE TABLE [CompletedIds]
-SET @BatchSize = 1000
+DECLARE @UriPath VARCHAR(50) = '$.Uri'
+DECLARE @UrisPath VARCHAR(50) = '$.Uris'
+DECLARE @BatchSize INT = 1000
+DECLARE @LastId UNIQUEIDENTIFIER = NULL
 
 -- Step 2: Remove old Uri Property
 WHILE @BatchSize > 0
