@@ -9,9 +9,11 @@
 
   <ItemGroup>
     <None Remove="DbScripts\2018-02-28_00_LoginUris.sql" />
+    <None Remove="DbScripts\2018-03-12_00_FixLoginUris.sql" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="DbScripts\2018-03-12_00_FixLoginUris.sql" />
     <EmbeddedResource Include="DbScripts\2018-02-28_00_LoginUris.sql" />
     <EmbeddedResource Include="DbScripts\2017-12-12_00_Events.sql" />
     <EmbeddedResource Include="DbScripts\2017-11-24_00_UpdateProcs.sql" />

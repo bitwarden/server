@@ -10,11 +10,7 @@
     "Name":"2.xx",
     "Username":"2.zz",
     "Password":"2.aa",
-    "Uris": [
-        {
-            "Uri": "2.yy"
-        }
-    ]
+    "Uris":[{"Uri": "2.yy"}]
 }
 */
 
@@ -54,14 +50,14 @@ BEGIN
     UPDATE
         [CTE]
     SET
-        [Data] = CAST(JSON_MODIFY(
+        [Data] = JSON_MODIFY(
             [Data],
             @UrisPath,
-            CAST(JSON_QUERY(
-                '[{"Uri":"' + CAST(JSON_VALUE([Data], @UriPath) AS VARCHAR(MAX)) + '"}]',
+            JSON_QUERY(
+                '[{"Uri":"' + CAST(JSON_VALUE([Data], @UriPath) AS NVARCHAR(MAX)) + '"}]',
                 '$'
-            ) AS VARCHAR(MAX))
-        ) AS VARCHAR(MAX))
+            )
+        )
     OUTPUT INSERTED.[Id] INTO [CompletedIds]
 
     SET @BatchSize = @@ROWCOUNT
