@@ -34,6 +34,14 @@ namespace Bit.Setup
                         $"-out /bitwarden/ssl/self/{Domain}/certificate.crt " +
                         $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=Bitwarden/CN={Domain}\"");
                 }
+                else
+                {
+                    Console.WriteLine("!!!!!! WARNING !!!!!!");
+                    Console.WriteLine("You are not using an SSL certificate. Bitwarden requires HTTPS to operate. " +
+                        "You must front your installation with a HTTPS proxy. The web vault (and other Bitwarden " +
+                        "apps) will not work properly without HTTPS.");
+                    Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!");
+                }
             }
 
             if(LetsEncrypt)
