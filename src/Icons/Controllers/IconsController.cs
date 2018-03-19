@@ -19,10 +19,15 @@ namespace Bit.Icons.Controllers
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         });
+        private static string _pngMediaType = "image/png";
+        private static string _icoMediaType = "image/x-icon";
+        private static string _jpegMediaType = "image/jpeg";
+        private static string _octetMediaType = "application/octet-stream";
         private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
-            "image/png",
-            "image/x-icon",
-            "image/jpeg"
+            _pngMediaType,
+            _icoMediaType,
+            _jpegMediaType,
+            _octetMediaType
         };
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
@@ -56,8 +61,9 @@ namespace Bit.Icons.Controllers
             var mappedDomain = _domainMappingService.MapDomain(uri.Host);
             if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
-                var iconUrl = $"{_iconsSettings.BestIconBaseUrl}/icon?url={mappedDomain}&size=16..32..200" +
-                    $"&fallback_icon_url=https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png";
+                var iconUrl = new Uri($"{_iconsSettings.BestIconBaseUrl}/icon" +
+                    $"?url={mappedDomain}&size=16..32..200&fallback_icon_url=" +
+                    $"https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png");
                 var response = await _httpClient.GetAsync(iconUrl);
                 response = await FollowRedirectsAsync(response, 1);
                 if(!response.IsSuccessStatusCode ||
@@ -72,6 +78,27 @@ namespace Bit.Icons.Controllers
                     Image = image,
                     Format = response.Content.Headers.ContentType.MediaType
                 };
+
+                if(icon.Format == _octetMediaType)
+                {
+                    if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".ico"))
+                    {
+                        icon.Format = _icoMediaType;
+                    }
+                    else if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".png"))
+                    {
+                        icon.Format = _pngMediaType;
+                    }
+                    else if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".jpeg") ||
+                        response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".jpg"))
+                    {
+                        icon.Format = _jpegMediaType;
+                    }
+                    else
+                    {
+                        return new NotFoundResult();
+                    }
+                }
 
                 // Only cache smaller images (<= 50kb)
                 if(image.Length <= 50012)
