@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Bit.Core.Services;
 using Bit.Core.Exceptions;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Models.Table
 {
@@ -162,6 +163,21 @@ namespace Bit.Core.Models.Table
             }
 
             return paymentService;
+        }
+
+        public IdentityUser ToIdentityUser()
+        {
+            return new IdentityUser
+            {
+                Id = Id.ToString(),
+                Email = Email,
+                NormalizedEmail = Email,
+                EmailConfirmed = EmailVerified,
+                UserName = Email,
+                NormalizedUserName = Email,
+                TwoFactorEnabled = TwoFactorIsEnabled(),
+                SecurityStamp = SecurityStamp
+            };
         }
     }
 }

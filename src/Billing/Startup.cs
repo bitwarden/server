@@ -11,6 +11,10 @@ using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Billing.Utilities;
+using Bit.Core.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Billing
 {
@@ -42,7 +46,28 @@ namespace Bit.Billing
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddCustomIdentityServices(globalSettings);
+            services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
+            services.AddIdentity<IdentityUser, Core.Models.Table.Role>()
+                .AddUserStore<ReadOnlyIdentityUserStore>()
+                .AddRoleStore<RoleStore>()
+                .AddDefaultTokenProviders();
+            services.TryAddScoped<PasswordlessSignInManager<IdentityUser>, PasswordlessSignInManager<IdentityUser>>();
+
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+            {
+                options.TokenLifespan = TimeSpan.FromMinutes(15);
+            });
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/login";
+                options.LogoutPath = "/";
+                options.AccessDeniedPath = "/login";
+                options.Cookie.Name = "BitwardenBilling";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+                options.ReturnUrlParameter = "returnUrl";
+                options.SlidingExpiration = true;
+            });
 
             // Services
             services.AddBaseServices();
@@ -55,6 +80,7 @@ namespace Bit.Billing
             {
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
             });
+            services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
         }
 
         public void Configure(
@@ -71,10 +97,9 @@ namespace Bit.Billing
                 app.UseDeveloperExceptionPage();
             }
 
-            // Default Middleware
-            app.UseDefaultMiddleware(env);
-
-            app.UseMvc();
+            app.UseAuthentication();
+            app.UseStaticFiles();
+            app.UseMvcWithDefaultRoute();
         }
     }
 }

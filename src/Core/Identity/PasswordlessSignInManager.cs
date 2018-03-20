@@ -1,0 +1,90 @@
+﻿using System;
+using System.Net;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace Bit.Core.Identity
+{
+    public class PasswordlessSignInManager<TUser> : SignInManager<TUser> where TUser : class
+    {
+        public const string PasswordlessSignInPurpose = "PasswordlessSignIn";
+
+        public PasswordlessSignInManager(UserManager<TUser> userManager,
+            IHttpContextAccessor contextAccessor,
+            IUserClaimsPrincipalFactory<TUser> claimsFactory,
+            IOptions<IdentityOptions> optionsAccessor,
+            ILogger<SignInManager<TUser>> logger,
+            IAuthenticationSchemeProvider schemes)
+            : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes)
+        {
+        }
+
+        public async Task<SignInResult> PasswordlessSignInAsync(string email)
+        {
+            var user = await UserManager.FindByEmailAsync(email);
+            if(user == null)
+            {
+                return SignInResult.Failed;
+            }
+
+            var token = await UserManager.GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+                PasswordlessSignInPurpose);
+
+            // TODO: send email
+            var encodedToken = WebUtility.UrlEncode(token);
+
+            return SignInResult.Success;
+        }
+
+        public async Task<SignInResult> PasswordlessSignInAsync(TUser user, string token, bool isPersistent)
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            var attempt = await CheckPasswordlessSignInAsync(user, token);
+            return attempt.Succeeded ?
+                await SignInOrTwoFactorAsync(user, isPersistent, bypassTwoFactor: true) : attempt;
+        }
+
+        public async Task<SignInResult> PasswordlessSignInAsync(string email, string token, bool isPersistent)
+        {
+            var user = await UserManager.FindByEmailAsync(email);
+            if(user == null)
+            {
+                return SignInResult.Failed;
+            }
+
+            return await PasswordlessSignInAsync(user, token, isPersistent);
+        }
+
+        public virtual async Task<SignInResult> CheckPasswordlessSignInAsync(TUser user, string token)
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            var error = await PreSignInCheck(user);
+            if(error != null)
+            {
+                return error;
+            }
+
+            if(await UserManager.VerifyUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+                PasswordlessSignInPurpose, token))
+            {
+                return SignInResult.Success;
+            }
+
+            Logger.LogWarning(2, "User {userId} failed to provide the correct token.",
+                await UserManager.GetUserIdAsync(user));
+            return SignInResult.Failed;
+        }
+    }
+}

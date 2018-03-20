@@ -1,0 +1,21 @@
+﻿@{
+    ViewData["Title"] = "Login";
+}
+
+@model LoginModel
+
+<div class="row">
+    <div class="col-xs-8 col-xs-offset-2">
+        <h1 class="text-center">Login</h1>
+        <form asp-action="" method="post" class="form-horizontal">
+            <div class="form-group">
+                <label asp-for="Email" class="col-sm-3">Email Address: </label>
+                <div class="col-sm-9">
+                    <input asp-for="Email" class="form-control" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <div asp-validation-summary="All"></div>
+        </form>
+    </div>
+</div>
