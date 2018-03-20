@@ -25,13 +25,20 @@ namespace Billing.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(LoginModel model)
         {
-            var result = await _signInManager.PasswordlessSignInAsync(model.Email);
-            if(!result.Succeeded)
+            if(ModelState.IsValid)
             {
-                return View("Error");
+                var result = await _signInManager.PasswordlessSignInAsync(model.Email);
+                if(result.Succeeded)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Account not found.");
+                }
             }
 
-            return RedirectToAction("Index", "Home");
+            return View(model);
         }
 
         public async Task<IActionResult> Confirm(string email, string token)

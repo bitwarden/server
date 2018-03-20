@@ -1,0 +1,6 @@
+﻿.custom-select.input-validation-error ~ .invalid-feedback,
+.custom-select.input-validation-error ~ .invalid-tooltip,
+.form-control.input-validation-error ~ .invalid-feedback,
+.form-control.input-validation-error ~ .invalid-tooltip {
+    display: block;
+}
