@@ -81,7 +81,7 @@ namespace Bit.Events
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) =>
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
             {
                 var context = e.Properties["SourceContext"].ToString();
                 if(context.Contains("IdentityServer4.Validation.TokenValidator") ||

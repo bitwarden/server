@@ -142,7 +142,7 @@ namespace Bit.Api
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) =>
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
             {
                 var context = e.Properties["SourceContext"].ToString();
                 if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||

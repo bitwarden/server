@@ -89,7 +89,7 @@ namespace Bit.Billing
             GlobalSettings globalSettings,
             ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
 
             if(env.IsDevelopment())
             {
