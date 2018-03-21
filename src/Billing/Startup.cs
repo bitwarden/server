@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Billing.Utilities;
 using Bit.Core.Identity;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Billing
