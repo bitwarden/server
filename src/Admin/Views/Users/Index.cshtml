@@ -7,12 +7,8 @@
 
 <form class="form-inline mb-3" method="get">
     <label class="sr-only" asp-for="Email">Email</label>
-    <div class="input-group">
-        <input type="text" class="form-control" placeholder="Email" asp-for="Email" name="email">
-        <div class="input-group-append">
-            <button type="submit" class="btn btn-primary" title="Search"><i class="fa fa-search"></i></button>
-        </div>
-    </div>
+    <input type="text" class="form-control mb-2 mr-2" placeholder="Email" asp-for="Email" name="email">
+    <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
 </form>
 
 <div class="table-responsive">
@@ -21,11 +17,11 @@
             <tr>
                 <th>Email</th>
                 <th style="width: 150px;">Created</th>
-                <th style="width: 150px; min-width: 150px;">Details</th>
+                <th style="width: 170px; min-width: 150px;">Details</th>
             </tr>
         </thead>
         <tbody>
-            @if(!Model.Users.Any())
+            @if(!Model.Items.Any())
             {
                 <tr>
                     <td colspan="4">No results to list.</td>
@@ -33,7 +29,7 @@
             }
             else
             {
-                @foreach(var user in Model.Users)
+                @foreach(var user in Model.Items)
                 {
                     <tr>
                         <td>
@@ -48,11 +44,21 @@
                             @if(user.Premium)
                             {
                                 <i class="fa fa-star fa-lg fa-fw"
-                                   title="Premium, expires @(user.PremiumExpirationDate?.ToShortDateString() ?? "Never")"></i>
+                                   title="Premium, expires @(user.PremiumExpirationDate?.ToShortDateString() ?? "-")"></i>
                             }
                             else
                             {
                                 <i class="fa fa-star-o fa-lg fa-fw text-muted" title="Not Premium"></i>
+                            }
+                            @if(user.MaxStorageGb.HasValue && user.MaxStorageGb > 1)
+                            {
+                                <i class="fa fa-plus-square fa-lg fa-fw"
+                                   title="Additional Storage, @(user.MaxStorageGb - 1) GB"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-plus-square-o fa-lg fa-fw text-muted"
+                                   title="No Additional Storage"></i>
                             }
                             @if(user.EmailVerified)
                             {
@@ -60,7 +66,7 @@
                             }
                             else
                             {
-                                <i class="fa fa-check-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
+                                <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
                             }
                             @if(user.TwoFactorIsEnabled())
                             {

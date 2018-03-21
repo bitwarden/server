@@ -45,6 +45,20 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid,
+            int skip, int take)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Organization>(
+                    "[dbo].[Organization_Search]",
+                    new { Name = name, UserEmail = userEmail, Paid = paid, Skip = skip, Take = take },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task UpdateStorageAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))

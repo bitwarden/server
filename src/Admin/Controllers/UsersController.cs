@@ -32,10 +32,10 @@ namespace Bit.Admin.Controllers
             }
 
             var skip = (page - 1) * count;
-            var users = await _userRepository.SearchByEmailAsync(email, skip, count);
+            var users = await _userRepository.SearchAsync(email, skip, count);
             return View(new UsersModel
             {
-                Users = users as List<User>,
+                Items = users as List<User>,
                 Email = string.IsNullOrWhiteSpace(email) ? null : email,
                 Page = page,
                 Count = count

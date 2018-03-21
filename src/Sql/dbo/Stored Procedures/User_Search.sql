@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[User_SearchByEmail]
+﻿CREATE PROCEDURE [dbo].[User_Search]
     @Email NVARCHAR(50),
     @Skip INT = 0,
     @Take INT = 25
