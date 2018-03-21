@@ -11,7 +11,6 @@ using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +21,7 @@ using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Core.Utilities
 {
@@ -195,6 +195,38 @@ namespace Bit.Core.Utilities
                 .AddTokenProvider<U2fTokenProvider>(TwoFactorProviderType.U2f.ToString())
                 .AddTokenProvider<TwoFactorRememberTokenProvider>(TwoFactorProviderType.Remember.ToString())
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
+
+            return identityBuilder;
+        }
+
+        public static IdentityBuilder AddPasswordlessIdentityServices<TUserStore>(
+            this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
+        {
+            services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
+
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+            {
+                options.TokenLifespan = TimeSpan.FromMinutes(15);
+            });
+
+            var identityBuilder = services.AddIdentity<IdentityUser, Role>()
+                .AddUserStore<TUserStore>()
+                .AddRoleStore<RoleStore>()
+                .AddDefaultTokenProviders();
+
+            services.TryAddScoped<PasswordlessSignInManager<IdentityUser>, PasswordlessSignInManager<IdentityUser>>();
+
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/login";
+                options.LogoutPath = "/";
+                options.AccessDeniedPath = "/login?accessDenied=1";
+                options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+                options.ReturnUrlParameter = "returnUrl";
+                options.SlidingExpiration = true;
+            });
 
             return identityBuilder;
         }

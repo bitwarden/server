@@ -10,9 +10,7 @@ using Bit.Core.Utilities;
 using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Billing.Utilities;
 using Bit.Core.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Billing
@@ -45,28 +43,7 @@ namespace Bit.Billing
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
-            services.AddIdentity<IdentityUser, Core.Models.Table.Role>()
-                .AddUserStore<ReadOnlyIdentityUserStore>()
-                .AddRoleStore<RoleStore>()
-                .AddDefaultTokenProviders();
-            services.TryAddScoped<PasswordlessSignInManager<IdentityUser>, PasswordlessSignInManager<IdentityUser>>();
-
-            services.Configure<DataProtectionTokenProviderOptions>(options =>
-            {
-                options.TokenLifespan = TimeSpan.FromMinutes(15);
-            });
-            services.ConfigureApplicationCookie(options =>
-            {
-                options.LoginPath = "/login";
-                options.LogoutPath = "/";
-                options.AccessDeniedPath = "/login";
-                options.Cookie.Name = "BitwardenBilling";
-                options.Cookie.HttpOnly = true;
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
-                options.ReturnUrlParameter = "returnUrl";
-                options.SlidingExpiration = true;
-            });
+            services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
 
             // Services
             services.AddBaseServices();
@@ -77,7 +54,7 @@ namespace Bit.Billing
             // Mvc
             services.AddMvc(config =>
             {
-                config.Filters.Add(new ExceptionHandlerFilterAttribute());
+                config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
         }

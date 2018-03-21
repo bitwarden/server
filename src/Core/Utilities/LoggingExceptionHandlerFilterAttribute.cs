@@ -2,9 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Billing.Utilities
+namespace Bit.Core.Utilities
 {
-    public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
+    public class LoggingExceptionHandlerFilterAttribute : ExceptionFilterAttribute
     {
         public override void OnException(ExceptionContext context)
         {
@@ -15,7 +15,8 @@ namespace Bit.Billing.Utilities
                 return;
             }
 
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<LoggingExceptionHandlerFilterAttribute>>();
             logger.LogError(0, exception, exception.Message);
         }
     }

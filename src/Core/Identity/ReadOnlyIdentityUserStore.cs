@@ -2,22 +2,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Repositories;
 
 namespace Bit.Core.Identity
 {
-    public class ReadOnlyIdentityUserStore :
+    public abstract class ReadOnlyIdentityUserStore :
         IUserStore<IdentityUser>,
         IUserEmailStore<IdentityUser>,
         IUserSecurityStampStore<IdentityUser>
     {
-        private readonly IUserRepository _userRepository;
-
-        public ReadOnlyIdentityUserStore(IUserRepository userRepository)
-        {
-            _userRepository = userRepository;
-        }
-
         public void Dispose() { }
 
         public Task<IdentityResult> CreateAsync(IdentityUser user,
@@ -32,24 +24,11 @@ namespace Bit.Core.Identity
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var user = await _userRepository.GetByEmailAsync(normalizedEmail);
-            return user?.ToIdentityUser();
-        }
+        public abstract Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
+            CancellationToken cancellationToken = default(CancellationToken));
 
-        public async Task<IdentityUser> FindByIdAsync(string userId,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if(!Guid.TryParse(userId, out var userIdGuid))
-            {
-                return null;
-            }
-
-            var user = await _userRepository.GetByIdAsync(userIdGuid);
-            return user?.ToIdentityUser();
-        }
+        public abstract Task<IdentityUser> FindByIdAsync(string userId,
+            CancellationToken cancellationToken = default(CancellationToken));
 
         public async Task<IdentityUser> FindByNameAsync(string normalizedUserName,
             CancellationToken cancellationToken = default(CancellationToken))

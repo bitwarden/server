@@ -1,13 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Admin.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Admin.Controllers
 {
     public class HomeController : Controller
     {
+        [Authorize]
         public IActionResult Index()
         {
             return View();

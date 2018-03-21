@@ -1,0 +1,21 @@
+﻿@model LoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-md-center">
+    <div class="col-4">
+        <p>Please enter your email address below to log in.</p>
+        <form asp-action="" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Email" class="sr-only">Email Address</label>
+                <input asp-for="Email" type="email" class="form-control" placeholder="ex. john@example.com"
+                       required autofocus>
+                <span asp-validation-for="Email" class="invalid-feedback"></span>
+                <small class="form-text text-muted">We'll email you a secure login link.</small>
+            </div>
+            <button class="btn btn-primary btn-block" type="submit">Continue</button>
+        </form>
+    </div>
+</div>
