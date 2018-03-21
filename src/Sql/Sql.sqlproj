@@ -224,5 +224,6 @@
     <Build Include="dbo\Stored Procedures\Event_ReadPageByCipherId.sql" />
     <Build Include="dbo\Stored Procedures\Event_ReadPageByOrganizationIdActingUserId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadAbilities.sql" />
+    <Build Include="dbo\Stored Procedures\User_SearchByEmail.sql" />
   </ItemGroup>
 </Project>

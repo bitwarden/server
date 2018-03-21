@@ -37,6 +37,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<User>> SearchByEmailAsync(string email, int skip, int take)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<User>(
+                    $"[{Schema}].[{Table}_SearchByEmail]",
+                    new { Email = email, Skip = skip, Take = take },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
         {
             using(var connection = new SqlConnection(ConnectionString))
