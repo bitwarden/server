@@ -41,5 +41,41 @@ namespace Bit.Admin.Controllers
                 Count = count
             });
         }
+
+        public async Task<IActionResult> Edit(Guid id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if(user == null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            return View(new UserEditModel(user));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Edit(Guid id, UserEditModel model)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if(user == null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            model.ToUser(user);
+            await _userRepository.ReplaceAsync(user);
+            return RedirectToAction("Edit", new { id });
+        }
+
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if(user != null)
+            {
+                await _userRepository.DeleteAsync(user);
+            }
+
+            return RedirectToAction("Index");
+        }
     }
 }

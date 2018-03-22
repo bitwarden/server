@@ -1,0 +1,89 @@
+﻿@model UserEditModel
+@{
+    ViewData["Title"] = "User Edit: " + Model.User.Email;
+}
+
+<h1>Edit User <small>@Model.User.Email</small></h1>
+
+<form method="post">
+    <h2>General</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="Name"></label>
+                <input type="text" class="form-control" asp-for="Name">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="Email"></label>
+                <input type="email" class="form-control" asp-for="Email">
+            </div>
+        </div>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EmailVerified">
+        <label class="form-check-label" asp-for="EmailVerified"></label>
+    </div>
+    <h2>Premium</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="MaxStorageGb"></label>
+                <input type="number" class="form-control" asp-for="MaxStorageGb" min="1">
+            </div>
+        </div>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Premium">
+        <label class="form-check-label" asp-for="Premium"></label>
+    </div>
+    <h2>Licensing</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="LicenseKey"></label>
+                <input type="text" class="form-control" asp-for="LicenseKey">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="PremiumExpirationDate"></label>
+                <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate">
+            </div>
+        </div>
+    </div>
+    <h2>Billing</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <div class="form-group">
+                    <label asp-for="Gateway"></label>
+                    <select class="form-control" asp-for="Gateway"
+                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                        <option value="">--</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="GatewayCustomerId"></label>
+                <input type="text" class="form-control" asp-for="GatewayCustomerId">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="GatewaySubscriptionId"></label>
+                <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+            </div>
+        </div>
+    </div>
+    <div class="d-flex mt-4">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-danger ml-auto" asp-action="Delete" asp-route-id="@Model.User.Id"
+           onclick="return confirm('Are you sure you want to delete this user (@Model.User.Email)?')">
+            Delete
+        </a>
+    </div>
+</form>

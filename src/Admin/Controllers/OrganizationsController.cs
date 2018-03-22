@@ -69,5 +69,16 @@ namespace Bit.Admin.Controllers
             await _organizationRepository.ReplaceAsync(organization);
             return RedirectToAction("Edit", new { id });
         }
+
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(id);
+            if(organization != null)
+            {
+                await _organizationRepository.DeleteAsync(organization);
+            }
+
+            return RedirectToAction("Index");
+        }
     }
 }

@@ -33,7 +33,7 @@
                 {
                     <tr>
                         <td>
-                            <a href="#">@user.Email</a>
+                            <a asp-action="Edit" asp-route-id="@user.Id">@user.Email</a>
                         </td>
                         <td>
                             <span title="@user.CreationDate.ToString()">

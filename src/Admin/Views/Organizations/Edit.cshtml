@@ -8,7 +8,7 @@
 <form method="post">
     <h2>General</h2>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="Name"></label>
                 <input type="text" class="form-control" asp-for="Name">
@@ -21,13 +21,13 @@
     </div>
     <h2>Business Information</h2>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessName"></label>
                 <input type="text" class="form-control" asp-for="BusinessName">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessTaxNumber"></label>
                 <input type="text" class="form-control" asp-for="BusinessTaxNumber">
@@ -35,13 +35,13 @@
         </div>
     </div>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessAddress1"></label>
                 <input type="text" class="form-control" asp-for="BusinessAddress1">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessAddress2"></label>
                 <input type="text" class="form-control" asp-for="BusinessAddress2">
@@ -49,13 +49,13 @@
         </div>
     </div>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessAddress3"></label>
                 <input type="text" class="form-control" asp-for="BusinessAddress3">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BusinessCountry"></label>
                 <select asp-for="BusinessCountry" class="form-control">
@@ -316,14 +316,14 @@
     </div>
     <h2>Plan</h2>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="PlanType"></label>
                 <select class="form-control" asp-for="PlanType"
                         asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PlanType>()"></select>
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="Plan"></label>
                 <input type="text" class="form-control" asp-for="Plan">
@@ -331,19 +331,19 @@
         </div>
     </div>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="Seats"></label>
                 <input type="number" class="form-control" asp-for="Seats" min="1">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="MaxCollections"></label>
                 <input type="number" class="form-control" asp-for="MaxCollections" min="1">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="MaxStorageGb"></label>
                 <input type="number" class="form-control" asp-for="MaxStorageGb" min="1">
@@ -375,15 +375,30 @@
         <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
         <label class="form-check-label" asp-for="UsersGetPremium"></label>
     </div>
+    <h2>Licensing</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="LicenseKey"></label>
+                <input type="text" class="form-control" asp-for="LicenseKey">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="ExpirationDate"></label>
+                <input type="datetime-local" class="form-control" asp-for="ExpirationDate">
+            </div>
+        </div>
+    </div>
     <h2>Billing</h2>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BillingEmail"></label>
                 <input type="email" class="form-control" asp-for="BillingEmail">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <div class="form-group">
                     <label asp-for="Gateway"></label>
@@ -396,33 +411,24 @@
         </div>
     </div>
     <div class="row">
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="GatewayCustomerId"></label>
                 <input type="text" class="form-control" asp-for="GatewayCustomerId">
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm">
             <div class="form-group">
                 <label asp-for="GatewaySubscriptionId"></label>
                 <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
             </div>
         </div>
     </div>
-    <h2>Licensing</h2>
-    <div class="row">
-        <div class="col">
-            <div class="form-group">
-                <label asp-for="LicenseKey"></label>
-                <input type="text" class="form-control" asp-for="LicenseKey">
-            </div>
-        </div>
-        <div class="col">
-            <div class="form-group">
-                <label asp-for="ExpirationDate"></label>
-                <input type="datetime-local" class="form-control" asp-for="ExpirationDate">
-            </div>
-        </div>
+    <div class="d-flex mt-4">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-danger ml-auto" asp-action="Delete" asp-route-id="@Model.Organization.Id"
+           onclick="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
+            Delete
+        </a>
     </div>
-    <button type="submit" class="btn btn-primary">Save</button>
 </form>
