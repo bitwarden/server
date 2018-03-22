@@ -7,6 +7,7 @@
     <div class="card-body">
         <p>Please enter your email address below to log in.</p>
         <form asp-action="" method="post">
+            <input type="hidden" asp-for="ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
                 <label asp-for="Email" class="sr-only">Email Address</label>

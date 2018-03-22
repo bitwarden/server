@@ -16,9 +16,12 @@ namespace Bit.Admin.Controllers
             _signInManager = signInManager;
         }
 
-        public IActionResult Index()
+        public IActionResult Index(string returnUrl = null)
         {
-            return View();
+            return View(new LoginModel
+            {
+                ReturnUrl = returnUrl
+            });
         }
 
         [HttpPost]
@@ -28,19 +31,25 @@ namespace Bit.Admin.Controllers
             if(ModelState.IsValid)
             {
                 await _signInManager.PasswordlessSignInAsync(model.Email,
-                    Url.Action("Confirm", "Login", null, Request.Scheme));
+                    Url.Action("Confirm", "Login", new { returnUrl = model.ReturnUrl }, Request.Scheme));
                 return RedirectToAction("Index", "Home");
             }
 
             return View(model);
         }
 
-        public async Task<IActionResult> Confirm(string email, string token)
+        public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
         {
             var result = await _signInManager.PasswordlessSignInAsync(email, token, false);
             if(!result.Succeeded)
             {
-                return View("Error");
+                // TODO: error?
+                return RedirectToAction("Index");
+            }
+
+            if(!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
             }
 
             return RedirectToAction("Index", "Home");

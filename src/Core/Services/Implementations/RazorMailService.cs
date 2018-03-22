@@ -206,10 +206,15 @@ namespace Bit.Core.Services
         public async Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
         {
             var message = CreateDefaultMessage("Continue Logging In", email);
+
+            var url = CoreHelpers.ExtendQuery(new Uri(baseUrl), new Dictionary<string, string>
+            {
+                ["email"] = email,
+                ["token"] = token,
+            });
             var model = new PasswordlessSignInModel
             {
-                Url = string.Format("{0}?email={1}&token={2}", baseUrl, WebUtility.UrlEncode(email),
-                    WebUtility.UrlEncode(token))
+                Url = url.ToString()
             };
             message.HtmlContent = await _engine.CompileRenderAsync("PasswordlessSignIn", model);
             message.TextContent = await _engine.CompileRenderAsync("PasswordlessSignIn.text", model);

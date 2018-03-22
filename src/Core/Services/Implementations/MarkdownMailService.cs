@@ -6,6 +6,7 @@ using Bit.Core.Models.Mail;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -172,10 +173,14 @@ namespace Bit.Core.Services
 
         public async Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
         {
+            var url = CoreHelpers.ExtendQuery(new Uri(baseUrl), new Dictionary<string, string>
+            {
+                ["email"] = email,
+                ["token"] = token,
+            });
             var model = new Dictionary<string, string>
             {
-                ["url"] = string.Format("{0}?email={1}&token={2}", baseUrl, WebUtility.UrlEncode(email),
-                    WebUtility.UrlEncode(token))
+                ["url"] = url.ToString()
             };
 
             var message = await CreateMessageAsync("Continue Logging In", email, "PasswordlessSignIn", model);

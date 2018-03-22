@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Dapper;
 using System.Globalization;
+using System.Web;
 
 namespace Bit.Core.Utilities
 {
@@ -424,6 +425,32 @@ namespace Bit.Core.Utilities
             }
 
             return _max.Subtract(date.Value).TotalMilliseconds.ToString(CultureInfo.InvariantCulture);
+        }
+
+        // ref: https://stackoverflow.com/a/27545010/1090359
+        public static Uri ExtendQuery(Uri uri, IDictionary<string, string> values)
+        {
+            var baseUri = uri.ToString();
+            var queryString = string.Empty;
+            if(baseUri.Contains("?"))
+            {
+                var urlSplit = baseUri.Split('?');
+                baseUri = urlSplit[0];
+                queryString = urlSplit.Length > 1 ? urlSplit[1] : string.Empty;
+            }
+
+            var queryCollection = HttpUtility.ParseQueryString(queryString);
+            foreach(var kvp in values ?? new Dictionary<string, string>())
+            {
+                queryCollection[kvp.Key] = kvp.Value;
+            }
+
+            var uriKind = uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative;
+            if(queryCollection.Count == 0)
+            {
+                return new Uri(baseUri, uriKind);
+            }
+            return new Uri(string.Format("{0}?{1}", baseUri, queryCollection), uriKind);
         }
     }
 }
