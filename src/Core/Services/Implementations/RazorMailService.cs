@@ -203,6 +203,19 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
+        {
+            var message = CreateDefaultMessage("Continue Logging In", email);
+            var model = new PasswordlessSignInModel
+            {
+                Url = string.Format("{0}?email={1}&token={2}", baseUrl, WebUtility.UrlEncode(email),
+                    WebUtility.UrlEncode(token))
+            };
+            message.HtmlContent = await _engine.CompileRenderAsync("PasswordlessSignIn", model);
+            message.TextContent = await _engine.CompileRenderAsync("PasswordlessSignIn.text", model);
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });

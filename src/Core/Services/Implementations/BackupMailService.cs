@@ -153,6 +153,19 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
+        {
+            try
+            {
+                await _primaryMailService.SendPasswordlessSignInAsync(baseUrl, token, email);
+            }
+            catch(Exception e)
+            {
+                LogError(e);
+                await _backupMailService.SendPasswordlessSignInAsync(baseUrl, token, email);
+            }
+        }
+
         public async Task SendWelcomeEmailAsync(User user)
         {
             try

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -13,17 +14,21 @@ namespace Bit.Core.Identity
     {
         public const string PasswordlessSignInPurpose = "PasswordlessSignIn";
 
+        private readonly IMailService _mailService;
+
         public PasswordlessSignInManager(UserManager<TUser> userManager,
             IHttpContextAccessor contextAccessor,
             IUserClaimsPrincipalFactory<TUser> claimsFactory,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<SignInManager<TUser>> logger,
-            IAuthenticationSchemeProvider schemes)
+            IAuthenticationSchemeProvider schemes,
+            IMailService mailService)
             : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes)
         {
+            _mailService = mailService;
         }
 
-        public async Task<SignInResult> PasswordlessSignInAsync(string email)
+        public async Task<SignInResult> PasswordlessSignInAsync(string email, string loginConfirmUrl)
         {
             var user = await UserManager.FindByEmailAsync(email);
             if(user == null)
@@ -33,10 +38,7 @@ namespace Bit.Core.Identity
 
             var token = await UserManager.GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
                 PasswordlessSignInPurpose);
-
-            // TODO: send email
-            var encodedToken = WebUtility.UrlEncode(token);
-
+            await _mailService.SendPasswordlessSignInAsync(loginConfirmUrl, token, email);
             return SignInResult.Success;
         }
 

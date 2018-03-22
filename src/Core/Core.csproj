@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="MailTemplates\Markdown\PasswordlessSignIn.md" />
+    <None Remove="MailTemplates\Razor\PasswordlessSignIn.cshtml" />
+    <None Remove="MailTemplates\Razor\PasswordlessSignIn.text.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="MailTemplates\Markdown\ChangeEmail.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\ChangeEmailAlreadyExists.md" />
@@ -14,11 +20,14 @@
     <EmbeddedResource Include="MailTemplates\Markdown\NoMasterPasswordHint.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserAccepted.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserConfirmed.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\PasswordlessSignIn.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserInvited.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\TwoFactorEmail.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\VerifyDelete.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\VerifyEmail.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\Welcome.md" />
+    <EmbeddedResource Include="MailTemplates\Razor\PasswordlessSignIn.text.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\PasswordlessSignIn.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\VerifyDelete.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\VerifyDelete.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\VerifyEmail.cshtml" />

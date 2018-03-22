@@ -27,7 +27,8 @@ namespace Billing.Controllers
         {
             if(ModelState.IsValid)
             {
-                var result = await _signInManager.PasswordlessSignInAsync(model.Email);
+                var result = await _signInManager.PasswordlessSignInAsync(model.Email,
+                    Url.Action("Confirm", "Login", null, Request.Scheme));
                 if(result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");

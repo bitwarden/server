@@ -18,5 +18,6 @@ namespace Bit.Core.Services
         Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token);
         Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail, IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
+        Task SendPasswordlessSignInAsync(string baseUrl, string token, string email);
     }
 }

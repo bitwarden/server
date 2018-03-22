@@ -27,7 +27,8 @@ namespace Bit.Admin.Controllers
         {
             if(ModelState.IsValid)
             {
-                await _signInManager.PasswordlessSignInAsync(model.Email);
+                await _signInManager.PasswordlessSignInAsync(model.Email,
+                    Url.Action("Confirm", "Login", null, Request.Scheme));
                 return RedirectToAction("Index", "Home");
             }
 

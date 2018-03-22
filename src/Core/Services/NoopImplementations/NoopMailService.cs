@@ -61,5 +61,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
