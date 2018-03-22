@@ -3,6 +3,74 @@
     ViewData["Title"] = "Organization Edit: " + Model.Organization.Name;
 }
 
+@section Scripts {
+    <script>
+        (function() {
+            document.getElementById('enterprise-trial').addEventListener('click', function () {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !==
+                    '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                    alert('Organization is not on a free plan.');
+                    return;
+                }
+
+                // Plan
+                document.getElementById('@(nameof(Model.PlanType))').value =
+                    '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)';
+                document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+                document.getElementById('@(nameof(Model.Seats))').value = '10';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Features
+                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
+                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
+                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
+                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+                document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+            });
+
+            document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', function() {
+                var selectEl = document.getElementById('@(nameof(Model.PlanType))');
+                var selectText = selectEl.options[selectEl.selectedIndex].text;
+                document.getElementById('@(nameof(Model.Plan))').value = selectText;
+            });
+
+            document.getElementById('gateway-customer-link').addEventListener('click', function () {
+                var gateway = document.getElementById('@(nameof(Model.Gateway))');
+                var customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
+                if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
+                    return;
+                }
+
+                if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                    window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+                } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
+                        + customerId.value, '_blank');
+                }
+            });
+
+            document.getElementById('gateway-subscription-link').addEventListener('click', function () {
+                var gateway = document.getElementById('@(nameof(Model.Gateway))');
+                var subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
+                if (!gateway || gateway.value === '' || !subId || subId.value === '') {
+                    return;
+                }
+
+                if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                    window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+                } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
+                        'subscriptions/' + subId.value, '_blank');
+                }
+            });
+        })();
+    </script>
+}
+
 <h1>Edit Organization <small>@Model.Organization.Name</small></h1>
 
 <form method="post">
@@ -414,21 +482,40 @@
         <div class="col-sm">
             <div class="form-group">
                 <label asp-for="GatewayCustomerId"></label>
-                <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                <div class="input-group">
+                    <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                    <div class="input-group-append">
+                        <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-sm">
             <div class="form-group">
                 <label asp-for="GatewaySubscriptionId"></label>
-                <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                <div class="input-group">
+                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                    <div class="input-group-append">
+                        <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div class="d-flex mt-4">
         <button type="submit" class="btn btn-primary">Save</button>
-        <a class="btn btn-danger ml-auto" asp-action="Delete" asp-route-id="@Model.Organization.Id"
-           onclick="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
-            Delete
-        </a>
+        <div class="ml-auto d-flex">
+            <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
+                Enterprise Trial
+            </button>
+            <a class="btn btn-danger" asp-action="Delete" asp-route-id="@Model.Organization.Id"
+               onclick="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
+                Delete
+            </a>
+        </div>
     </div>
 </form>

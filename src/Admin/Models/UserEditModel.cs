@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.Models
 {
@@ -8,9 +10,11 @@ namespace Bit.Admin.Models
     {
         public UserEditModel() { }
 
-        public UserEditModel(User user)
+        public UserEditModel(User user, GlobalSettings globalSettings)
         {
             User = user;
+            BraintreeMerchantId = globalSettings.Braintree.MerchantId;
+
             Name = user.Name;
             Email = user.Email;
             EmailVerified = user.EmailVerified;
@@ -24,6 +28,9 @@ namespace Bit.Admin.Models
         }
 
         public User User { get; set; }
+        public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
+        public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
+        public string BraintreeMerchantId { get; set; }
 
         [Display(Name = "Name")]
         public string Name { get; set; }

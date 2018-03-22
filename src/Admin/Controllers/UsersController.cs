@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Admin.Models;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
+using Bit.Core;
 
 namespace Bit.Admin.Controllers
 {
@@ -13,10 +14,14 @@ namespace Bit.Admin.Controllers
     public class UsersController : Controller
     {
         private readonly IUserRepository _userRepository;
+        private readonly GlobalSettings _globalSettings;
 
-        public UsersController(IUserRepository userRepository)
+        public UsersController(
+            IUserRepository userRepository,
+            GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
+            _globalSettings = globalSettings;
         }
 
         public async Task<IActionResult> Index(string email, int page = 1, int count = 25)
@@ -50,7 +55,7 @@ namespace Bit.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            return View(new UserEditModel(user));
+            return View(new UserEditModel(user, _globalSettings));
         }
 
         [HttpPost]
