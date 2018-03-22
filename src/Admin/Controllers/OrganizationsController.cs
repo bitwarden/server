@@ -19,7 +19,7 @@ namespace Bit.Admin.Controllers
             _organizationRepository = organizationRepository;
         }
 
-        public async Task<IActionResult> Index(string name = null, string userEmail = null, bool paid = false,
+        public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
             int page = 1, int count = 25)
         {
             if(page < 1)
@@ -33,8 +33,7 @@ namespace Bit.Admin.Controllers
             }
 
             var skip = (page - 1) * count;
-            var organizations = await _organizationRepository.SearchAsync(name, userEmail, paid ? (bool?)true : null,
-                skip, count);
+            var organizations = await _organizationRepository.SearchAsync(name, userEmail, paid, skip, count);
             return View(new OrganizationsModel
             {
                 Items = organizations as List<Organization>,
