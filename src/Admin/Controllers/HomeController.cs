@@ -73,7 +73,7 @@ namespace Bit.Admin.Controllers
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     var data = JObject.Parse(json);
-                    return new JsonResult(data.ToString());
+                    return new JsonResult(data["version"].ToString());
                 }
             }
             catch(HttpRequestException) { }
