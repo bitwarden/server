@@ -5,8 +5,8 @@
 
 @section Scripts {
     <script>
-        (function() {
-            document.getElementById('upgrade-premium').addEventListener('click', function () {
+        (() => {
+            document.getElementById('upgrade-premium').addEventListener('click', () => {
                 if (document.getElementById('@(nameof(Model.Premium))').checked) {
                     alert('User is already premium.');
                     return;
@@ -21,9 +21,9 @@
                     '@Model.OneYearExpirationDate';
             });
 
-            document.getElementById('gateway-customer-link').addEventListener('click', function () {
-                var gateway = document.getElementById('@(nameof(Model.Gateway))');
-                var customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
+            document.getElementById('gateway-customer-link').addEventListener('click', () => {
+                const gateway = document.getElementById('@(nameof(Model.Gateway))');
+                const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
                 if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
                     return;
                 }
@@ -36,9 +36,9 @@
                 }
             });
 
-            document.getElementById('gateway-subscription-link').addEventListener('click', function () {
-                var gateway = document.getElementById('@(nameof(Model.Gateway))');
-                var subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
+            document.getElementById('gateway-subscription-link').addEventListener('click', () => {
+                const gateway = document.getElementById('@(nameof(Model.Gateway))');
+                const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
                 if (!gateway || gateway.value === '' || !subId || subId.value === '') {
                     return;
                 }
