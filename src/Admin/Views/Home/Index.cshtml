@@ -99,32 +99,32 @@
 <h2>Settings</h2>
 
 <h3>SMTP</h3>
-@if(Model.GlobalSettings.Mail.Smtp == null)
+@if(!Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Mail?.Smtp?.Host))
 {
-<p class="text-muted">Not configured</p>
+    <p class="text-muted">Not configured</p>
 }
 else
 {
-<dl class="row">
-    <dt class="col-sm-4 col-lg-3">Host</dt>
-    <dd class="col-sm-8 col-lg-9">
-        @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Host) ? "-" : Model.GlobalSettings.Mail.Smtp.Host)
-    </dd>
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Host</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Host) ? "-" : Model.GlobalSettings.Mail.Smtp.Host)
+        </dd>
 
-    <dt class="col-sm-4 col-lg-3">Port</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.GlobalSettings.Mail.Smtp.Port</dd>
+        <dt class="col-sm-4 col-lg-3">Port</dt>
+        <dd class="col-sm-8 col-lg-9">@Model.GlobalSettings.Mail.Smtp.Port</dd>
 
-    <dt class="col-sm-4 col-lg-3">SSL</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
+        <dt class="col-sm-4 col-lg-3">SSL</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
 
-    <dt class="col-sm-4 col-lg-3">Credentials</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Default" : "Provided")</dd>
+        <dt class="col-sm-4 col-lg-3">Credentials</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Default" : "Provided")</dd>
 
-    <dt class="col-sm-4 col-lg-3">Username</dt>
-    <dd class="col-sm-8 col-lg-9">
-        @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Username) ? "-" : Model.GlobalSettings.Mail.Smtp.Username)
-    </dd>
-</dl>
+        <dt class="col-sm-4 col-lg-3">Username</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Username) ? "-" : Model.GlobalSettings.Mail.Smtp.Username)
+        </dd>
+    </dl>
 }
 
 <h3>Other</h3>
@@ -134,11 +134,11 @@ else
     <dd class="col-sm-8 col-lg-9">
         @if(Model.GlobalSettings.Installation?.Id != null)
         {
-        <code>@Model.GlobalSettings.Installation.Id</code>
+            <code>@Model.GlobalSettings.Installation.Id</code>
         }
         else
         {
-        <text>-</text>
+            <text>-</text>
         }
     </dd>
 
@@ -149,11 +149,11 @@ else
     <dd class="col-sm-8 col-lg-9">
         @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.PushRelayBaseUri))
         {
-        <span><i class="fa fa-check"></i> Configured</span>
+            <span><i class="fa fa-check"></i> Configured</span>
         }
         else
         {
-        <span class="text-muted">Not configured</span>
+            <span class="text-muted">Not configured</span>
         }
     </dd>
 
@@ -161,11 +161,11 @@ else
     <dd class="col-sm-8 col-lg-9">
         @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Yubico?.Key) && Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Yubico?.ClientId))
         {
-        <span><i class="fa fa-check"></i> Configured</span>
+            <span><i class="fa fa-check"></i> Configured</span>
         }
         else
         {
-        <span class="text-muted">Not configured</span>
+            <span class="text-muted">Not configured</span>
         }
     </dd>
 
@@ -173,11 +173,11 @@ else
     <dd class="col-sm-8 col-lg-9">
         @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Duo?.AKey))
         {
-        <span><i class="fa fa-check"></i> Configured</span>
+            <span><i class="fa fa-check"></i> Configured</span>
         }
         else
         {
-        <span class="text-muted">Not configured</span>
+            <span class="text-muted">Not configured</span>
         }
     </dd>
 </dl>
