@@ -63,7 +63,7 @@ namespace Bit.Scim
             var telConfig = app.ApplicationServices.GetService<TelemetryConfiguration>();
             telConfig.DisableTelemetry = true;
 
-            loggerFactory.AddSerilog(env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
 
             if(env.IsDevelopment())
             {

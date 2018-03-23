@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
@@ -10,6 +11,7 @@ namespace Bit.Core.Utilities
     {
         public static ILoggerFactory AddSerilog(
             this ILoggerFactory factory,
+            IApplicationBuilder appBuilder,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings,
@@ -31,6 +33,16 @@ namespace Bit.Core.Utilities
                 {
                     config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
                         timeToLive: TimeSpan.FromDays(7));
+                }
+                else if(globalSettings.Sentry != null && CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
+                {
+                    config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
+                        .Enrich.FromLogContext()
+                        .Enrich.WithProperty("Project", globalSettings.ProjectName)
+                        .Destructure.With<HttpContextDestructingPolicy>()
+                        .Filter.ByExcluding(e => e.Exception?.CheckIfCaptured() == true);
+
+                    appBuilder.AddSentryContext();
                 }
                 else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
                 {

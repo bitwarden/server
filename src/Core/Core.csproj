@@ -72,6 +72,7 @@
     <PackageReference Include="IdentityServer4" Version="2.1.2" />
     <PackageReference Include="Dapper" Version="1.50.4" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
+    <PackageReference Include="Serilog.Sinks.Sentry.AspNetCore" Version="2.1.4" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.0.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="3.12.0" />

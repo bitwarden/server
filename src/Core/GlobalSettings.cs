@@ -22,6 +22,7 @@ namespace Bit.Core
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
+        public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
@@ -113,6 +114,11 @@ namespace Bit.Core
         {
             public string Uri { get; set; }
             public string Key { get; set; }
+        }
+
+        public class SentrySettings
+        {
+            public string Dsn { get; set; }
         }
 
         public class NotificationHubSettings
