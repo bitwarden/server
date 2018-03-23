@@ -28,15 +28,18 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item" active-controller="Home">
-                        <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
-                    </li>
-                    <li class="nav-item" active-controller="Users">
-                        <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
-                    </li>
-                    <li class="nav-item" active-controller="Organizations">
-                        <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
-                    </li>
+                    @if(SignInManager.IsSignedIn(User))
+                    {
+                        <li class="nav-item" active-controller="Home">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item" active-controller="Users">
+                            <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
+                        </li>
+                        <li class="nav-item" active-controller="Organizations">
+                            <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
+                        </li>
+                    }
                     <li class="nav-item">
                         <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank">Docs</a>
                     </li>
