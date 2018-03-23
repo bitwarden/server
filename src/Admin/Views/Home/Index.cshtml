@@ -1,5 +1,117 @@
-﻿@{
-    ViewData["Title"] = "Home";
+﻿@model HomeModel
+@{
+    ViewData["Title"] = "Dashboard";
 }
 
-Welcome to the Bitwarden Admin Portal.
+@section Scripts {
+    <script>
+        (() => {
+            let loadedWebLatest = false;
+            let loadedWebInstalled = false;
+
+            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "web" })').then((response) => {
+                return response.json();
+            }).then((version) => {
+                document.getElementById('web-latest').innerText = version;
+                loadedWebLatest = true;
+                if (loadedWebInstalled) {
+                    checkVersions('web', document.getElementById('web-installed').innerText, version);
+                }
+            });
+
+            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "api" })').then((response) => {
+                return response.json();
+            }).then((version) => {
+                document.getElementById('core-latest').innerText = version;
+                checkVersions('core', '@Model.CurrentVersion', version);
+            });
+
+            fetch('@Url.Action("GetInstalledWebVersion")').then((response) => {
+                return response.json();
+            }).then((version) => {
+                document.getElementById('web-installed').innerText = version;
+                loadedWebInstalled = true;
+                if (loadedWebLatest) {
+                    checkVersions('web', version, document.getElementById('web-latest').innerText);
+                }
+            });
+
+            function checkVersions(platform, installed, latest) {
+                if (installed === '-' || latest === '-') {
+                    return;
+                }
+
+                if (installed !== latest) {
+                    document.getElementById(platform + '-warning').classList.remove('d-none');
+                } else {
+                    document.getElementById(platform + '-success').classList.remove('d-none');
+                }
+            }
+        })();
+    </script>
+}
+
+<h1>Dashboard</h1>
+
+<p>Welcome to the Bitwarden System Administration Portal.</p>
+
+<h2>Version</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Core Installed</dt>
+    <dd class="col-sm-9">
+        <span id="core-installed">@Model.CurrentVersion</span>
+        <i class="fa fa-check text-success d-none" id="core-success" title="You are up to date!"></i>
+        <i class="fa fa-warning text-warning d-none" id="core-warning"
+           title="This version is not the latest. You should update."></i>
+    </dd>
+
+    <dt class="col-sm-3">Core Latest</dt>
+    <dd class="col-sm-9">
+        <span id="core-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
+    </dd>
+
+    <dt class="col-sm-3">Web Installed</dt>
+    <dd class="col-sm-9">
+        <span id="web-installed"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
+        <i class="fa fa-check text-success d-none" id="web-success" title="You are up to date!"></i>
+        <i class="fa fa-warning text-warning d-none" id="web-warning"
+           title="This version is not the latest. You should update."></i>
+    </dd>
+
+    <dt class="col-sm-3">Web Latest</dt>
+    <dd class="col-sm-9">
+        <span id="web-latest"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
+    </dd>
+</dl>
+
+<h2>Settings</h2>
+
+<h3>SMTP</h3>
+@if(Model.GlobalSettings.Mail.Smtp == null)
+{
+    <p>Not configured.</p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Host</dt>
+        <dd class="col-sm-9">
+            @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Host) ? "-" : Model.GlobalSettings.Mail.Smtp.Host)
+        </dd>
+
+        <dt class="col-sm-3">Port</dt>
+        <dd class="col-sm-9">@Model.GlobalSettings.Mail.Smtp.Port</dd>
+
+        <dt class="col-sm-3">SSL</dt>
+        <dd class="col-sm-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-3">Default Credentials?</dt>
+        <dd class="col-sm-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-3">Username</dt>
+        <dd class="col-sm-9">
+            @(string.IsNullOrWhiteSpace(Model.GlobalSettings.Mail.Smtp.Username) ? "-" : Model.GlobalSettings.Mail.Smtp.Username)
+        </dd>
+    </dl>
+}
