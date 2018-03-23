@@ -1,0 +1,20 @@
+﻿@model OrganizationViewModel
+<dl class="row">
+    <dt class="col-sm-2">Id</dt>
+    <dd class="col-sm-10"><code>@Model.Organization.Id</code></dd>
+
+    <dt class="col-sm-2">Users</dt>
+    <dd class="col-sm-10">@Model.UserCount</dd>
+
+    <dt class="col-sm-2">Owners</dt>
+    <dd class="col-sm-10">@(string.IsNullOrWhiteSpace(Model.Owners) ? "None" : Model.Owners)</dd>
+
+    <dt class="col-sm-2">Admins</dt>
+    <dd class="col-sm-10">@(string.IsNullOrWhiteSpace(Model.Admins) ? "None" : Model.Admins)</dd>
+
+    <dt class="col-sm-2">Created</dt>
+    <dd class="col-sm-10">@Model.Organization.CreationDate.ToString()</dd>
+
+    <dt class="col-sm-2">Modified</dt>
+    <dd class="col-sm-10">@Model.Organization.RevisionDate.ToString()</dd>
+</dl>

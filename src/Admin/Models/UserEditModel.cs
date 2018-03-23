@@ -8,14 +8,13 @@ using Bit.Core.Utilities;
 
 namespace Bit.Admin.Models
 {
-    public class UserEditModel
+    public class UserEditModel : UserViewModel
     {
         public UserEditModel() { }
 
         public UserEditModel(User user, IEnumerable<Cipher> ciphers, GlobalSettings globalSettings)
+            : base(user, ciphers)
         {
-            User = user;
-            CipherCount = ciphers.Count();
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = user.Name;
@@ -30,8 +29,6 @@ namespace Bit.Admin.Models
             PremiumExpirationDate = user.PremiumExpirationDate;
         }
 
-        public User User { get; set; }
-        public int CipherCount { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }

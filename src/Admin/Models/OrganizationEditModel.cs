@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -10,17 +9,14 @@ using Bit.Core.Utilities;
 
 namespace Bit.Admin.Models
 {
-    public class OrganizationEditModel
+    public class OrganizationEditModel : OrganizationViewModel
     {
         public OrganizationEditModel() { }
 
         public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
             GlobalSettings globalSettings)
+            : base(org, orgUsers)
         {
-            Organization = org;
-            UserCount = orgUsers.Count();
-            Owners = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Owner).Select(u => u.Email));
-            Admins = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Admin).Select(u => u.Email));
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = org.Name;
@@ -50,10 +46,6 @@ namespace Bit.Admin.Models
             ExpirationDate = org.ExpirationDate;
         }
 
-        public Organization Organization { get; set; }
-        public string Owners { get; set; }
-        public string Admins { get; set; }
-        public int UserCount { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }

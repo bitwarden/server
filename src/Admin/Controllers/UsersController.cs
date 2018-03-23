@@ -50,6 +50,18 @@ namespace Bit.Admin.Controllers
             });
         }
 
+        public async Task<IActionResult> View(Guid id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if(user == null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+            return View(new UserViewModel(user, ciphers));
+        }
+
         public async Task<IActionResult> Edit(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);

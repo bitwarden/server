@@ -74,25 +74,7 @@
 <h1>Organization <small>@Model.Organization.Name</small></h1>
 
 <h2>Information</h2>
-<dl class="row">
-    <dt class="col-sm-2">Id</dt>
-    <dd class="col-sm-10"><code>@Model.Organization.Id</code></dd>
-
-    <dt class="col-sm-2">Users</dt>
-    <dd class="col-sm-10">@Model.UserCount</dd>
-
-    <dt class="col-sm-2">Owners</dt>
-    <dd class="col-sm-10">@(string.IsNullOrWhiteSpace(Model.Owners) ? "None" : Model.Owners)</dd>
-
-    <dt class="col-sm-2">Admins</dt>
-    <dd class="col-sm-10">@(string.IsNullOrWhiteSpace(Model.Admins) ? "None" : Model.Admins)</dd>
-
-    <dt class="col-sm-2">Created</dt>
-    <dd class="col-sm-10">@Model.Organization.CreationDate.ToString()</dd>
-
-    <dt class="col-sm-2">Modified</dt>
-    <dd class="col-sm-10">@Model.Organization.RevisionDate.ToString()</dd>
-</dl>
+@Html.Partial("_ViewInformation", Model)
 <form method="post" id="edit-form">
     <h2>General</h2>
     <div class="row">

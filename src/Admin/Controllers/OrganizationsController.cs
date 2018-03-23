@@ -53,6 +53,18 @@ namespace Bit.Admin.Controllers
             });
         }
 
+        public async Task<IActionResult> View(Guid id)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(id);
+            if(organization == null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
+            return View(new OrganizationViewModel(organization, users));
+        }
+
         public async Task<IActionResult> Edit(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
