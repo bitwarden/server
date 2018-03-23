@@ -50,7 +50,8 @@ namespace Bit.Admin.Controllers
                 UserEmail = string.IsNullOrWhiteSpace(userEmail) ? null : userEmail,
                 Paid = paid,
                 Page = page,
-                Count = count
+                Count = count,
+                Action = _globalSettings.SelfHosted ? "View" : "Edit"
             });
         }
 

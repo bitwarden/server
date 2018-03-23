@@ -7,5 +7,6 @@ namespace Bit.Admin.Models
         public string Name { get; set; }
         public string UserEmail { get; set; }
         public bool? Paid { get; set; }
+        public string Action { get; set; }
     }
 }

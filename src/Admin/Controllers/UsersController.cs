@@ -47,7 +47,8 @@ namespace Bit.Admin.Controllers
                 Items = users as List<User>,
                 Email = string.IsNullOrWhiteSpace(email) ? null : email,
                 Page = page,
-                Count = count
+                Count = count,
+                Action = _globalSettings.SelfHosted ? "View" : "Edit"
             });
         }
 
