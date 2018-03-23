@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@inject SignInManager<IdentityUser> SignInManager
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -39,6 +40,16 @@
                         <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
                     </li>
                 </ul>
+                @if(SignInManager.IsSignedIn(User))
+                {
+                    <form asp-controller="Login" asp-action="Logout" method="post">
+                        <button type="submit" class="btn btn-secondary">Log Out</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="btn btn-secondary" asp-controller="Login" asp-action="Index">Log In</a>
+                }
             </div>
         </div>
     </nav>

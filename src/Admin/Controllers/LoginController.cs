@@ -40,7 +40,7 @@ namespace Bit.Admin.Controllers
 
         public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
         {
-            var result = await _signInManager.PasswordlessSignInAsync(email, token, false);
+            var result = await _signInManager.PasswordlessSignInAsync(email, token, true);
             if(!result.Succeeded)
             {
                 // TODO: error?
@@ -53,6 +53,14 @@ namespace Bit.Admin.Controllers
             }
 
             return RedirectToAction("Index", "Home");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Index");
         }
     }
 }
