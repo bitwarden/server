@@ -37,6 +37,7 @@ CREATE PROCEDURE [dbo].[Organization_Search]
     @Paid BIT,
     @Skip INT = 0,
     @Take INT = 25
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
