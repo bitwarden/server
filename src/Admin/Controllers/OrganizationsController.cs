@@ -14,13 +14,16 @@ namespace Bit.Admin.Controllers
     public class OrganizationsController : Controller
     {
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _globalSettings = globalSettings;
         }
 
@@ -58,10 +61,12 @@ namespace Bit.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            return View(new OrganizationEditModel(organization, _globalSettings));
+            var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
+            return View(new OrganizationEditModel(organization, users, _globalSettings));
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);

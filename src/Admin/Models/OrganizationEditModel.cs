@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 
@@ -10,9 +14,13 @@ namespace Bit.Admin.Models
     {
         public OrganizationEditModel() { }
 
-        public OrganizationEditModel(Organization org, GlobalSettings globalSettings)
+        public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
+            GlobalSettings globalSettings)
         {
             Organization = org;
+            UserCount = orgUsers.Count();
+            Owners = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Owner).Select(u => u.Email));
+            Admins = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Admin).Select(u => u.Email));
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = org.Name;
@@ -43,6 +51,9 @@ namespace Bit.Admin.Models
         }
 
         public Organization Organization { get; set; }
+        public string Owners { get; set; }
+        public string Admins { get; set; }
+        public int UserCount { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }
@@ -66,7 +77,7 @@ namespace Bit.Admin.Models
         public string BillingEmail { get; set; }
         [Required]
         [Display(Name = "Plan")]
-        public Core.Enums.PlanType? PlanType { get; set; }
+        public PlanType? PlanType { get; set; }
         [Required]
         [Display(Name = "Plan Name")]
         public string Plan { get; set; }
@@ -89,7 +100,7 @@ namespace Bit.Admin.Models
         [Display(Name = "Max. Storage GB")]
         public short? MaxStorageGb { get; set; }
         [Display(Name = "Gateway")]
-        public Core.Enums.GatewayType? Gateway { get; set; }
+        public GatewayType? Gateway { get; set; }
         [Display(Name = "Gateway Customer Id")]
         public string GatewayCustomerId { get; set; }
         [Display(Name = "Gateway Subscription Id")]

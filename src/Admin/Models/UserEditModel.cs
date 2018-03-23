@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using Bit.Core;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
@@ -10,9 +12,10 @@ namespace Bit.Admin.Models
     {
         public UserEditModel() { }
 
-        public UserEditModel(User user, GlobalSettings globalSettings)
+        public UserEditModel(User user, IEnumerable<Cipher> ciphers, GlobalSettings globalSettings)
         {
             User = user;
+            CipherCount = ciphers.Count();
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = user.Name;
@@ -28,6 +31,7 @@ namespace Bit.Admin.Models
         }
 
         public User User { get; set; }
+        public int CipherCount { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }

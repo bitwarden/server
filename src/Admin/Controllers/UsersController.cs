@@ -14,13 +14,16 @@ namespace Bit.Admin.Controllers
     public class UsersController : Controller
     {
         private readonly IUserRepository _userRepository;
+        private readonly ICipherRepository _cipherRepository;
         private readonly GlobalSettings _globalSettings;
 
         public UsersController(
             IUserRepository userRepository,
+            ICipherRepository cipherRepository,
             GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
+            _cipherRepository = cipherRepository;
             _globalSettings = globalSettings;
         }
 
@@ -55,10 +58,12 @@ namespace Bit.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            return View(new UserEditModel(user, _globalSettings));
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+            return View(new UserEditModel(user, ciphers, _globalSettings));
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Guid id, UserEditModel model)
         {
             var user = await _userRepository.GetByIdAsync(id);

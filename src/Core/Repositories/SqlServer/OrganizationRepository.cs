@@ -55,11 +55,7 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Name = name, UserEmail = userEmail, Paid = paid, Skip = skip, Take = take },
                     commandType: CommandType.StoredProcedure);
 
-                // Select distinct results by Id
-                return results
-                    .GroupBy(c => c.Id)
-                    .Select(g => g.First())
-                    .ToList();
+                return results.ToList();
             }
         }
 
