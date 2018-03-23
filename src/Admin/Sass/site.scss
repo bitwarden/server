@@ -1,1 +1,30 @@
-﻿@import "../node_modules/bootstrap/scss/bootstrap.scss";
+﻿$theme-colors: ( "primary": #3c8dbc, "primary-accent": #286090, "danger": #dd4b39, "success": #00a65a, "info": #555555, "warning": #bf7e16);
+$font-family-sans-serif: 'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+
+$h1-font-size: 2rem;
+$h2-font-size: 1.3rem;
+$h3-font-size: 1rem;
+$h4-font-size: 1rem;
+$h5-font-size: 1rem;
+$h6-font-size: 1rem;
+
+@import "../node_modules/bootstrap/scss/bootstrap.scss";
+
+h1 {
+    border-bottom: 1px solid $border-color;
+    margin-bottom: 20px;
+
+    small {
+        color: $text-muted;
+        font-size: $h1-font-size * .5;
+    }
+}
+
+h2 {
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+h3 {
+    text-transform: uppercase;
+}

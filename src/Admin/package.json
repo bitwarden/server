@@ -10,6 +10,7 @@
     "gulp-cssmin": "0.2.0",
     "gulp-uglify": "3.0.0",
     "gulp-sass": "3.1.0",
+    "gulp-google-webfonts": "1.0.0",
     "bootstrap": "4.0.0",
     "font-awesome": "4.7.0",
     "popper.js": "1.14.1",

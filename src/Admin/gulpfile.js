@@ -4,6 +4,7 @@ const gulp = require('gulp'),
     rimraf = require('rimraf'),
     merge = require('merge-stream'),
     runSequence = require('run-sequence'),
+    googleWebFonts = require('gulp-google-webfonts'),
     concat = require('gulp-concat'),
     cssmin = require('gulp-cssmin'),
     uglify = require('gulp-uglify'),
@@ -78,6 +79,15 @@ gulp.task('sass:watch', () => {
     gulp.watch(paths.sass, ['sass']);
 });
 
+gulp.task('webfonts', () => {
+    return gulp.src('./webfonts.list')
+        .pipe(googleWebFonts({
+            fontsDir: 'webfonts',
+            cssFilename: 'webfonts.css'
+        }))
+        .pipe(gulp.dest(paths.cssDir));
+});
+
 gulp.task('build', function (cb) {
-    return runSequence('clean', ['lib', 'sass'], cb);
+    return runSequence('clean', ['lib', 'sass', 'webfonts'], cb);
 });

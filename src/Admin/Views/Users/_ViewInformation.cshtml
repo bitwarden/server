@@ -1,17 +1,17 @@
 ﻿@model UserViewModel
 <dl class="row">
-    <dt class="col-sm-2">Id</dt>
-    <dd class="col-sm-10"><code>@Model.User.Id</code></dd>
+    <dt class="col-sm-4 col-lg-3">Id</dt>
+    <dd class="col-sm-8 col-lg-9"><code>@Model.User.Id</code></dd>
 
-    <dt class="col-sm-2">Items</dt>
-    <dd class="col-sm-10">@Model.CipherCount</dd>
+    <dt class="col-sm-4 col-lg-3">Items</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
 
-    <dt class="col-sm-2">Created</dt>
-    <dd class="col-sm-10">@Model.User.CreationDate.ToString()</dd>
+    <dt class="col-sm-4 col-lg-3">Created</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.User.CreationDate.ToString()</dd>
 
-    <dt class="col-sm-2">Modified</dt>
-    <dd class="col-sm-10">@Model.User.RevisionDate.ToString()</dd>
+    <dt class="col-sm-4 col-lg-3">Modified</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.User.RevisionDate.ToString()</dd>
 
-    <dt class="col-sm-2">Account Modified</dt>
-    <dd class="col-sm-10">@Model.User.AccountRevisionDate.ToString()</dd>
+    <dt class="col-sm-4 col-lg-3">Account Modified</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.User.AccountRevisionDate.ToString()</dd>
 </dl>
