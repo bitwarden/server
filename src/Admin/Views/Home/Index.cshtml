@@ -57,40 +57,51 @@
 
 <h2>Version</h2>
 
-<dl class="row">
-    <dt class="col-sm-3">Core Installed</dt>
-    <dd class="col-sm-9">
-        <span id="core-installed">@Model.CurrentVersion</span>
-        <i class="fa fa-check text-success d-none" id="core-success" title="You are up to date!"></i>
-        <i class="fa fa-warning text-warning d-none" id="core-warning"
-           title="This version is not the latest. You should update."></i>
-    </dd>
+<div class="row">
+    <div class="col-md">
+        <dl class="row">
+            <dt class="col-sm-4">Core Installed</dt>
+            <dd class="col-sm-8">
+                <span id="core-installed">@Model.CurrentVersion</span>
+                <i class="fa fa-check text-success d-none" id="core-success" title="You are up to date!"></i>
+                <i class="fa fa-warning text-warning d-none" id="core-warning"
+                   title="This version is not the latest. You should update."></i>
+            </dd>
 
-    <dt class="col-sm-3">Core Latest</dt>
-    <dd class="col-sm-9">
-        <span id="core-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
-    </dd>
+            <dt class="col-sm-4">Core Latest</dt>
+            <dd class="col-sm-8">
+                <span id="core-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
+            </dd>
 
-    <dt class="col-sm-3">Web Installed</dt>
-    <dd class="col-sm-9">
-        <span id="web-installed"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
-        <i class="fa fa-check text-success d-none" id="web-success" title="You are up to date!"></i>
-        <i class="fa fa-warning text-warning d-none" id="web-warning"
-           title="This version is not the latest. You should update."></i>
-    </dd>
+            <dt class="col-sm-4">Web Installed</dt>
+            <dd class="col-sm-8">
+                <span id="web-installed"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
+                <i class="fa fa-check text-success d-none" id="web-success" title="You are up to date!"></i>
+                <i class="fa fa-warning text-warning d-none" id="web-warning"
+                   title="This version is not the latest. You should update."></i>
+            </dd>
 
-    <dt class="col-sm-3">Web Latest</dt>
-    <dd class="col-sm-9">
-        <span id="web-latest"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
-    </dd>
-</dl>
+            <dt class="col-sm-4">Web Latest</dt>
+            <dd class="col-sm-8">
+                <span id="web-latest"><i class="fa fa-spinner fa-spin" title="Checking version..."></i></span>
+            </dd>
+        </dl>
+    </div>
+    <div class="col-md">
+        <ul>
+            <li><a href="https://github.com/bitwarden/core/releases" target="_blank">Check for Core updates</a></li>
+            <li><a href="https://github.com/bitwarden/web/releases" target="_blank">Check for Web updates</a></li>
+            <li><a href="https://help.bitwarden.com/article/updating-on-premise/" target="_blank">How do I update?</a></li>
+        </ul>
+    </div>
+</div>
 
 <h2>Settings</h2>
 
 <h3>SMTP</h3>
 @if(Model.GlobalSettings.Mail.Smtp == null)
 {
-    <p>Not configured.</p>
+    <p class="text-muted">Not configured</p>
 }
 else
 {
@@ -106,8 +117,8 @@ else
         <dt class="col-sm-3">SSL</dt>
         <dd class="col-sm-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
 
-        <dt class="col-sm-3">Default Credentials?</dt>
-        <dd class="col-sm-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Yes" : "No")</dd>
+        <dt class="col-sm-3">Credentials</dt>
+        <dd class="col-sm-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Default" : "Provided")</dd>
 
         <dt class="col-sm-3">Username</dt>
         <dd class="col-sm-9">
@@ -115,3 +126,58 @@ else
         </dd>
     </dl>
 }
+
+<h3>Other</h3>
+
+<dl class="row">
+    <dt class="col-sm-3">Installation Id</dt>
+    <dd class="col-sm-9">
+        @if(Model.GlobalSettings.Installation?.Id != null)
+        {
+            <code>@Model.GlobalSettings.Installation.Id</code>
+        }
+        else
+        {
+            <text>-</text>
+        }
+    </dd>
+
+    <dt class="col-sm-3">User Registraion</dt>
+    <dd class="col-sm-9">@(Model.GlobalSettings.DisableUserRegistration ? "Disabled" : "Enabled")</dd>
+
+    <dt class="col-sm-3">Push Notifications Relay</dt>
+    <dd class="col-sm-9">
+        @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.PushRelayBaseUri))
+        {
+            <span><i class="fa fa-check"></i> Configured</span>
+        }
+        else
+        {
+            <span class="text-muted">Not configured</span>
+        }
+    </dd>
+
+    <dt class="col-sm-3">Yubico 2FA</dt>
+    <dd class="col-sm-9">
+        @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Yubico?.Key) && Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Yubico?.ClientId))
+        {
+            <span><i class="fa fa-check"></i> Configured</span>
+        }
+        else
+        {
+            <span class="text-muted">Not configured</span>
+        }
+    </dd>
+
+    <dt class="col-sm-3">Duo 2FA</dt>
+    <dd class="col-sm-9">
+        @if(Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Duo?.AKey))
+        {
+            <span><i class="fa fa-check"></i> Configured</span>
+        }
+        else
+        {
+            <span class="text-muted">Not configured</span>
+        }
+    </dd>
+</dl>
