@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
-using Bit.Core;
 using Bit.Core.Exceptions;
 
-namespace Bit.Api.Utilities
+namespace Bit.Core.Utilities
 {
     public class SelfHostedAttribute : ActionFilterAttribute
     {

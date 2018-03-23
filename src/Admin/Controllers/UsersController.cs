@@ -7,6 +7,7 @@ using Bit.Admin.Models;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.Controllers
 {
@@ -62,6 +63,7 @@ namespace Bit.Admin.Controllers
             return View(new UserViewModel(user, ciphers));
         }
 
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<IActionResult> Edit(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
@@ -76,6 +78,7 @@ namespace Bit.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<IActionResult> Edit(Guid id, UserEditModel model)
         {
             var user = await _userRepository.GetByIdAsync(id);

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Bit.Api.Utilities;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {

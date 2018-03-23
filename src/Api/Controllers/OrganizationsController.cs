@@ -17,6 +17,7 @@ using jsreport.Types;
 using Bit.Api.Models;
 using Stripe;
 using Microsoft.Extensions.Options;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {

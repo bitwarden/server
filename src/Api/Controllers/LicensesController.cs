@@ -3,11 +3,11 @@ using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core;
 using System.Threading.Tasks;
-using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using System;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
