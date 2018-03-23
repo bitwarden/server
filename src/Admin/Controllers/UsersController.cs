@@ -77,6 +77,8 @@ namespace Bit.Admin.Controllers
             return RedirectToAction("Edit", new { id });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);

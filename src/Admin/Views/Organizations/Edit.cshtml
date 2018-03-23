@@ -93,7 +93,7 @@
     <dt class="col-sm-2">Modified</dt>
     <dd class="col-sm-10">@Model.Organization.RevisionDate.ToString()</dd>
 </dl>
-<form method="post">
+<form method="post" id="edit-form">
     <h2>General</h2>
     <div class="row">
         <div class="col-sm">
@@ -526,16 +526,16 @@
             </div>
         </div>
     </div>
-    <div class="d-flex mt-4">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <div class="ml-auto d-flex">
-            <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
-                Enterprise Trial
-            </button>
-            <a class="btn btn-danger" asp-action="Delete" asp-route-id="@Model.Organization.Id"
-               onclick="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
-                Delete
-            </a>
-        </div>
-    </div>
 </form>
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+    <div class="ml-auto d-flex">
+        <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
+            Enterprise Trial
+        </button>
+        <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
+              onsubmit="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
+            <button class="btn btn-danger" type="submit">Delete</button>
+        </form>
+    </div>
+</div>

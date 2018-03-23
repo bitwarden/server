@@ -80,6 +80,8 @@ namespace Bit.Admin.Controllers
             return RedirectToAction("Edit", new { id });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
