@@ -28,13 +28,13 @@ namespace Bit.Core.Utilities
                     .Enrich.FromLogContext()
                     .Filter.ByIncludingOnly(filter);
 
-                if(globalSettings.DocumentDb != null && CoreHelpers.SettingHasValue(globalSettings.DocumentDb.Uri) &&
-                    CoreHelpers.SettingHasValue(globalSettings.DocumentDb.Key))
+                if(CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
+                    CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
                 {
-                    config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri), globalSettings.DocumentDb.Key,
-                        timeToLive: TimeSpan.FromDays(7));
+                    config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri),
+                        globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7));
                 }
-                else if(globalSettings.Sentry != null && CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
+                else if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
                 {
                     config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                         .Enrich.FromLogContext()
@@ -46,7 +46,8 @@ namespace Bit.Core.Utilities
                 }
                 else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
                 {
-                    config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
+                    config.WriteTo.RollingFile(
+                        $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
                 }
 
                 var serilog = config.CreateLogger();
