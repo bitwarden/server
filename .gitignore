@@ -205,3 +205,5 @@ mail_dist/
 src/Core/Properties/launchSettings.json
 *.override.env
 **/*.DS_Store
+src/Admin/wwwroot/lib
+src/Admin/wwwroot/css

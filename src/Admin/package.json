@@ -1,0 +1,18 @@
+{
+  "name": "bitwarden",
+  "version": "0.0.0",
+  "devDependencies": {
+    "gulp": "3.9.1",
+    "rimraf": "2.6.2",
+    "merge-stream": "1.0.1",
+    "run-sequence": "2.2.1",
+    "gulp-concat": "2.6.1",
+    "gulp-cssmin": "0.2.0",
+    "gulp-uglify": "3.0.0",
+    "gulp-sass": "3.1.0",
+    "bootstrap": "4.0.0",
+    "font-awesome": "4.7.0",
+    "popper.js": "1.14.1",
+    "jquery": "3.3.1"
+  }
+}
