@@ -5,9 +5,5 @@ RUN apt-get update \
         openssl \
 && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -g 999 bitwarden && \
-    useradd -r -u 999 -g bitwarden bitwarden
-USER bitwarden
-
 WORKDIR /app
 COPY obj/Docker/publish .
