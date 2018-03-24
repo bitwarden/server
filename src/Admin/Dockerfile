@@ -1,5 +1,7 @@
 FROM microsoft/aspnetcore:2.0.5
 
+ENV ASPNETCORE_URLS http://+:5000
+
 WORKDIR /app
 EXPOSE 5000
 COPY obj/Docker/publish .
