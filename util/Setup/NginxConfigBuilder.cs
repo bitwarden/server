@@ -195,7 +195,7 @@ server {{
   }}
 
   location /admin/ {{
-    proxy_pass http://admin/;
+    proxy_pass http://admin:5000/
   }}
 }}");
             }

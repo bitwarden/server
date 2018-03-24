@@ -1,7 +1,7 @@
 FROM microsoft/aspnetcore:2.0.5
 
 WORKDIR /app
-EXPOSE 80
+EXPOSE 5000
 COPY obj/Docker/publish .
 COPY entrypoint.sh /
 
