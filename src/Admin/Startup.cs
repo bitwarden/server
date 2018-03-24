@@ -71,11 +71,7 @@ namespace Bit.Admin
 
             if(globalSettings.SelfHosted)
             {
-                app.Use(async (context, next) =>
-                {
-                    context.Request.PathBase = "/admin";
-                    await next.Invoke();
-                });
+                app.UsePathBase("/admin");
             }
 
             app.UseAuthentication();
