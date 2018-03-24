@@ -5,6 +5,10 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
+RUN groupadd -g 999 bitwarden && \
+    useradd -r -u 999 -g bitwarden bitwarden
+USER bitwarden
+
 WORKDIR /tmp
 COPY iconserver.sha256 .
 RUN curl -L -o iconserver.zip https://github.com/mat/besticon/releases/download/v3.6.0/iconserver_linux_amd64.zip \
