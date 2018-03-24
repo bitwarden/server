@@ -2,6 +2,7 @@
     @Email NVARCHAR(50),
     @Skip INT = 0,
     @Take INT = 25
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
