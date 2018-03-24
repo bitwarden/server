@@ -145,6 +145,16 @@ services:
       - global.env
       - ../env/global.override.env
 
+  admin:
+    image: bitwarden/admin:{CoreVersion}
+    container_name: bitwarden-admin
+    restart: always
+    volumes:
+      - ../core:/etc/bitwarden/core
+    env_file:
+      - global.env
+      - ../env/global.override.env
+
   icons:
     image: bitwarden/icons:{CoreVersion}
     container_name: bitwarden-icons

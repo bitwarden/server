@@ -193,6 +193,10 @@ server {{
   location /icons/ {{
     proxy_pass http://icons/;
   }}
+
+  location /admin/ {{
+    proxy_pass http://admin/;
+  }}
 }}");
             }
         }
