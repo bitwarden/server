@@ -194,8 +194,8 @@ server {{
     proxy_pass http://icons/;
   }}
 
-  location /admin/ {{
-    proxy_pass http://admin:5000/admin/;
+  location /admin {{
+    proxy_pass http://admin:5000/;
   }}
 }}");
             }
