@@ -64,14 +64,14 @@ namespace Bit.Admin
         {
             loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
 
-            if(env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
             if(globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
+            }
+
+            if(env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
             }
 
             app.UseAuthentication();
