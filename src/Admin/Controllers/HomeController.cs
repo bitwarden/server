@@ -7,6 +7,7 @@ using Bit.Core;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Bit.Admin.Controllers
 {
@@ -52,7 +53,7 @@ namespace Bit.Admin.Controllers
                     foreach(var result in results)
                     {
                         var name = result["name"].ToString();
-                        if(name != "latest" && name != "beta")
+                        if(name.Count(c => c == '.') > 2)
                         {
                             return new JsonResult(name);
                         }

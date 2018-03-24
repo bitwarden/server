@@ -69,6 +69,15 @@ namespace Bit.Admin
                 app.UseDeveloperExceptionPage();
             }
 
+            if(globalSettings.SelfHosted)
+            {
+                app.Use(async (context, next) =>
+                {
+                    context.Request.PathBase = "/admin";
+                    await next.Invoke();
+                });
+            }
+
             app.UseAuthentication();
             app.UseStaticFiles();
             app.UseMvcWithDefaultRoute();
