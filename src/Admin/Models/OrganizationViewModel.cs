@@ -15,8 +15,14 @@ namespace Bit.Admin.Models
         {
             Organization = org;
             UserCount = orgUsers.Count();
-            Owners = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Owner).Select(u => u.Email));
-            Admins = string.Join(", ", orgUsers.Where(u => u.Type == OrganizationUserType.Admin).Select(u => u.Email));
+            Owners = string.Join(", ", 
+                orgUsers
+                .Where(u => u.Type == OrganizationUserType.Owner && u.Status == OrganizationUserStatusType.Confirmed)
+                .Select(u => u.Email));
+            Admins = string.Join(", ", 
+                orgUsers
+                .Where(u => u.Type == OrganizationUserType.Admin && u.Status == OrganizationUserStatusType.Confirmed)
+                .Select(u => u.Email));
         }
 
         public Organization Organization { get; set; }
