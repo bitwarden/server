@@ -19,7 +19,7 @@ COPY entrypoint.sh /
 
 RUN mkdir -p /etc/bitwarden/mssql/backups \
     && chown -R bitwarden:bitwarden /etc/bitwarden \
-    && mkdir /var/opt/mssql/data \
+    && mkdir -p /var/opt/mssql/data \
     && chown -R bitwarden:bitwarden /var/opt/mssql \
     && chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh \
