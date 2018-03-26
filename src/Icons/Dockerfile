@@ -12,10 +12,18 @@ RUN curl -L -o iconserver.zip https://github.com/mat/besticon/releases/download/
     && unzip iconserver.zip -d /etc/iconserver \
     && rm iconserver.*
 
+ENV ASPNETCORE_URLS http://+:5000
 WORKDIR /app
-EXPOSE 80
+EXPOSE 5000
 COPY obj/Docker/publish .
-
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
+
+RUN groupadd -g 999 bitwarden \
+    && useradd -r -u 999 -g bitwarden bitwarden \
+    && chown -R bitwarden:bitwarden /app \
+    && chown -R bitwarden:bitwarden /etc/iconserver \
+    && chmod +x /entrypoint.sh \
+    && chown bitwarden:bitwarden /entrypoint.sh
+
+USER bitwarden
 ENTRYPOINT ["/entrypoint.sh"]

@@ -165,8 +165,8 @@ services:
     container_name: bitwarden-nginx
     restart: always
     ports:
-      - '{HttpPort}:80'
-      - '{HttpsPort}:443'
+      - '{HttpPort}:8080'
+      - '{HttpsPort}:8081'
     volumes:
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt

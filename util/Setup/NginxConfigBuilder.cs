@@ -65,7 +65,7 @@ namespace Bit.Setup
             if(File.Exists("/bitwarden/nginx/default.conf"))
             {
                 var confContent = File.ReadAllText("/bitwarden/nginx/default.conf");
-                Ssl = confContent.Contains("listen 443 ssl http2;");
+                Ssl = confContent.Contains("listen 8081 ssl http2;") || confContent.Contains("listen 443 ssl http2;");
                 SelfSignedSsl = confContent.Contains("/etc/ssl/self/");
                 LetsEncrypt = !SelfSignedSsl && confContent.Contains("/etc/letsencrypt/live/");
                 DiffieHellman = confContent.Contains("/dhparam.pem;");
@@ -98,8 +98,8 @@ namespace Bit.Setup
 # Parameter:Trusted={Trusted}
 
 server {{
-  listen 80 default_server;
-  listen [::]:80 default_server;
+  listen 8080 default_server;
+  listen [::]:8080 default_server;
   server_name {Domain};");
 
                 if(Ssl)
@@ -108,8 +108,8 @@ server {{
 }}
 
 server {{
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  listen 8081 ssl http2;
+  listen [::]:8081 ssl http2;
   server_name {Domain};
 
   ssl_certificate {sslPath}/{certFile};
@@ -169,29 +169,29 @@ server {{
 
                 sw.WriteLine($@"
   location / {{
-    proxy_pass http://web/;
+    proxy_pass http://web:5000/;
   }}
 
   location = /app-id.json {{
-    proxy_pass http://web/app-id.json;
+    proxy_pass http://web:5000/app-id.json;
     proxy_hide_header Content-Type;
     add_header Content-Type $fido_content_type;
   }}
 
   location /attachments/ {{
-    proxy_pass http://attachments/;
+    proxy_pass http://attachments:5000/;
   }}
 
   location /api/ {{
-    proxy_pass http://api/;
+    proxy_pass http://api:5000/;
   }}
 
   location /identity/ {{
-    proxy_pass http://identity/;
+    proxy_pass http://identity:5000/;
   }}
 
   location /icons/ {{
-    proxy_pass http://icons/;
+    proxy_pass http://icons:5000/;
   }}
 
   location /admin {{
