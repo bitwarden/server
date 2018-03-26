@@ -7,7 +7,7 @@ COPY entrypoint.sh /
 RUN groupadd -g 999 bitwarden \
     && useradd -r -u 999 -g bitwarden bitwarden \
     && chown -R bitwarden:bitwarden /bitwarden_server \
-    && mkdir /etc/bitwarden \
+    && mkdir -p /etc/bitwarden/core/attachments \
     && chown -R bitwarden:bitwarden /etc/bitwarden \
     && chmod +x /entrypoint.sh \
     && chown bitwarden:bitwarden /entrypoint.sh

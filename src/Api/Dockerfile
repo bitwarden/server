@@ -20,7 +20,7 @@ RUN groupadd -g 999 bitwarden \
     && useradd -r -u 999 -g bitwarden bitwarden \
     && chown -R bitwarden:bitwarden /app \
     && chown -R bitwarden:bitwarden /jobs \
-    && mkdir /etc/bitwarden \
+    && mkdir -p /etc/bitwarden/core \
     && chown -R bitwarden:bitwarden /etc/bitwarden \
     && chmod +x /entrypoint.sh \
     && chown bitwarden:bitwarden /entrypoint.sh

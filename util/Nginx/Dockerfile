@@ -7,7 +7,7 @@ COPY entrypoint.sh /
 
 RUN groupadd -g 999 bitwarden \
     && useradd -r -u 999 -g bitwarden bitwarden \
-    && mkdir /etc/bitwarden \
+    && mkdir -p /etc/bitwarden/nginx \
     && chown -R bitwarden:bitwarden /etc/bitwarden \
     && mkdir /etc/letsencrypt \
     && chown -R bitwarden:bitwarden /etc/letsencrypt \
