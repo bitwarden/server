@@ -9,6 +9,10 @@ RUN groupadd -g 999 bitwarden \
     && useradd -r -u 999 -g bitwarden bitwarden \
     && mkdir /etc/bitwarden \
     && chown -R bitwarden:bitwarden /etc/bitwarden \
+    && mkdir /etc/letsencrypt \
+    && chown -R bitwarden:bitwarden /etc/letsencrypt \
+    && mkdir /etc/ssl \
+    && chown -R bitwarden:bitwarden /etc/ssl \
     && chmod +x /entrypoint.sh \
     && chown bitwarden:bitwarden /entrypoint.sh \
     && touch /var/run/nginx.pid \
