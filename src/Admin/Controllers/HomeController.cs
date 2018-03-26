@@ -53,7 +53,7 @@ namespace Bit.Admin.Controllers
                     foreach(var result in results)
                     {
                         var name = result["name"].ToString();
-                        if(name.Count(c => c == '.') > 2)
+                        if(string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
                         {
                             return new JsonResult(name);
                         }
