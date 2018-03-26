@@ -12,8 +12,8 @@ RUN groupadd -g 999 bitwarden \
     && chmod +x /entrypoint.sh \
     && chown bitwarden:bitwarden /entrypoint.sh \
     && touch /var/run/nginx.pid \
-    && chown -R proxytest:proxytest /var/run/nginx.pid \
-    && chown -R proxytest:proxytest /var/cache/nginx
+    && chown -R bitwarden:bitwarden /var/run/nginx.pid \
+    && chown -R bitwarden:bitwarden /var/cache/nginx
 
 USER bitwarden
 ENTRYPOINT ["/entrypoint.sh"]
