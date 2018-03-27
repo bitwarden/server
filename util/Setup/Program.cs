@@ -227,43 +227,59 @@ namespace Bit.Setup
             Console.WriteLine("\n");
         }
 
-        private static void MigrateDatabase()
+        private static void MigrateDatabase(int attempt = 1)
         {
-            Console.WriteLine("Migrating database.");
-
-            var dbPass = Helpers.GetValueFronEnvFile("mssql", "SA_PASSWORD");
-            var masterConnectionString = Helpers.MakeSqlConnectionString(
-                "mssql", "master", "sa", dbPass ?? string.Empty);
-            var vaultConnectionString = Helpers.MakeSqlConnectionString(
-                "mssql", "vault", "sa", dbPass ?? string.Empty);
-
-            using(var connection = new SqlConnection(masterConnectionString))
+            try
             {
-                var command = new SqlCommand(
-                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) CREATE DATABASE [vault];",
-                    connection);
-                command.Connection.Open();
-                command.ExecuteNonQuery();
+                Console.WriteLine("Migrating database.");
+
+                var dbPass = Helpers.GetValueFronEnvFile("mssql", "SA_PASSWORD");
+                var masterConnectionString = Helpers.MakeSqlConnectionString(
+                    "mssql", "master", "sa", dbPass ?? string.Empty);
+                var vaultConnectionString = Helpers.MakeSqlConnectionString(
+                    "mssql", "vault", "sa", dbPass ?? string.Empty);
+
+                using(var connection = new SqlConnection(masterConnectionString))
+                {
+                    var command = new SqlCommand(
+                        "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
+                        "CREATE DATABASE [vault];", connection);
+                    command.Connection.Open();
+                    command.ExecuteNonQuery();
+                }
+
+                var upgrader = DeployChanges.To
+                    .SqlDatabase(vaultConnectionString)
+                    .JournalToSqlTable("dbo", "Migration")
+                    .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+                        s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
+                    .WithTransaction()
+                    .WithExecutionTimeout(new TimeSpan(0, 5, 0))
+                    .LogToConsole()
+                    .Build();
+
+                var result = upgrader.PerformUpgrade();
+                if(result.Successful)
+                {
+                    Console.WriteLine("Migration successful.");
+                }
+                else
+                {
+                    Console.WriteLine("Migration failed.");
+                }
             }
-
-            var upgrader = DeployChanges.To
-                .SqlDatabase(vaultConnectionString)
-                .JournalToSqlTable("dbo", "Migration")
-                .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                    s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                .WithTransaction()
-                .WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                .LogToConsole()
-                .Build();
-
-            var result = upgrader.PerformUpgrade();
-            if(result.Successful)
+            catch(SqlException e)
             {
-                Console.WriteLine("Migration successful.");
-            }
-            else
-            {
-                Console.WriteLine("Migration failed.");
+                if(e.Message.Contains("Server is in script upgrade mode") && attempt < 3)
+                {
+                    var nextAttempt = attempt + 1;
+                    Console.WriteLine("Database is in script upgrade mode. " +
+                        "Trying again (attempt #{0})...", nextAttempt);
+                    MigrateDatabase(nextAttempt);
+                    return;
+                }
+
+                throw e;
             }
         }
 
