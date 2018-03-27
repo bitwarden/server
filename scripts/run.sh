@@ -68,28 +68,49 @@ function updateLetsEncrypt() {
     if [ -d "${OUTPUT_DIR}/letsencrypt/live" ]
     then
         docker pull certbot/certbot
-        docker run -i --rm --name certbot -p 443:443 -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+        docker run -i --rm --name certbot -p 443:443 -p 80:80 \
+            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
     fi
 }
 
 function updateDatabase() {
     pullSetup
-    docker run -i --rm --name setup --network container:bitwarden-mssql -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    if [ $OS == "lin" ]
+    then
+        docker run -i --rm --name setup --network container:bitwarden-mssql \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+            dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    else
+        docker run -i --rm --name setup --network container:bitwarden-mssql \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+            dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    fi
     echo "Database update complete"
 }
 
 function update() {
     pullSetup
-    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    if [ $OS == "lin" ]
+    then
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+            dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    else
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+            dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    fi
 }
 
 function printEnvironment() {
     pullSetup
-    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    if [ $OS == "lin" ]
+    then
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+            dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    else
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+            dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+    fi
 }
 
 function restart() {

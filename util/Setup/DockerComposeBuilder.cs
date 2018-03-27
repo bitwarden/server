@@ -108,6 +108,7 @@ services:
       - ../mssql/backups:/etc/bitwarden/mssql/backups
     env_file:
       - mssql.env
+      - ../env/uid.env
       - ../env/mssql.override.env
 
   web:
@@ -116,6 +117,8 @@ services:
     restart: always
     volumes:
       - ../web:/etc/bitwarden/web
+    env_file:
+      - ../env/uid.env
 
   attachments:
     image: bitwarden/attachments:{CoreVersion}
@@ -123,6 +126,8 @@ services:
     restart: always
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
+    env_file:
+      - ../env/uid.env
 
   api:
     image: bitwarden/api:{CoreVersion}
@@ -132,6 +137,7 @@ services:
       - ../core:/etc/bitwarden/core
     env_file:
       - global.env
+      - ../env/uid.env
       - ../env/global.override.env
 
   identity:
@@ -143,6 +149,7 @@ services:
       - ../core:/etc/bitwarden/core
     env_file:
       - global.env
+      - ../env/uid.env
       - ../env/global.override.env
 
   admin:
@@ -153,12 +160,15 @@ services:
       - ../core:/etc/bitwarden/core
     env_file:
       - global.env
+      - ../env/uid.env
       - ../env/global.override.env
 
   icons:
     image: bitwarden/icons:{CoreVersion}
     container_name: bitwarden-icons
     restart: always
+    env_file:
+      - ../env/uid.env
 
   nginx:
     image: bitwarden/nginx:{CoreVersion}
@@ -170,7 +180,9 @@ services:
     volumes:
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt
-      - ../ssl:/etc/ssl");
+      - ../ssl:/etc/ssl
+    env_file:
+      - ../env/uid.env");
 
                 if(MssqlDataDockerVolume)
                 {

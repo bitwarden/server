@@ -51,8 +51,14 @@ then
 fi
 
 docker pull bitwarden/setup:$COREVERSION
-docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-    dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+if [ $OS == "lin" ]
+then
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+else
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+fi
 
 echo ""
 echo "Setup complete"

@@ -1,16 +1,15 @@
 FROM bitwarden/server
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gosu \
+&& rm -rf /var/lib/apt/lists/*
+
 ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
 COPY entrypoint.sh /
 
 RUN groupadd -g 999 bitwarden \
-    && useradd -r -u 999 -g bitwarden bitwarden \
-    && chown -R bitwarden:bitwarden /bitwarden_server \
-    && mkdir -p /etc/bitwarden/core/attachments \
-    && chown -R bitwarden:bitwarden /etc/bitwarden \
-    && chmod +x /entrypoint.sh \
-    && chown bitwarden:bitwarden /entrypoint.sh
+    && chmod +x /entrypoint.sh
 
-USER bitwarden
 ENTRYPOINT ["/entrypoint.sh"]

@@ -14,16 +14,9 @@ COPY obj/Docker/publish/Jobs /jobs
 COPY entrypoint.sh /
 
 RUN mv /jobs/crontab /etc/cron.d/bitwarden-cron \
-    && chmod 0644 /etc/cron.d/bitwarden-cron \
-    && touch /var/log/cron.log
+    && chmod 0644 /etc/cron.d/bitwarden-cron
 
 RUN groupadd -g 999 bitwarden \
-    && useradd -r -u 999 -g bitwarden bitwarden \
-    && chown -R bitwarden:bitwarden /app \
-    && chown -R bitwarden:bitwarden /jobs \
-    && mkdir -p /etc/bitwarden/core \
-    && chown -R bitwarden:bitwarden /etc/bitwarden \
-    && chmod +x /entrypoint.sh \
-    && chown bitwarden:bitwarden /entrypoint.sh
+    && chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
