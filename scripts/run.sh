@@ -124,6 +124,7 @@ function restart() {
     
     if [ $OS == "lin" ]
     then
+        mkdir -p ../env
         echo "LOCAL_UID=`id -u $USER`" > ../env/uid.env
     fi
     
