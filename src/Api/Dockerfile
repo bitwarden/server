@@ -3,6 +3,7 @@ FROM microsoft/aspnetcore:2.0.5
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         cron \
+        gosu \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_URLS http://+:5000
@@ -25,5 +26,4 @@ RUN groupadd -g 999 bitwarden \
     && chmod +x /entrypoint.sh \
     && chown bitwarden:bitwarden /entrypoint.sh
 
-USER bitwarden
 ENTRYPOINT ["/entrypoint.sh"]

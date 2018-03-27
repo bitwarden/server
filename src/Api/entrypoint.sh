@@ -2,4 +2,5 @@
 
 env >> /etc/environment
 cron
-dotnet /app/Api.dll
+
+gosu bitwarden:bitwarden dotnet /app/Api.dll

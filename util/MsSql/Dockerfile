@@ -3,6 +3,7 @@ FROM microsoft/mssql-server-linux:2017-CU4
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         cron \
+        gosu \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 999 bitwarden \
@@ -27,5 +28,4 @@ RUN mkdir -p /etc/bitwarden/mssql/backups \
     && chown bitwarden:bitwarden /backup-db.sh \
     && chown bitwarden:bitwarden /backup-db.sql
 
-USER bitwarden
 ENTRYPOINT ["/entrypoint.sh"]

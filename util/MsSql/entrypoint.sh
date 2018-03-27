@@ -2,4 +2,6 @@
 
 env >> /etc/environment
 cron
-/opt/mssql/bin/sqlservr
+
+chown -R bitwarden:bitwarden /var/opt/mssql
+gosu bitwarden:bitwarden /opt/mssql/bin/sqlservr
