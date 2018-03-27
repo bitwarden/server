@@ -121,6 +121,12 @@ function restart() {
     dockerComposeDown
     dockerComposePull
     updateLetsEncrypt
+    
+    if [ $OS == "lin" ]
+    then
+        echo "LOCAL_UID=`id -u $USER`" > ../env/uid.env
+    fi
+    
     dockerComposeUp
     dockerPrune
     printEnvironment
