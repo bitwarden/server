@@ -164,9 +164,6 @@ SA_PASSWORD=SECRET
             }
 
             Helpers.Exec("chmod 600 /bitwarden/env/mssql.override.env");
-
-            using(var sw = File.CreateText("/bitwarden/env/uid.env"))
-            { }
         }
     }
 }

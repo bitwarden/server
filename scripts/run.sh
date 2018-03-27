@@ -93,10 +93,12 @@ function update() {
     pullSetup
     if [ $OS == "lin" ]
     then
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+        docker run -i --rm --name setup \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
             dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        docker run -i --rm --name setup \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     fi
 }
@@ -105,10 +107,12 @@ function printEnvironment() {
     pullSetup
     if [ $OS == "lin" ]
     then
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
+        docker run -i --rm --name setup \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION -e LOCAL_UID=`id -u $USER` \
             dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        docker run -i --rm --name setup \
+            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     fi
 }
