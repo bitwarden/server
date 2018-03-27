@@ -30,6 +30,7 @@ then
 fi
 
 DOCKER_DIR="$OUTPUT_DIR/docker"
+ENV_DIR="$OUTPUT_DIR/env"
 
 # Functions
 
@@ -124,8 +125,8 @@ function restart() {
     
     if [ $OS == "lin" ]
     then
-        mkdir -p ../env
-        echo "LOCAL_UID=`id -u $USER`" > ../env/uid.env
+        mkdir -p $ENV_DIR
+        echo "LOCAL_UID=`id -u $USER`" > $ENV_DIR/uid.env
     fi
     
     dockerComposeUp
