@@ -79,7 +79,7 @@ function updateDatabase() {
     if [ $OS == "lin" ]
     then
         docker run -i --rm --name setup --network container:bitwarden-mssql \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+            -v $OUTPUT_DIR:/bitwarden -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup --network container:bitwarden-mssql \
@@ -93,8 +93,8 @@ function update() {
     pullSetup
     if [ $OS == "lin" ]
     then
-        docker run -i --rm --name setup \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+            -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup \
@@ -107,8 +107,8 @@ function printEnvironment() {
     pullSetup
     if [ $OS == "lin" ]
     then
-        docker run -i --rm --name setup \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+            -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup \
