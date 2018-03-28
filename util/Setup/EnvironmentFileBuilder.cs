@@ -61,6 +61,7 @@ namespace Bit.Setup
                 ["globalSettings__mail__smtp__port"] = "587",
                 ["globalSettings__mail__smtp__useDefaultCredentials"] = "false",
                 ["globalSettings__disableUserRegistration"] = "false",
+                ["adminSettings__admins"] = string.Empty,
             };
 
             if(forInstall && !Push)

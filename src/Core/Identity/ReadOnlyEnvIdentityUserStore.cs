@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 
@@ -19,7 +20,7 @@ namespace Bit.Core.Identity
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var usersCsv = _configuration["adminSettings:admins"];
-            if(string.IsNullOrWhiteSpace(usersCsv))
+            if(!CoreHelpers.SettingHasValue(usersCsv))
             {
                 return Task.FromResult<IdentityUser>(null);
             }
