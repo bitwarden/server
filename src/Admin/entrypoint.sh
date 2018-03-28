@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
