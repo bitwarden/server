@@ -77,9 +77,9 @@
         Airbnb = 72,
         Eventbrite = 73,
         StackExchange = 74,
-        WordPress = 75
-        Patreon = 76
-        SchibstedNorway = 77
-        BankIDNorway = 78
+        WordPress = 75,
+        Patreon = 76,
+        SchibstedNorway = 77,
+        BankIDNorway = 78,
     }
 }
