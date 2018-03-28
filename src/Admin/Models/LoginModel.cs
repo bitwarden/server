@@ -8,5 +8,7 @@ namespace Bit.Admin.Models
         [EmailAddress]
         public string Email { get; set; }
         public string ReturnUrl { get; set; }
+        public string Error { get; set; }
+        public string Success { get; set; }
     }
 }

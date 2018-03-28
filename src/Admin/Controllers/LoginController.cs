@@ -16,11 +16,19 @@ namespace Bit.Admin.Controllers
             _signInManager = signInManager;
         }
 
-        public IActionResult Index(string returnUrl = null)
+        public IActionResult Index(string returnUrl = null, string error = null, string success = null,
+            bool accessDenied = false)
         {
+            if(string.IsNullOrWhiteSpace(error) && accessDenied)
+            {
+                error = "Access denied. Please log in.";
+            }
+
             return View(new LoginModel
             {
-                ReturnUrl = returnUrl
+                ReturnUrl = returnUrl,
+                Error = error,
+                Success = success
             });
         }
 
@@ -32,7 +40,11 @@ namespace Bit.Admin.Controllers
             {
                 await _signInManager.PasswordlessSignInAsync(model.Email,
                     Url.Action("Confirm", "Login", new { returnUrl = model.ReturnUrl }, Request.Scheme));
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", new
+                {
+                    success = "If a valid admin user with this email address exists, " +
+                        "we've sent you an email with a secure link to log in."
+                });
             }
 
             return View(model);
@@ -43,8 +55,10 @@ namespace Bit.Admin.Controllers
             var result = await _signInManager.PasswordlessSignInAsync(email, token, true);
             if(!result.Succeeded)
             {
-                // TODO: error?
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", new
+                {
+                    error = "This login confirmation link is invalid. Try logging in again."
+                });
             }
 
             if(!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -60,7 +74,10 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new
+            {
+                success = "You have been logged out."
+            });
         }
     }
 }

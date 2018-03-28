@@ -220,7 +220,7 @@ namespace Bit.Core.Utilities
             {
                 options.LoginPath = "/login";
                 options.LogoutPath = "/";
-                options.AccessDeniedPath = "/login?accessDenied=1";
+                options.AccessDeniedPath = "/login?accessDenied=true";
                 options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}";
                 options.Cookie.HttpOnly = true;
                 options.Cookie.Expiration = options.ExpireTimeSpan = TimeSpan.FromDays(2);

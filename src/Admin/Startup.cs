@@ -47,6 +47,13 @@ namespace Bit.Admin
 
             // Identity
             services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
+            if(globalSettings.SelfHosted)
+            {
+                services.ConfigureApplicationCookie(options =>
+                {
+                    options.Cookie.Path = "/admin";
+                });
+            }
 
             // Services
             services.AddBaseServices();

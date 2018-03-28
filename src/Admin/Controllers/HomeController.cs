@@ -7,7 +7,6 @@ using Bit.Core;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using System.Linq;
 
 namespace Bit.Admin.Controllers
 {
