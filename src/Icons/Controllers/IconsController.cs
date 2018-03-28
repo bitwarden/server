@@ -20,12 +20,17 @@ namespace Bit.Icons.Controllers
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         });
         private static string _pngMediaType = "image/png";
+        private static byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
         private static string _icoMediaType = "image/x-icon";
+        private static string _icoAltMediaType = "image/vnd.microsoft.icon";
+        private static byte[] _icoHeader = new byte[] { 00, 00, 01, 00 };
         private static string _jpegMediaType = "image/jpeg";
+        private static byte[] _jpegHeader = new byte[] { 255, 216, 255 };
         private static string _octetMediaType = "application/octet-stream";
         private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
             _pngMediaType,
             _icoMediaType,
+            _icoAltMediaType,
             _jpegMediaType,
             _octetMediaType
         };
@@ -62,7 +67,7 @@ namespace Bit.Icons.Controllers
             if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
                 var iconUrl = new Uri($"{_iconsSettings.BestIconBaseUrl}/icon" +
-                    $"?url={mappedDomain}&size=16..32..200&fallback_icon_url=" +
+                    $"?url={mappedDomain}&size=16..32..256&fallback_icon_url=" +
                     $"https://raw.githubusercontent.com/bitwarden/web/master/src/images/fa-globe.png");
                 var response = await _httpClient.GetAsync(iconUrl);
                 response = await FollowRedirectsAsync(response, 1);
@@ -81,16 +86,15 @@ namespace Bit.Icons.Controllers
 
                 if(icon.Format == _octetMediaType)
                 {
-                    if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".ico"))
+                    if(HeaderMatch(icon, _icoHeader))
                     {
                         icon.Format = _icoMediaType;
                     }
-                    else if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".png"))
+                    else if(HeaderMatch(icon, _pngHeader))
                     {
                         icon.Format = _pngMediaType;
                     }
-                    else if(response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".jpeg") ||
-                        response.RequestMessage.RequestUri.AbsoluteUri.EndsWith(".jpg"))
+                    else if(HeaderMatch(icon, _jpegHeader))
                     {
                         icon.Format = _jpegMediaType;
                     }
@@ -148,6 +152,11 @@ namespace Bit.Icons.Controllers
             }
 
             return response;
+        }
+
+        private bool HeaderMatch(Icon icon, byte[] header)
+        {
+            return icon.Image.Length >= header.Length && header.SequenceEqual(icon.Image.Take(header.Length));
         }
     }
 }
