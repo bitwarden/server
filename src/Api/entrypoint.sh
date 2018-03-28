@@ -15,6 +15,7 @@ chown bitwarden:bitwarden /var/log/cron.log
 chown -R bitwarden:bitwarden /app
 chown -R bitwarden:bitwarden /jobs
 mkdir -p /etc/bitwarden/core
+mkdir -p /etc/bitwarden/logs
 chown -R bitwarden:bitwarden /etc/bitwarden
 
 env >> /etc/environment

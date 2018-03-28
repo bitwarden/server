@@ -46,7 +46,7 @@ namespace Bit.Setup
                 ["globalSettings__attachment__baseDirectory"] = $"{OutputDirectory}/core/attachments",
                 ["globalSettings__attachment__baseUrl"] = $"{Url}/attachments",
                 ["globalSettings__dataProtection__directory"] = $"{OutputDirectory}/core/aspnet-dataprotection",
-                ["globalSettings__logDirectory"] = $"{OutputDirectory}/core/logs",
+                ["globalSettings__logDirectory"] = $"{OutputDirectory}/logs",
                 ["globalSettings__licenseDirectory"] = $"{OutputDirectory}/core/licenses",
                 ["globalSettings__duo__aKey"] = $"{Helpers.SecureRandomString(64, alpha: true, numeric: true)}",
                 ["globalSettings__installation__id"] = InstallationId?.ToString(),

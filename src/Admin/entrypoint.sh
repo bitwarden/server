@@ -12,6 +12,7 @@ fi
 
 chown -R bitwarden:bitwarden /app
 mkdir -p /etc/bitwarden/core
+mkdir -p /etc/bitwarden/logs
 chown -R bitwarden:bitwarden /etc/bitwarden
 
 gosu bitwarden:bitwarden dotnet /app/Admin.dll

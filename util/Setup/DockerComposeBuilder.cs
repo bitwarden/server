@@ -101,7 +101,8 @@ services:
                 else
                 {
                     sw.Write(@"
-      - ../mssql/data:/var/opt/mssql/data");
+      - ../mssql/data:/var/opt/mssql/data
+      - ../logs/mssql:/var/opt/mssql/log");
                 }
 
                 sw.Write($@"
@@ -135,6 +136,7 @@ services:
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
+      - ../logs/api:/etc/bitwarden/logs
     env_file:
       - global.env
       - ../env/uid.env
@@ -147,6 +149,7 @@ services:
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
+      - ../logs/identity:/etc/bitwarden/logs
     env_file:
       - global.env
       - ../env/uid.env
@@ -158,6 +161,7 @@ services:
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
+      - ../logs/admin:/etc/bitwarden/logs
     env_file:
       - global.env
       - ../env/uid.env
@@ -181,7 +185,7 @@ services:
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt
       - ../ssl:/etc/ssl
-      - ../core/logs/nginx:/var/log/nginx
+      - ../logs/nginx:/var/log/nginx
     env_file:
       - ../env/uid.env");
 
