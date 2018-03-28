@@ -15,12 +15,14 @@ namespace Bit.Admin
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
             Configuration = configuration;
+            Environment = env;
         }
 
-        public IConfiguration Configuration { get; }
+        public IConfiguration Configuration { get; private set; }
+        public IHostingEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -30,6 +32,9 @@ namespace Bit.Admin
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
             services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
+
+            // Data Protection
+            services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
             StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);

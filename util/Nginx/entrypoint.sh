@@ -19,5 +19,6 @@ chown -R bitwarden:bitwarden /etc/ssl
 touch /var/run/nginx.pid
 chown -R bitwarden:bitwarden /var/run/nginx.pid
 chown -R bitwarden:bitwarden /var/cache/nginx
+chown -R bitwarden:bitwarden /var/log/nginx
 
 gosu bitwarden:bitwarden nginx -g 'daemon off;'
