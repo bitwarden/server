@@ -29,7 +29,6 @@ BEGIN
                 AND (OU.[AccessAll] = 1 OR CU.[CollectionId] IS NOT NULL)
             )
         )
-        AND C.[Folders] IS NOT NULL
         AND JSON_VALUE(C.[Folders], @UserIdPath) = @Id
 
     DELETE

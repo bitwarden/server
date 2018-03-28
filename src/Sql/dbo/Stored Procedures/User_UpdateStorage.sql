@@ -26,7 +26,6 @@ BEGIN
         [CTE] ON C.[Id] = [CTE].[Id]
     WHERE
         C.[UserId] = @Id
-        AND C.[Attachments] IS NOT NULL
 
     UPDATE
         [dbo].[User]
