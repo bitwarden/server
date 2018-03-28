@@ -125,7 +125,7 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    Console.WriteLine("Invalid HTTP port. Using default.")
+                    Console.WriteLine("Invalid HTTP port. Using default.");
                     httpPort = 80;
                 }
             }
