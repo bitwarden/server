@@ -36,7 +36,7 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    Console.WriteLine("!!!!!!!!!! WARNING !!!!!!!!!!");
+                    Console.WriteLine("\n!!!!!!!!!! WARNING !!!!!!!!!!");
                     Console.WriteLine("You are not using an SSL certificate. Bitwarden requires HTTPS to operate. " +
                         "You must front your installation with a HTTPS proxy. The web vault (and other Bitwarden " +
                         "apps) will not work properly without HTTPS.");
