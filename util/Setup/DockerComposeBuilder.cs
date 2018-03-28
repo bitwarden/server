@@ -21,15 +21,19 @@ namespace Bit.Setup
 
         public bool MssqlDataDockerVolume { get; private set; }
         public int HttpPort { get; private set; } = 80;
-        public int HttpsPort { get; private set; } = 443;
+        public int HttpsPort { get; private set; }
         public string CoreVersion { get; private set; } = "latest";
         public string WebVersion { get; private set; } = "latest";
 
         public void BuildForInstaller(int httpPort, int httpsPort)
         {
-            if(httpPort != default(int) && httpsPort != default(int))
+            if(httpPort != default(int))
             {
                 HttpPort = httpPort;
+            }
+
+            if(httpsPort != default(int))
+            {
                 HttpsPort = httpsPort;
             }
 
@@ -179,8 +183,15 @@ services:
     container_name: bitwarden-nginx
     restart: always
     ports:
-      - '{HttpPort}:8080'
-      - '{HttpsPort}:8081'
+      - '{HttpPort}:8080'");
+
+                if(HttpsPort != default(int))
+                {
+                    sw.Write($@"
+      - '{HttpsPort}:8081'");
+                }
+
+                sw.Write($@"
     volumes:
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt

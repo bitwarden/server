@@ -91,7 +91,12 @@ namespace Bit.Setup
             Console.Write("(!) Do you want to use the default ports for HTTP (80) and HTTPS (443)? (y/n): ");
             var defaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
             int httpPort = default(int), httpsPort = default(int);
-            if(!defaultPorts)
+            if(defaultPorts)
+            {
+                httpPort = 80;
+                httpsPort = 443;
+            }
+            else
             {
                 Console.Write("(!) HTTP port: ");
                 if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpPort))
@@ -108,8 +113,9 @@ namespace Bit.Setup
                         }
                         else
                         {
-                            Console.WriteLine("Invalid HTTPS port.");
-                            httpPort = httpsPort = default(int);
+                            Console.WriteLine("Invalid HTTPS port. Using defaults.");
+                            httpPort = 80;
+                            httpsPort = 443;
                         }
                     }
                     else if(httpPort != 80)
@@ -119,7 +125,8 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    Console.WriteLine("Invalid HTTP port.");
+                    Console.WriteLine("Invalid HTTP port. Using default.")
+                    httpPort = 80;
                 }
             }
 
