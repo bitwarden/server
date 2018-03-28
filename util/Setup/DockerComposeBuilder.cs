@@ -181,6 +181,7 @@ services:
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt
       - ../ssl:/etc/ssl
+      - ../core/logs/nginx:/var/log/nginx
     env_file:
       - ../env/uid.env");
 
