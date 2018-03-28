@@ -1,21 +1,29 @@
 #!/bin/bash
 
-NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
+USERNAME="bitwarden"
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
-if [ $NOUSER == 0 ] && [ `id -u bitwarden` != $LUID ]
+
+# Step down from host root
+if [ $LUID == 0 ]
 then
-    usermod -u $LUID bitwarden
+    LUID=999
+fi
+
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
 elif [ $NOUSER == 1 ]
 then
-    useradd -r -u $LUID -g bitwarden bitwarden
+    useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
 mkdir -p /etc/bitwarden/identity
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
-chown -R bitwarden:bitwarden /etc/bitwarden
+chown -R $USERNAME:$USERNAME /etc/bitwarden
 
 cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
-chown -R bitwarden:bitwarden /app
+chown -R $USERNAME:$USERNAME /app
 
-gosu bitwarden:bitwarden dotnet /app/Identity.dll
+gosu $USERNAME:$USERNAME dotnet /app/Identity.dll

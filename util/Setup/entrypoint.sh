@@ -1,22 +1,30 @@
 #!/bin/bash
 
-NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
+USERNAME="bitwarden"
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
-if [ $NOUSER == 0 ] && [ `id -u bitwarden` != $LUID ]
+
+# Step down from host root
+if [ $LUID == 0 ]
 then
-    usermod -u $LUID bitwarden
-elif [ $NOUSER == 1 ]
-then
-    useradd -r -u $LUID -g bitwarden bitwarden
+    LUID=999
 fi
 
-chown -R bitwarden:bitwarden /app
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
+elif [ $NOUSER == 1 ]
+then
+    useradd -r -u $LUID -g $USERNAME $USERNAME
+fi
+
+chown -R $USERNAME:$USERNAME /app
 mkdir -p /bitwarden/env
 mkdir -p /bitwarden/docker
 mkdir -p /bitwarden/ssl
 mkdir -p /bitwarden/letsencrypt
 mkdir -p /bitwarden/identity
 mkdir -p /bitwarden/nginx
-chown -R bitwarden:bitwarden /bitwarden
+chown -R $USERNAME:$USERNAME /bitwarden
 
-exec gosu bitwarden:bitwarden "$@"
+exec gosu $USERNAME:$USERNAME "$@"

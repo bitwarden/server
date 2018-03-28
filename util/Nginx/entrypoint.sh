@@ -1,24 +1,32 @@
 #!/bin/bash
 
-NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
+USERNAME="bitwarden"
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
-if [ $NOUSER == 0 ] && [ `id -u bitwarden` != $LUID ]
+
+# Step down from host root
+if [ $LUID == 0 ]
 then
-    usermod -u $LUID bitwarden
-elif [ $NOUSER == 1 ]
-then
-    useradd -r -u $LUID -g bitwarden bitwarden
+    LUID=999
 fi
 
-chown -R bitwarden:bitwarden /etc/bitwarden
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
+elif [ $NOUSER == 1 ]
+then
+    useradd -r -u $LUID -g $USERNAME $USERNAME
+fi
+
+chown -R $USERNAME:$USERNAME /etc/bitwarden
 cp /etc/bitwarden/nginx/default.conf /etc/nginx/conf.d/default.conf
 mkdir -p /etc/letsencrypt
-chown -R bitwarden:bitwarden /etc/letsencrypt
+chown -R $USERNAME:$USERNAME /etc/letsencrypt
 mkdir -p /etc/ssl
-chown -R bitwarden:bitwarden /etc/ssl
+chown -R $USERNAME:$USERNAME /etc/ssl
 touch /var/run/nginx.pid
-chown -R bitwarden:bitwarden /var/run/nginx.pid
-chown -R bitwarden:bitwarden /var/cache/nginx
-chown -R bitwarden:bitwarden /var/log/nginx
+chown -R $USERNAME:$USERNAME /var/run/nginx.pid
+chown -R $USERNAME:$USERNAME /var/cache/nginx
+chown -R $USERNAME:$USERNAME /var/log/nginx
 
-gosu bitwarden:bitwarden nginx -g 'daemon off;'
+gosu $USERNAME:$USERNAME nginx -g 'daemon off;'

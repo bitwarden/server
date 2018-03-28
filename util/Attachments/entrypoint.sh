@@ -1,18 +1,26 @@
 #!/bin/bash
 
-NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
+USERNAME="bitwarden"
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
-if [ $NOUSER == 0 ] && [ `id -u bitwarden` != $LUID ]
+
+# Step down from host root
+if [ $LUID == 0 ]
 then
-    usermod -u $LUID bitwarden
-elif [ $NOUSER == 1 ]
-then
-    useradd -r -u $LUID -g bitwarden bitwarden
+    LUID=999
 fi
 
-chown -R bitwarden:bitwarden /bitwarden_server
-mkdir -p /etc/bitwarden/core/attachments
-chown -R bitwarden:bitwarden /etc/bitwarden
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
+elif [ $NOUSER == 1 ]
+then
+    useradd -r -u $LUID -g $USERNAME $USERNAME
+fi
 
-gosu bitwarden:bitwarden dotnet /bitwarden_server/Server.dll \
+chown -R $USERNAME:$USERNAME /bitwarden_server
+mkdir -p /etc/bitwarden/core/attachments
+chown -R $USERNAME:$USERNAME /etc/bitwarden
+
+gosu $USERNAME:$USERNAME dotnet /bitwarden_server/Server.dll \
     /contentRoot=/etc/bitwarden/core/attachments /webRoot=. /serveUnknown=true

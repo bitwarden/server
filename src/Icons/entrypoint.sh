@@ -1,17 +1,25 @@
 #!/bin/bash
 
-NOUSER=`id -u bitwarden > /dev/null 2>&1; echo $?`
+USERNAME="bitwarden"
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
-if [ $NOUSER == 0 ] && [ `id -u bitwarden` != $LUID ]
+
+# Step down from host root
+if [ $LUID == 0 ]
 then
-    usermod -u $LUID bitwarden
-elif [ $NOUSER == 1 ]
-then
-    useradd -r -u $LUID -g bitwarden bitwarden
+    LUID=999
 fi
 
-chown -R bitwarden:bitwarden /app
-chown -R bitwarden:bitwarden /etc/iconserver
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
+elif [ $NOUSER == 1 ]
+then
+    useradd -r -u $LUID -g $USERNAME $USERNAME
+fi
 
-gosu bitwarden:bitwarden /etc/iconserver/iconserver &
-gosu bitwarden:bitwarden dotnet /app/Icons.dll iconsSettings:bestIconBaseUrl=http://localhost:8080
+chown -R $USERNAME:$USERNAME /app
+chown -R $USERNAME:$USERNAME /etc/iconserver
+
+gosu $USERNAME:$USERNAME /etc/iconserver/iconserver &
+gosu $USERNAME:$USERNAME dotnet /app/Icons.dll iconsSettings:bestIconBaseUrl=http://localhost:8080
