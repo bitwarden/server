@@ -30,9 +30,6 @@
                 <ul class="navbar-nav mr-auto">
                     @if(SignInManager.IsSignedIn(User))
                     {
-                        <li class="nav-item" active-controller="Home">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
                         <li class="nav-item" active-controller="Users">
                             <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
                         </li>
