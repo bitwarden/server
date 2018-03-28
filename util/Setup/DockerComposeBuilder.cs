@@ -58,13 +58,20 @@ namespace Bit.Setup
                         continue;
                     }
 
-                    if(paramParts[0] == "# Parameter:HttpPort" && int.TryParse(paramParts[1], out int httpPort))
+                    if(paramParts[0] == "# Parameter:MssqlDataDockerVolume" &&
+                        bool.TryParse(paramParts[1], out var mssqlDataDockerVolume))
+                    {
+                        MssqlDataDockerVolume = mssqlDataDockerVolume;
+                        continue;
+                    }
+
+                    if(paramParts[0] == "# Parameter:HttpPort" && int.TryParse(paramParts[1], out var httpPort))
                     {
                         HttpPort = httpPort;
                         continue;
                     }
 
-                    if(paramParts[0] == "# Parameter:HttpsPort" && int.TryParse(paramParts[1], out int httpsPort))
+                    if(paramParts[0] == "# Parameter:HttpsPort" && int.TryParse(paramParts[1], out var httpsPort))
                     {
                         HttpsPort = httpsPort;
                         continue;
