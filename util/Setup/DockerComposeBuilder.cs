@@ -148,6 +148,7 @@ services:
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/api:/etc/bitwarden/logs
     env_file:
       - global.env
@@ -161,6 +162,7 @@ services:
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/identity:/etc/bitwarden/logs
     env_file:
       - global.env

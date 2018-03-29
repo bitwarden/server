@@ -24,9 +24,13 @@ chown -R $USERNAME:$USERNAME /app
 chown -R $USERNAME:$USERNAME /jobs
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
+mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$USERNAME /etc/bitwarden
 
 env >> /etc/environment
 cron
+
+cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ \
+    && update-ca-certificates
 
 gosu bitwarden:bitwarden dotnet /app/Api.dll
