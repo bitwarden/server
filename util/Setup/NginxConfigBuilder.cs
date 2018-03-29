@@ -92,8 +92,8 @@ server {{
 }}
 
 server {{
-  listen 8081 ssl http2;
-  listen [::]:8081 ssl http2;
+  listen 8443 ssl http2;
+  listen [::]:8443 ssl http2;
   server_name {Domain};
 
   ssl_certificate {sslPath}/{certFile};
