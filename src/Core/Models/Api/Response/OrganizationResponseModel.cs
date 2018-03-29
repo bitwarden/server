@@ -29,6 +29,7 @@ namespace Bit.Core.Models.Api
             PlanType = organization.PlanType;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
+            MaxStorageGb = organization.MaxStorageGb;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -48,6 +49,7 @@ namespace Bit.Core.Models.Api
         public Enums.PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
+        public short? MaxStorageGb { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
