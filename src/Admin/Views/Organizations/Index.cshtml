@@ -57,13 +57,16 @@
                             </span>
                         </td>
                         <td>
-                            @if(!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
+                            @if(!Model.SelfHosted)
                             {
-                                <i class="fa fa-usd fa-lg fa-fw" title="Paid"></i>
-                            }
-                            else
-                            {
-                                <i class="fa fa-smile-o fa-lg fa-fw text-muted" title="Freeloader"></i>
+                                if(!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
+                                {
+                                    <i class="fa fa-usd fa-lg fa-fw" title="Paid"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-smile-o fa-lg fa-fw text-muted" title="Freeloader"></i>
+                                }
                             }
                             @if(org.MaxStorageGb.HasValue && org.MaxStorageGb > 1)
                             {

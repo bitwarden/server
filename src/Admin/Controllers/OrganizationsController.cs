@@ -51,7 +51,8 @@ namespace Bit.Admin.Controllers
                 Paid = paid,
                 Page = page,
                 Count = count,
-                Action = _globalSettings.SelfHosted ? "View" : "Edit"
+                Action = _globalSettings.SelfHosted ? "View" : "Edit",
+                SelfHosted = _globalSettings.SelfHosted
             });
         }
 
