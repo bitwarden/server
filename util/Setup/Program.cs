@@ -128,7 +128,7 @@ namespace Bit.Setup
                 {
                     url = $"https://{domain}";
                 }
-                else if(ssl)
+                else
                 {
                     Console.Write("(!) Proxy HTTPS port: ");
                     if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out var httpsReversePort)
