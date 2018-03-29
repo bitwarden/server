@@ -127,6 +127,8 @@ globalSettings__baseServiceUri__vault=http://localhost
 globalSettings__baseServiceUri__api=http://localhost/api
 globalSettings__baseServiceUri__identity=http://localhost/identity
 globalSettings__baseServiceUri__internalIdentity=http://identity:5000
+globalSettings__baseServiceUri__internalApi=http://api:5000
+globalSettings__baseServiceUri__internalVault=http://web:5000
 globalSettings__pushRelayBaseUri=https://push.bitwarden.com
 globalSettings__installation__identityUri=https://identity.bitwarden.com
 ");

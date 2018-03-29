@@ -35,6 +35,8 @@ namespace Bit.Core
             public string Api { get; set; }
             public string Identity { get; set; }
             public string InternalIdentity { get; set; }
+            public string InternalApi { get; set; }
+            public string InternalVault { get; set; }
         }
 
         public class SqlServerSettings

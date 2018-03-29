@@ -68,7 +68,8 @@ namespace Bit.Admin.Controllers
         {
             try
             {
-                var response = await _httpClient.GetAsync($"{_globalSettings.BaseServiceUri.Vault}/version.json");
+                var response = await _httpClient.GetAsync(
+                    $"{_globalSettings.BaseServiceUri.InternalVault}/version.json");
                 if(response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
