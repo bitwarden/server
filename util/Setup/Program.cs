@@ -93,7 +93,10 @@ namespace Bit.Setup
             if(defaultPorts)
             {
                 httpPort = 80;
-                httpsPort = 443;
+                if(ssl)
+                {
+                    httpsPort = 443;
+                }
             }
             else if(ssl)
             {
