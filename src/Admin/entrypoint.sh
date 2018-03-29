@@ -21,6 +21,10 @@ fi
 chown -R $USERNAME:$USERNAME /app
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
+mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$USERNAME /etc/bitwarden
+
+cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ \
+    && update-ca-certificates
 
 gosu $USERNAME:$USERNAME dotnet /app/Admin.dll

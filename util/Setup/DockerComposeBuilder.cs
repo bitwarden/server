@@ -173,6 +173,7 @@ services:
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/admin:/etc/bitwarden/logs
     env_file:
       - global.env
