@@ -68,7 +68,6 @@ namespace Bit.Core.Models.Api
             StorageName = organization.Storage.HasValue ?
                 Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
             StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D) : 0; // 1 GB
-            MaxStorageGb = organization.MaxStorageGb;
             Expiration = DateTime.UtcNow.AddYears(1);
         }
 
@@ -78,13 +77,11 @@ namespace Bit.Core.Models.Api
             StorageName = organization.Storage.HasValue ?
                 Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
             StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-            MaxStorageGb = organization.MaxStorageGb;
             Expiration = organization.ExpirationDate;
         }
 
         public string StorageName { get; set; }
         public double? StorageGb { get; set; }
-        public short? MaxStorageGb { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
