@@ -115,18 +115,18 @@ server {{
   ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
   # Disabled insecure ciphers suite. For example, MD5, DES, RC4, PSK
   ssl_ciphers ""{SslCiphers}"";
-  # enables server-side protection from BEAST attacks
+  # Enables server-side protection from BEAST attacks
   ssl_prefer_server_ciphers on;");
 
                     if(Trusted)
                     {
                         sw.WriteLine($@"
   # OCSP Stapling ---
-  # fetch OCSP records from URL in ssl_certificate and cache them
+  # Fetch OCSP records from URL in ssl_certificate and cache them
   ssl_stapling on;
   ssl_stapling_verify on;
 
-  ## verify chain of trust of OCSP response using Root CA and Intermediate certs
+  # Verify chain of trust of OCSP response using Root CA and Intermediate certs
   ssl_trusted_certificate {sslPath}/{caFile};
 
   resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
@@ -140,7 +140,7 @@ server {{
   # X-Frame-Options is to prevent from click-jacking attack
   #add_header X-Frame-Options SAMEORIGIN;
 
-  # disable content-type sniffing on some browsers.
+  # Disable content-type sniffing on some browsers.
   add_header X-Content-Type-Options nosniff;
 
   # This header enables the Cross-site scripting (XSS) filter
