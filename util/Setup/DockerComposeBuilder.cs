@@ -20,7 +20,7 @@ namespace Bit.Setup
         }
 
         public bool MssqlDataDockerVolume { get; private set; }
-        public int HttpPort { get; private set; } = 80;
+        public int HttpPort { get; private set; }
         public int HttpsPort { get; private set; }
         public string CoreVersion { get; private set; } = "latest";
         public string WebVersion { get; private set; } = "latest";
@@ -42,9 +42,10 @@ namespace Bit.Setup
 
         public void BuildForUpdater()
         {
-            if(File.Exists("/bitwarden/docker/docker-compose.yml"))
+            var composeFile = "/bitwarden/docker/docker-compose.yml";
+            if(File.Exists(composeFile))
             {
-                var fileLines = File.ReadAllLines("/bitwarden/docker/docker-compose.yml");
+                var fileLines = File.ReadAllLines(composeFile);
                 foreach(var line in fileLines)
                 {
                     if(!line.StartsWith("# Parameter:"))
@@ -189,8 +190,13 @@ services:
     image: bitwarden/nginx:{CoreVersion}
     container_name: bitwarden-nginx
     restart: always
-    ports:
+    ports:");
+
+                if(HttpPort != default(int))
+                {
+                    sw.Write($@"
       - '{HttpPort}:8080'");
+                }
 
                 if(HttpsPort != default(int))
                 {

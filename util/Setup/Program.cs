@@ -73,7 +73,6 @@ namespace Bit.Setup
             {
                 Console.Write("(!) Do you have a SSL certificate to use? (y/n): ");
                 ssl = Console.ReadLine().ToLowerInvariant() == "y";
-
                 if(ssl)
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
@@ -87,7 +86,7 @@ namespace Bit.Setup
             var selfSignedSsl = certBuilder.BuildForInstall();
             ssl = certBuilder.Ssl; // Ssl prop can get flipped during the build
 
-            var url = ssl ? $"https://{domain}" : $"http://{domain}";
+            var url = $"https://{domain}";
             Console.Write("(!) Do you want to use the default ports for HTTP (80) and HTTPS (443)? (y/n): ");
             var defaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
             int httpPort = default(int), httpsPort = default(int);
@@ -96,37 +95,26 @@ namespace Bit.Setup
                 httpPort = 80;
                 httpsPort = 443;
             }
-            else
+            else if(ssl)
             {
-                Console.Write("(!) HTTP port: ");
-                if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpPort))
+                httpsPort = 443;
+                Console.Write("(!) HTTPS port: ");
+                if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort) && httpsPort != 443)
                 {
-                    if(ssl)
-                    {
-                        Console.Write("(!) HTTPS port: ");
-                        if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsPort))
-                        {
-                            if(httpsPort != 443)
-                            {
-                                url += (":" + httpsPort);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid HTTPS port. Using defaults.");
-                            httpPort = 80;
-                            httpsPort = 443;
-                        }
-                    }
-                    else if(httpPort != 80)
-                    {
-                        url += (":" + httpPort);
-                    }
+                    url += (":" + httpsPort);
                 }
                 else
                 {
-                    Console.WriteLine("Invalid HTTP port. Using default.");
-                    httpPort = 80;
+                    Console.WriteLine("Using default port.");
+                }
+            }
+            else
+            {
+                httpPort = 80;
+                Console.Write("(!) HTTP port: ");
+                if(!int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpPort) && httpPort != 80)
+                {
+                    Console.WriteLine("Using default port.");
                 }
             }
 
@@ -134,45 +122,31 @@ namespace Bit.Setup
             var reverseProxy = Console.ReadLine().ToLowerInvariant() == "y";
             if(reverseProxy)
             {
-                Console.Write("(!) Do you use the default ports on your reverse proxy (80/443)? (y/n): ");
-                var proxyDefaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
-
-                if(proxyDefaultPorts)
+                Console.Write("(!) Do you use the default HTTPS port (443) on your reverse proxy? (y/n): ");
+                var proxyDefaultPort = Console.ReadLine().ToLowerInvariant() == "y";
+                if(proxyDefaultPort)
                 {
-                    url = ssl ? $"https://{domain}" : $"http://{domain}";
+                    url = $"https://{domain}";
                 }
-                else
+                else if(ssl)
                 {
-                    int httpReversePort = default(int), httpsReversePort = default(int);
-                    Console.Write("(!) Proxy HTTP port: ");
-                    if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpReversePort))
+                    Console.Write("(!) Proxy HTTPS port: ");
+                    if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out var httpsReversePort)
+                        && httpsReversePort != 443)
                     {
-                        if(ssl)
-                        {
-                            Console.Write("(!) Proxy HTTPS port: ");
-                            if(int.TryParse(Console.ReadLine().ToLowerInvariant().Trim(), out httpsReversePort))
-                            {
-                                if(httpsReversePort != 443)
-                                {
-                                    url += (":" + httpsReversePort);
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine("Invalid proxy HTTPS port.");
-                                httpReversePort = httpsReversePort = default(int);
-                            }
-                        }
-                        else if(httpReversePort != 80)
-                        {
-                            url += (":" + httpReversePort);
-                        }
+                        url += (":" + httpsReversePort);
                     }
                     else
                     {
-                        Console.WriteLine("Invalid proxy HTTP port.");
+                        Console.WriteLine("Using default port.");
+                        url = $"https://{domain}";
                     }
                 }
+            }
+            else if(!ssl)
+            {
+                Console.WriteLine("ERROR: You must use a reverse proxy if not using SSL.");
+                return;
             }
 
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
