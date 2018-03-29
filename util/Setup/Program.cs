@@ -86,6 +86,16 @@ namespace Bit.Setup
             var selfSignedSsl = certBuilder.BuildForInstall();
             ssl = certBuilder.Ssl; // Ssl prop can get flipped during the build
 
+            var sslTrusted = letsEncrypt;
+            var sslDiffieHellman = letsEncrypt;
+            if(ssl && !selfSignedSsl && !letsEncrypt)
+            {
+                Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
+                sslDiffieHellman = Console.ReadLine().ToLowerInvariant() == "y";
+                Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
+                sslTrusted = Console.ReadLine().ToLowerInvariant() == "y";
+            }
+
             var url = $"https://{domain}";
             Console.Write("(!) Do you want to use the default ports for HTTP (80) and HTTPS (443)? (y/n): ");
             var defaultPorts = Console.ReadLine().ToLowerInvariant() == "y";
@@ -155,7 +165,8 @@ namespace Bit.Setup
             Console.Write("(!) Do you want to use push notifications? (y/n): ");
             var push = Console.ReadLine().ToLowerInvariant() == "y";
 
-            var nginxBuilder = new NginxConfigBuilder(domain, url, ssl, selfSignedSsl, letsEncrypt);
+            var nginxBuilder = new NginxConfigBuilder(domain, url, ssl, selfSignedSsl, letsEncrypt,
+                sslTrusted, sslDiffieHellman);
             nginxBuilder.BuildForInstaller();
 
             var environmentFileBuilder = new EnvironmentFileBuilder

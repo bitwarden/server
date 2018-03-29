@@ -5,6 +5,7 @@ namespace Bit.Setup
 {
     public class NginxConfigBuilder
     {
+        private const string ConfFile = "/bitwarden/nginx/default.conf";
         private const string SslCiphers =
             "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:" +
             "DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:" +
@@ -12,13 +13,16 @@ namespace Bit.Setup
             "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:" +
             "AES128-SHA256:AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
 
-        public NginxConfigBuilder(string domain, string url, bool ssl, bool selfSignedSsl, bool letsEncrypt)
+        public NginxConfigBuilder(string domain, string url, bool ssl, bool selfSignedSsl, bool letsEncrypt,
+            bool trusted, bool diffieHellman)
         {
             Domain = domain;
             Url = url;
             Ssl = ssl;
             SelfSignedSsl = selfSignedSsl;
             LetsEncrypt = letsEncrypt;
+            Trusted = trusted;
+            DiffieHellman = diffieHellman;
         }
 
         public NginxConfigBuilder(string domain, string url)
@@ -37,35 +41,15 @@ namespace Bit.Setup
 
         public void BuildForInstaller()
         {
-            if(Ssl && !SelfSignedSsl && !LetsEncrypt)
-            {
-                Console.Write("(!) Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)? (y/n): ");
-                DiffieHellman = Console.ReadLine().ToLowerInvariant() == "y";
-            }
-            else
-            {
-                DiffieHellman = LetsEncrypt;
-            }
-
-            if(Ssl && !SelfSignedSsl && !LetsEncrypt)
-            {
-                Console.Write("(!) Is this a trusted SSL certificate (requires ca.crt)? (y/n): ");
-                Trusted = Console.ReadLine().ToLowerInvariant() == "y";
-            }
-            else
-            {
-                Trusted = LetsEncrypt;
-            }
-
             Build();
         }
 
         public void BuildForUpdater()
         {
-            if(File.Exists("/bitwarden/nginx/default.conf"))
+            if(File.Exists(ConfFile))
             {
-                var confContent = File.ReadAllText("/bitwarden/nginx/default.conf");
-                Ssl = confContent.Contains("listen 8081 ssl http2;") || confContent.Contains("listen 443 ssl http2;");
+                var confContent = File.ReadAllText(ConfFile);
+                Ssl = confContent.Contains("ssl http2;");
                 SelfSignedSsl = confContent.Contains("/etc/ssl/self/");
                 LetsEncrypt = !SelfSignedSsl && confContent.Contains("/etc/letsencrypt/live/");
                 DiffieHellman = confContent.Contains("/dhparam.pem;");
@@ -86,7 +70,7 @@ namespace Bit.Setup
             var caFile = LetsEncrypt ? "fullchain.pem" : "ca.crt";
 
             Console.WriteLine("Building nginx config.");
-            using(var sw = File.CreateText("/bitwarden/nginx/default.conf"))
+            using(var sw = File.CreateText(ConfFile))
             {
                 sw.WriteLine($@"# Config Parameters
 # Parameter:Ssl={Ssl}
