@@ -234,6 +234,7 @@ namespace Bit.Core.Utilities
         public static IIdentityServerBuilder AddCustomIdentityServerServices(
             this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
         {
+            var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
             var identityServerBuilder = services
                 .AddIdentityServer(options =>
                 {
@@ -243,7 +244,7 @@ namespace Bit.Core.Utilities
                     options.Endpoints.EnableUserInfoEndpoint = false;
                     options.Endpoints.EnableCheckSessionEndpoint = false;
                     options.Endpoints.EnableTokenRevocationEndpoint = false;
-                    options.IssuerUri = globalSettings.BaseServiceUri.InternalIdentity;
+                    options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                     options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 })
                 .AddInMemoryCaching()
