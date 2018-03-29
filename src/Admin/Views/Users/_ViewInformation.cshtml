@@ -9,6 +9,12 @@
     <dt class="col-sm-4 col-lg-3">Premium Expires</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.User.PremiumExpirationDate?.ToString() ?? "-")</dd>
 
+    <dt class="col-sm-4 col-lg-3">Email Verified</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.EmailVerified ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.TwoFactorIsEnabled() ? "Yes" : "No")</dd>
+
     <dt class="col-sm-4 col-lg-3">Items</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
 
