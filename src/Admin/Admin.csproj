@@ -6,14 +6,7 @@
     <RootNamespace>Bit.Billing</RootNamespace>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="wwwroot\scripts\**" />
-    <Content Remove="wwwroot\scripts\**" />
-    <EmbeddedResource Remove="wwwroot\scripts\**" />
-    <None Remove="wwwroot\scripts\**" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
@@ -26,12 +19,6 @@
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.2" />
     <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="2.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="appsettings.json">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>
