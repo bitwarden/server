@@ -377,7 +377,7 @@ namespace Bit.Setup
 
         private static bool ReadQuestion(string prompt)
         {
-            var input = ReadInput(prompt).ToLowerInvariant();
+            var input = ReadInput(prompt).ToLowerInvariant().Trim();
             return input == "y" || input == "yes";
         }
     }
