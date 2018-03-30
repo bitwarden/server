@@ -64,12 +64,12 @@ namespace Bit.Admin.Controllers
             }
         }
 
-        public async Task<IActionResult> View(string id)
+        public async Task<IActionResult> View(Guid id)
         {
             using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
                 _globalSettings.DocumentDb.Key))
             {
-                var uri = UriFactory.CreateDocumentUri(Database, Collection, id);
+                var uri = UriFactory.CreateDocumentUri(Database, Collection, id.ToString());
                 var response = await client.ReadDocumentAsync<LogModel>(uri);
                 if(response?.Document == null)
                 {
