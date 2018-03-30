@@ -189,7 +189,6 @@ namespace Bit.Setup
             }
             Console.WriteLine($"!!!!!!!!!! {title} !!!!!!!!!!");
             Console.WriteLine(message);
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             Console.WriteLine();
             Console.ResetColor();
         }
