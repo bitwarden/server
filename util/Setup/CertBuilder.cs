@@ -35,9 +35,9 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    var message = "You are not using an SSL certificate. Bitwarden requires HTTPS to operate. " +
-                        "You must front your installation with a HTTPS proxy. The web vault (and other Bitwarden " +
-                        "apps) will not work properly without HTTPS.";
+                    var message = "You are not using an SSL certificate. Bitwarden requires HTTPS to operate. \n" +
+                                  "You must front your installation with a HTTPS proxy. The web vault (and \n" +
+                                  "other Bitwarden apps) will not work properly without HTTPS.";
                     Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
                 }
             }

@@ -77,8 +77,8 @@ namespace Bit.Setup
                 if(ssl)
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
-                    Helpers.ShowBanner("NOTE", "Make sure 'certificate.crt' and 'private.key' are provided in the " +
-                        "appropriate directory (see docs for info).");
+                    Helpers.ShowBanner("NOTE", "Make sure 'certificate.crt' and 'private.key' are provided in the \n" +
+                                               "appropriate directory (see docs for info).");
                 }
             }
 
@@ -91,9 +91,9 @@ namespace Bit.Setup
             var sslDiffieHellman = letsEncrypt;
             if(ssl && !selfSignedSsl && !letsEncrypt)
             {
-                sslDiffieHellman = Helpers.ReadQuestion(
-                    "Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)?");
-                sslTrusted = Helpers.ReadQuestion("Is this a trusted SSL certificate (requires ca.crt)?");
+                sslDiffieHellman = Helpers.ReadQuestion("Use Diffie Hellman ephemeral parameters for SSL " +
+                    "(requires dhparam.pem, see docs)?");
+                sslTrusted = Helpers.ReadQuestion("Is this a trusted SSL certificate (requires ca.crt, see docs)?");
             }
 
             var url = $"https://{domain}";
