@@ -78,7 +78,7 @@ namespace Bit.Setup
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
                     Helpers.ShowBanner("NOTE", "Make sure 'certificate.crt' and 'private.key' are provided in the \n" +
-                                               "appropriate directory (see docs for info).");
+                                               "appropriate directory before running 'start' (see docs for info).");
                 }
             }
 
