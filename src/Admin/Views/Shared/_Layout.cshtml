@@ -1,4 +1,5 @@
 ﻿@inject SignInManager<IdentityUser> SignInManager
+@inject Bit.Core.GlobalSettings GlobalSettings
 <!DOCTYPE html>
 <html>
 <head>
@@ -36,6 +37,12 @@
                         <li class="nav-item" active-controller="Organizations">
                             <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
                         </li>
+                        @if(!GlobalSettings.SelfHosted)
+                        {
+                            <li class="nav-item" active-controller="Logs">
+                                <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
+                            </li>
+                        }
                     }
                     <li class="nav-item">
                         <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank">Docs</a>
