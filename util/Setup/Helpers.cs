@@ -158,5 +158,40 @@ namespace Bit.Setup
             process.WaitForExit();
             return result;
         }
+
+        public static string ReadInput(string prompt)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write("(!) ");
+            Console.ResetColor();
+            Console.Write(prompt);
+            if(prompt.EndsWith("?"))
+            {
+                Console.Write(" (y/n)");
+            }
+            Console.Write(": ");
+            var input = Console.ReadLine();
+            Console.WriteLine();
+            return input;
+        }
+
+        public static bool ReadQuestion(string prompt)
+        {
+            var input = ReadInput(prompt).ToLowerInvariant().Trim();
+            return input == "y" || input == "yes";
+        }
+
+        public static void ShowBanner(string title, string message, ConsoleColor? color = null)
+        {
+            if(color != null)
+            {
+                Console.ForegroundColor = color.Value;
+            }
+            Console.WriteLine($"!!!!!!!!!! {title} !!!!!!!!!!");
+            Console.WriteLine(message);
+            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            Console.WriteLine();
+            Console.ResetColor();
+        }
     }
 }

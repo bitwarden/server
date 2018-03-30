@@ -23,8 +23,7 @@ namespace Bit.Setup
             var selfSignedSsl = false;
             if(!Ssl)
             {
-                Console.Write("(!) Do you want to generate a self-signed SSL certificate? (y/n): ");
-                if(Console.ReadLine().ToLowerInvariant() == "y")
+                if(Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{Domain}/");
                     Console.WriteLine("Generating self signed SSL certificate.");
@@ -36,11 +35,10 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    Console.WriteLine("\n!!!!!!!!!! WARNING !!!!!!!!!!");
-                    Console.WriteLine("You are not using an SSL certificate. Bitwarden requires HTTPS to operate. " +
+                    var message = "You are not using an SSL certificate. Bitwarden requires HTTPS to operate. " +
                         "You must front your installation with a HTTPS proxy. The web vault (and other Bitwarden " +
-                        "apps) will not work properly without HTTPS.");
-                    Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                        "apps) will not work properly without HTTPS.";
+                    Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
                 }
             }
 
@@ -57,6 +55,7 @@ namespace Bit.Setup
             Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -certfile identity.crt -passout pass:{IdentityCertPassword}");
 
+            Console.WriteLine();
             return selfSignedSsl;
         }
     }

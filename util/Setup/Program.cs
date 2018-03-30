@@ -73,12 +73,12 @@ namespace Bit.Setup
             var ssl = letsEncrypt;
             if(!letsEncrypt)
             {
-                ssl = ReadQuestion("Do you have a SSL certificate to use?");
+                ssl = Helpers.ReadQuestion("Do you have a SSL certificate to use?");
                 if(ssl)
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
-                    Console.WriteLine("*** Make sure 'certificate.crt' and 'private.key' are provided in the " +
-                        "appropriate directory (see docs for info). ***\n");
+                    Helpers.ShowBanner("NOTE", "Make sure 'certificate.crt' and 'private.key' are provided in the " +
+                        "appropriate directory (see docs for info).");
                 }
             }
 
@@ -91,14 +91,14 @@ namespace Bit.Setup
             var sslDiffieHellman = letsEncrypt;
             if(ssl && !selfSignedSsl && !letsEncrypt)
             {
-                sslDiffieHellman = ReadQuestion(
+                sslDiffieHellman = Helpers.ReadQuestion(
                     "Use Diffie Hellman ephemeral parameters for SSL (requires dhparam.pem)?");
-                sslTrusted = ReadQuestion("Is this a trusted SSL certificate (requires ca.crt)?");
+                sslTrusted = Helpers.ReadQuestion("Is this a trusted SSL certificate (requires ca.crt)?");
             }
 
             var url = $"https://{domain}";
             int httpPort = default(int), httpsPort = default(int);
-            if(ReadQuestion("Do you want to use the default ports for HTTP (80) and HTTPS (443)?"))
+            if(Helpers.ReadQuestion("Do you want to use the default ports for HTTP (80) and HTTPS (443)?"))
             {
                 httpPort = 80;
                 if(ssl)
@@ -109,7 +109,7 @@ namespace Bit.Setup
             else if(ssl)
             {
                 httpsPort = 443;
-                if(int.TryParse(ReadInput("HTTPS port").ToLowerInvariant().Trim(), out httpsPort) && httpsPort != 443)
+                if(int.TryParse(Helpers.ReadInput("HTTPS port").Trim(), out httpsPort) && httpsPort != 443)
                 {
                     url += (":" + httpsPort);
                 }
@@ -121,21 +121,21 @@ namespace Bit.Setup
             else
             {
                 httpPort = 80;
-                if(!int.TryParse(ReadInput("HTTP port").ToLowerInvariant().Trim(), out httpPort) && httpPort != 80)
+                if(!int.TryParse(Helpers.ReadInput("HTTP port").Trim(), out httpPort) && httpPort != 80)
                 {
                     Console.WriteLine("Using default port.");
                 }
             }
 
-            if(ReadQuestion("Is your installation behind a reverse proxy?"))
+            if(Helpers.ReadQuestion("Is your installation behind a reverse proxy?"))
             {
-                if(ReadQuestion("Do you use the default HTTPS port (443) on your reverse proxy?"))
+                if(Helpers.ReadQuestion("Do you use the default HTTPS port (443) on your reverse proxy?"))
                 {
                     url = $"https://{domain}";
                 }
                 else
                 {
-                    if(int.TryParse(ReadInput("Proxy HTTPS port").ToLowerInvariant().Trim(), out var httpsReversePort)
+                    if(int.TryParse(Helpers.ReadInput("Proxy HTTPS port").Trim(), out var httpsReversePort)
                         && httpsReversePort != 443)
                     {
                         url += (":" + httpsReversePort);
@@ -153,7 +153,7 @@ namespace Bit.Setup
                 return;
             }
 
-            var push = ReadQuestion("Do you want to use push notifications?");
+            var push = Helpers.ReadQuestion("Do you want to use push notifications?");
 
             var nginxBuilder = new NginxConfigBuilder(domain, url, ssl, selfSignedSsl, letsEncrypt,
                 sslTrusted, sslDiffieHellman);
@@ -270,7 +270,7 @@ namespace Bit.Setup
 
         private static bool ValidateInstallation()
         {
-            var installationId = ReadInput("Enter your installation id (get it at https://bitwarden.com/host)");
+            var installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");
             if(!Guid.TryParse(installationId.Trim(), out var installationidGuid))
             {
                 Console.WriteLine("Invalid installation id.");
@@ -278,7 +278,7 @@ namespace Bit.Setup
             }
 
             _installationId = installationidGuid;
-            _installationKey = ReadInput("Enter your installation key");
+            _installationKey = Helpers.ReadInput("Enter your installation key");
 
             try
             {
@@ -357,28 +357,6 @@ namespace Bit.Setup
             }
 
             return dict;
-        }
-
-        private static string ReadInput(string prompt)
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write("(!) ");
-            Console.ResetColor();
-            Console.Write(prompt);
-            if(prompt.EndsWith("?"))
-            {
-                Console.Write(" (y/n)");
-            }
-            Console.Write(": ");
-            var input = Console.ReadLine();
-            Console.WriteLine();
-            return input;
-        }
-
-        private static bool ReadQuestion(string prompt)
-        {
-            var input = ReadInput(prompt).ToLowerInvariant().Trim();
-            return input == "y" || input == "yes";
         }
     }
 }
