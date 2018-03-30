@@ -15,7 +15,13 @@ namespace Bit.Setup
             }
             if(!string.IsNullOrWhiteSpace(coreVersion))
             {
-                CoreVersion = coreVersion;
+                CoreVersion = MssqlVersion = coreVersion;
+            }
+
+            // Lock Windows at mssql CU2 due to various problems with later mssql docker builds.
+            if(os == "win")
+            {
+                MssqlVersion = "1.16.0";
             }
         }
 
@@ -24,6 +30,7 @@ namespace Bit.Setup
         public int HttpsPort { get; private set; }
         public string CoreVersion { get; private set; } = "latest";
         public string WebVersion { get; private set; } = "latest";
+        public string MssqlVersion { get; private set; } = "latest";
 
         public void BuildForInstaller(int httpPort, int httpsPort)
         {
@@ -95,12 +102,13 @@ namespace Bit.Setup
 # Parameter:HttpsPort={HttpsPort}
 # Parameter:CoreVersion={CoreVersion}
 # Parameter:WebVersion={WebVersion}
+# Parameter:MssqlVersion={MssqlVersion}
 
 version: '3'
 
 services:
   mssql:
-    image: bitwarden/mssql:{CoreVersion}
+    image: bitwarden/mssql:{MssqlVersion}
     container_name: bitwarden-mssql
     restart: always
     volumes:");
