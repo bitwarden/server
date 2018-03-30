@@ -25,6 +25,12 @@ namespace Bit.Setup
             {
                 if(Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
                 {
+                    var message = "You are using a self-signed SSL certificate. This certificate will not be \n" +
+                                  "trusted by Bitwarden client applications. You must add this certificate to \n" +
+                                  "the trusted store on each device or else you will receive errors when trying \n" +
+                                  "to connect to your installation.";
+                    Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
+
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{Domain}/");
                     Console.WriteLine("Generating self signed SSL certificate.");
                     Ssl = selfSignedSsl = true;
