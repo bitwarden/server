@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 OUTPUT_DIR="../."
 if [ $# -gt 0 ]
 then
@@ -28,7 +31,9 @@ fi
 mkdir -p $OUTPUT_DIR
 
 LETS_ENCRYPT="n"
-read -p "(!) Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): " DOMAIN
+echo -e -n "${CYAN}(!)${NC} Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): "
+read DOMAIN
+echo ""
 
 if [ "$DOMAIN" == "" ]
 then
@@ -37,11 +42,16 @@ fi
 
 if [ "$DOMAIN" != "localhost" ]
 then
-    read -p "(!) Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): " LETS_ENCRYPT
+    echo -e -n "${CYAN}(!)${NC} Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): " LETS_ENCRYPT
+    read LETS_ENCRYPT
+    echo ""
 
     if [ "$LETS_ENCRYPT" == "y" ]
     then
-        read -p "(!) Enter your email address (Let's Encrypt will send you certificate expiration reminders): " EMAIL
+        echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): " EMAIL
+        read EMAIL
+        echo ""
+
         mkdir -p $OUTPUT_DIR/letsencrypt
         docker pull certbot/certbot
         docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
@@ -62,3 +72,4 @@ fi
 
 echo ""
 echo "Setup complete"
+echo ""
