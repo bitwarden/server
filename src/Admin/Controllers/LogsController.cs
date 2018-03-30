@@ -70,7 +70,7 @@ namespace Bit.Admin.Controllers
                 _globalSettings.DocumentDb.Key))
             {
                 var uri = UriFactory.CreateDocumentUri(Database, Collection, id.ToString());
-                var response = await client.ReadDocumentAsync<LogModel>(uri);
+                var response = await client.ReadDocumentAsync<LogDetailsModel>(uri);
                 if(response?.Document == null)
                 {
                     return RedirectToAction("Index");
