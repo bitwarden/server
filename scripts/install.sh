@@ -42,13 +42,13 @@ fi
 
 if [ "$DOMAIN" != "localhost" ]
 then
-    echo -e -n "${CYAN}(!)${NC} Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): " LETS_ENCRYPT
+    echo -e -n "${CYAN}(!)${NC} Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): "
     read LETS_ENCRYPT
     echo ""
 
     if [ "$LETS_ENCRYPT" == "y" ]
     then
-        echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): " EMAIL
+        echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): "
         read EMAIL
         echo ""
 
