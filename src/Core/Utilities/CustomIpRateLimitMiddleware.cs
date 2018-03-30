@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
-using System.Linq;
 using System;
 
 namespace Bit.Core.Utilities
