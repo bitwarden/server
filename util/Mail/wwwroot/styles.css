@@ -102,6 +102,12 @@ body {
     padding: 0 0 10px;
 }
 
+.content-block img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
 .content-block-spaced {
     padding: 0 0 25px;
 }
@@ -137,7 +143,6 @@ body {
 /* -------------------------------------
     TYPOGRAPHY
 ------------------------------------- */
-
 .h3 {
     font-size: 18px;
     line-height: 25px;
