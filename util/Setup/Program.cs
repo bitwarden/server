@@ -96,6 +96,22 @@ namespace Bit.Setup
                 sslTrusted = Helpers.ReadQuestion("Is this a trusted SSL certificate (requires ca.crt, see docs)?");
             }
 
+            if(!ssl)
+            {
+                var message = "You are not using a SSL certificate. Bitwarden requires HTTPS to operate. \n" +
+                              "You must front your installation with a HTTPS proxy. The web vault (and \n" +
+                              "other Bitwarden apps) will not work properly without HTTPS.";
+                Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
+            }
+            else if(ssl && !sslTrusted)
+            {
+                var message = "You are using an untrusted SSL certificate. This certificate will not be \n" +
+                              "trusted by Bitwarden client applications. You must add this certificate to \n" +
+                              "the trusted store on each device or else you will receive errors when trying \n" +
+                              "to connect to your installation.";
+                Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
+            }
+
             var url = $"https://{domain}";
             int httpPort = default(int), httpsPort = default(int);
             if(Helpers.ReadQuestion("Do you want to use the default ports for HTTP (80) and HTTPS (443)?"))

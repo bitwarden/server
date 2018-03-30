@@ -25,12 +25,6 @@ namespace Bit.Setup
             {
                 if(Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
                 {
-                    var message = "You are using a self-signed SSL certificate. This certificate will not be \n" +
-                                  "trusted by Bitwarden client applications. You must add this certificate to \n" +
-                                  "the trusted store on each device or else you will receive errors when trying \n" +
-                                  "to connect to your installation.";
-                    Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
-
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{Domain}/");
                     Console.WriteLine("Generating self signed SSL certificate.");
                     Ssl = selfSignedSsl = true;
@@ -38,13 +32,6 @@ namespace Bit.Setup
                         $"-keyout /bitwarden/ssl/self/{Domain}/private.key " +
                         $"-out /bitwarden/ssl/self/{Domain}/certificate.crt " +
                         $"-subj \"/C=US/ST=New York/L=New York/O=8bit Solutions LLC/OU=Bitwarden/CN={Domain}\"");
-                }
-                else
-                {
-                    var message = "You are not using an SSL certificate. Bitwarden requires HTTPS to operate. \n" +
-                                  "You must front your installation with a HTTPS proxy. The web vault (and \n" +
-                                  "other Bitwarden apps) will not work properly without HTTPS.";
-                    Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
                 }
             }
 
