@@ -13,6 +13,7 @@
             <tr>
                 <th style="width: 50px;">&nbsp;</th>
                 <th style="width: 200px;">Timestamp</th>
+                <th style="width: 100px;">Project</th>
                 <th style="width: 100px;">Level</th>
                 <th>Message</th>
             </tr>
@@ -21,7 +22,7 @@
             @if(!Model.Items.Any())
             {
                 <tr>
-                    <td colspan="4">No results to list.</td>
+                    <td colspan="5">No results to list.</td>
                 </tr>
             }
             else
@@ -35,6 +36,7 @@
                             </a>
                         </td>
                         <td>@log.Timestamp.ToString()</td>
+                        <td>@(string.IsNullOrWhiteSpace(log.Project) ? "-" : log.Project)</td>
                         <td>@log.Level</td>
                         <td>@log.MessageTruncated</td>
                     </tr>

@@ -35,7 +35,9 @@ namespace Bit.Core.Utilities
                 CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
             {
                 config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri),
-                    globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7));
+                    globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7))
+                    .Enrich.FromLogContext()
+                    .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
             else if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
             {
@@ -49,7 +51,9 @@ namespace Bit.Core.Utilities
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
-                config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
+                config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt")
+                    .Enrich.FromLogContext()
+                    .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
 
             var serilog = config.CreateLogger();

@@ -16,6 +16,7 @@ namespace Bit.Admin.Models
         public string MessageTemplate { get; set; }
         public Error Exception { get; set; }
         public IDictionary<string, object> Properties { get; set; }
+        public string Project => Properties?.ContainsKey("Project") ?? false ? Properties["Project"].ToString() : null;
 
         [JsonObject(MemberSerialization.OptIn)]
         public class Error : Exception, ISerializable
