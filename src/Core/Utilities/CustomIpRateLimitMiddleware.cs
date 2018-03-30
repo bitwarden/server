@@ -60,11 +60,11 @@ namespace Bit.Core.Utilities
             if(blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
-                _logger.LogInformation($"Banned {identity.ClientIp}. Info: {GetRequestInfo(httpContext)}");
+                _logger.LogInformation($"Banned {identity.ClientIp}. \nInfo: \n{GetRequestInfo(httpContext)}");
             }
             else
             {
-                _logger.LogInformation($"Request blocked {identity.ClientIp}. Info: {GetRequestInfo(httpContext)}");
+                _logger.LogInformation($"Request blocked {identity.ClientIp}. \nInfo: \n{GetRequestInfo(httpContext)}");
                 _memoryCache.Set(key, blockedCount,
                     new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
@@ -80,12 +80,12 @@ namespace Bit.Core.Utilities
             var s = string.Empty;
             foreach(var header in httpContext.Request.Headers)
             {
-                s += $"H_{header.Key}: {header.Value} | ";
+                s += $"Header \"{header.Key}\": {header.Value} \n";
             }
 
             foreach(var query in httpContext.Request.Query)
             {
-                s += $"Q_{query.Key}: {query.Value} | ";
+                s += $"Query \"{query.Key}\": {query.Value} \n";
             }
 
             return s;
