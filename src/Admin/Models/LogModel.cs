@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Microsoft.Azure.Documents;
 using Newtonsoft.Json;
@@ -14,6 +15,7 @@ namespace Bit.Admin.Models
         public string MessageTruncated => Message.Length > 200 ? $"{Message.Substring(0, 200)}..." : Message;
         public string MessageTemplate { get; set; }
         public Error Exception { get; set; }
+        public IDictionary<string, object> Properties { get; set; }
 
         [JsonObject(MemberSerialization.OptIn)]
         public class Error : Exception, ISerializable
