@@ -10,7 +10,7 @@ namespace Bit.Admin.Models
     public class LogModel : Resource
     {
         public long EventIdHash { get; set; }
-        public LogEventLevel Level { get; set; }
+        public string Level { get; set; }
         public string Message { get; set; }
         public string MessageTruncated => Message.Length > 200 ? $"{Message.Substring(0, 200)}..." : Message;
         public string MessageTemplate { get; set; }

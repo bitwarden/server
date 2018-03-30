@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Documents.Linq;
+using Serilog.Events;
 
 namespace Bit.Admin.Controllers
 {
@@ -25,7 +26,8 @@ namespace Bit.Admin.Controllers
             _globalSettings = globalSettings;
         }
 
-        public async Task<IActionResult> Index(string cursor = null, int count = 50)
+        public async Task<IActionResult> Index(string cursor = null, int count = 50,
+            LogEventLevel? level = null, string project = null)
         {
             var collectionLink = UriFactory.CreateDocumentCollectionUri(Database, Collection);
             using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
@@ -37,12 +39,23 @@ namespace Bit.Admin.Controllers
                     RequestContinuation = cursor
                 };
 
-                var query = client.CreateDocumentQuery(collectionLink, options)
-                    .OrderByDescending(l => l.Timestamp).AsDocumentQuery();
-                var response = await query.ExecuteNextAsync<LogModel>();
-
-                return View(new CursorPagedModel<LogModel>
+                var query = client.CreateDocumentQuery<LogModel>(collectionLink, options).AsQueryable();
+                if(level.HasValue)
                 {
+                    query = query.Where(l => l.Level == level.Value.ToString());
+                }
+                if(!string.IsNullOrWhiteSpace(project))
+                {
+                    query = query.Where(l => l.Properties != null && l.Properties["Project"] == (object)project);
+                }
+
+                var docQuery = query.OrderByDescending(l => l.Timestamp).AsDocumentQuery();
+                var response = await docQuery.ExecuteNextAsync<LogModel>();
+
+                return View(new LogsModel
+                {
+                    Level = level,
+                    Project = project,
                     Items = response.ToList(),
                     Count = count,
                     Cursor = cursor,

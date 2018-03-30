@@ -1,4 +1,4 @@
-﻿@model CursorPagedModel<LogModel>
+﻿@model LogsModel
 @{
     ViewData["Title"] = "Logs";
 }
@@ -6,6 +6,22 @@
 <h1>Logs</h1>
 
 <p>Current UTC time: @DateTime.UtcNow.ToString()</p>
+
+<form class="form-inline mb-2" method="get">
+    <label class="sr-only" asp-for="Level">Level</label>
+    <select class="form-control mb-2 mr-2" asp-for="Level" name="level"
+            asp-items="Html.GetEnumSelectList<Serilog.Events.LogEventLevel>()">
+        <option value="">-- Level --</option>
+    </select>
+    <label class="sr-only" asp-for="Project">Project</label>
+    <select class="form-control mb-2 mr-2" asp-for="Project" name="project">
+        <option asp-selected="string.IsNullOrWhiteSpace(Model.Project)" value="">-- Project --</option>
+        <option asp-selected="@(Model.Project == "Admin")" value="Admin">Admin</option>
+        <option asp-selected="@(Model.Project == "Api")" value="Api">Api</option>
+        <option asp-selected="@(Model.Project == "Identity")" value="Identity">Identity</option>
+    </select>
+    <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
+</form>
 
 <div class="table-responsive">
     <table class="table table-striped table-hover">
@@ -58,7 +74,8 @@
         {
             <li class="page-item">
                 <a class="page-link" asp-action="Index" asp-route-cursor="@Model.NextCursor"
-                   asp-route-count="@Model.Count">Next</a>
+                   asp-route-count="@Model.Count" asp-route-project="@Model.Project"
+                   asp-route-level="@Model.Level">Next</a>
             </li>
         }
     </ul>
