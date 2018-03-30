@@ -25,7 +25,7 @@ namespace Bit.Admin.Controllers
             _globalSettings = globalSettings;
         }
 
-        public async Task<IActionResult> Index(string cursor = null, int count = 25)
+        public async Task<IActionResult> Index(string cursor = null, int count = 50)
         {
             var collectionLink = UriFactory.CreateDocumentCollectionUri(Database, Collection);
             using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
