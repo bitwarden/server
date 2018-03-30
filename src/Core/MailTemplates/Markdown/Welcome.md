@@ -2,34 +2,33 @@
 
 Did you know that Bitwarden is free to sync with all of your devices? Download Bitwarden today on:
 
-Mobile
-============
-
-## iOS
-<https://itunes.apple.com/us/app/bitwarden-free-password-manager/id1137397744?mt=8>
-
-## Android
-<https://play.google.com/store/apps/details?id=com.x8bit.bitwarden>
-
 Desktop
 ============
 
-## Chrome Extension
-<https://chrome.google.com/webstore/detail/bitwarden-free-password-m/nngceckbapebfimnlniiiahkandclblb?utm_source=welcome_email&utm_medium=email>
+Access Bitwarden on Windows, macOS, and Linux desktops with our native desktop application.
 
-## Firefox Extension
-<https://addons.mozilla.org/firefox/addon/bitwarden-password-manager/>
+<https://bitwarden.com/#download>
 
-## Opera Extension
-<https://addons.opera.com/extensions/details/bitwarden-free-password-manager/?utm_source=welcome_email&utm_medium=email>
+Web Browser
+============
 
-## Edge Extension
-<https://www.microsoft.com/store/p/bitwarden-free-password-manager/9p6kxl0svnnl>
+Integrate Bitwarden directly into your favorite browser. Use our browser extensions for a seamless browsing experience.
+
+<https://bitwarden.com/#download-browser>
+
+Mobile
+============
+
+Take Bitwarden on the go with our mobile apps for your phone or tablet device.
+
+<https://bitwarden.com/#download-mobile>
 
 Web
 ============
 
-You can also access your vault from any web-enabled device using our web vault at: <{{vaultUrl}}?utm_source=welcome_email&utm_medium=email>
+Stuck without any of your devices? Using a friend's computer? You can access your Bitwarden vault from any web enabled device by using the web vault.
+
+<{{vaultUrl}}?utm_source=welcome_email&utm_medium=email>
 
 ------------
 
