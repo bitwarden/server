@@ -21,7 +21,7 @@ namespace Bit.Setup
             // Lock Windows at mssql CU2 due to various problems with later mssql docker builds.
             if(os == "win")
             {
-                MssqlVersion = "1.18.0-CU2";
+                MssqlVersion = "1.16.0";
             }
         }
 
