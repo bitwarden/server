@@ -35,12 +35,12 @@ namespace Bit.Admin.Models
 
             if(e["StackTrace"] != null && e["StackTrace"].ToObject<string>() != null)
             {
-                val += "\nStackTrace:\n";
+                val += "\nStack Trace:\n";
                 val += e["StackTrace"];
             }
             else if(e["StackTraceString"] != null && e["StackTraceString"].ToObject<string>() != null)
             {
-                val += "\nStackTraceString:\n";
+                val += "\nStack Trace String:\n";
                 val += e["StackTraceString"];
             }
 
