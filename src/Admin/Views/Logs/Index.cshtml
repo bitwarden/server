@@ -18,7 +18,10 @@
         <option asp-selected="string.IsNullOrWhiteSpace(Model.Project)" value="">-- Project --</option>
         <option asp-selected="@(Model.Project == "Admin")" value="Admin">Admin</option>
         <option asp-selected="@(Model.Project == "Api")" value="Api">Api</option>
+        <option asp-selected="@(Model.Project == "Billing")" value="Billing">Billing</option>
+        <option asp-selected="@(Model.Project == "Events")" value="Events">Events</option>
         <option asp-selected="@(Model.Project == "Identity")" value="Identity">Identity</option>
+        <option asp-selected="@(Model.Project == "Scim")" value="Scim">Scim</option>
     </select>
     <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
 </form>
