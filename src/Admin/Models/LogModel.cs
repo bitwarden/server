@@ -46,7 +46,7 @@ namespace Bit.Admin.Models
 
             if(e["InnerException"] != null && e["InnerException"].ToObject<JObject>() != null)
             {
-                val += "\n\n\n=== Inner Exception ===\n\n\n";
+                val += "\n\n=== Inner Exception ===\n\n";
                 val += ExceptionToString(e["InnerException"].ToObject<JObject>());
             }
 
