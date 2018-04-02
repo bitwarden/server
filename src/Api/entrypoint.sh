@@ -18,6 +18,8 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
+mkdir -p /home/$USERNAME
+chown -R $USERNAME:$USERNAME /home/$USERNAME
 touch /var/log/cron.log
 chown $USERNAME:$USERNAME /var/log/cron.log
 chown -R $USERNAME:$USERNAME /app

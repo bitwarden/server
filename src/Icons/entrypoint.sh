@@ -18,6 +18,8 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
+mkdir -p /home/$USERNAME
+chown -R $USERNAME:$USERNAME /home/$USERNAME
 chown -R $USERNAME:$USERNAME /app
 chown -R $USERNAME:$USERNAME /etc/iconserver
 
