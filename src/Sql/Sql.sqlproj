@@ -106,7 +106,6 @@
     <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
@@ -226,5 +225,6 @@
     <Build Include="dbo\Stored Procedures\Organization_ReadAbilities.sql" />
     <Build Include="dbo\Stored Procedures\User_Search.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Search.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
   </ItemGroup>
 </Project>
