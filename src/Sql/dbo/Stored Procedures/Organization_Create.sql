@@ -16,6 +16,7 @@
     @UseDirectory BIT,
     @UseEvents BIT,
     @UseTotp BIT,
+    @Use2fa BIT,
     @SelfHost BIT,
     @UsersGetPremium BIT,
     @Storage BIGINT,
@@ -25,6 +26,7 @@
     @GatewaySubscriptionId VARCHAR(50),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
+    @TwoFactorProviders NVARCHAR(MAX),
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -51,6 +53,7 @@ BEGIN
         [UseDirectory],
         [UseEvents],
         [UseTotp],
+        [Use2fa],
         [SelfHost],
         [UsersGetPremium],
         [Storage],
@@ -60,6 +63,7 @@ BEGIN
         [GatewaySubscriptionId],
         [Enabled],
         [LicenseKey],
+        [TwoFactorProviders],
         [ExpirationDate],
         [CreationDate],
         [RevisionDate]
@@ -83,6 +87,7 @@ BEGIN
         @UseDirectory,
         @UseEvents,
         @UseTotp,
+        @Use2fa,
         @SelfHost,
         @UsersGetPremium,
         @Storage,
@@ -92,6 +97,7 @@ BEGIN
         @GatewaySubscriptionId,
         @Enabled,
         @LicenseKey,
+        @TwoFactorProviders,
         @ExpirationDate,
         @CreationDate,
         @RevisionDate

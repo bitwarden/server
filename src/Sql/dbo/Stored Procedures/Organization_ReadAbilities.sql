@@ -6,6 +6,7 @@ BEGIN
     SELECT
         [Id],
         [UseEvents],
+        [Use2fa],
         [Enabled]
     FROM
         [dbo].[Organization]

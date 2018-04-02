@@ -533,6 +533,7 @@ namespace Bit.Core.Services
                 UseEvents = plan.UseEvents,
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
+                Use2fa = plan.Use2fa,
                 SelfHost = plan.SelfHost,
                 UsersGetPremium = plan.UsersGetPremium,
                 Plan = plan.Name,
@@ -588,6 +589,7 @@ namespace Bit.Core.Services
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
                 UseTotp = license.UseTotp,
+                Use2fa = license.Use2fa,
                 Plan = license.Plan,
                 SelfHost = license.SelfHost,
                 UsersGetPremium = license.UsersGetPremium,
@@ -753,6 +755,9 @@ namespace Bit.Core.Services
             organization.UseDirectory = license.UseDirectory;
             organization.UseEvents = license.UseEvents;
             organization.UseTotp = license.UseTotp;
+            organization.Use2fa = license.Use2fa;
+            organization.SelfHost = license.SelfHost;
+            organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;
             organization.Enabled = license.Enabled;
             organization.ExpirationDate = license.Expires;

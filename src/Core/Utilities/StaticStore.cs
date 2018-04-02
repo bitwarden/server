@@ -166,6 +166,7 @@ namespace Bit.Core.Utilities
                     UseDirectory = true,
                     UseEvents = true,
                     UseTotp = true,
+                    Use2fa = true,
                     MaxStorageGb = 1,
                     SelfHost = true,
                     UsersGetPremium = true
@@ -187,6 +188,7 @@ namespace Bit.Core.Utilities
                     UseDirectory = true,
                     UseEvents = true,
                     UseTotp = true,
+                    Use2fa = true,
                     MaxStorageGb = 1,
                     SelfHost = true,
                     UsersGetPremium = true

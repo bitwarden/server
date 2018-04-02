@@ -16,6 +16,7 @@ namespace Bit.Core.Models.StaticStore
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
+        public bool Use2fa { get; set; }
         public short? MaxStorageGb { get; set; }
         public decimal BasePrice { get; set; }
         public decimal SeatPrice { get; set; }

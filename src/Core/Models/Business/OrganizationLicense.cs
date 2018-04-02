@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, BillingInfo billingInfo, Guid installationId,
             ILicensingService licenseService)
         {
-            Version = 3;
+            Version = 4;
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -35,6 +35,7 @@ namespace Bit.Core.Models.Business
             UseEvents = org.UseEvents;
             UseDirectory = org.UseDirectory;
             UseTotp = org.UseTotp;
+            Use2fa = org.Use2fa;
             MaxStorageGb = org.MaxStorageGb;
             SelfHost = org.SelfHost;
             UsersGetPremium = org.UsersGetPremium;
@@ -100,6 +101,7 @@ namespace Bit.Core.Models.Business
         public bool UseEvents { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseTotp { get; set; }
+        public bool Use2fa { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
@@ -116,7 +118,7 @@ namespace Bit.Core.Models.Business
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if(Version >= 1 && Version <= 3)
+            if(Version >= 1 && Version <= 4)
             {
                 var props = typeof(OrganizationLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -127,6 +129,8 @@ namespace Bit.Core.Models.Business
                         (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                         // UseEvents was added in Version 3
                         (Version >= 3 || !p.Name.Equals(nameof(UseEvents))) &&
+                        // Use2fa was added in Version 4
+                        (Version >= 4 || !p.Name.Equals(nameof(Use2fa))) &&
                         (
                             !forHash ||
                             (
@@ -163,7 +167,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version >= 1 && Version <= 3)
+            if(Version >= 1 && Version <= 4)
             {
                 return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
@@ -180,7 +184,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version >= 1 && Version <= 3)
+            if(Version >= 1 && Version <= 4)
             {
                 var valid =
                     globalSettings.Installation.Id == InstallationId &&
@@ -203,6 +207,11 @@ namespace Bit.Core.Models.Business
                 if(valid && Version >= 3)
                 {
                     valid = organization.UseEvents == UseEvents;
+                }
+
+                if(valid && Version >= 4)
+                {
+                    valid = organization.Use2fa == Use2fa;
                 }
 
                 return valid;

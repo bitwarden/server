@@ -68,7 +68,8 @@ namespace Bit.Core.Models.Table
                 if(_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(TwoFactorProviders);
+                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                            TwoFactorProviders);
                 }
 
                 return _twoFactorProviders;
@@ -107,7 +108,8 @@ namespace Bit.Core.Models.Table
                 return false;
             }
 
-            return providers.Any(p => (p.Value?.Enabled ?? false) && (Premium || !TwoFactorProvider.RequiresPremium(p.Key)));
+            return providers.Any(p => (p.Value?.Enabled ?? false) && 
+                (Premium || !TwoFactorProvider.RequiresPremium(p.Key)));
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)

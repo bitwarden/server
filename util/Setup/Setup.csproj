@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="DbScripts\2018-04-02_00_Org2fa.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="DbScripts\2018-04-02_00_Org2fa.sql" />
     <EmbeddedResource Include="DbScripts\2018-03-21_00_AdminPortal.sql" />
     <EmbeddedResource Include="DbScripts\2018-03-12_00_FixLoginUris.sql" />
     <EmbeddedResource Include="DbScripts\2018-02-28_00_LoginUris.sql" />
