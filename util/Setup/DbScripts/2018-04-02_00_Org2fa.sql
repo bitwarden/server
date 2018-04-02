@@ -241,3 +241,17 @@ BEGIN
         [dbo].[Organization]
 END
 GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationView')
+BEGIN
+    DROP VIEW [dbo].[OrganizationView]
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Organization]
+GO
