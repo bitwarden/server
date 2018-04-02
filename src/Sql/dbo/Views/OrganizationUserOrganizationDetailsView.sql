@@ -9,6 +9,7 @@ SELECT
     O.[UseDirectory],
     O.[UseEvents],
     O.[UseTotp],
+    O.[Use2fa],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[Seats],
