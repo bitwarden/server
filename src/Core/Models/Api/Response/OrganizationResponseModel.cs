@@ -34,6 +34,7 @@ namespace Bit.Core.Models.Api
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
             UseTotp = organization.UseTotp;
+            Use2fa = organization.Use2fa;
         }
 
         public string Id { get; set; }
@@ -54,6 +55,7 @@ namespace Bit.Core.Models.Api
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
+        public bool Use2fa { get; set; }
     }
 
     public class OrganizationBillingResponseModel : OrganizationResponseModel
