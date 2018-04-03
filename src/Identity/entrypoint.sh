@@ -18,6 +18,11 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
+if [ ! -d "/home/$USERNAME" ]
+then
+    mkhomedir_helper $USERNAME
+fi
+
 mkdir -p /etc/bitwarden/identity
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
