@@ -18,6 +18,11 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
+if [ ! -d "/home/$USERNAME" ]
+then
+    mkhomedir_helper $USERNAME
+fi
+
 touch /var/log/cron.log
 chown $USERNAME:$USERNAME /var/log/cron.log
 chown -R $USERNAME:$USERNAME /app
