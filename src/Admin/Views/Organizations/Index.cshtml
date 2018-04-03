@@ -10,12 +10,15 @@
     <input type="text" class="form-control mb-2 mr-2" placeholder="Name" asp-for="Name" name="name">
     <label class="sr-only" asp-for="UserEmail">User email</label>
     <input type="text" class="form-control mb-2 mr-2" placeholder="User email" asp-for="UserEmail" name="userEmail">
-    <label class="sr-only" asp-for="Paid">Customer</label>
-    <select class="form-control mb-2 mr-2" asp-for="Paid" name="paid">
-        <option asp-selected="!Model.Paid.HasValue" value="">-- Customer --</option>
-        <option asp-selected="Model.Paid.GetValueOrDefault(false)" value="true">Paid</option>
-        <option asp-selected="!Model.Paid.GetValueOrDefault(true)" value="false">Freeloader</option>
-    </select>
+    @if(!Model.SelfHosted)
+    {
+        <label class="sr-only" asp-for="Paid">Customer</label>
+        <select class="form-control mb-2 mr-2" asp-for="Paid" name="paid">
+            <option asp-selected="!Model.Paid.HasValue" value="">-- Customer --</option>
+            <option asp-selected="Model.Paid.GetValueOrDefault(false)" value="true">Paid</option>
+            <option asp-selected="!Model.Paid.GetValueOrDefault(true)" value="false">Freeloader</option>
+        </select>
+    }
     <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
 </form>
 
@@ -27,7 +30,7 @@
                 <th style="width: 190px;">Plan</th>
                 <th style="width: 80px;">Seats</th>
                 <th style="width: 150px;">Created</th>
-                <th style="width: 150px; min-width: 150px;">Details</th>
+                <th style="width: 170px; min-width: 170px;">Details</th>
             </tr>
         </thead>
         <tbody>
@@ -86,6 +89,14 @@
                             else
                             {
                                 <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Disabled"></i>
+                            }
+                            @if(org.TwoFactorIsEnabled())
+                            {
+                                <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
                             }
                         </td>
                     </tr>
