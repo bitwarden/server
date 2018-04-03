@@ -2,7 +2,6 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System;
 using System.Linq;
 
 namespace Bit.Core.Models.Api
@@ -74,6 +73,32 @@ namespace Bit.Core.Models.Api
             });
             extistingUser.SetTwoFactorProviders(providers);
             return extistingUser;
+        }
+
+        public Organization ToOrganization(Organization extistingOrg)
+        {
+            var providers = extistingOrg.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            else if(providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
+            {
+                providers.Remove(TwoFactorProviderType.OrganizationDuo);
+            }
+
+            providers.Add(TwoFactorProviderType.OrganizationDuo, new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object>
+                {
+                    ["SKey"] = SecretKey,
+                    ["IKey"] = IntegrationKey,
+                    ["Host"] = Host
+                },
+                Enabled = true
+            });
+            extistingOrg.SetTwoFactorProviders(providers);
+            return extistingOrg;
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -214,7 +239,7 @@ namespace Bit.Core.Models.Api
     public class TwoFactorProviderRequestModel : TwoFactorRequestModel
     {
         [Required]
-        public Enums.TwoFactorProviderType? Type { get; set; }
+        public TwoFactorProviderType? Type { get; set; }
     }
 
     public class TwoFactorRequestModel

@@ -26,6 +26,8 @@ namespace Bit.Core.Services
         Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
         Task EnableAsync(Guid organizationId);
         Task UpdateAsync(Organization organization, bool updateBilling = false);
+        Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
+        Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
         Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<string> emails,

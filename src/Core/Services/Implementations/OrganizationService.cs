@@ -832,6 +832,47 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
+        {
+            if(!type.ToString().StartsWith("Organization"))
+            {
+                throw new ArgumentException("Not an organization provider type.");
+            }
+
+            if(!organization.Use2fa)
+            {
+                throw new BadRequestException("Organization cannot use 2FA.");
+            }
+
+            var providers = organization.GetTwoFactorProviders();
+            if(!providers?.ContainsKey(type) ?? true)
+            {
+                return;
+            }
+
+            providers[type].Enabled = true;
+            organization.SetTwoFactorProviders(providers);
+            await UpdateAsync(organization);
+        }
+
+        public async Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
+        {
+            if(!type.ToString().StartsWith("Organization"))
+            {
+                throw new ArgumentException("Not an organization provider type.");
+            }
+
+            var providers = organization.GetTwoFactorProviders();
+            if(!providers?.ContainsKey(type) ?? true)
+            {
+                return;
+            }
+
+            providers.Remove(type);
+            organization.SetTwoFactorProviders(providers);
+            await UpdateAsync(organization);
+        }
+
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {

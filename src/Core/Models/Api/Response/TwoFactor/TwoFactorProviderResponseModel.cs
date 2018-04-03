@@ -6,8 +6,10 @@ namespace Bit.Core.Models.Api
 {
     public class TwoFactorProviderResponseModel : ResponseModel
     {
+        private const string ResponseObj = "twoFactorProvider";
+
         public TwoFactorProviderResponseModel(TwoFactorProviderType type, TwoFactorProvider provider)
-            : base("twoFactorProvider")
+            : base(ResponseObj)
         {
             if(provider == null)
             {
@@ -19,7 +21,7 @@ namespace Bit.Core.Models.Api
         }
 
         public TwoFactorProviderResponseModel(TwoFactorProviderType type, User user)
-            : base("twoFactorProvider")
+            : base(ResponseObj)
         {
             if(user == null)
             {
@@ -27,6 +29,19 @@ namespace Bit.Core.Models.Api
             }
 
             var provider = user.GetTwoFactorProvider(type);
+            Enabled = provider?.Enabled ?? false;
+            Type = type;
+        }
+
+        public TwoFactorProviderResponseModel(TwoFactorProviderType type, Organization organization)
+            : base(ResponseObj)
+        {
+            if(organization == null)
+            {
+                throw new ArgumentNullException(nameof(organization));
+            }
+
+            var provider = organization.GetTwoFactorProvider(type);
             Enabled = provider?.Enabled ?? false;
             Type = type;
         }

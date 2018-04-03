@@ -6,8 +6,10 @@ namespace Bit.Core.Models.Api
 {
     public class TwoFactorDuoResponseModel : ResponseModel
     {
+        private const string ResponseObj = "twoFactorDuo";
+
         public TwoFactorDuoResponseModel(User user)
-            : base("twoFactorDuo")
+            : base(ResponseObj)
         {
             if(user == null)
             {
@@ -15,6 +17,28 @@ namespace Bit.Core.Models.Api
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+            Build(provider);
+        }
+
+        public TwoFactorDuoResponseModel(Organization org)
+            : base(ResponseObj)
+        {
+            if(org == null)
+            {
+                throw new ArgumentNullException(nameof(org));
+            }
+
+            var provider = org.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+            Build(provider);
+        }
+
+        public bool Enabled { get; set; }
+        public string Host { get; set; }
+        public string SecretKey { get; set; }
+        public string IntegrationKey { get; set; }
+
+        private void Build(TwoFactorProvider provider)
+        {
             if(provider?.MetaData != null && provider.MetaData.Count > 0)
             {
                 Enabled = provider.Enabled;
@@ -37,10 +61,5 @@ namespace Bit.Core.Models.Api
                 Enabled = false;
             }
         }
-
-        public bool Enabled { get; set; }
-        public string Host { get; set; }
-        public string SecretKey { get; set; }
-        public string IntegrationKey { get; set; }
     }
 }

@@ -10,6 +10,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core;
+using Bit.Core.Repositories;
 
 namespace Bit.Api.Controllers
 {
@@ -18,17 +19,26 @@ namespace Bit.Api.Controllers
     public class TwoFactorController : Controller
     {
         private readonly IUserService _userService;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
+        private readonly CurrentContext _currentContext;
 
         public TwoFactorController(
             IUserService userService,
+            IOrganizationRepository organizationRepository,
+            IOrganizationService organizationService,
             GlobalSettings globalSettings,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            CurrentContext currentContext)
         {
             _userService = userService;
+            _organizationRepository = organizationRepository;
+            _organizationService = organizationService;
             _globalSettings = globalSettings;
             _userManager = userManager;
+            _currentContext = currentContext;
         }
 
         [HttpGet("")]
@@ -40,7 +50,28 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var providers = user.GetTwoFactorProviders()?.Select(p => new TwoFactorProviderResponseModel(p.Key, p.Value));
+            var providers = user.GetTwoFactorProviders()?.Select(
+                p => new TwoFactorProviderResponseModel(p.Key, p.Value));
+            return new ListResponseModel<TwoFactorProviderResponseModel>(providers);
+        }
+
+        [HttpGet("~/organizations/{id}/two-factor")]
+        public async Task<ListResponseModel<TwoFactorProviderResponseModel>> GetOrganization(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var providers = organization.GetTwoFactorProviders()?.Select(
+                p => new TwoFactorProviderResponseModel(p.Key, p.Value));
             return new ListResponseModel<TwoFactorProviderResponseModel>(providers);
         }
 
@@ -113,6 +144,54 @@ namespace Bit.Api.Controllers
             model.ToUser(user);
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
             var response = new TwoFactorDuoResponseModel(user);
+            return response;
+        }
+
+        [HttpPost("~/organizations/{id}/two-factor/get-duo")]
+        public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
+            [FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, false);
+
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var response = new TwoFactorDuoResponseModel(organization);
+            return response;
+        }
+
+        [HttpPut("~/organizations/{id}/two-factor/duo")]
+        [HttpPost("~/organizations/{id}/two-factor/duo")]
+        public async Task<TwoFactorDuoResponseModel> PutOrganizationDuo(string id,
+            [FromBody]UpdateTwoFactorDuoRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, false);
+
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            model.ToOrganization(organization);
+            await _organizationService.UpdateTwoFactorProviderAsync(organization,
+                TwoFactorProviderType.OrganizationDuo);
+            var response = new TwoFactorDuoResponseModel(organization);
             return response;
         }
 
@@ -203,6 +282,30 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
             var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
+            return response;
+        }
+        
+        [HttpPut("~/organizations/{id}/two-factor/disable")]
+        [HttpPost("~/organizations/{id}/two-factor/disable")]
+        public async Task<TwoFactorProviderResponseModel> PutOrganizationDisable(string id,
+            [FromBody]TwoFactorProviderRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, false);
+
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.DisableTwoFactorProviderAsync(organization, model.Type.Value);
+            var response = new TwoFactorProviderResponseModel(model.Type.Value, organization);
             return response;
         }
 
