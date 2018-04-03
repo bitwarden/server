@@ -18,8 +18,6 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
-mkdir -p /home/$USERNAME
-chown -R $USERNAME:$USERNAME /home/$USERNAME
 mkdir -p /etc/bitwarden/identity
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs

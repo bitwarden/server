@@ -18,8 +18,6 @@ then
     useradd -r -u $LUID -g $USERNAME $USERNAME
 fi
 
-mkdir -p /home/$USERNAME
-chown -R $USERNAME:$USERNAME /home/$USERNAME
 chown -R $USERNAME:$USERNAME /etc/bitwarden
 cp /etc/bitwarden/nginx/default.conf /etc/nginx/conf.d/default.conf
 mkdir -p /etc/letsencrypt
