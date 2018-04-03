@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Bit.Core.Services;
 using System.Linq;
 using Bit.Core.Models;
+using Bit.Core.Identity;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.IdentityServer
 {
@@ -22,19 +24,34 @@ namespace Bit.Core.IdentityServer
         private readonly IDeviceService _deviceService;
         private readonly IUserService _userService;
         private readonly IEventService _eventService;
+        private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IApplicationCacheService _applicationCacheService;
+        private readonly CurrentContext _currentContext;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
             IDeviceService deviceService,
             IUserService userService,
-            IEventService eventService)
+            IEventService eventService,
+            IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
+            IApplicationCacheService applicationCacheService,
+            CurrentContext currentContext)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
             _deviceService = deviceService;
             _userService = userService;
             _eventService = eventService;
+            _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
+            _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
+            _applicationCacheService = applicationCacheService;
+            _currentContext = currentContext;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -42,7 +59,8 @@ namespace Bit.Core.IdentityServer
             var twoFactorToken = context.Request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = context.Request.Raw["TwoFactorProvider"]?.ToString();
             var twoFactorRemember = context.Request.Raw["TwoFactorRemember"]?.ToString() == "1";
-            var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) && !string.IsNullOrWhiteSpace(twoFactorProvider);
+            var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
+                !string.IsNullOrWhiteSpace(twoFactorProvider);
 
             if(string.IsNullOrWhiteSpace(context.UserName))
             {
@@ -57,16 +75,18 @@ namespace Bit.Core.IdentityServer
                 return;
             }
 
-            if(await TwoFactorRequiredAsync(user))
+            var twoFactorRequirement = await RequiresTwoFactorAsync(user);
+            if(twoFactorRequirement.Item1)
             {
                 var twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
                 if(!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
                 {
-                    await BuildTwoFactorResultAsync(user, context);
+                    await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
                     return;
                 }
 
-                var verified = await VerifyTwoFactor(user, twoFactorProviderType, twoFactorToken);
+                var verified = await VerifyTwoFactor(user, twoFactorRequirement.Item2,
+                    twoFactorProviderType, twoFactorToken);
                 if(!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
                     await BuildErrorResultAsync(true, context, user);
@@ -75,7 +95,7 @@ namespace Bit.Core.IdentityServer
                 else if(!verified && twoFactorProviderType == TwoFactorProviderType.Remember)
                 {
                     await Task.Delay(2000); // Delay for brute force.
-                    await BuildTwoFactorResultAsync(user, context);
+                    await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
                     return;
                 }
             }
@@ -116,7 +136,8 @@ namespace Bit.Core.IdentityServer
 
             if(sendRememberToken)
             {
-                var token = await _userManager.GenerateTwoFactorTokenAsync(user, TwoFactorProviderType.Remember.ToString());
+                var token = await _userManager.GenerateTwoFactorTokenAsync(user,
+                    TwoFactorProviderType.Remember.ToString());
                 customResponse.Add("TwoFactorToken", token);
             }
 
@@ -126,12 +147,26 @@ namespace Bit.Core.IdentityServer
                 customResponse: customResponse);
         }
 
-        private async Task BuildTwoFactorResultAsync(User user, ResourceOwnerPasswordValidationContext context)
+        private async Task BuildTwoFactorResultAsync(User user, Organization organization,
+            ResourceOwnerPasswordValidationContext context)
         {
             var providerKeys = new List<byte>();
             var providers = new Dictionary<byte, Dictionary<string, object>>();
-            var enabledProviders = user.GetTwoFactorProviders()?.Where(p => user.TwoFactorProviderIsEnabled(p.Key));
-            if(enabledProviders == null)
+
+            var enabledProviders = new List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>();
+            if(organization?.GetTwoFactorProviders() != null)
+            {
+                enabledProviders.AddRange(organization.GetTwoFactorProviders().Where(
+                    p => organization.TwoFactorProviderIsEnabled(p.Key)));
+            }
+
+            if(user.GetTwoFactorProviders() != null)
+            {
+                enabledProviders.AddRange(
+                    user.GetTwoFactorProviders().Where(p => user.TwoFactorProviderIsEnabled(p.Key)));
+            }
+
+            if(!enabledProviders.Any())
             {
                 await BuildErrorResultAsync(false, context, user);
                 return;
@@ -140,7 +175,7 @@ namespace Bit.Core.IdentityServer
             foreach(var provider in enabledProviders)
             {
                 providerKeys.Add((byte)provider.Key);
-                var infoDict = await BuildTwoFactorParams(user, provider.Key, provider.Value);
+                var infoDict = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
                 providers.Add((byte)provider.Key, infoDict);
             }
 
@@ -176,11 +211,34 @@ namespace Bit.Core.IdentityServer
                 }});
         }
 
-        private async Task<bool> TwoFactorRequiredAsync(User user)
+        public async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user)
         {
-            return _userManager.SupportsUserTwoFactor &&
+            var individualRequired = _userManager.SupportsUserTwoFactor &&
                 await _userManager.GetTwoFactorEnabledAsync(user) &&
                 (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
+
+            Organization firstEnabledOrg = null;
+            var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+                .Where(o => o.Status == OrganizationUserStatusType.Confirmed).ToList();
+            if(orgs.Any())
+            {
+                var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+                var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.OrganizationId));
+                if(twoFactorOrgs.Any())
+                {
+                    var userOrgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+                    firstEnabledOrg = userOrgs.FirstOrDefault(
+                        o => orgs.Any(om => om.OrganizationId == o.Id) && o.TwoFactorIsEnabled());
+                }
+            }
+
+            return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
+        }
+
+        private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+        {
+            return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
+                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
         }
 
         private Device GetDeviceFromRequest(ResourceOwnerPasswordValidationContext context)
@@ -205,13 +263,9 @@ namespace Bit.Core.IdentityServer
             };
         }
 
-        private async Task<bool> VerifyTwoFactor(User user, TwoFactorProviderType type, string token)
+        private async Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType type,
+            string token)
         {
-            if(type != TwoFactorProviderType.Remember && !user.TwoFactorProviderIsEnabled(type))
-            {
-                return false;
-            }
-
             switch(type)
             {
                 case TwoFactorProviderType.Authenticator:
@@ -219,28 +273,43 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.Remember:
+                    if(type != TwoFactorProviderType.Remember && !user.TwoFactorProviderIsEnabled(type))
+                    {
+                        return false;
+                    }
                     return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
                 case TwoFactorProviderType.Email:
+                    if(!user.TwoFactorProviderIsEnabled(type))
+                    {
+                        return false;
+                    }
                     return await _userService.VerifyTwoFactorEmailAsync(user, token);
+                case TwoFactorProviderType.OrganizationDuo:
+                    if(!organization?.TwoFactorProviderIsEnabled(type) ?? true)
+                    {
+                        return false;
+                    }
+
+                    return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
                 default:
                     return false;
             }
         }
 
-        private async Task<Dictionary<string, object>> BuildTwoFactorParams(User user, TwoFactorProviderType type,
-            TwoFactorProvider provider)
+        private async Task<Dictionary<string, object>> BuildTwoFactorParams(Organization organization, User user,
+            TwoFactorProviderType type, TwoFactorProvider provider)
         {
-            if(!user.TwoFactorProviderIsEnabled(type))
-            {
-                return null;
-            }
-
             switch(type)
             {
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.YubiKey:
+                    if(!user.TwoFactorProviderIsEnabled(type))
+                    {
+                        return null;
+                    }
+
                     var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
                     if(type == TwoFactorProviderType.Duo)
                     {
@@ -269,6 +338,16 @@ namespace Bit.Core.IdentityServer
                         return new Dictionary<string, object>
                         {
                             ["Nfc"] = (bool)provider.MetaData["Nfc"]
+                        };
+                    }
+                    return null;
+                case TwoFactorProviderType.OrganizationDuo:
+                    if(await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
                         };
                     }
                     return null;

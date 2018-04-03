@@ -62,7 +62,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                var orgs = await _organizationUserRepository.GetManyByUserAsync(userId);
+                var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
                 orgEvents = orgs
                     .Where(o => o.Status == OrganizationUserStatusType.Confirmed &&
                         CanUseEvents(orgAbilities, o.OrganizationId))

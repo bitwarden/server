@@ -4,13 +4,16 @@ using System.Linq;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
+using Bit.Core.Repositories;
+using System.Threading.Tasks;
 
 namespace Bit.Core
 {
     public class CurrentContext
     {
         private string _ip;
+        private Dictionary<Guid, ICollection<OrganizationUser>> _orgUsers =
+            new Dictionary<Guid, ICollection<OrganizationUser>>();
 
         public virtual HttpContext HttpContext { get; set; }
         public virtual Guid? UserId { get; set; }
@@ -18,7 +21,8 @@ namespace Bit.Core
         public virtual string DeviceIdentifier { get; set; }
         public virtual DeviceType? DeviceType { get; set; }
         public virtual string IpAddress => GetRequestIp();
-        public virtual List<CurrentContentOrganization> Organizations { get; set; } = new List<CurrentContentOrganization>();
+        public virtual List<CurrentContentOrganization> Organizations { get; set; } =
+            new List<CurrentContentOrganization>();
         public virtual Guid? InstallationId { get; set; }
 
         public bool OrganizationUser(Guid orgId)
@@ -33,6 +37,17 @@ namespace Bit.Core
         public bool OrganizationOwner(Guid orgId)
         {
             return Organizations.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner);
+        }
+
+        public async Task<ICollection<OrganizationUser>> OrganizationMembershipAsync(
+            IOrganizationUserRepository organizationUserRepository, Guid userId)
+        {
+            if(!_orgUsers.ContainsKey(userId))
+            {
+                _orgUsers.Add(userId, await organizationUserRepository.GetManyByUserAsync(userId));
+            }
+
+            return _orgUsers[userId];
         }
 
         private string GetRequestIp()

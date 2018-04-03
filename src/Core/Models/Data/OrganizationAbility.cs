@@ -12,12 +12,15 @@ namespace Bit.Core.Models.Data
             Id = organization.Id;
             UseEvents = organization.UseEvents;
             Use2fa = organization.Use2fa;
+            Using2fa = organization.Use2fa && organization.TwoFactorProviders != null &&
+                organization.TwoFactorProviders != "{}";
             Enabled = organization.Enabled;
         }
 
         public Guid Id { get; set; }
         public bool UseEvents { get; set; }
         public bool Use2fa { get; set; }
+        public bool Using2fa { get; set; }
         public bool Enabled { get; set; }
     }
 }

@@ -155,6 +155,7 @@ namespace Bit.Core.Utilities
             this IServiceCollection services, GlobalSettings globalSettings)
         {
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
+            services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
 
             services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
             {

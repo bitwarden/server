@@ -17,17 +17,20 @@ namespace Bit.Core.IdentityServer
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licensingService;
+        private readonly CurrentContext _currentContext;
 
         public ProfileService(
             IUserRepository userRepository,
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
-            ILicensingService licensingService)
+            ILicensingService licensingService,
+            CurrentContext currentContext)
         {
             _userRepository = userRepository;
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
             _licensingService = licensingService;
+            _currentContext = currentContext;
         }
 
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
@@ -53,7 +56,7 @@ namespace Bit.Core.IdentityServer
                 }
 
                 // Orgs that this user belongs to
-                var orgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
                 if(orgs.Any())
                 {
                     var groupedOrgs = orgs.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed)

@@ -133,6 +133,13 @@ namespace Bit.Core.Models.Table
 
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
         {
+            if(!providers.Any())
+            {
+                TwoFactorProviders = null;
+                _twoFactorProviders = null;
+                return;
+            }
+
             TwoFactorProviders = JsonConvert.SerializeObject(providers, new JsonSerializerSettings
             {
                 ContractResolver = new EnumKeyResolver<byte>()
