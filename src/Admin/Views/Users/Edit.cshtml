@@ -31,8 +31,8 @@
                 if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
                     window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
                 } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
-                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
-                        + customerId.value, '_blank');
+                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
+                        'customers/' + customerId.value, '_blank');
                 }
             });
 
