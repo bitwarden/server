@@ -70,21 +70,32 @@ namespace Bit.Core.Services
                 var license = ReadOrganiztionLicense(org);
                 if(license == null)
                 {
-                    await DisableOrganizationAsync(org, null);
+                    await DisableOrganizationAsync(org, null, "No license file.");
                     continue;
                 }
 
                 var totalLicensedOrgs = enabledOrgs.Count(o => o.LicenseKey.Equals(license.LicenseKey));
-                if(totalLicensedOrgs > 1 || !license.VerifyData(org, _globalSettings) || !license.VerifySignature(_certificate))
+                if(totalLicensedOrgs > 1)
                 {
-                    await DisableOrganizationAsync(org, license);
+                    await DisableOrganizationAsync(org, license, "Multiple organizations.");
+                }
+
+                if(!license.VerifyData(org, _globalSettings))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid data.");
+                }
+
+                if(!license.VerifySignature(_certificate))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid signature.");
                 }
             }
         }
 
-        private async Task DisableOrganizationAsync(Organization org, ILicense license)
+        private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
         {
-            _logger.LogInformation("Organization {0}({1}) has an invalid license and is being disabled.", org.Id, org.Name);
+            _logger.LogInformation("Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
+                org.Id, org.Name, reason);
             org.Enabled = false;
             org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
             org.RevisionDate = DateTime.UtcNow;
