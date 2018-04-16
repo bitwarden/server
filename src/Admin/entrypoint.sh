@@ -28,7 +28,7 @@ fi
 
 if [ $CURRENTGID ]
 then
-    if [ $CURRENTGID != $LGID ]
+    if [ "$CURRENTGID" != "$LGID" ]
     then
         groupmod -g $LGID $GROUPNAME
     fi
@@ -38,7 +38,7 @@ fi
 
 # Create user and assign group
 
-if [ $NOUSER == 0 ] && [ $CURRENTUID != $LUID ]
+if [ $NOUSER == 0 ] && [ "$CURRENTUID" != "$LUID" ]
 then
     usermod -u $LUID $USERNAME
 elif [ $NOUSER == 1 ]
