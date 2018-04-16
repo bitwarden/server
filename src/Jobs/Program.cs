@@ -47,7 +47,7 @@ namespace Bit.Jobs
                 return;
             }
 
-            _logger.LogInformation("Starting job '{0}'.", parameters["j"]);
+            _logger.LogInformation("Starting job {0}.", parameters["j"]);
 
             try
             {
@@ -75,7 +75,7 @@ namespace Bit.Jobs
                 throw e;
             }
 
-            _logger.LogInformation("Finished job '{0}'.", parameters["j"]);
+            _logger.LogInformation("Finished job {0}.", parameters["j"]);
         }
 
         private static IDictionary<string, string> ParseParameters(string[] args)
