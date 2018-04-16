@@ -113,11 +113,11 @@ services:
                 else
                 {
                     sw.Write(@"
-      - ../mssql/data:/var/opt/mssql/data
-      - ../logs/mssql:/var/opt/mssql/log");
+      - ../mssql/data:/var/opt/mssql/data");
                 }
 
                 sw.Write($@"
+      - ../logs/mssql:/var/opt/mssql/log
       - ../mssql/backups:/etc/bitwarden/mssql/backups
     env_file:
       - mssql.env
