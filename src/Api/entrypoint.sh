@@ -8,8 +8,7 @@ USERNAME="bitwarden"
 CURRENTGID=`getent group $GROUPNAME | cut -d: -f3`
 LGID=${LOCAL_GID:-999}
 
-CURRENTUID=`id -u $USERNAME`
-NOUSER=`$CURRENTUID > /dev/null 2>&1; echo $?`
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
 LUID=${LOCAL_UID:-999}
 
 # Step down from host root
@@ -38,7 +37,7 @@ fi
 
 # Create user and assign group
 
-if [ $NOUSER == 0 ] && [ "$CURRENTUID" != "$LUID" ]
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
 then
     usermod -u $LUID $USERNAME
 elif [ $NOUSER == 1 ]
