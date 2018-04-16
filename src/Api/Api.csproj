@@ -21,7 +21,7 @@
     <PackageReference Include="Microsoft.AspNetCore.AzureAppServices.HostingStartup" Version="2.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="2.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.0.1" />
-    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="2.4.0" />
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="2.6.0" />
   </ItemGroup>
 
   <ItemGroup>
