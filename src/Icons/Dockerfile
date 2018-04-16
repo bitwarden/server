@@ -18,8 +18,6 @@ WORKDIR /app
 EXPOSE 5000
 COPY obj/Docker/publish .
 COPY entrypoint.sh /
-
-RUN groupadd -g 999 bitwarden \
-    && chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

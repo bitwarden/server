@@ -9,8 +9,6 @@ COPY nginx.conf /etc/nginx
 COPY proxy.conf /etc/nginx
 COPY mime.types /etc/nginx
 COPY entrypoint.sh /
-
-RUN groupadd -g 999 bitwarden \
-    && chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

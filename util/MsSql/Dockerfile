@@ -6,8 +6,6 @@ RUN apt-get update \
         gosu \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -g 999 bitwarden
-
 COPY crontab /etc/cron.d/bitwarden-cron
 RUN chmod 0644 /etc/cron.d/bitwarden-cron
 COPY backup-db.sql /
@@ -16,4 +14,5 @@ COPY entrypoint.sh /
 
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
+
 ENTRYPOINT ["/entrypoint.sh"]

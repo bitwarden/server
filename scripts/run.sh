@@ -31,6 +31,8 @@ fi
 
 DOCKER_DIR="$OUTPUT_DIR/docker"
 ENV_DIR="$OUTPUT_DIR/env"
+LUID="LOCAL_UID=`id -u $USER`"
+LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
 
 # Functions
 
@@ -80,7 +82,7 @@ function updateDatabase() {
     if [ $OS == "lin" ]
     then
         docker run -i --rm --name setup --network container:bitwarden-mssql \
-            -v $OUTPUT_DIR:/bitwarden -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
+            -v $OUTPUT_DIR:/bitwarden -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup --network container:bitwarden-mssql \
@@ -95,7 +97,7 @@ function update() {
     if [ $OS == "lin" ]
     then
         docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
-            -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
+            -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup \
@@ -109,7 +111,7 @@ function printEnvironment() {
     if [ $OS == "lin" ]
     then
         docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
-            -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
+            -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
             dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     else
         docker run -i --rm --name setup \
@@ -126,7 +128,7 @@ function restart() {
     if [ $OS == "lin" ]
     then
         mkdir -p $ENV_DIR
-        echo "LOCAL_UID=`id -u $USER`" > $ENV_DIR/uid.env
+        (echo $LUID; echo $LGID) > $ENV_DIR/uid.env
     fi
     
     dockerComposeUp

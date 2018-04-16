@@ -28,6 +28,9 @@ then
     OS="mac"
 fi
 
+LUID="LOCAL_UID=`id -u $USER`"
+LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+
 mkdir -p $OUTPUT_DIR
 
 LETS_ENCRYPT="n"
@@ -63,7 +66,7 @@ fi
 docker pull bitwarden/setup:$COREVERSION
 if [ $OS == "lin" ]
 then
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden -e LOCAL_UID=`id -u $USER` bitwarden/setup:$COREVERSION \
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
 else
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \

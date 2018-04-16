@@ -8,8 +8,6 @@ RUN apt-get update \
 ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
 COPY entrypoint.sh /
-
-RUN groupadd -g 999 bitwarden \
-    && chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
