@@ -8,6 +8,7 @@ namespace Billing.Controllers
 {
     public class LoginController : Controller
     {
+        /*
         private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
 
         public LoginController(
@@ -52,5 +53,6 @@ namespace Billing.Controllers
 
             return RedirectToAction("Index", "Home");
         }
+        */
     }
 }

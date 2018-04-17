@@ -43,7 +43,8 @@ namespace Bit.Billing
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
+            services.AddCustomIdentityServices(globalSettings);
+            //services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
 
             // Services
             services.AddBaseServices();
