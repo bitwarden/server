@@ -32,7 +32,6 @@ namespace Bit.Api.Controllers
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly ApiSettings _apiSettings;
-        private readonly UserManager<User> _userManager;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -41,15 +40,13 @@ namespace Bit.Api.Controllers
             IUserService userService,
             CurrentContext currentContext,
             GlobalSettings globalSettings,
-            IOptions<ApiSettings> apiSettings,
-            UserManager<User> userManager)
+            IOptions<ApiSettings> apiSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _userService = userService;
             _currentContext = currentContext;
-            _userManager = userManager;
             _globalSettings = globalSettings;
             _apiSettings = apiSettings.Value;
         }
@@ -359,7 +356,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");

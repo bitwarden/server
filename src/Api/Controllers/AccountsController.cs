@@ -25,7 +25,6 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licenseService;
-        private readonly UserManager<User> _userManager;
         private readonly GlobalSettings _globalSettings;
 
         public AccountsController(
@@ -33,13 +32,11 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licenseService,
-            UserManager<User> userManager,
             GlobalSettings globalSettings)
         {
             _userService = userService;
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
-            _userManager = userManager;
             _licenseService = licenseService;
             _globalSettings = globalSettings;
         }
@@ -79,7 +76,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -323,7 +320,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
                 await Task.Delay(2000);

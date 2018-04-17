@@ -69,7 +69,7 @@ namespace Bit.Core.IdentityServer
             }
 
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-            if(user == null || !await _userManager.CheckPasswordAsync(user, context.Password))
+            if(user == null || !await _userService.CheckPasswordAsync(user, context.Password))
             {
                 await BuildErrorResultAsync(false, context, user);
                 return;

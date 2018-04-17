@@ -246,7 +246,7 @@ namespace Bit.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
             if(user != null)
             {
-                if(await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+                if(await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
                 {
                     await _userService.SendTwoFactorEmailAsync(user);
                     return;
@@ -336,7 +336,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, masterPasswordHash))
+            if(!await _userService.CheckPasswordAsync(user, masterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");

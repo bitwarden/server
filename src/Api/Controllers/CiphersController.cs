@@ -25,7 +25,6 @@ namespace Bit.Api.Controllers
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
-        private readonly UserManager<User> _userManager;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -34,7 +33,6 @@ namespace Bit.Api.Controllers
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
-            UserManager<User> userManager,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -42,7 +40,6 @@ namespace Bit.Api.Controllers
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
-            _userManager = userManager;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -381,7 +378,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userManager.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
                 await Task.Delay(2000);

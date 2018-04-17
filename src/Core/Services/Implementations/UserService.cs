@@ -411,7 +411,7 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await base.CheckPasswordAsync(user, masterPassword))
+            if(await CheckPasswordAsync(user, masterPassword))
             {
                 var result = await UpdatePasswordHash(user, newMasterPassword);
                 if(!result.Succeeded)
@@ -440,7 +440,7 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await base.CheckPasswordAsync(user, masterPassword))
+            if(await CheckPasswordAsync(user, masterPassword))
             {
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.SecurityStamp = Guid.NewGuid().ToString();
@@ -469,7 +469,7 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await base.CheckPasswordAsync(user, masterPassword))
+            if(await CheckPasswordAsync(user, masterPassword))
             {
                 var result = await base.UpdateSecurityStampAsync(user);
                 if(!result.Succeeded)
@@ -527,7 +527,7 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            if(!await base.CheckPasswordAsync(user, masterPassword))
+            if(!await CheckPasswordAsync(user, masterPassword))
             {
                 return false;
             }
@@ -745,7 +745,31 @@ namespace Bit.Core.Services
                 new UserLicense(user, billingInfo, _licenseService);
         }
 
-        private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword, bool validatePassword = true)
+        public override async Task<bool> CheckPasswordAsync(User user, string password)
+        {
+            if(user == null)
+            {
+                return false;
+            }
+
+            var result = await base.VerifyPasswordAsync(Store as IUserPasswordStore<User>, user, password);
+            if(result == PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                await UpdatePasswordHash(user, password, false, false);
+                user.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(user);
+            }
+
+            var success = result != PasswordVerificationResult.Failed;
+            if(!success)
+            {
+                Logger.LogWarning(0, "Invalid password for user {userId}.", user.Id);
+            }
+            return success;
+        }
+
+        private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+            bool validatePassword = true, bool refreshStamp = true)
         {
             if(validatePassword)
             {
@@ -757,7 +781,10 @@ namespace Bit.Core.Services
             }
 
             user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
-            user.SecurityStamp = Guid.NewGuid().ToString();
+            if(refreshStamp)
+            {
+                user.SecurityStamp = Guid.NewGuid().ToString();
+            }
 
             return IdentityResult.Success;
         }
