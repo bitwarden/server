@@ -54,12 +54,12 @@
                 @if(SignInManager.IsSignedIn(User))
                 {
                     <form asp-controller="Login" asp-action="Logout" method="post">
-                        <button type="submit" class="btn btn-secondary">Log Out</button>
+                        <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>
                     </form>
                 }
                 else
                 {
-                    <a class="btn btn-secondary" asp-controller="Login" asp-action="Index">Log In</a>
+                    <a class="btn btn-sm btn-secondary" asp-controller="Login" asp-action="Index">Log In</a>
                 }
             </div>
         </div>
