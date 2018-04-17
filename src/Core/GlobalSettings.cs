@@ -34,6 +34,8 @@ namespace Bit.Core
             public string VaultWithHash => $"{Vault}/#";
             public string Api { get; set; }
             public string Identity { get; set; }
+            public string Admin { get; set; }
+            public string InternalAdmin { get; set; }
             public string InternalIdentity { get; set; }
             public string InternalApi { get; set; }
             public string InternalVault { get; set; }

@@ -28,7 +28,7 @@ namespace Bit.Core.Identity
             _mailService = mailService;
         }
 
-        public async Task<SignInResult> PasswordlessSignInAsync(string email, string loginConfirmUrl)
+        public async Task<SignInResult> PasswordlessSignInAsync(string email, string returnUrl)
         {
             var user = await UserManager.FindByEmailAsync(email);
             if(user == null)
@@ -38,7 +38,7 @@ namespace Bit.Core.Identity
 
             var token = await UserManager.GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
                 PasswordlessSignInPurpose);
-            await _mailService.SendPasswordlessSignInAsync(loginConfirmUrl, token, email);
+            await _mailService.SendPasswordlessSignInAsync(returnUrl, token, email);
             return SignInResult.Success;
         }
 

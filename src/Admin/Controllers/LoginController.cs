@@ -38,8 +38,7 @@ namespace Bit.Admin.Controllers
         {
             if(ModelState.IsValid)
             {
-                await _signInManager.PasswordlessSignInAsync(model.Email,
-                    Url.Action("Confirm", "Login", new { returnUrl = model.ReturnUrl }, Request.Scheme));
+                await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
                 return RedirectToAction("Index", new
                 {
                     success = "If a valid admin user with this email address exists, " +

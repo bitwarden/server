@@ -171,19 +171,21 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendPasswordlessSignInAsync(string baseUrl, string token, string email)
+        public async Task SendPasswordlessSignInAsync(string returnUrl, string token, string email)
         {
-            var url = CoreHelpers.ExtendQuery(new Uri(baseUrl), new Dictionary<string, string>
-            {
-                ["email"] = email,
-                ["token"] = token,
-            });
+            var url = CoreHelpers.ExtendQuery(new Uri($"{_globalSettings.BaseServiceUri.Admin}/login/confirm"),
+                new Dictionary<string, string>
+                {
+                    ["returnUrl"] = returnUrl,
+                    ["email"] = email,
+                    ["token"] = token,
+                });
             var model = new Dictionary<string, string>
             {
                 ["url"] = url.ToString()
             };
 
-            var message = await CreateMessageAsync("Continue Logging In", email, "PasswordlessSignIn", model);
+            var message = await CreateMessageAsync("[Admin] Continue Logging In", email, "PasswordlessSignIn", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
             await _mailDeliveryService.SendEmailAsync(message);
         }
