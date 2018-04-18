@@ -164,7 +164,7 @@ namespace Bit.Core.Models.Business
                     if(item.Plan != null)
                     {
                         Name = item.Plan.Nickname;
-                        Amount = item.Plan.Amount / 100M;
+                        Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                         Interval = item.Plan.Interval;
                     }
 
