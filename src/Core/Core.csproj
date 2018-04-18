@@ -77,7 +77,7 @@
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.1.1" />
     <PackageReference Include="CommonMark.NET" Version="0.15.1" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.4" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
     <PackageReference Include="RazorLight" Version="2.0.0-alpha3" />
     <PackageReference Include="Sendgrid" Version="9.9.0" />
     <PackageReference Include="Stripe.net" Version="15.5.0" />
