@@ -12,7 +12,6 @@ using Bit.Api.Utilities;
 using Bit.Core.Utilities;
 using Core.Models.Data;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 
 namespace Bit.Api.Controllers
@@ -87,22 +86,13 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CipherDetailsResponseModel>> Get([FromQuery]Core.Enums.CipherType? type = null)
+        public async Task<ListResponseModel<CipherDetailsResponseModel>> Get()
         {
             var userId = _userService.GetProperUserId(User).Value;
-
-            IEnumerable<CipherDetails> ciphers;
-            if(type.HasValue)
-            {
-                ciphers = await _cipherRepository.GetManyByTypeAndUserIdAsync(type.Value, userId);
-            }
-            else
-            {
-                ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-            }
-
+            var hasOrgs = _currentContext.Organizations.Any();
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, hasOrgs);
             Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
-            if(_currentContext.Organizations.Any())
+            if(hasOrgs)
             {
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
                 collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
@@ -182,24 +172,6 @@ namespace Bit.Api.Controllers
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
-        }
-
-        [Obsolete]
-        [HttpGet("details")]
-        public async Task<ListResponseModel<CipherDetailsResponseModel>> GetCollections()
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByUserIdHasCollectionsAsync(userId);
-
-            Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
-            if(_currentContext.Organizations.Any())
-            {
-                var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
-                collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-            }
-
-            var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict));
-            return new ListResponseModel<CipherDetailsResponseModel>(responses);
         }
 
         [HttpGet("organization-details")]

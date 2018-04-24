@@ -33,3 +33,9 @@
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
+    ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
+    INCLUDE ([UseTotp]);
+

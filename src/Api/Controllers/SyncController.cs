@@ -55,12 +55,13 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
+            var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
 
             IEnumerable<Collection> collections = null;
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
-            if(organizationUserDetails.Any(o => o.Enabled))
+            if(hasEnabledOrgs)
             {
                 collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, false);
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);

@@ -62,33 +62,27 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            string sprocName = null;
+            // Always "with organizations" for now. Future TODO is to possibly move to another, simpler sproc when no
+            // orgs are expected.
+            if(true || withOrganizations)
             {
-                var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadByUserId]",
-                    new { UserId = userId },
-                    commandType: CommandType.StoredProcedure);
-
-                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
-                return results
-                    .GroupBy(c => c.Id)
-                    .Select(g => g.OrderByDescending(og => og.Edit).First())
-                    .ToList();
+                sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
             }
-        }
+            else
+            {
+                sprocName = $"[{Schema}].[CipherDetails_ReadWithoutOrganizationsByUserId]";
+            }
 
-        public async Task<ICollection<CipherDetails>> GetManyByUserIdHasCollectionsAsync(Guid userId)
-        {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadByUserIdHasCollection]",
+                    sprocName,
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
                 return results
                     .GroupBy(c => c.Id)
                     .Select(g => g.OrderByDescending(og => og.Edit).First())
@@ -106,27 +100,6 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
-            }
-        }
-
-        public async Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId)
-        {
-            using(var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadByTypeUserId]",
-                    new
-                    {
-                        Type = type,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
-
-                // Return distinct Id results. If at least one of the grouped results allows edit, that we return it.
-                return results
-                    .GroupBy(c => c.Id)
-                    .Select(g => g.OrderByDescending(og => og.Edit).First())
-                    .ToList();
             }
         }
 

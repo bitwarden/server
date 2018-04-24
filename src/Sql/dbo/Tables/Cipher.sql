@@ -16,12 +16,7 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Type]
-    ON [dbo].[Cipher]([OrganizationId] ASC, [Type] ASC) WHERE ([OrganizationId] IS NOT NULL);
-
-
-GO
-CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_Type_IncludeAll]
-    ON [dbo].[Cipher]([UserId] ASC, [Type] ASC)
-    INCLUDE ([OrganizationId], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate]);
+CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_OrganizationId_IncludeAll]
+    ON [dbo].[Cipher]([UserId] ASC, [OrganizationId] ASC)
+    INCLUDE ([Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate]);
 

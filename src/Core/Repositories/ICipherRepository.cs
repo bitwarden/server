@@ -12,10 +12,8 @@ namespace Bit.Core.Repositories
         Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
         Task<CipherDetails> GetDetailsByIdAsync(Guid id);
         Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
-        Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId);
-        Task<ICollection<CipherDetails>> GetManyByUserIdHasCollectionsAsync(Guid userId);
+        Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
         Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<ICollection<CipherDetails>> GetManyByTypeAndUserIdAsync(Enums.CipherType type, Guid userId);
         Task CreateAsync(CipherDetails cipher);
         Task ReplaceAsync(CipherDetails cipher);
         Task UpsertAsync(CipherDetails cipher);

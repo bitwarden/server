@@ -181,9 +181,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByIdUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CipherDetails_ReadByTypeUserId.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\CipherDetails_ReadByUserIdHasCollection.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Create.sql" />
     <Build Include="dbo\Stored Procedures\Collection_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadById.sql" />
@@ -226,5 +224,6 @@
     <Build Include="dbo\Stored Procedures\User_Search.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Search.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\CipherDetails_ReadWithoutOrganizationsByUserId.sql" />
   </ItemGroup>
 </Project>

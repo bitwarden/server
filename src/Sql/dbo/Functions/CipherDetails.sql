@@ -10,18 +10,20 @@ SELECT
     C.[Attachments],
     C.[CreationDate],
     C.[RevisionDate],
-    CASE WHEN
-        @UserId IS NULL
-        OR C.[Favorites] IS NULL
-        OR JSON_VALUE(C.[Favorites], CONCAT('$."', @UserId, '"')) IS NULL
-    THEN 0
-    ELSE 1
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Favorites] IS NULL
+            OR JSON_VALUE(C.[Favorites], CONCAT('$."', @UserId, '"')) IS NULL
+        THEN 0
+        ELSE 1
     END [Favorite],
-    CASE WHEN
-        @UserId IS NULL
-        OR C.[Folders] IS NULL
-    THEN NULL
-    ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Folders] IS NULL
+        THEN NULL
+        ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
     END [FolderId]
 FROM
     [dbo].[Cipher] C

@@ -9,5 +9,6 @@ BEGIN
     FROM
         [dbo].[CipherView]
     WHERE
-        [OrganizationId] = @OrganizationId
+        [UserId] IS NULL
+        AND [OrganizationId] = @OrganizationId
 END
