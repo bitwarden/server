@@ -5,6 +5,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
+        *,
         1 [Edit],
         0 [OrganizationUseTotp]
     FROM
