@@ -90,7 +90,8 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var hasOrgs = _currentContext.Organizations.Any();
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, hasOrgs);
+            // TODO: Use hasOrgs proper for cipher listing here?
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true || hasOrgs);
             Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
             if(hasOrgs)
             {

@@ -65,9 +65,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
         {
             string sprocName = null;
-            // Always "with organizations" for now. Future TODO is to possibly move to another, simpler sproc when no
-            // orgs are expected.
-            if(true || withOrganizations)
+            if(withOrganizations)
             {
                 sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
             }
