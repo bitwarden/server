@@ -25,7 +25,8 @@ BEGIN
     LEFT JOIN
         [CTE] ON C.[Id] = [CTE].[Id]
     WHERE
-        C.[OrganizationId] = @Id
+        C.[UserId] IS NULL
+        AND C.[OrganizationId] = @Id
 
     UPDATE
         [dbo].[Organization]

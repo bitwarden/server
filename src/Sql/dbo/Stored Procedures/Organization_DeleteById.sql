@@ -15,7 +15,8 @@ BEGIN
         FROM
             [dbo].[Cipher]
         WHERE
-            [OrganizationId] = @Id
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
 
         SET @BatchSize = @@ROWCOUNT
 

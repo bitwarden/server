@@ -222,3 +222,88 @@ BEGIN
         AND [OrganizationId] = @OrganizationId
 END
 GO
+
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
+
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION Organization_DeleteById_Ciphers
+
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION Organization_DeleteById_Ciphers
+    END
+
+    DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[Organization_UpdateStorage]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_UpdateStorage]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_UpdateStorage]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @Storage BIGINT
+
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            (
+                SELECT
+                    SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
+                FROM
+                    OPENJSON([Attachments])
+            ) [Size]
+        FROM
+            [dbo].[Cipher]
+    )
+    SELECT
+        @Storage = SUM([CTE].[Size])
+    FROM
+        [dbo].[Cipher] C
+    LEFT JOIN
+        [CTE] ON C.[Id] = [CTE].[Id]
+    WHERE
+        C.[UserId] IS NULL
+        AND C.[OrganizationId] = @Id
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Storage] = @Storage,
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @Id
+END
+GO
