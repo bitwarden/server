@@ -7,4 +7,10 @@
     CONSTRAINT [PK_Collection] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Collection_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
+GO
+
+CREATE NONCLUSTERED INDEX [IX_Collection_OrganizationId_IncludeAll]
+    ON [dbo].[Collection]([OrganizationId] ASC)
+    INCLUDE([CreationDate], [Name], [RevisionDate]);
+GO
 

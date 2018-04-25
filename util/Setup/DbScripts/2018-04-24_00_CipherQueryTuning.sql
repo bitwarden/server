@@ -155,6 +155,17 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_Collection_OrganizationId_IncludeAll'
+    AND object_id = OBJECT_ID('[dbo].[Collection]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Collection_OrganizationId_IncludeAll]
+        ON [dbo].[Collection]([OrganizationId] ASC)
+        INCLUDE([CreationDate], [Name], [RevisionDate])
+END
+GO
+
 IF OBJECT_ID('[dbo].[CipherDetails_ReadByTypeUserId]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[CipherDetails_ReadByTypeUserId]
