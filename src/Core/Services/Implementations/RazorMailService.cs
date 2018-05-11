@@ -223,6 +223,26 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
+            List<string> items, bool mentionInvoices)
+        {
+            var message = CreateDefaultMessage("Your Subscription Will Renew Soon", email);
+            message.BccEmails = new List<string> { "kyle@bitwarden.com" };
+
+            var model = new InvoiceUpcomingViewModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                AmountDue = amount,
+                DueDate = dueDate,
+                Items = items,
+                MentionInvoices = mentionInvoices
+            };
+            message.HtmlContent = await _engine.CompileRenderAsync("InvoiceUpcoming", model);
+            message.TextContent = await _engine.CompileRenderAsync("InvoiceUpcoming.text", model);
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });

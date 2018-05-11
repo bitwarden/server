@@ -1,4 +1,6 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -17,18 +19,24 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IHostingEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly IUserService _userService;
+        private readonly IMailService _mailService;
 
         public StripeController(
             IOptions<BillingSettings> billingSettings,
             IHostingEnvironment hostingEnvironment,
             IOrganizationService organizationService,
-            IUserService userService)
+            IOrganizationRepository organizationRepository,
+            IUserService userService,
+            IMailService mailService)
         {
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
+            _organizationRepository = organizationRepository;
             _userService = userService;
+            _mailService = mailService;
         }
 
         [HttpPost("webhook")]
@@ -105,7 +113,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if(false /* Disabled for now */ && invUpcoming)
+            else if(invUpcoming)
             {
                 StripeInvoice invoice = Mapper<StripeInvoice>.MapFromJson(
                     parsedEvent.Data.Object.ToString());
@@ -114,7 +122,6 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice is null.");
                 }
 
-                // TODO: maybe invoice subscription expandable is already here any we don't need to call API?
                 var subscriptionService = new StripeSubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 if(subscription == null)
@@ -122,21 +129,32 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice subscription is null.");
                 }
 
+                string email = null;
                 var ids = GetIdsFromMetaData(subscription.Metadata);
-
-                // To include in email:
-                // invoice.AmountDue;
-                // invoice.DueDate;
-
                 // org
                 if(ids.Item1.HasValue)
                 {
-                    // TODO: email billing contact
+                    var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                    if(org != null && OrgPlanForInvoiceNotifications(org))
+                    {
+                        email = org.BillingEmail;
+                    }
                 }
                 // user
                 else if(ids.Item2.HasValue)
                 {
-                    // TODO: email user
+                    var user = await _userService.GetUserByIdAsync(ids.Item2.Value);
+                    if(user.Premium)
+                    {
+                        email = user.Email;
+                    }
+                }
+
+                if(!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
+                {
+                    var items = invoice.StripeInvoiceLineItems.Select(i => i.Description).ToList();
+                    await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
+                        invoice.NextPaymentAttempt.Value, items, ids.Item1.HasValue);
                 }
             }
 
@@ -180,6 +198,19 @@ namespace Bit.Billing.Controllers
             }
 
             return new Tuple<Guid?, Guid?>(orgId, userId);
+        }
+
+        private bool OrgPlanForInvoiceNotifications(Organization org)
+        {
+            switch(org.PlanType)
+            {
+                case Core.Enums.PlanType.FamiliesAnnually:
+                case Core.Enums.PlanType.TeamsAnnually:
+                case Core.Enums.PlanType.EnterpriseAnnually:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

@@ -50,6 +50,14 @@ namespace Bit.Core.Services
                 smtpMessage.To.Add(new MailAddress(address));
             }
 
+            if(message.BccEmails != null)
+            {
+                foreach(var address in message.BccEmails)
+                {
+                    smtpMessage.Bcc.Add(new MailAddress(address));
+                }
+            }
+
             if(string.IsNullOrWhiteSpace(message.TextContent))
             {
                 smtpMessage.IsBodyHtml = true;

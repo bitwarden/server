@@ -7,7 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="MailTemplates\Markdown\InvoiceUpcoming.md" />
     <None Remove="MailTemplates\Markdown\PasswordlessSignIn.md" />
+    <None Remove="MailTemplates\Razor\InvoiceUpcoming.cshtml" />
+    <None Remove="MailTemplates\Razor\InvoiceUpcoming.text.cshtml" />
     <None Remove="MailTemplates\Razor\PasswordlessSignIn.cshtml" />
     <None Remove="MailTemplates\Razor\PasswordlessSignIn.text.cshtml" />
   </ItemGroup>
@@ -18,6 +21,7 @@
     <EmbeddedResource Include="MailTemplates\Markdown\ChangeEmailAlreadyExists.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\MasterPasswordHint.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\NoMasterPasswordHint.md" />
+    <EmbeddedResource Include="MailTemplates\Markdown\InvoiceUpcoming.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserAccepted.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\OrganizationUserConfirmed.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\PasswordlessSignIn.md" />
@@ -26,6 +30,8 @@
     <EmbeddedResource Include="MailTemplates\Markdown\VerifyDelete.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\VerifyEmail.md" />
     <EmbeddedResource Include="MailTemplates\Markdown\Welcome.md" />
+    <EmbeddedResource Include="MailTemplates\Razor\InvoiceUpcoming.cshtml" />
+    <EmbeddedResource Include="MailTemplates\Razor\InvoiceUpcoming.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\PasswordlessSignIn.text.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\PasswordlessSignIn.cshtml" />
     <EmbeddedResource Include="MailTemplates\Razor\VerifyDelete.cshtml" />

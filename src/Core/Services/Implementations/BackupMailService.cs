@@ -179,6 +179,20 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
+            List<string> items, bool mentionInvoices)
+        {
+            try
+            {
+                await _primaryMailService.SendInvoiceUpcomingAsync(email, amount, dueDate, items, mentionInvoices);
+            }
+            catch(Exception e)
+            {
+                LogError(e);
+                await _backupMailService.SendInvoiceUpcomingAsync(email, amount, dueDate, items, mentionInvoices);
+            }
+        }
+
         private void LogError(Exception e)
         {
             _logger.LogError(e, "Error sending mail with primary service, using backup.");

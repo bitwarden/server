@@ -190,6 +190,22 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
+            List<string> items, bool mentionInvoices)
+        {
+            var model = new Dictionary<string, string>
+            {
+                ["vaultUrl"] = _globalSettings.BaseServiceUri.VaultWithHash,
+                ["dueDate"] = dueDate.ToString("MMM dd, yyyy"),
+                ["amountDue"] = amount.ToString("C")
+            };
+
+            var message = await CreateMessageAsync("Your Subscription Will Renew Soon", email,
+                "InvoiceUpcoming", model);
+            message.BccEmails = new List<string> { "kyle@bitwarden.com" };
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         private async Task<MailMessage> CreateMessageAsync(string subject, string toEmail, string fileName,
             Dictionary<string, string> model)
         {

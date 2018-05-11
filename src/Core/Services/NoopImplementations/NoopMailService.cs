@@ -66,5 +66,11 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
+            List<string> items, bool mentionInvoices)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
