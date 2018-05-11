@@ -135,6 +135,16 @@ END
 GO
 
 IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_Cipher_OrganizationId'
+    AND object_id = OBJECT_ID('[dbo].[Cipher]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId]
+        ON [dbo].[Cipher]([OrganizationId] ASC)
+END
+GO
+
+IF NOT EXISTS (
     SELECT * FROM sys.indexes  WHERE [Name]='IX_GroupUser_OrganizationUserId'
     AND object_id = OBJECT_ID('[dbo].[GroupUser]')
 )
