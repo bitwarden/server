@@ -227,8 +227,6 @@ namespace Bit.Core.Services
             List<string> items, bool mentionInvoices)
         {
             var message = CreateDefaultMessage("Your Subscription Will Renew Soon", email);
-            message.BccEmails = new List<string> { "kyle@bitwarden.com" };
-
             var model = new InvoiceUpcomingViewModel
             {
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
