@@ -15,4 +15,6 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
+RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
+
 ENTRYPOINT ["/entrypoint.sh"]
