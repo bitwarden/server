@@ -1,5 +1,4 @@
-﻿using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,10 +13,8 @@ namespace Bit.Server
         public void Configure(
             IApplicationBuilder app,
             ILoggerFactory loggerFactory,
-            IConfiguration configuration,
-            TelemetryConfiguration telemetryConfiguration)
+            IConfiguration configuration)
         {
-            telemetryConfiguration.DisableTelemetry = true;
             loggerFactory
                 .AddConsole()
                 .AddDebug();

@@ -2,7 +2,6 @@
 using Bit.Core;
 using Bit.Core.Identity;
 using Bit.Core.Utilities;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
@@ -73,16 +72,14 @@ namespace Bit.Admin
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings,
-            ILoggerFactory loggerFactory,
-            TelemetryConfiguration telemetryConfiguration)
+            ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+
             if(globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
-                telemetryConfiguration.DisableTelemetry = true;
             }
-
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
 
             if(env.IsDevelopment())
             {
