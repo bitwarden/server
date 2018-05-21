@@ -60,7 +60,6 @@ mkdir -p /etc/bitwarden/mssql/backups
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 mkdir -p /var/opt/mssql/data
 chown -R $USERNAME:$GROUPNAME /var/opt/mssql
-chown $USERNAME:$GROUPNAME /var/opt/mssql/mssql.conf
 chown $USERNAME:$GROUPNAME /backup-db.sh
 chown $USERNAME:$GROUPNAME /backup-db.sql
 
