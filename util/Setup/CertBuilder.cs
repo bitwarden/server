@@ -31,6 +31,8 @@ namespace Bit.Setup
                     Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
                         $"-keyout /bitwarden/ssl/self/{Domain}/private.key " +
                         $"-out /bitwarden/ssl/self/{Domain}/certificate.crt " +
+                        $"-reqexts SAN -extensions SAN " +
+                        $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{Domain}')) " +
                         $"-subj \"/C=US/ST=Florida/L=Jacksonville/O=8bit Solutions LLC/OU=Bitwarden/CN={Domain}\"");
                 }
             }
