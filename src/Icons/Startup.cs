@@ -35,6 +35,7 @@ namespace Bit.Icons
 
             // Services
             services.AddSingleton<IDomainMappingService, DomainMappingService>();
+            services.AddSingleton<IIconFetchingService, IconFetchingService>();
 
             // Mvc
             services.AddMvc();
