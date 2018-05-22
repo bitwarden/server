@@ -366,6 +366,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment")]
+        [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
         {
@@ -389,6 +390,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment-admin")]
+        [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachmentAdmin(string id)
         {
