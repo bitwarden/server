@@ -37,9 +37,9 @@ fi
 
 # Create user and assign group
 
-if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID -o `id -g $USERNAME` != $LGID ]
 then
-    usermod -u $LUID $USERNAME
+    usermod -u $LUID -g $GROUPNAME $USERNAME
 elif [ $NOUSER == 1 ]
 then
     useradd -r -u $LUID -g $GROUPNAME $USERNAME
