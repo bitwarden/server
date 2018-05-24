@@ -29,7 +29,7 @@ then
 fi
 
 LUID="LOCAL_UID=`id -u $USER`"
-if [ `id -u $USER` -eq 0 ]
+if [ "$OS" == "lin" -a `id -u $USER` -eq 0 ]
 then
     LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
 else
