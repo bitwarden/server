@@ -29,7 +29,12 @@ then
 fi
 
 LUID="LOCAL_UID=`id -u $USER`"
-LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+if [ `id -u $USER` -eq 0 ]
+then
+    LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+else
+    LGID="LOCAL_GID=`id -g $USER`"
+fi
 
 mkdir -p $OUTPUT_DIR
 

@@ -32,7 +32,12 @@ fi
 DOCKER_DIR="$OUTPUT_DIR/docker"
 ENV_DIR="$OUTPUT_DIR/env"
 LUID="LOCAL_UID=`id -u $USER`"
-LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+if [ `id -u $USER` -eq 0 ]
+then
+    LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+else
+    LGID="LOCAL_GID=`id -g $USER`"
+fi
 
 # Functions
 
