@@ -48,19 +48,26 @@ namespace Bit.Icons.Controllers
                 var result = await _iconFetchingService.GetIconAsync(mappedDomain);
                 if(result == null)
                 {
-                    return new NotFoundResult();
+                    icon = null;
+                }
+                else
+                {
+                    icon = result.Icon;
                 }
 
-                icon = result.Icon;
-
-                // Only cache smaller images (<= 50kb)
-                if(icon.Image.Length <= 50012)
+                // Only cache not found and smaller images (<= 50kb)
+                if(icon == null || icon.Image.Length <= 50012)
                 {
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0)
                     });
                 }
+            }
+
+            if(icon == null)
+            {
+                return new NotFoundResult();
             }
 
             return new FileContentResult(icon.Image, icon.Format);
