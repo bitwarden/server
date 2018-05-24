@@ -66,9 +66,4 @@ chown $USERNAME:$GROUPNAME /backup-db.sql
 env >> /etc/environment
 cron
 
-# Workaround to disable mssql telemetry
-
-echo "127.0.0.1 settings-win.data.microsoft.com" >> /etc/hosts
-echo "127.0.0.1 vortex.data.microsoft.com" >> /etc/hosts
-
 gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
