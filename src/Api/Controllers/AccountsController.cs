@@ -45,7 +45,8 @@ namespace Bit.Api.Controllers
         [AllowAnonymous]
         public async Task PostRegister([FromBody]RegisterRequestModel model)
         {
-            var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash);
+            var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
+                model.Token, model.OrganizationUserId);
             if(result.Succeeded)
             {
                 return;
