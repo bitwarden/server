@@ -84,10 +84,10 @@ namespace Bit.Icons.Services
             }
 
             var baseUrl = "/";
-            var baseUrlNodes = doc.DocumentNode.SelectNodes(@"//base[@href]");
-            if(baseUrlNodes != null && baseUrlNodes.Count > 0)
+            var baseUrlNode = doc.DocumentNode.SelectSingleNode(@"//head/base[@href]");
+            if(baseUrlNode != null)
             {
-                var hrefAttr = baseUrlNodes[0].Attributes["href"];
+                var hrefAttr = baseUrlNode.Attributes["href"];
                 if(!string.IsNullOrWhiteSpace(hrefAttr?.Value))
                 {
                     baseUrl = hrefAttr.Value;
@@ -95,7 +95,7 @@ namespace Bit.Icons.Services
             }
 
             var icons = new List<IconResult>();
-            var links = doc.DocumentNode.SelectNodes(@"//link[@href]");
+            var links = doc.DocumentNode.SelectNodes(@"//head/link[@href]");
             if(links != null)
             {
                 foreach(var link in links)
@@ -234,8 +234,8 @@ namespace Bit.Icons.Services
 
             // Let's add some headers to look like we're coming from a web browser request. Some websites
             // will block our request without these.
-            message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
+            message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299");
             message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
             message.Headers.Add("Cache-Control", "no-cache");
             message.Headers.Add("Pragma", "no-cache");
