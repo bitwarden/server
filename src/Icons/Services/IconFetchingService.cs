@@ -26,15 +26,11 @@ namespace Bit.Icons.Services
         private static byte[] _icoHeader = new byte[] { 00, 00, 01, 00 };
         private static string _jpegMediaType = "image/jpeg";
         private static byte[] _jpegHeader = new byte[] { 255, 216, 255 };
-        private static string _octetMediaType = "application/octet-stream";
-        private static string _textMediaType = "text/plain";
         private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
             _pngMediaType,
             _icoMediaType,
             _icoAltMediaType,
-            _jpegMediaType,
-            _octetMediaType,
-            _textMediaType
+            _jpegMediaType
         };
 
         public IconFetchingService()
@@ -185,13 +181,8 @@ namespace Bit.Icons.Services
             }
 
             var format = response.Content.Headers?.ContentType?.MediaType;
-            if(format == null || !_allowedMediaTypes.Contains(format))
-            {
-                return null;
-            }
-
             var bytes = await response.Content.ReadAsByteArrayAsync();
-            if(format == _octetMediaType || format == _textMediaType)
+            if(format == null || !_allowedMediaTypes.Contains(format))
             {
                 if(HeaderMatch(bytes, _icoHeader))
                 {
