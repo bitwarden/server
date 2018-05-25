@@ -17,7 +17,7 @@ namespace Bit.Icons.Services
         private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
         {
             AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         });
         private static string _pngMediaType = "image/png";
         private static byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
@@ -27,22 +27,34 @@ namespace Bit.Icons.Services
         private static string _jpegMediaType = "image/jpeg";
         private static byte[] _jpegHeader = new byte[] { 255, 216, 255 };
         private static string _octetMediaType = "application/octet-stream";
+        private static string _textMediaType = "text/plain";
         private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
             _pngMediaType,
             _icoMediaType,
             _icoAltMediaType,
             _jpegMediaType,
-            _octetMediaType
+            _octetMediaType,
+            _textMediaType
         };
+
+        public IconFetchingService()
+        {
+            _httpClient.Timeout = TimeSpan.FromSeconds(20);
+        }
 
         public async Task<IconResult> GetIconAsync(string domain)
         {
-            var uri = new Uri($"http://{domain}");
+            var uri = new Uri($"https://{domain}");
             var response = await GetAndFollowAsync(uri, 2);
             if(response == null || !response.IsSuccessStatusCode)
             {
-                uri = new Uri($"https://{domain}");
+                uri = new Uri($"http://{domain}");
                 response = await GetAndFollowAsync(uri, 2);
+                if(response == null || !response.IsSuccessStatusCode)
+                {
+                    uri = new Uri($"https://www.{domain}");
+                    response = await GetAndFollowAsync(uri, 2);
+                }
             }
 
             if(response?.Content == null || !response.IsSuccessStatusCode)
@@ -50,18 +62,36 @@ namespace Bit.Icons.Services
                 return null;
             }
 
-            if(response.Content.Headers?.ContentType?.MediaType != "text/html")
+            uri = response.RequestMessage.RequestUri;
+            var doc = new HtmlDocument();
+
+            try
+            {
+                var html = await response.Content.ReadAsStringAsync();
+                if(html == null)
+                {
+                    return null;
+                }
+                doc.LoadHtml(html);
+                if(doc.DocumentNode == null)
+                {
+                    return null;
+                }
+            }
+            catch
             {
                 return null;
             }
 
-            uri = response.RequestMessage.RequestUri;
-            var html = await response.Content.ReadAsStringAsync();
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-            if(doc.DocumentNode == null)
+            var baseUrl = "/";
+            var baseUrlNodes = doc.DocumentNode.SelectNodes(@"//base[@href]");
+            if(baseUrlNodes != null && baseUrlNodes.Count > 0)
             {
-                return null;
+                var hrefAttr = baseUrlNodes[0].Attributes["href"];
+                if(!string.IsNullOrWhiteSpace(hrefAttr?.Value))
+                {
+                    baseUrl = hrefAttr.Value;
+                }
             }
 
             var icons = new List<IconResult>();
@@ -77,17 +107,21 @@ namespace Bit.Icons.Services
                     }
 
                     var relAttr = link.Attributes["rel"];
-                    if(relAttr != null && _iconRels.Contains(relAttr.Value))
+                    if(relAttr != null && _iconRels.Contains(relAttr.Value.ToLower()))
                     {
                         icons.Add(new IconResult(hrefAttr.Value, link));
                     }
                     else
                     {
-                        var extension = Path.GetExtension(hrefAttr.Value);
-                        if(_iconExtensions.Contains(extension))
+                        try
                         {
-                            icons.Add(new IconResult(hrefAttr.Value, link));
+                            var extension = Path.GetExtension(hrefAttr.Value);
+                            if(_iconExtensions.Contains(extension.ToLower()))
+                            {
+                                icons.Add(new IconResult(hrefAttr.Value, link));
+                            }
                         }
+                        catch(ArgumentException) { }
                     }
                 }
             }
@@ -96,9 +130,13 @@ namespace Bit.Icons.Services
             foreach(var icon in icons)
             {
                 Uri iconUri = null;
-                if(Uri.TryCreate(icon.Path, UriKind.Relative, out Uri relUri))
+                if(icon.Path.StartsWith("//"))
                 {
-                    iconUri = new Uri($"{uri.Scheme}://{uri.Host}/{relUri.OriginalString}");
+                    iconUri = new Uri($"{uri.Scheme}://{icon.Path.Substring(2)}");
+                }
+                else if(Uri.TryCreate(icon.Path, UriKind.Relative, out Uri relUri))
+                {
+                    iconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", baseUrl, relUri.OriginalString);
                 }
                 else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out Uri absUri))
                 {
@@ -123,7 +161,7 @@ namespace Bit.Icons.Services
             await Task.WhenAll(iconResultTasks);
             if(!icons.Any(i => i.Icon != null))
             {
-                var faviconUri = new Uri($"{uri.Scheme}://{uri.Host}/favicon.ico");
+                var faviconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", "favicon.ico");
                 var result = await GetIconAsync(faviconUri);
                 if(result != null)
                 {
@@ -153,7 +191,7 @@ namespace Bit.Icons.Services
             }
 
             var bytes = await response.Content.ReadAsByteArrayAsync();
-            if(format == _octetMediaType)
+            if(format == _octetMediaType || format == _textMediaType)
             {
                 if(HeaderMatch(bytes, _icoHeader))
                 {
@@ -197,11 +235,12 @@ namespace Bit.Icons.Services
             // Let's add some headers to look like we're coming from a web browser request. Some websites
             // will block our request without these.
             message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
             message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
             message.Headers.Add("Cache-Control", "no-cache");
             message.Headers.Add("Pragma", "no-cache");
-            message.Headers.Add("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
+            message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
+                "q=0.9,image/webp,image/apng,*/*;q=0.8");
 
             try
             {
@@ -223,7 +262,8 @@ namespace Bit.Icons.Services
 
             if(!(response.StatusCode == HttpStatusCode.Redirect ||
                 response.StatusCode == HttpStatusCode.MovedPermanently ||
-                response.StatusCode == HttpStatusCode.RedirectKeepVerb) ||
+                response.StatusCode == HttpStatusCode.RedirectKeepVerb ||
+                response.StatusCode == HttpStatusCode.SeeOther) ||
                 !response.Headers.Contains("Location"))
             {
                 return null;
@@ -237,7 +277,7 @@ namespace Bit.Icons.Services
                     if(Uri.TryCreate(locationHeader, UriKind.Relative, out Uri relLocation))
                     {
                         var requestUri = response.RequestMessage.RequestUri;
-                        location = new Uri($"{requestUri.Scheme}://{requestUri.Host}/{relLocation.OriginalString}");
+                        location = ResolveUri($"{requestUri.Scheme}://{requestUri.Host}", relLocation.OriginalString);
                     }
                     else
                     {
@@ -262,6 +302,19 @@ namespace Bit.Icons.Services
         private bool HeaderMatch(byte[] imageBytes, byte[] header)
         {
             return imageBytes.Length >= header.Length && header.SequenceEqual(imageBytes.Take(header.Length));
+        }
+
+        private Uri ResolveUri(string baseUrl, params string[] paths)
+        {
+            var url = baseUrl;
+            foreach(var path in paths)
+            {
+                if(Uri.TryCreate(new Uri(url), path, out var r))
+                {
+                    url = r.ToString();
+                }
+            }
+            return new Uri(url);
         }
     }
 }

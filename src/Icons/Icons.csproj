@@ -18,4 +18,8 @@
     <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="2.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\public_suffix_list.dat" />
+  </ItemGroup>
+
 </Project>

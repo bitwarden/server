@@ -37,15 +37,21 @@ namespace Bit.Icons.Controllers
             }
 
             var url = $"http://{hostname}";
-            if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            if(!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 return new BadRequestResult();
             }
 
-            var mappedDomain = _domainMappingService.MapDomain(uri.Host);
+            var domain = uri.Host;
+            if(DomainName.TryParseBaseDomain(domain, out var baseDomain))
+            {
+                domain = baseDomain;
+            }
+
+            var mappedDomain = _domainMappingService.MapDomain(domain);
             if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
-                var result = await _iconFetchingService.GetIconAsync(mappedDomain);
+                var result = await _iconFetchingService.GetIconAsync(domain);
                 if(result == null)
                 {
                     icon = null;
