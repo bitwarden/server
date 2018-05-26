@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api
@@ -18,6 +19,8 @@ namespace Bit.Core.Models.Api
         public string MasterPasswordHint { get; set; }
         public string Key { get; set; }
         public KeysRequestModel Keys { get; set; }
+        public string Token { get; set; }
+        public Guid? OrganizationUserId { get; set; }
 
         public User ToUser()
         {

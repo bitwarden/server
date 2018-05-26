@@ -18,6 +18,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using System.IO;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Services
 {
@@ -38,6 +39,7 @@ namespace Bit.Core.Services
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
         private readonly ILicensingService _licenseService;
         private readonly IEventService _eventService;
+        private readonly IDataProtector _organizationServiceDataProtector;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -59,6 +61,7 @@ namespace Bit.Core.Services
             ILogger<UserManager<User>> logger,
             ILicensingService licenseService,
             IEventService eventService,
+            IDataProtectionProvider dataProtectionProvider,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -84,6 +87,8 @@ namespace Bit.Core.Services
             _passwordValidators = passwordValidators;
             _licenseService = licenseService;
             _eventService = eventService;
+            _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
+                "OrganizationServiceDataProtector");
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -204,11 +209,19 @@ namespace Bit.Core.Services
             await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
         }
 
-        public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword)
+        public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword,
+            string token, Guid? orgUserId)
         {
-            if(_globalSettings.DisableUserRegistration)
+            var tokenValid = false;
+            if(!string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
             {
-                throw new BadRequestException("Registration has been disabled by the system administrator.");
+                tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token, 
+                    user.Email, orgUserId.Value);
+            }
+
+            if(_globalSettings.DisableUserRegistration && !tokenValid)
+            {
+                throw new BadRequestException("Open registration has been disabled by the system administrator.");
             }
 
             var result = await base.CreateAsync(user, masterPassword);

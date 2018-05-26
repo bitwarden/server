@@ -18,5 +18,15 @@ namespace Bit.Api.Controllers
         {
             return new VersionResponseModel();
         }
+
+        [HttpGet("~/ip")]
+        public JsonResult Ip()
+        {
+            return new JsonResult(new
+            {
+                Ip = HttpContext.Connection?.RemoteIpAddress?.ToString(),
+                Headers = HttpContext.Request?.Headers,
+            });
+        }
     }
 }

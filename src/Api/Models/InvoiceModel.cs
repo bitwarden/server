@@ -22,7 +22,7 @@ namespace Bit.Api.Models
 
             InvoiceDate = invoice.Date?.ToLongDateString();
             InvoiceDueDate = invoice.DueDate?.ToLongDateString();
-            InvoiceNumber = invoice.Id;
+            InvoiceNumber = invoice.Number;
             Items = invoice.StripeInvoiceLineItems.Select(i => new Item(i));
 
             SubtotalAmount = (invoice.Total / 100).ToString("C");

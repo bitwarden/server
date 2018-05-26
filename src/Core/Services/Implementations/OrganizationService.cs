@@ -1012,26 +1012,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You are already part of this organization.");
             }
 
-            var tokenValidationFailed = true;
-            try
-            {
-                var unprotectedData = _dataProtector.Unprotect(token);
-                var dataParts = unprotectedData.Split(' ');
-                if(dataParts.Length == 4 &&
-                    dataParts[0] == "OrganizationUserInvite" &&
-                    new Guid(dataParts[1]) == orgUser.Id &&
-                    dataParts[2].Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    var creationTime = CoreHelpers.FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
-                    tokenValidationFailed = creationTime.AddDays(5) < DateTime.UtcNow;
-                }
-            }
-            catch
-            {
-                tokenValidationFailed = true;
-            }
-
-            if(tokenValidationFailed)
+            if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id))
             {
                 throw new BadRequestException("Invalid token.");
             }

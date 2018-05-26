@@ -18,7 +18,7 @@ namespace Bit.Core.Services
         Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
         Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
         Task SaveUserAsync(User user, bool push = false);
-        Task<IdentityResult> RegisterUserAsync(User user, string masterPassword);
+        Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
         Task SendMasterPasswordHintAsync(string email);
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);

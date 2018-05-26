@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Dapper;
 using System.Globalization;
 using System.Web;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Utilities
 {
@@ -451,6 +452,30 @@ namespace Bit.Core.Utilities
                 return new Uri(baseUri, uriKind);
             }
             return new Uri(string.Format("{0}?{1}", baseUri, queryCollection), uriKind);
+        }
+
+        public static bool UserInviteTokenIsValid(IDataProtector protector, string token,
+            string userEmail, Guid orgUserId)
+        {
+            var invalid = true;
+            try
+            {
+                var unprotectedData = protector.Unprotect(token);
+                var dataParts = unprotectedData.Split(' ');
+                if(dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
+                    new Guid(dataParts[1]) == orgUserId &&
+                    dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
+                    invalid = creationTime.AddDays(5) < DateTime.UtcNow;
+                }
+            }
+            catch
+            {
+                invalid = true;
+            }
+
+            return !invalid;
         }
     }
 }

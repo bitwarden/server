@@ -18,6 +18,7 @@ using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using jsreport.AspNetCore;
 using Bit.Core.IdentityServer;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Api
 {
@@ -172,6 +173,13 @@ namespace Bit.Api
             {
                 // Rate limiting
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
+            }
+            else
+            {
+                app.UseForwardedHeaders(new ForwardedHeadersOptions
+                {
+                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                });
             }
 
             // Add static files to the request pipeline.

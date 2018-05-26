@@ -30,7 +30,5 @@ mkhomedir_helper $USERNAME
 # The rest...
 
 chown -R $USERNAME:$GROUPNAME /app
-chown -R $USERNAME:$GROUPNAME /etc/iconserver
 
-gosu $USERNAME:$GROUPNAME /etc/iconserver/iconserver &
-exec gosu $USERNAME:$GROUPNAME dotnet /app/Icons.dll iconsSettings:bestIconBaseUrl=http://localhost:8080
+exec gosu $USERNAME:$GROUPNAME dotnet /app/Icons.dll
