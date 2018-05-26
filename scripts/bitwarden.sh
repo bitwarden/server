@@ -99,6 +99,14 @@ then
     checkOutputDirExists
     downloadRunFile
     $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "updateapp" ]
+then
+    checkOutputDirExists
+    # docker-compose project name has been introduced in a new run.sh script, so we need
+    # to stop an instance which should have been started before without a project name.
+    grep -q COMPOSE_PROJECT_NAME $SCRIPTS_DIR/run.sh || $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+    downloadRunFile
+    $SCRIPTS_DIR/run.sh updateapp $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists

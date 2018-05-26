@@ -39,9 +39,9 @@ LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
 function dockerComposeUp() {
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d $1
     else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
+        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d $1
     fi
 }
 
@@ -131,7 +131,7 @@ function restart() {
         (echo $LUID; echo $LGID) > $ENV_DIR/uid.env
     fi
     
-    dockerComposeUp
+    dockerComposeUp $1
     dockerPrune
     printEnvironment
 }
@@ -145,21 +145,26 @@ function pullSetup() {
 if [ "$1" == "start" -o "$1" == "restart" ]
 then
     restart
-elif [ "$1" == "pull" ]
-then
-    dockerComposePull
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown
+elif [ "$1" == "updateapp" ]
+then
+    dockerComposeDown
+    update
 elif [ "$1" == "updatedb" ]
 then
+    restart mssql
+    echo "Pausing 60 seconds for database to come online. Please wait..."
+    sleep 60
     updateDatabase
 elif [ "$1" == "update" ]
 then
     dockerComposeDown
     update
-    restart
+    restart mssql
     echo "Pausing 60 seconds for database to come online. Please wait..."
     sleep 60
     updateDatabase
+    restart
 fi
