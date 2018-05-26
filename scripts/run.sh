@@ -5,7 +5,7 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-OUTPUT_DIR="../."
+OUTPUT_DIR=".."
 if [ $# -gt 1 ]
 then
     OUTPUT_DIR=$2
@@ -23,21 +23,8 @@ then
     WEBVERSION=$4
 fi
 
-OS="lin"
-if [ "$(uname)" == "Darwin" ]
-then
-    OS="mac"
-fi
-
-DOCKER_DIR="$OUTPUT_DIR/docker"
 ENV_DIR="$OUTPUT_DIR/env"
-LUID="LOCAL_UID=`id -u $USER`"
-if [ "$OS" == "lin" -a `id -u $USER` -eq 0 ]
-then
-    LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
-else
-    LGID="LOCAL_GID=`id -g $USER`"
-fi
+DOCKER_DIR="$OUTPUT_DIR/docker"
 
 # Functions
 
@@ -84,58 +71,30 @@ function updateLetsEncrypt() {
 
 function updateDatabase() {
     pullSetup
-    if [ $OS == "lin" ]
-    then
-        docker run -i --rm --name setup --network container:bitwarden-mssql \
-            -v $OUTPUT_DIR:/bitwarden -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    else
-        docker run -i --rm --name setup --network container:bitwarden-mssql \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    fi
+    docker run -i --rm --name setup --network container:bitwarden-mssql \
+        -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     echo "Database update complete"
 }
 
 function update() {
     pullSetup
-    if [ $OS == "lin" ]
-    then
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
-            -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    else
-        docker run -i --rm --name setup \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    fi
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+        --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
 }
 
 function printEnvironment() {
     pullSetup
-    if [ $OS == "lin" ]
-    then
-        docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
-            -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    else
-        docker run -i --rm --name setup \
-            -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
-            dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
-    fi
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+        --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
 }
 
 function restart() {
     dockerComposeDown
     dockerComposePull
     updateLetsEncrypt
-    
-    if [ $OS == "lin" ]
-    then
-        mkdir -p $ENV_DIR
-        (echo $LUID; echo $LGID) > $ENV_DIR/uid.env
-    fi
-    
     dockerComposeUp
     dockerPrune
     printEnvironment
