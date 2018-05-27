@@ -103,7 +103,8 @@ services:
     image: bitwarden/mssql:{CoreVersion}
     container_name: bitwarden-mssql
     restart: always
-    volumes:");
+    volumes:
+      - /etc/localtime:/etc/localtime:ro");
 
                 if(MssqlDataDockerVolume)
                 {
@@ -129,6 +130,7 @@ services:
     container_name: bitwarden-web
     restart: always
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../web:/etc/bitwarden/web
     env_file:
       - ../env/uid.env
@@ -138,6 +140,7 @@ services:
     container_name: bitwarden-attachments
     restart: always
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../core/attachments:/etc/bitwarden/core/attachments
     env_file:
       - ../env/uid.env
@@ -147,6 +150,7 @@ services:
     container_name: bitwarden-api
     restart: always
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/api:/etc/bitwarden/logs
@@ -160,6 +164,7 @@ services:
     container_name: bitwarden-identity
     restart: always
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -174,6 +179,7 @@ services:
     container_name: bitwarden-admin
     restart: always
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/admin:/etc/bitwarden/logs
@@ -186,6 +192,8 @@ services:
     image: bitwarden/icons:{CoreVersion}
     container_name: bitwarden-icons
     restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     env_file:
       - ../env/uid.env
 
@@ -209,6 +217,7 @@ services:
 
                 sw.Write($@"
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ../nginx:/etc/bitwarden/nginx
       - ../letsencrypt:/etc/letsencrypt
       - ../ssl:/etc/ssl
