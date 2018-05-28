@@ -14,6 +14,7 @@ namespace Bit.Core.IdentityServer
                 new ApiClient("web", 1, 1),
                 new ApiClient("browser", 30, 1),
                 new ApiClient("desktop", 30, 1),
+                new ApiClient("cli", 30, 1),
                 new ApiClient("connector", 30, 24)
             }.ToDictionary(c => c.ClientId);
         }
