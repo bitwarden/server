@@ -5,52 +5,27 @@
 GROUPNAME="bitwarden"
 USERNAME="bitwarden"
 
-CURRENTGID=`getent group $GROUPNAME | cut -d: -f3`
-LGID=${LOCAL_GID:-999}
+LUID=${LOCAL_UID:-0}
+LGID=${LOCAL_GID:-0}
 
-NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
-LUID=${LOCAL_UID:-999}
+# Step down from host root to well-known nobody/nogroup user
 
-# Step down from host root
-
-if [ $LGID == 0 ]
+if [ $LUID -eq 0 ]
 then
-    LGID=999
+    LUID=65534
+fi
+if [ $LGID -eq 0 ]
+then
+    LGID=65534
 fi
 
-if [ $LUID == 0 ]
-then
-    LUID=999
-fi
+# Create user and group
 
-# Create group
-
-if [ $CURRENTGID ]
-then
-    if [ "$CURRENTGID" != "$LGID" ]
-    then
-        groupmod -g $LGID $GROUPNAME
-    fi
-else
-    groupadd -g $LGID $GROUPNAME
-fi
-
-# Create user and assign group
-
-if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
-then
-    usermod -u $LUID $USERNAME
-elif [ $NOUSER == 1 ]
-then
-    useradd -r -u $LUID -g $GROUPNAME $USERNAME
-fi
-
-# Make home directory for user
-
-if [ ! -d "/home/$USERNAME" ]
-then
-    mkhomedir_helper $USERNAME
-fi
+groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
+groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
+useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
+usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
+mkhomedir_helper $USERNAME
 
 # The rest...
 
@@ -58,5 +33,5 @@ chown -R $USERNAME:$GROUPNAME /bitwarden_server
 mkdir -p /etc/bitwarden/core/attachments
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-gosu $USERNAME:$GROUPNAME dotnet /bitwarden_server/Server.dll \
+exec gosu $USERNAME:$GROUPNAME dotnet /bitwarden_server/Server.dll \
     /contentRoot=/etc/bitwarden/core/attachments /webRoot=. /serveUnknown=true
