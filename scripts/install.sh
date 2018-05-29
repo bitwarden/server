@@ -4,11 +4,10 @@ set -e
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-OUTPUT_DIR=".."
+OUTPUT_DIR="../."
 if [ $# -gt 0 ]
 then
     OUTPUT_DIR=$1
-    mkdir -p $OUTPUT_DIR
 fi
 
 COREVERSION="latest"
@@ -23,13 +22,16 @@ then
     WEBVERSION=$3
 fi
 
-ENV_DIR="$OUTPUT_DIR/env"
+OS="lin"
+if [ "$(uname)" == "Darwin" ]
+then
+    OS="mac"
+fi
 
-# Save the installation UID/GID, they could also be manually changed later on if desired
 LUID="LOCAL_UID=`id -u $USER`"
-LGID="LOCAL_GID=`id -g $USER`"
-mkdir -p $ENV_DIR
-(echo $LUID; echo $LGID) > $ENV_DIR/uid.env
+LGID="LOCAL_GID=`getent group docker | cut -d: -f3`"
+
+mkdir -p $OUTPUT_DIR
 
 LETS_ENCRYPT="n"
 echo -e -n "${CYAN}(!)${NC} Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): "
@@ -62,8 +64,14 @@ then
 fi
 
 docker pull bitwarden/setup:$COREVERSION
-docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
-    dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+if [ $OS == "lin" ]
+then
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden -e $LUID -e $LGID bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+else
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+fi
 
 echo ""
 echo "Setup complete"

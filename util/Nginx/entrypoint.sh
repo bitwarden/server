@@ -5,27 +5,52 @@
 GROUPNAME="bitwarden"
 USERNAME="bitwarden"
 
-LUID=${LOCAL_UID:-0}
-LGID=${LOCAL_GID:-0}
+CURRENTGID=`getent group $GROUPNAME | cut -d: -f3`
+LGID=${LOCAL_GID:-999}
 
-# Step down from host root to well-known nobody/nogroup user
+NOUSER=`id -u $USERNAME > /dev/null 2>&1; echo $?`
+LUID=${LOCAL_UID:-999}
 
-if [ $LUID -eq 0 ]
+# Step down from host root
+
+if [ $LGID == 0 ]
 then
-    LUID=65534
+    LGID=999
 fi
-if [ $LGID -eq 0 ]
+
+if [ $LUID == 0 ]
 then
-    LGID=65534
+    LUID=999
 fi
 
-# Create user and group
+# Create group
 
-groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
-groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
-useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
-usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
-mkhomedir_helper $USERNAME
+if [ $CURRENTGID ]
+then
+    if [ "$CURRENTGID" != "$LGID" ]
+    then
+        groupmod -g $LGID $GROUPNAME
+    fi
+else
+    groupadd -g $LGID $GROUPNAME
+fi
+
+# Create user and assign group
+
+if [ $NOUSER == 0 ] && [ `id -u $USERNAME` != $LUID ]
+then
+    usermod -u $LUID $USERNAME
+elif [ $NOUSER == 1 ]
+then
+    useradd -r -u $LUID -g $GROUPNAME $USERNAME
+fi
+
+# Make home directory for user
+
+if [ ! -d "/home/$USERNAME" ]
+then
+    mkhomedir_helper $USERNAME
+fi
 
 # The rest...
 
@@ -40,4 +65,4 @@ chown -R $USERNAME:$GROUPNAME /var/run/nginx.pid
 chown -R $USERNAME:$GROUPNAME /var/cache/nginx
 chown -R $USERNAME:$GROUPNAME /var/log/nginx
 
-exec gosu $USERNAME:$GROUPNAME nginx -g 'daemon off;'
+gosu $USERNAME:$GROUPNAME nginx -g 'daemon off;'
