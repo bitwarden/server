@@ -172,7 +172,10 @@ SA_PASSWORD=SECRET
             Helpers.Exec("chmod 600 /bitwarden/env/mssql.override.env");
 
             // Empty uid env file. Only used on Linux hosts.
-            using(var sw = File.CreateText("/bitwarden/env/uid.env")) { }
+            if(!File.Exists("/bitwarden/env/uid.env"))
+            {
+                using(var sw = File.CreateText("/bitwarden/env/uid.env")) { }
+            }
         }
     }
 }

@@ -27,7 +27,7 @@ ENV_DIR="$OUTPUT_DIR/env"
 DOCKER_DIR="$OUTPUT_DIR/docker"
 
 # As in install.sh, save the running UID/GID, they could not exist yet, during an update for example
-if [ ! -f $ENV_DIR/uid.env ]
+if ! grep -q "^LOCAL_UID=" $ENV_DIR/uid.env 2>/dev/null || ! grep -q "^LOCAL_GID=" $ENV_DIR/uid.env 2>/dev/null
 then
     LUID="LOCAL_UID=`id -u $USER`"
     LGID="LOCAL_GID=`id -g $USER`"
