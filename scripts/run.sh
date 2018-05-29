@@ -26,6 +26,15 @@ fi
 ENV_DIR="$OUTPUT_DIR/env"
 DOCKER_DIR="$OUTPUT_DIR/docker"
 
+# As in install.sh, save the running UID/GID, they could not exist yet, during an update for example
+if [ ! -f $ENV_DIR/uid.env ]
+then
+    LUID="LOCAL_UID=`id -u $USER`"
+    LGID="LOCAL_GID=`id -g $USER`"
+    mkdir -p $ENV_DIR
+    (echo $LUID; echo $LGID) > $ENV_DIR/uid.env
+fi
+
 # Functions
 
 function dockerComposeUp() {
