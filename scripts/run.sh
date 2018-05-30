@@ -51,6 +51,46 @@ fi
 
 # Functions
 
+function install() {
+    LETS_ENCRYPT="n"
+    echo -e -n "${CYAN}(!)${NC} Enter the domain name for your bitwarden instance (ex. bitwarden.company.com): "
+    read DOMAIN
+    echo ""
+    
+    if [ "$DOMAIN" == "" ]
+    then
+        DOMAIN="localhost"
+    fi
+    
+    if [ "$DOMAIN" != "localhost" ]
+    then
+        echo -e -n "${CYAN}(!)${NC} Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n): "
+        read LETS_ENCRYPT
+        echo ""
+    
+        if [ "$LETS_ENCRYPT" == "y" ]
+        then
+            echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): "
+            read EMAIL
+            echo ""
+    
+            mkdir -p $OUTPUT_DIR/letsencrypt
+            docker pull certbot/certbot
+            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+                certonly --standalone --noninteractive  --agree-tos --preferred-challenges http --email $EMAIL -d $DOMAIN \
+                --logs-dir /etc/letsencrypt/logs
+        fi
+    fi
+    
+    pullSetup
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+    
+    echo ""
+    echo "Setup complete"
+    echo ""
+}
+
 function dockerComposeUp() {
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
@@ -129,7 +169,10 @@ function pullSetup() {
 
 # Commands
 
-if [ "$1" == "start" -o "$1" == "restart" ]
+if [ "$1" == "install" ]
+then
+    install
+elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     restart
 elif [ "$1" == "pull" ]
