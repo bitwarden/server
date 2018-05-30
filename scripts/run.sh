@@ -23,7 +23,8 @@ then
     WEBVERSION=$4
 fi
 
-OS="nix"
+OS="lin"
+[ "$(uname)" == "Darwin" ] && OS="mac"
 ENV_DIR="$OUTPUT_DIR/env"
 DOCKER_DIR="$OUTPUT_DIR/docker"
 
