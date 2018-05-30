@@ -23,8 +23,31 @@ then
     WEBVERSION=$4
 fi
 
+OS="nix"
 ENV_DIR="$OUTPUT_DIR/env"
 DOCKER_DIR="$OUTPUT_DIR/docker"
+
+# Initialize UID/GID which will be used to run services
+if ! grep -q "^LOCAL_UID=" $ENV_DIR/uid.env 2>/dev/null || ! grep -q "^LOCAL_GID=" $ENV_DIR/uid.env 2>/dev/null
+then
+    LUID="LOCAL_UID=`id -u $USER`"
+    LGID="LOCAL_GID=`id -g $USER`"
+    mkdir -p $ENV_DIR
+    echo $LUID >$ENV_DIR/uid.env
+    echo $LGID >>$ENV_DIR/uid.env
+fi
+
+# Up to Core version 1.19.0, UID/GID given by the user in uid.env may collide with existing UID/GID in images
+# We then must enforce a UID/GID pair known to be available in images
+# Newer versions properly use -o switch to useradd / groupadd to avoid this problem
+if [[ "$COREVERSION" == *.*.* ]] &&
+   echo -e "1.19.0\n$COREVERSION" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -n | awk 'END {if($0!="1.19.0") {exit 1}}'
+then
+    LUID="LOCAL_UID=999"
+    LGID="LOCAL_GID=999"
+    echo $LUID >$ENV_DIR/uid.env
+    echo $LGID >>$ENV_DIR/uid.env
+fi
 
 # Functions
 
