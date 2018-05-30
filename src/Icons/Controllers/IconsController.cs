@@ -66,7 +66,8 @@ namespace Bit.Icons.Controllers
                 {
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
                     {
-                        AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0)
+                        AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0),
+                        Size = icon?.Image.Length ?? 0
                     });
                 }
             }
