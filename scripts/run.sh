@@ -31,7 +31,7 @@ OS="lin"
 ENV_DIR="$OUTPUT_DIR/env"
 DOCKER_DIR="$OUTPUT_DIR/docker"
 
-# Initialize UID/GID which will be used to run services identically over all the OS...
+# Initialize UID/GID which will be used to run services from within containers
 if ! grep -q "^LOCAL_UID=" $ENV_DIR/uid.env 2>/dev/null || ! grep -q "^LOCAL_GID=" $ENV_DIR/uid.env 2>/dev/null
 then
     LUID="LOCAL_UID=`id -u $USER`"
@@ -43,7 +43,7 @@ then
     echo $LGID >>$ENV_DIR/uid.env
 fi
 
-# ... but up to Core version 1.19.0, keep the old behavior for backward compatibility
+# Backwards compat GID/UID for pre-1.20.0 installations
 if [[ "$COREVERSION" == *.*.* ]] &&
    echo -e "1.19.0\n$COREVERSION" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -n | awk 'END {if($0!="1.19.0") {exit 1}}'
 then
@@ -86,14 +86,16 @@ function install() {
             mkdir -p $OUTPUT_DIR/letsencrypt
             docker pull certbot/certbot
             docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
-                certonly --standalone --noninteractive  --agree-tos --preferred-challenges http --email $EMAIL -d $DOMAIN \
-                --logs-dir /etc/letsencrypt/logs
+                certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
+                --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
         fi
     fi
     
     pullSetup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS -corev $COREVERSION -webv $WEBVERSION
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+        --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
+        -corev $COREVERSION -webv $WEBVERSION
     
     echo ""
     echo "Setup complete"
