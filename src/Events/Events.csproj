@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>1.18.0</Version>
+    <Version>1.20.0</Version>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Bit.Events</RootNamespace>
     <UserSecretsId>bitwarden-Events</UserSecretsId>
