@@ -100,8 +100,7 @@ then
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updateself" ]
 then
-    downloadSelf
-    echo "Updated self."
+    downloadSelf && echo "Updated self." && exit
 else
     echo "No command found."
 fi
