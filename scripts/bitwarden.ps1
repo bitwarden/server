@@ -51,13 +51,6 @@ function Download-Self {
     Invoke-RestMethod -OutFile $scriptPath -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
 }
 
-function Download-Install {
-    if(!(Test-Path -Path $scriptsDir)) {
-        New-Item -ItemType directory -Path $scriptsDir | Out-Null
-    }
-    Invoke-RestMethod -OutFile $scriptsDir\install.ps1 ` -Uri "${githubBaseUrl}/scripts/install.ps1"
-}
-
 function Download-Run-File {
     if(!(Test-Path -Path $scriptsDir)) {
         New-Item -ItemType directory -Path $scriptsDir | Out-Null
@@ -82,9 +75,8 @@ function Check-Output-Dir-Not-Exists {
 if($install) {
     Check-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output | Out-Null
-    Download-Install
     Download-Run-File
-    Invoke-Expression "$scriptsDir\install.ps1 -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
+    Invoke-Expression "$scriptsDir\run.ps1 -install -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif($start -Or $restart) {
     Check-Output-Dir-Exists

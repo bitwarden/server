@@ -2,6 +2,7 @@ param (
     [string]$outputDir = "../.",
     [string]$coreVersion = "latest",
     [string]$webVersion = "latest",
+    [switch] $install,
     [switch] $start,
     [switch] $restart,
     [switch] $stop,
@@ -15,6 +16,48 @@ param (
 $dockerDir="${outputDir}\docker"
 
 # Functions
+
+function Install() {
+    [string]$letsEncrypt = "n"
+    Write-Host "(!) " -f cyan -nonewline
+    [string]$domain = $( Read-Host "Enter the domain name for your bitwarden instance (ex. bitwarden.company.com)" )
+    echo ""
+    
+    if($domain -eq "") {
+        $domain = "localhost"
+    }
+    
+    if($domain -ne "localhost") {
+        Write-Host "(!) " -f cyan -nonewline
+        $letsEncrypt = $( Read-Host "Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n)" )
+        echo ""
+    
+        if($letsEncrypt -eq "y") {
+            Write-Host "(!) " -f cyan -nonewline
+            [string]$email = $( Read-Host "Enter your email address (Let's Encrypt will send you certificate " +
+                "expiration reminders)" )
+            echo ""
+    
+            $letsEncryptPath = "${outputDir}/letsencrypt"
+            if(!(Test-Path -Path $letsEncryptPath )){
+                New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
+            }
+            docker pull certbot/certbot
+            docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
+                certonly --standalone --noninteractive --agree-tos --preferred-challenges http `
+                --email $email -d $domain --logs-dir /etc/letsencrypt/logs
+        }
+    }
+    
+    Pull-Setup
+    docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
+        dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
+        -os win -corev $coreVersion -webv $webVersion
+    
+    echo ""
+    echo "Setup complete"
+    echo ""    
+}
 
 function Docker-Compose-Up {
     if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
@@ -51,14 +94,16 @@ function Docker-Prune {
 function Update-Lets-Encrypt {
     if(Test-Path -Path "${outputDir}\letsencrypt\live") {
         docker pull certbot/certbot
-        docker run -it --rm --name certbot -p 443:443 -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
+        docker run -it --rm --name certbot -p 443:443 -p 80:80 `
+            -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
             renew --logs-dir /etc/letsencrypt/logs
     }
 }
 
 function Update-Database {
     Pull-Setup
-    docker run -it --rm --name setup --network container:bitwarden-mssql -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
+    docker run -it --rm --name setup --network container:bitwarden-mssql `
+        -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion
     echo "Database update complete"
 }
@@ -90,7 +135,10 @@ function Pull-Setup {
 
 # Commands
 
-if($start -Or $restart) {
+if($install) {
+    Install
+}
+elseif($start -Or $restart) {
     Restart
 }
 elseif($pull) {
