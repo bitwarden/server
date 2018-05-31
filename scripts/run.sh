@@ -3,6 +3,9 @@ set -e
 
 # Setup
 
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 OUTPUT_DIR=".."
