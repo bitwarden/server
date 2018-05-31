@@ -47,15 +47,6 @@ function downloadSelf() {
     chmod u+x $SCRIPT_PATH
 }
 
-function downloadInstall() {
-    if [ ! -d "$SCRIPTS_DIR" ]
-    then
-        mkdir $SCRIPTS_DIR
-    fi
-    curl -s -o $SCRIPTS_DIR/install.sh $GITHUB_BASE_URL/scripts/install.sh
-    chmod u+x $SCRIPTS_DIR/install.sh
-}
-
 function downloadRunFile() {
     if [ ! -d "$SCRIPTS_DIR" ]
     then
@@ -63,6 +54,7 @@ function downloadRunFile() {
     fi
     curl -s -o $SCRIPTS_DIR/run.sh $GITHUB_BASE_URL/scripts/run.sh
     chmod u+x $SCRIPTS_DIR/run.sh
+    rm -f $SCRIPTS_DIR/install.sh
 }
 
 function checkOutputDirExists() {
@@ -87,9 +79,8 @@ if [ "$1" == "install" ]
 then
     checkOutputDirNotExists
     mkdir $OUTPUT
-    downloadInstall
     downloadRunFile
-    $SCRIPTS_DIR/install.sh $OUTPUT $COREVERSION $WEBVERSION
+    $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     checkOutputDirExists
