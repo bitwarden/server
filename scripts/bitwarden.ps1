@@ -36,8 +36,8 @@ echo ""
 
 $scriptPath = $MyInvocation.MyCommand.Path
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if($output -eq "") {
-    $output="${dir}\bwdata"
+if ($output -eq "") {
+    $output = "${dir}\bwdata"
 }
 
 $scriptsDir = "${output}\scripts"
@@ -52,50 +52,50 @@ function Download-Self {
 }
 
 function Download-Run-File {
-    if(!(Test-Path -Path $scriptsDir)) {
+    if (!(Test-Path -Path $scriptsDir)) {
         New-Item -ItemType directory -Path $scriptsDir | Out-Null
     }
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
 }
 
 function Check-Output-Dir-Exists {
-    if(!(Test-Path -Path $output)) {
+    if (!(Test-Path -Path $output)) {
         throw "Cannot find a bitwarden installation at $output."
     }
 }
 
 function Check-Output-Dir-Not-Exists {
-    if(Test-Path -Path $output) {
+    if (Test-Path -Path $output) {
         throw "Looks like bitwarden is already installed at $output."
     }
 }
 
 # Commands
 
-if($install) {
+if ($install) {
     Check-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output | Out-Null
     Download-Run-File
     Invoke-Expression "$scriptsDir\run.ps1 -install -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif($start -Or $restart) {
+elseif ($start -Or $restart) {
     Check-Output-Dir-Exists
     Invoke-Expression "$scriptsDir\run.ps1 -restart -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif($update) {
+elseif ($update) {
     Check-Output-Dir-Exists
     Download-Run-File
     Invoke-Expression "$scriptsDir\run.ps1 -update -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif($updatedb) {
+elseif ($updatedb) {
     Check-Output-Dir-Exists
     Invoke-Expression "$scriptsDir\run.ps1 -updatedb -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif($stop) {
+elseif ($stop) {
     Check-Output-Dir-Exists
     Invoke-Expression "$scriptsDir\run.ps1 -stop -outputDir $output -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif($updateself) {
+elseif ($updateself) {
     Download-Self
     echo "Updated self."
 }

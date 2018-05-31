@@ -13,7 +13,7 @@ param (
 
 # Setup
 
-$dockerDir="${outputDir}\docker"
+$dockerDir = "${outputDir}\docker"
 
 # Functions
 
@@ -23,23 +23,23 @@ function Install() {
     [string]$domain = $( Read-Host "Enter the domain name for your bitwarden instance (ex. bitwarden.company.com)" )
     echo ""
     
-    if($domain -eq "") {
+    if ($domain -eq "") {
         $domain = "localhost"
     }
     
-    if($domain -ne "localhost") {
+    if ($domain -ne "localhost") {
         Write-Host "(!) " -f cyan -nonewline
         $letsEncrypt = $( Read-Host "Do you want to use Let's Encrypt to generate a free SSL certificate? (y/n)" )
         echo ""
     
-        if($letsEncrypt -eq "y") {
+        if ($letsEncrypt -eq "y") {
             Write-Host "(!) " -f cyan -nonewline
             [string]$email = $( Read-Host "Enter your email address (Let's Encrypt will send you certificate " +
                 "expiration reminders)" )
             echo ""
     
             $letsEncryptPath = "${outputDir}/letsencrypt"
-            if(!(Test-Path -Path $letsEncryptPath )){
+            if (!(Test-Path -Path $letsEncryptPath )) {
                 New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
             }
             docker pull certbot/certbot
@@ -60,7 +60,7 @@ function Install() {
 }
 
 function Docker-Compose-Up {
-    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+    if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
         docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml up -d
     }
     else {
@@ -69,7 +69,7 @@ function Docker-Compose-Up {
 }
 
 function Docker-Compose-Down {
-    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+    if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
         docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml down
     }
     else {
@@ -78,7 +78,7 @@ function Docker-Compose-Down {
 }
 
 function Docker-Compose-Pull {
-    if(Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
+    if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
         docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml pull
     }
     else {
@@ -92,7 +92,7 @@ function Docker-Prune {
 }
 
 function Update-Lets-Encrypt {
-    if(Test-Path -Path "${outputDir}\letsencrypt\live") {
+    if (Test-Path -Path "${outputDir}\letsencrypt\live") {
         docker pull certbot/certbot
         docker run -it --rm --name certbot -p 443:443 -p 80:80 `
             -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
@@ -135,22 +135,22 @@ function Pull-Setup {
 
 # Commands
 
-if($install) {
+if ($install) {
     Install
 }
-elseif($start -Or $restart) {
+elseif ($start -Or $restart) {
     Restart
 }
-elseif($pull) {
+elseif ($pull) {
     Docker-Compose-Pull
 }
-elseif($stop) {
+elseif ($stop) {
     Docker-Compose-Down
 }
-elseif($updatedb) {
+elseif ($updatedb) {
     Update-Database
 }
-elseif($update) {
+elseif ($update) {
     Docker-Compose-Down
     Update
     Restart
