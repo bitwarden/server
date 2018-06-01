@@ -81,7 +81,7 @@ Full documentation for deploying Bitwarden with Docker can be found in our help 
 ```
 curl -s -o bitwarden.sh \
     https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh \
-    && sudo chmod u+x bitwarden.sh
+    && chmod +x bitwarden.sh
 ./bitwarden.sh install
 ./bitwarden.sh start
 ./bitwarden.sh updatedb
