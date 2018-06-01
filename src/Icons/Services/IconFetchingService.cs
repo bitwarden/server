@@ -94,7 +94,7 @@ namespace Bit.Icons.Services
             var links = doc.DocumentNode.SelectNodes(@"//head/link[@href]");
             if(links != null)
             {
-                foreach(var link in links)
+                foreach(var link in links.Take(40))
                 {
                     var hrefAttr = link.Attributes["href"];
                     if(string.IsNullOrWhiteSpace(hrefAttr?.Value))
@@ -130,11 +130,11 @@ namespace Bit.Icons.Services
                 {
                     iconUri = new Uri($"{uri.Scheme}://{icon.Path.Substring(2)}");
                 }
-                else if(Uri.TryCreate(icon.Path, UriKind.Relative, out Uri relUri))
+                else if(Uri.TryCreate(icon.Path, UriKind.Relative, out var relUri))
                 {
                     iconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", baseUrl, relUri.OriginalString);
                 }
-                else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out Uri absUri))
+                else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out var absUri))
                 {
                     iconUri = absUri;
                 }
