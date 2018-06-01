@@ -277,6 +277,7 @@ namespace Bit.Setup
                     var nextAttempt = attempt + 1;
                     Console.WriteLine("Database is in script upgrade mode. " +
                         "Trying again (attempt #{0})...", nextAttempt);
+                    System.Threading.Thread.Sleep(20000);
                     MigrateDatabase(nextAttempt);
                     return;
                 }
