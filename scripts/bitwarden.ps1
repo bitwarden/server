@@ -60,13 +60,13 @@ function Download-Run-File {
 
 function Check-Output-Dir-Exists {
     if (!(Test-Path -Path $output)) {
-        throw "Cannot find a bitwarden installation at $output."
+        throw "Cannot find a Bitwarden installation at $output."
     }
 }
 
 function Check-Output-Dir-Not-Exists {
     if (Test-Path -Path $output) {
-        throw "Looks like bitwarden is already installed at $output."
+        throw "Looks like Bitwarden is already installed at $output."
     }
 }
 

@@ -60,7 +60,7 @@ function downloadRunFile() {
 function checkOutputDirExists() {
     if [ ! -d "$OUTPUT" ]
     then
-        echo "Cannot find a bitwarden installation at $OUTPUT."
+        echo "Cannot find a Bitwarden installation at $OUTPUT."
         exit 1
     fi
 }
@@ -68,7 +68,7 @@ function checkOutputDirExists() {
 function checkOutputDirNotExists() {
     if [ -d "$OUTPUT" ]
     then
-        echo "Looks like bitwarden is already installed at $OUTPUT."
+        echo "Looks like Bitwarden is already installed at $OUTPUT."
         exit 1
     fi
 }
