@@ -85,11 +85,10 @@ elif [ "$1" == "start" -o "$1" == "restart" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "update" ]
+elif [ "$1" == "update" -o "$1" == "updateapp" ]
 then
     checkOutputDirExists
-    downloadRunFile
-    $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
+    $SCRIPTS_DIR/run.sh $1 $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists
@@ -100,6 +99,7 @@ then
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updateself" ]
 then
+    downloadRunFile
     downloadSelf && echo "Updated self." && exit
 else
     echo "No command found."
