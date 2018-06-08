@@ -1,5 +1,7 @@
 FROM microsoft/aspnetcore:2.0.6
 
+LABEL product="bitwarden"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         cron \
