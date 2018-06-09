@@ -137,8 +137,7 @@ function dockerComposePull() {
 function dockerPrune() {
     docker image prune -f
     # Perhaps we could prefer the following, to recover disk space after automatic update ?
-    # (product label would have to be added to images to avoid removing non-bitwarden images)
-    # docker image prune -f -a --filter="label=product=bitwarden"
+    # docker image prune -f -a --filter="label=com.bitwarden.product=bitwarden"
 }
 
 function updateLetsEncrypt() {
