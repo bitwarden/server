@@ -1,5 +1,7 @@
 FROM nginx:1.12
 
+LABEL com.bitwarden.product="bitwarden"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gosu \
