@@ -1,6 +1,6 @@
 FROM microsoft/mssql-server-linux:2017-CU7
 
-LABEL product="bitwarden"
+LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
