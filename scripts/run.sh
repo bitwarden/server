@@ -81,23 +81,45 @@ function install() {
         then
             echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): "
             read EMAIL
-            echo ""
-    
             mkdir -p $OUTPUT_DIR/letsencrypt
-            docker pull certbot/certbot
-            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
-                certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
-                --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
+            echo ""    
         fi
     fi
-    
+
     pullSetup
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION
-    
     echo ""
+
+    if [ "$LETS_ENCRYPT" == "y" ]
+    then
+        http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
+        https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
+        if [ "$http_port" != "80" ]
+        then
+            if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
+            then
+                http_port_default=80
+            fi
+        fi
+        if [ "$http_port" != "443" ]
+        then
+            if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
+            then
+                https_port_default=443
+            fi
+        fi
+        docker pull certbot/certbot
+        docker run -it --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
+            ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
+            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
+            --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
+        echo ""
+    fi
+
     echo "Setup complete"
     echo ""
 }
@@ -153,7 +175,7 @@ function updateLetsEncrypt() {
             fi
         fi
         docker pull certbot/certbot
-        docker run -i --rm --name certbot -p ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
+        docker run -i --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
             ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
             -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
