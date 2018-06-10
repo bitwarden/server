@@ -95,22 +95,7 @@ function install() {
 
     if [ "$LETS_ENCRYPT" == "y" ]
     then
-        http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-        https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-        if [ "$http_port" != "80" ]
-        then
-            if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
-            then
-                http_port_default=80
-            fi
-        fi
-        if [ "$http_port" != "443" ]
-        then
-            if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
-            then
-                https_port_default=443
-            fi
-        fi
+        portsLetsEncrypt
         docker pull certbot/certbot
         docker run -it --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
             ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
@@ -155,25 +140,29 @@ function dockerPrune() {
     docker image prune -f
 }
 
+function portsLetsEncrypt() {
+    http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
+    https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
+    if [ "$http_port" != "80" ]
+    then
+        if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
+        then
+            http_port_default=80
+        fi
+    fi
+    if [ "$http_port" != "443" ]
+    then
+        if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
+        then
+            https_port_default=443
+        fi
+    fi
+}
+
 function updateLetsEncrypt() {
     if [ -d "${OUTPUT_DIR}/letsencrypt/live" ]
     then
-        http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-        https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-        if [ "$http_port" != "80" ]
-        then
-            if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
-            then
-                http_port_default=80
-            fi
-        fi
-        if [ "$http_port" != "443" ]
-        then
-            if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
-            then
-                https_port_default=443
-            fi
-        fi
+        portsLetsEncrypt
         docker pull certbot/certbot
         docker run -i --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
             ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
