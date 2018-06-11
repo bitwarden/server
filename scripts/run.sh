@@ -97,8 +97,7 @@ function install() {
     then
         portsLetsEncrypt
         docker pull certbot/certbot
-        docker run -it --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
-            ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
+        docker run -it --rm --name certbot $http_port $https_port $http_port_default $https_port_default \
             -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
             --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
@@ -141,20 +140,20 @@ function dockerPrune() {
 }
 
 function portsLetsEncrypt() {
-    http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-    https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print $2}' $OUTPUT_DIR/docker/docker-compose.yml)
-    if [ "$http_port" != "80" ]
+    http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print "-p "$2":80"}' $OUTPUT_DIR/docker/docker-compose.yml)
+    https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print "-p "$2":443"}' $OUTPUT_DIR/docker/docker-compose.yml)
+    if [ "$http_port" != "-p 80:80" ]
     then
         if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
         then
-            http_port_default=80
+            http_port_default="-p 80:80"
         fi
     fi
-    if [ "$http_port" != "443" ]
+    if [ "$https_port" != "-p 443:443" ]
     then
         if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
         then
-            https_port_default=443
+            https_port_default="-p 443:443"
         fi
     fi
 }
@@ -164,8 +163,7 @@ function updateLetsEncrypt() {
     then
         portsLetsEncrypt
         docker pull certbot/certbot
-        docker run -i --rm --name certbot ${http_port:+-p $http_port:80} ${https_port:+-p $https_port:443} \
-            ${http_port_default:+-p $http_port_default:80} ${https_port_default:+-p $https_port_default:443} \
+        docker run -i --rm --name certbot $http_port $https_port $http_port_default $https_port_default \
             -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
     fi
