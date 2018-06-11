@@ -46,7 +46,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/details")]
-        public async Task<CollectionDetailsResponseModel> GetDetails(string orgId, string id)
+        public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
             var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(new Guid(id));
             if(collectionDetails?.Item1 == null || !_currentContext.OrganizationAdmin(collectionDetails.Item1.OrganizationId))
@@ -54,7 +54,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new CollectionDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
         }
 
         [HttpGet("")]
@@ -72,12 +72,19 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("~/collections")]
-        public async Task<ListResponseModel<CollectionResponseModel>> GetUser([FromQuery]bool writeOnly = false)
+        public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser([FromQuery]bool writeOnly = false)
         {
             var collections = await _collectionRepository.GetManyByUserIdAsync(
-                _userService.GetProperUserId(User).Value, writeOnly);
-            var responses = collections.Select(c => new CollectionResponseModel(c));
-            return new ListResponseModel<CollectionResponseModel>(responses);
+                _userService.GetProperUserId(User).Value);
+
+            // TODO: Deprecated. writeOnly flag can be removed after v1.21.0
+            if(writeOnly)
+            {
+                collections = collections.Where(c => !c.ReadOnly).ToList();
+            }
+
+            var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
+            return new ListResponseModel<CollectionDetailsResponseModel>(responses);
         }
 
         [HttpGet("{id}/users")]

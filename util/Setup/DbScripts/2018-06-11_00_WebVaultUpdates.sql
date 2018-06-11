@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Collection_ReadByUserId]
+﻿IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_ReadByUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -40,3 +46,4 @@ BEGIN
             OR CG.[CollectionId] IS NOT NULL
         )
 END
+GO

@@ -28,8 +28,19 @@ namespace Bit.Core.Models.Api
 
     public class CollectionDetailsResponseModel : CollectionResponseModel
     {
-        public CollectionDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
-            : base(collection, "collectionDetails")
+        public CollectionDetailsResponseModel(CollectionDetails collectionDetails)
+            : base(collectionDetails, "collectionDetails")
+        {
+            ReadOnly = collectionDetails.ReadOnly;
+        }
+
+        public bool ReadOnly { get; set; }
+    }
+
+    public class CollectionGroupDetailsResponseModel : CollectionResponseModel
+    {
+        public CollectionGroupDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
+            : base(collection, "collectionGroupDetails")
         {
             Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
         }

@@ -14,7 +14,7 @@ namespace Bit.Core.Models.Api
             User user,
             IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
             IEnumerable<Folder> folders,
-            IEnumerable<Collection> collections,
+            IEnumerable<CollectionDetails> collections,
             IEnumerable<CipherDetails> ciphers,
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict)
             : base("sync")
@@ -22,13 +22,14 @@ namespace Bit.Core.Models.Api
             Profile = new ProfileResponseModel(user, organizationUserDetails);
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
-            Collections = collections?.Select(c => new CollectionResponseModel(c)) ?? new List<CollectionResponseModel>();
+            Collections = collections?.Select(
+                c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
             Domains = new DomainsResponseModel(user, false);
         }
 
         public ProfileResponseModel Profile { get; set; }
         public IEnumerable<FolderResponseModel> Folders { get; set; }
-        public IEnumerable<CollectionResponseModel> Collections { get; set; }
+        public IEnumerable<CollectionDetailsResponseModel> Collections { get; set; }
         public IEnumerable<CipherDetailsResponseModel> Ciphers { get; set; }
         public DomainsResponseModel Domains { get; set; }
     }

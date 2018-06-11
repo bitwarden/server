@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -59,11 +60,11 @@ namespace Bit.Api.Controllers
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
 
-            IEnumerable<Collection> collections = null;
+            IEnumerable<CollectionDetails> collections = null;
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
             if(hasEnabledOrgs)
             {
-                collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, false);
+                collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
                 collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
             }
