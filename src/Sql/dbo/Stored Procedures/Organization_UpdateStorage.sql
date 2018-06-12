@@ -6,6 +6,22 @@ BEGIN
 
     DECLARE @Storage BIGINT
 
+    CREATE TABLE #Temp
+    ( 
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [Attachments] VARCHAR(MAX) NULL
+    )
+
+    INSERT INTO #Temp
+    SELECT
+        [Id],
+        [Attachments]
+    FROM
+        [dbo].[Cipher]
+    WHERE
+        [UserId] IS NULL
+        AND [OrganizationId] = @Id
+
     ;WITH [CTE] AS (
         SELECT
             [Id],
@@ -16,17 +32,14 @@ BEGIN
                     OPENJSON([Attachments])
             ) [Size]
         FROM
-            [dbo].[Cipher]
+            #Temp
     )
     SELECT
-        @Storage = SUM([CTE].[Size])
+        @Storage = SUM([Size])
     FROM
-        [dbo].[Cipher] C
-    LEFT JOIN
-        [CTE] ON C.[Id] = [CTE].[Id]
-    WHERE
-        C.[UserId] IS NULL
-        AND C.[OrganizationId] = @Id
+        [CTE]
+
+    DROP TABLE #Temp
 
     UPDATE
         [dbo].[Organization]
