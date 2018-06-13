@@ -346,6 +346,86 @@ namespace Bit.Core.Repositories.SqlServer
             return Task.FromResult(0);
         }
 
+        public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
+        {
+            if(!ciphers.Any())
+            {
+                return;
+            }
+
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                connection.Open();
+
+                using(var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Create temp tables to bulk copy into.
+
+                        var sqlCreateTemp = @"
+                            SELECT TOP 0 *
+                            INTO #TempCipher
+                            FROM [dbo].[Cipher]";
+
+                        using(var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Bulk copy into temp tables.
+                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "#TempCipher";
+                            var dataTable = BuildCiphersTable(ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
+
+                        // 3. Insert into real tables from temp tables and clean up.
+
+                        // Intentionally not including Favorites, Folders, and CreationDate
+                        // since those are not meant to be bulk updated at this time
+                        var sql = @"
+                            UPDATE
+                                [dbo].[Cipher]
+                            SET
+                                [UserId] = TC.[UserId],
+                                [OrganizationId] = TC.[OrganizationId],
+                                [Type] = TC.[Type],
+                                [Data] = TC.[Data],
+                                [Attachments] = TC.[Attachments],
+                                [RevisionDate] = TC.[RevisionDate]
+                            FROM
+                                [dbo].[Cipher] C
+                            INNER JOIN
+                                #TempCipher TC ON C.Id = TC.Id
+                            WHERE
+                                C.[UserId] = @UserId
+
+                            DROP TABLE #TempCipher";
+
+                        using(var cmd = new SqlCommand(sql, connection, transaction))
+                        {
+                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        await connection.ExecuteAsync(
+                            $"[{Schema}].[User_BumpAccountRevisionDate]",
+                            new { Id = userId },
+                            commandType: CommandType.StoredProcedure, transaction: transaction);
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
         public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             if(!ciphers.Any())

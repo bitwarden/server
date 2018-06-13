@@ -401,6 +401,52 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherUpdateAsync(cipher);
         }
 
+        public async Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId,
+            IEnumerable<Guid> collectionIds, Guid sharingUserId)
+        {
+            var cipherIds = new List<Guid>();
+            foreach(var cipher in ciphers)
+            {
+                if(cipher.Id == default(Guid))
+                {
+                    throw new BadRequestException("All ciphers must already exist.");
+                }
+
+                if(cipher.OrganizationId.HasValue)
+                {
+                    throw new BadRequestException("One or more ciphers already belong to an organization.");
+                }
+
+                if(!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
+                {
+                    throw new BadRequestException("One or more ciphers do not belong to you.");
+                }
+
+                if(!string.IsNullOrWhiteSpace(cipher.Attachments))
+                {
+                    throw new BadRequestException("One or more ciphers have attachments.");
+                }
+
+                cipher.UserId = null;
+                cipher.OrganizationId = organizationId;
+                cipher.RevisionDate = DateTime.UtcNow;
+                cipherIds.Add(cipher.Id);
+            }
+
+            await _cipherRepository.UpdateCiphersAsync(sharingUserId, ciphers);
+            await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
+                organizationId, collectionIds);
+
+            // TODO: move this to a single event?
+            foreach(var cipher in ciphers)
+            {
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Shared);
+            }
+
+            // push
+            await _pushService.PushSyncCiphersAsync(sharingUserId);
+        }
+
         public async Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin)
         {
             if(cipher.Id == default(Guid))

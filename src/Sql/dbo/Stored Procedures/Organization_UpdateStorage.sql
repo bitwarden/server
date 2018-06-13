@@ -6,13 +6,13 @@ BEGIN
 
     DECLARE @Storage BIGINT
 
-    CREATE TABLE #Temp
+    CREATE TABLE #OrgStorageUpdateTemp
     ( 
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [Attachments] VARCHAR(MAX) NULL
     )
 
-    INSERT INTO #Temp
+    INSERT INTO #OrgStorageUpdateTemp
     SELECT
         [Id],
         [Attachments]
@@ -32,14 +32,14 @@ BEGIN
                     OPENJSON([Attachments])
             ) [Size]
         FROM
-            #Temp
+            #OrgStorageUpdateTemp
     )
     SELECT
         @Storage = SUM([Size])
     FROM
         [CTE]
 
-    DROP TABLE #Temp
+    DROP TABLE #OrgStorageUpdateTemp
 
     UPDATE
         [dbo].[Organization]

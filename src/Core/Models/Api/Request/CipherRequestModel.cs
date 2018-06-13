@@ -182,4 +182,50 @@ namespace Bit.Core.Models.Api
         public IEnumerable<string> Ids { get; set; }
         public string FolderId { get; set; }
     }
+
+    public class CipherBulkShareRequestModel
+    {
+        [Required]
+        public IEnumerable<string> CollectionIds { get; set; }
+        [Required]
+        public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(!Ciphers?.Any() ?? false)
+            {
+                yield return new ValidationResult("You must select at least one cipher.",
+                    new string[] { nameof(Ciphers) });
+            }
+            else
+            {
+                var allHaveIds = true;
+                var organizationIds = new HashSet<string>();
+                foreach(var c in Ciphers)
+                {
+                    organizationIds.Add(c.OrganizationId);
+                    if(allHaveIds)
+                    {
+                        allHaveIds = !(string.IsNullOrWhiteSpace(c.Id) || string.IsNullOrWhiteSpace(c.OrganizationId));
+                    }
+                }
+
+                if(!allHaveIds)
+                {
+                    yield return new ValidationResult("All Ciphers must have an Id and OrganizationId.",
+                        new string[] { nameof(Ciphers) });
+                }
+                else if(organizationIds.Count != 1)
+                {
+                    yield return new ValidationResult("All ciphers must be for the same organization.");
+                }
+            }
+
+            if(!CollectionIds?.Any() ?? false)
+            {
+                yield return new ValidationResult("You must select at least one collection.",
+                    new string[] { nameof(CollectionIds) });
+            }
+        }
+    }
 }

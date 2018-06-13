@@ -22,6 +22,7 @@ namespace Bit.Core.Services
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);
         Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds, Guid userId);
+        Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId);
         Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
         Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships);

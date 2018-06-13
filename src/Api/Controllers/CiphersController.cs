@@ -346,6 +346,36 @@ namespace Bit.Api.Controllers
                 string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
         }
 
+        [HttpPut("share")]
+        [HttpPost("share")]
+        public async Task PutShareMany([FromBody]CipherBulkShareRequestModel model)
+        {
+            var organizationId = new Guid(model.Ciphers.First().OrganizationId);
+            if(!_currentContext.OrganizationUser(organizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
+            var ciphersDict = ciphers.ToDictionary(c => c.Id);
+
+            var shareCiphers = new List<Cipher>();
+            foreach(var cipher in model.Ciphers)
+            {
+                var cipherGuid = new Guid(cipher.Id);
+                if(!ciphersDict.ContainsKey(cipherGuid))
+                {
+                    throw new BadRequestException("Trying to share ciphers that you do not own.");
+                }
+
+                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipherGuid]));
+            }
+
+            await _cipherService.ShareManyAsync(shareCiphers, organizationId,
+                model.CollectionIds.Select(c => new Guid(c)), userId);
+        }
+
         [HttpPost("purge")]
         public async Task PostPurge([FromBody]CipherPurgeRequestModel model)
         {

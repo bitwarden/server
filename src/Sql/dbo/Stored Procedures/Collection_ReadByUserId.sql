@@ -12,8 +12,8 @@ BEGIN
                 OR G.[AccessAll] = 1
                 OR CU.[ReadOnly] = 0
                 OR CG.[ReadOnly] = 0
-            THEN 1
-            ELSE 0
+            THEN 0
+            ELSE 1
         END [ReadOnly]
     FROM
         [dbo].[CollectionView] C

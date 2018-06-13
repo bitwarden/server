@@ -80,5 +80,23 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId,
+            Guid organizationId, IEnumerable<Guid> collectionIds)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]",
+                    new
+                    {
+                        CipherIds = cipherIds.ToGuidIdArrayTVP(),
+                        UserId = userId,
+                        OrganizationId = organizationId,
+                        CollectionIds = collectionIds.ToGuidIdArrayTVP()
+                    },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }
