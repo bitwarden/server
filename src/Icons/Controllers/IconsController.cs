@@ -28,7 +28,6 @@ namespace Bit.Icons.Controllers
         }
 
         [HttpGet("{hostname}/icon.png")]
-        [ResponseCache(Duration = 604800 /*7 days*/)]
         public async Task<IActionResult> Get(string hostname)
         {
             if(string.IsNullOrWhiteSpace(hostname) || !hostname.Contains("."))

@@ -2,8 +2,10 @@
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
 
 namespace Bit.Icons
 {
@@ -31,7 +33,6 @@ namespace Bit.Icons
             {
                 options.SizeLimit = iconsSettings.CacheSizeLimit;
             });
-            services.AddResponseCaching();
 
             // Services
             services.AddSingleton<IDomainMappingService, DomainMappingService>();
@@ -50,7 +51,16 @@ namespace Bit.Icons
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseResponseCaching();
+            app.Use(async (context, next) =>
+            {
+                context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+                {
+                    Public = true,
+                    MaxAge = TimeSpan.FromDays(7)
+                };
+                await next();
+            });
+
             app.UseMvc();
         }
     }
