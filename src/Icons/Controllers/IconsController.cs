@@ -49,7 +49,7 @@ namespace Bit.Icons.Controllers
             }
 
             var mappedDomain = _domainMappingService.MapDomain(domain);
-            if(!_memoryCache.TryGetValue(mappedDomain, out Icon icon))
+            if(!_iconsSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
                 var result = await _iconFetchingService.GetIconAsync(domain);
                 if(result == null)
@@ -62,7 +62,7 @@ namespace Bit.Icons.Controllers
                 }
 
                 // Only cache not found and smaller images (<= 50kb)
-                if(icon == null || icon.Image.Length <= 50012)
+                if(_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
                 {
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
                     {
