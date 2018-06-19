@@ -6,35 +6,45 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
-using HtmlAgilityPack;
+using AngleSharp.Parser.Html;
 
 namespace Bit.Icons.Services
 {
     public class IconFetchingService : IIconFetchingService
     {
-        private static HashSet<string> _iconRels = new HashSet<string> { "icon", "apple-touch-icon", "shortcut icon" };
-        private static HashSet<string> _iconExtensions = new HashSet<string> { ".ico", ".png", ".jpg", ".jpeg" };
-        private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        });
-        private static string _pngMediaType = "image/png";
-        private static byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
-        private static string _icoMediaType = "image/x-icon";
-        private static string _icoAltMediaType = "image/vnd.microsoft.icon";
-        private static byte[] _icoHeader = new byte[] { 00, 00, 01, 00 };
-        private static string _jpegMediaType = "image/jpeg";
-        private static byte[] _jpegHeader = new byte[] { 255, 216, 255 };
-        private static readonly HashSet<string> _allowedMediaTypes = new HashSet<string>{
-            _pngMediaType,
-            _icoMediaType,
-            _icoAltMediaType,
-            _jpegMediaType
-        };
+        private readonly HashSet<string> _iconRels =
+            new HashSet<string> { "icon", "apple-touch-icon", "shortcut icon" };
+        private readonly HashSet<string> _iconExtensions =
+            new HashSet<string> { ".ico", ".png", ".jpg", ".jpeg" };
+
+        private readonly string _pngMediaType = "image/png";
+        private readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
+
+        private readonly string _icoMediaType = "image/x-icon";
+        private readonly string _icoAltMediaType = "image/vnd.microsoft.icon";
+        private readonly byte[] _icoHeader = new byte[] { 00, 00, 01, 00 };
+
+        private readonly string _jpegMediaType = "image/jpeg";
+        private readonly byte[] _jpegHeader = new byte[] { 255, 216, 255 };
+
+        private readonly HashSet<string> _allowedMediaTypes;
+        private readonly HttpClient _httpClient;
 
         public IconFetchingService()
         {
+            _allowedMediaTypes = new HashSet<string>
+            {
+                _pngMediaType,
+                _icoMediaType,
+                _icoAltMediaType,
+                _jpegMediaType
+            };
+
+            _httpClient = new HttpClient(new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            });
             _httpClient.Timeout = TimeSpan.FromSeconds(20);
         }
 
@@ -44,10 +54,12 @@ namespace Bit.Icons.Services
             var response = await GetAndFollowAsync(uri, 2);
             if(response == null || !response.IsSuccessStatusCode)
             {
+                Cleanup(response);
                 uri = new Uri($"http://{domain}");
                 response = await GetAndFollowAsync(uri, 2);
                 if(response == null || !response.IsSuccessStatusCode)
                 {
+                    Cleanup(response);
                     uri = new Uri($"https://www.{domain}");
                     response = await GetAndFollowAsync(uri, 2);
                 }
@@ -55,171 +67,160 @@ namespace Bit.Icons.Services
 
             if(response?.Content == null || !response.IsSuccessStatusCode)
             {
+                Cleanup(response);
                 return null;
             }
 
-            uri = response.RequestMessage.RequestUri;
-            var doc = new HtmlDocument();
-
+            var parser = new HtmlParser();
+            using(response)
             using(var htmlStream = await response.Content.ReadAsStreamAsync())
+            using(var document = await parser.ParseAsync(htmlStream))
             {
-                if(htmlStream == null)
+                uri = response.RequestMessage.RequestUri;
+                if(document.DocumentElement == null)
                 {
-                    doc = null;
                     return null;
                 }
 
-                try
+                var baseUrl = "/";
+                var baseUrlNode = document.QuerySelector("head base[href]");
+                if(baseUrlNode != null)
                 {
-                    doc.Load(htmlStream);
-                    if(doc.DocumentNode == null)
+                    var hrefAttr = baseUrlNode.Attributes["href"];
+                    if(!string.IsNullOrWhiteSpace(hrefAttr?.Value))
                     {
-                        doc = null;
-                        return null;
-                    }
-                }
-                catch
-                {
-                    doc = null;
-                    return null;
-                }
-            }
-
-            var baseUrl = "/";
-            var baseUrlNode = doc.DocumentNode.SelectSingleNode(@"//head/base[@href]");
-            if(baseUrlNode != null)
-            {
-                var hrefAttr = baseUrlNode.Attributes["href"];
-                if(!string.IsNullOrWhiteSpace(hrefAttr?.Value))
-                {
-                    baseUrl = hrefAttr.Value;
-                }
-
-                baseUrlNode = null;
-                hrefAttr = null;
-            }
-
-            var icons = new List<IconResult>();
-            var links = doc.DocumentNode.SelectNodes(@"//head/link[@href]");
-            doc = null;
-            if(links != null)
-            {
-                foreach(var link in links.Take(40))
-                {
-                    var hrefAttr = link.Attributes["href"];
-                    if(string.IsNullOrWhiteSpace(hrefAttr?.Value))
-                    {
-                        continue;
+                        baseUrl = hrefAttr.Value;
                     }
 
-                    var relAttr = link.Attributes["rel"];
-                    var sizesAttr = link.Attributes["sizes"];
-                    if(relAttr != null && _iconRels.Contains(relAttr.Value.ToLower()))
-                    {
-                        icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var extension = Path.GetExtension(hrefAttr.Value);
-                            if(_iconExtensions.Contains(extension.ToLower()))
-                            {
-                                icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
-                            }
-                        }
-                        catch(ArgumentException) { }
-                    }
-
-                    sizesAttr = null;
-                    relAttr = null;
+                    baseUrlNode = null;
                     hrefAttr = null;
                 }
 
-                links = null;
-            }
-
-            var iconResultTasks = new List<Task>();
-            foreach(var icon in icons)
-            {
-                Uri iconUri = null;
-                if(icon.Path.StartsWith("//"))
+                var icons = new List<IconResult>();
+                var links = document.QuerySelectorAll("head link[href]");
+                if(links != null)
                 {
-                    iconUri = new Uri($"{uri.Scheme}://{icon.Path.Substring(2)}");
-                }
-                else if(Uri.TryCreate(icon.Path, UriKind.Relative, out var relUri))
-                {
-                    iconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", baseUrl, relUri.OriginalString);
-                }
-                else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out var absUri))
-                {
-                    iconUri = absUri;
-                }
-
-                if(iconUri != null)
-                {
-                    var task = GetIconAsync(iconUri).ContinueWith(async (r) =>
+                    foreach(var link in links.Take(40))
                     {
-                        var result = await r;
-                        if(result != null)
+                        var hrefAttr = link.Attributes["href"];
+                        if(string.IsNullOrWhiteSpace(hrefAttr?.Value))
                         {
-                            icon.Path = iconUri.ToString();
-                            icon.Icon = result.Icon;
+                            continue;
                         }
-                    });
-                    iconResultTasks.Add(task);
-                }
-            }
 
-            await Task.WhenAll(iconResultTasks);
-            if(!icons.Any(i => i.Icon != null))
-            {
-                var faviconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", "favicon.ico");
-                var result = await GetIconAsync(faviconUri);
-                if(result != null)
-                {
-                    icons.Add(result);
-                }
-                else
-                {
-                    return null;
-                }
-            }
+                        var relAttr = link.Attributes["rel"];
+                        var sizesAttr = link.Attributes["sizes"];
+                        if(relAttr != null && _iconRels.Contains(relAttr.Value.ToLower()))
+                        {
+                            icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var extension = Path.GetExtension(hrefAttr.Value);
+                                if(_iconExtensions.Contains(extension.ToLower()))
+                                {
+                                    icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
+                                }
+                            }
+                            catch(ArgumentException) { }
+                        }
 
-            return icons.Where(i => i.Icon != null).OrderBy(i => i.Priority).First();
+                        sizesAttr = null;
+                        relAttr = null;
+                        hrefAttr = null;
+                    }
+
+                    links = null;
+                }
+
+                var iconResultTasks = new List<Task>();
+                foreach(var icon in icons)
+                {
+                    Uri iconUri = null;
+                    if(icon.Path.StartsWith("//"))
+                    {
+                        iconUri = new Uri($"{uri.Scheme}://{icon.Path.Substring(2)}");
+                    }
+                    else if(Uri.TryCreate(icon.Path, UriKind.Relative, out var relUri))
+                    {
+                        iconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", baseUrl, relUri.OriginalString);
+                    }
+                    else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out var absUri))
+                    {
+                        iconUri = absUri;
+                    }
+
+                    if(iconUri != null)
+                    {
+                        var task = GetIconAsync(iconUri).ContinueWith(async (r) =>
+                        {
+                            var result = await r;
+                            if(result != null)
+                            {
+                                icon.Path = iconUri.ToString();
+                                icon.Icon = result.Icon;
+                            }
+                        });
+                        iconResultTasks.Add(task);
+                    }
+                }
+
+                await Task.WhenAll(iconResultTasks);
+                if(!icons.Any(i => i.Icon != null))
+                {
+                    var faviconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", "favicon.ico");
+                    var result = await GetIconAsync(faviconUri);
+                    if(result != null)
+                    {
+                        icons.Add(result);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return icons.Where(i => i.Icon != null).OrderBy(i => i.Priority).First();
+            }
         }
 
         private async Task<IconResult> GetIconAsync(Uri uri)
         {
-            var response = await GetAndFollowAsync(uri, 2);
-            if(response?.Content?.Headers == null || !response.IsSuccessStatusCode)
+            using(var response = await GetAndFollowAsync(uri, 2))
             {
-                return null;
-            }
-
-            var format = response.Content.Headers?.ContentType?.MediaType;
-            var bytes = await response.Content.ReadAsByteArrayAsync();
-            if(format == null || !_allowedMediaTypes.Contains(format))
-            {
-                if(HeaderMatch(bytes, _icoHeader))
+                if(response?.Content?.Headers == null || !response.IsSuccessStatusCode)
                 {
-                    format = _icoMediaType;
-                }
-                else if(HeaderMatch(bytes, _pngHeader))
-                {
-                    format = _pngMediaType;
-                }
-                else if(HeaderMatch(bytes, _jpegHeader))
-                {
-                    format = _jpegMediaType;
-                }
-                else
-                {
+                    response?.Content?.Dispose();
                     return null;
                 }
-            }
 
-            return new IconResult(uri, bytes, format);
+                var format = response.Content.Headers?.ContentType?.MediaType;
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                response.Content.Dispose();
+                if(format == null || !_allowedMediaTypes.Contains(format))
+                {
+                    if(HeaderMatch(bytes, _icoHeader))
+                    {
+                        format = _icoMediaType;
+                    }
+                    else if(HeaderMatch(bytes, _pngHeader))
+                    {
+                        format = _pngMediaType;
+                    }
+                    else if(HeaderMatch(bytes, _jpegHeader))
+                    {
+                        format = _jpegMediaType;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return new IconResult(uri, bytes, format);
+            }
         }
 
         private async Task<HttpResponseMessage> GetAndFollowAsync(Uri uri, int maxRedirectCount)
@@ -234,29 +235,29 @@ namespace Bit.Icons.Services
 
         private async Task<HttpResponseMessage> GetAsync(Uri uri)
         {
-            var message = new HttpRequestMessage
+            using(var message = new HttpRequestMessage())
             {
-                RequestUri = uri,
-                Method = HttpMethod.Get
-            };
+                message.RequestUri = uri;
+                message.Method = HttpMethod.Get;
 
-            // Let's add some headers to look like we're coming from a web browser request. Some websites
-            // will block our request without these.
-            message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299");
-            message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
-            message.Headers.Add("Cache-Control", "no-cache");
-            message.Headers.Add("Pragma", "no-cache");
-            message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
-                "q=0.9,image/webp,image/apng,*/*;q=0.8");
+                // Let's add some headers to look like we're coming from a web browser request. Some websites
+                // will block our request without these.
+                message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299");
+                message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
+                message.Headers.Add("Cache-Control", "no-cache");
+                message.Headers.Add("Pragma", "no-cache");
+                message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
+                    "q=0.9,image/webp,image/apng,*/*;q=0.8");
 
-            try
-            {
-                return await _httpClient.SendAsync(message);
-            }
-            catch
-            {
-                return null;
+                try
+                {
+                    return await _httpClient.SendAsync(message);
+                }
+                catch
+                {
+                    return null;
+                }
             }
         }
 
@@ -272,14 +273,15 @@ namespace Bit.Icons.Services
                 response.StatusCode == HttpStatusCode.MovedPermanently ||
                 response.StatusCode == HttpStatusCode.RedirectKeepVerb ||
                 response.StatusCode == HttpStatusCode.SeeOther) ||
-                !response.Headers.Contains("Location"))
+                response.Headers.Location == null)
             {
+                Cleanup(response);
                 return null;
             }
 
-            var locationHeader = response.Headers.GetValues("Location").FirstOrDefault();
-            if(!string.IsNullOrWhiteSpace(locationHeader))
+            if(response.Headers.Location != null)
             {
+                var locationHeader = response.Headers.Location.ToString();
                 if(!Uri.TryCreate(locationHeader, UriKind.Absolute, out Uri location))
                 {
                     if(Uri.TryCreate(locationHeader, UriKind.Relative, out Uri relLocation))
@@ -293,12 +295,17 @@ namespace Bit.Icons.Services
                     }
                 }
 
+                Cleanup(response);
                 var newResponse = await GetAsync(location);
                 if(newResponse != null)
                 {
                     var redirectedResponse = await FollowRedirectsAsync(newResponse, maxFollowCount, followCount++);
                     if(redirectedResponse != null)
                     {
+                        if(redirectedResponse != newResponse)
+                        {
+                            Cleanup(newResponse);
+                        }
                         return redirectedResponse;
                     }
                 }
@@ -323,6 +330,12 @@ namespace Bit.Icons.Services
                 }
             }
             return new Uri(url);
+        }
+
+        private void Cleanup(IDisposable obj)
+        {
+            obj?.Dispose();
+            obj = null;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using HtmlAgilityPack;
 
 namespace Bit.Icons.Models
 {
