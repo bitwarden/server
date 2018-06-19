@@ -141,11 +141,11 @@ namespace Bit.Icons.Services
                     Uri iconUri = null;
                     if(icon.Path.StartsWith("//"))
                     {
-                        iconUri = new Uri($"{uri.Scheme}://{icon.Path.Substring(2)}");
+                        iconUri = new Uri($"{GetScheme(uri)}://{icon.Path.Substring(2)}");
                     }
                     else if(Uri.TryCreate(icon.Path, UriKind.Relative, out var relUri))
                     {
-                        iconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", baseUrl, relUri.OriginalString);
+                        iconUri = ResolveUri($"{GetScheme(uri)}://{uri.Host}", baseUrl, relUri.OriginalString);
                     }
                     else if(Uri.TryCreate(icon.Path, UriKind.Absolute, out var absUri))
                     {
@@ -170,7 +170,7 @@ namespace Bit.Icons.Services
                 await Task.WhenAll(iconResultTasks);
                 if(!icons.Any(i => i.Icon != null))
                 {
-                    var faviconUri = ResolveUri($"{uri.Scheme}://{uri.Host}", "favicon.ico");
+                    var faviconUri = ResolveUri($"{GetScheme(uri)}://{uri.Host}", "favicon.ico");
                     var result = await GetIconAsync(faviconUri);
                     if(result != null)
                     {
@@ -287,7 +287,7 @@ namespace Bit.Icons.Services
             else
             {
                 var requestUri = response.RequestMessage.RequestUri;
-                location = ResolveUri($"{requestUri.Scheme}://{requestUri.Host}",
+                location = ResolveUri($"{GetScheme(requestUri)}://{requestUri.Host}",
                     response.Headers.Location.OriginalString);
             }
 
@@ -332,6 +332,11 @@ namespace Bit.Icons.Services
         {
             obj?.Dispose();
             obj = null;
+        }
+
+        private string GetScheme(Uri uri)
+        {
+            return uri != null && uri.Scheme == "http" ? "http" : "https";
         }
     }
 }
