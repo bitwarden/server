@@ -5,13 +5,12 @@ namespace Bit.Icons.Models
 {
     public class IconResult
     {
-        public IconResult(string href, HtmlNode node)
+        public IconResult(string href, string sizes)
         {
             Path = href;
-            var sizesAttr = node.Attributes["sizes"];
-            if(!string.IsNullOrWhiteSpace(sizesAttr?.Value))
+            if(!string.IsNullOrWhiteSpace(sizes))
             {
-                var sizeParts = sizesAttr.Value.Split('x');
+                var sizeParts = sizes.Split('x');
                 if(sizeParts.Length == 2 && int.TryParse(sizeParts[0].Trim(), out var width) &&
                     int.TryParse(sizeParts[1].Trim(), out var height))
                 {

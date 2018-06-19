@@ -61,22 +61,28 @@ namespace Bit.Icons.Services
             uri = response.RequestMessage.RequestUri;
             var doc = new HtmlDocument();
 
-            try
+            using(var htmlStream = await response.Content.ReadAsStreamAsync())
             {
-                var html = await response.Content.ReadAsStringAsync();
-                if(html == null)
+                if(htmlStream == null)
                 {
+                    doc = null;
                     return null;
                 }
-                doc.LoadHtml(html);
-                if(doc.DocumentNode == null)
+
+                try
                 {
+                    doc.Load(htmlStream);
+                    if(doc.DocumentNode == null)
+                    {
+                        doc = null;
+                        return null;
+                    }
+                }
+                catch
+                {
+                    doc = null;
                     return null;
                 }
-            }
-            catch
-            {
-                return null;
             }
 
             var baseUrl = "/";
@@ -88,10 +94,14 @@ namespace Bit.Icons.Services
                 {
                     baseUrl = hrefAttr.Value;
                 }
+
+                baseUrlNode = null;
+                hrefAttr = null;
             }
 
             var icons = new List<IconResult>();
             var links = doc.DocumentNode.SelectNodes(@"//head/link[@href]");
+            doc = null;
             if(links != null)
             {
                 foreach(var link in links.Take(40))
@@ -103,9 +113,10 @@ namespace Bit.Icons.Services
                     }
 
                     var relAttr = link.Attributes["rel"];
+                    var sizesAttr = link.Attributes["sizes"];
                     if(relAttr != null && _iconRels.Contains(relAttr.Value.ToLower()))
                     {
-                        icons.Add(new IconResult(hrefAttr.Value, link));
+                        icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
                     }
                     else
                     {
@@ -114,12 +125,18 @@ namespace Bit.Icons.Services
                             var extension = Path.GetExtension(hrefAttr.Value);
                             if(_iconExtensions.Contains(extension.ToLower()))
                             {
-                                icons.Add(new IconResult(hrefAttr.Value, link));
+                                icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
                             }
                         }
                         catch(ArgumentException) { }
                     }
+
+                    sizesAttr = null;
+                    relAttr = null;
+                    hrefAttr = null;
                 }
+
+                links = null;
             }
 
             var iconResultTasks = new List<Task>();
