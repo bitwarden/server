@@ -264,7 +264,7 @@ namespace Bit.Icons.Services
         private async Task<HttpResponseMessage> FollowRedirectsAsync(HttpResponseMessage response,
             int maxFollowCount, int followCount = 0)
         {
-            if(response.IsSuccessStatusCode || followCount > maxFollowCount)
+            if(response == null || response.IsSuccessStatusCode || followCount > maxFollowCount)
             {
                 return response;
             }
@@ -279,35 +279,31 @@ namespace Bit.Icons.Services
                 return null;
             }
 
-            if(response.Headers.Location != null)
+            Uri location = null;
+            if(response.Headers.Location.IsAbsoluteUri)
             {
-                var locationHeader = response.Headers.Location.ToString();
-                if(!Uri.TryCreate(locationHeader, UriKind.Absolute, out Uri location))
-                {
-                    if(Uri.TryCreate(locationHeader, UriKind.Relative, out Uri relLocation))
-                    {
-                        var requestUri = response.RequestMessage.RequestUri;
-                        location = ResolveUri($"{requestUri.Scheme}://{requestUri.Host}", relLocation.OriginalString);
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                location = response.Headers.Location;
+            }
+            else
+            {
+                var requestUri = response.RequestMessage.RequestUri;
+                location = ResolveUri($"{requestUri.Scheme}://{requestUri.Host}",
+                    response.Headers.Location.OriginalString);
+            }
 
-                Cleanup(response);
-                var newResponse = await GetAsync(location);
-                if(newResponse != null)
+            Cleanup(response);
+            var newResponse = await GetAsync(location);
+            if(newResponse != null)
+            {
+                followCount++;
+                var redirectedResponse = await FollowRedirectsAsync(newResponse, maxFollowCount, followCount);
+                if(redirectedResponse != null)
                 {
-                    var redirectedResponse = await FollowRedirectsAsync(newResponse, maxFollowCount, followCount++);
-                    if(redirectedResponse != null)
+                    if(redirectedResponse != newResponse)
                     {
-                        if(redirectedResponse != newResponse)
-                        {
-                            Cleanup(newResponse);
-                        }
-                        return redirectedResponse;
+                        Cleanup(newResponse);
                     }
+                    return redirectedResponse;
                 }
             }
 
