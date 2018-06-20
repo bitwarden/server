@@ -8,6 +8,8 @@ NC='\033[0m' # No Color
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+export COMPOSE_CONTAINER_PREFIX=""
+
 OUTPUT_DIR=".."
 if [ $# -gt 1 ]
 then
@@ -103,6 +105,12 @@ function install() {
 }
 
 function dockerComposeUp() {
+    # Compute an ID to make containers name unique, only if needed
+    if [ "$COMPOSE_CONTAINER_PREFIX" == "" ]
+    then
+        ID=$(docker ps -a -f name=bitwarden[0-9-]*-mssql --format "{{.Names}}" | sort -t- -k2n | awk -F- 'END {if($NR){print "-"$2+1}}')
+        export COMPOSE_CONTAINER_PREFIX=bitwarden${ID}
+    fi
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
         docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
@@ -145,7 +153,7 @@ function updateLetsEncrypt() {
 
 function updateDatabase() {
     pullSetup
-    docker run -i --rm --name setup --network container:bitwarden-mssql \
+    docker run -i --rm --name setup --network container:${COMPOSE_CONTAINER_PREFIX}-mssql \
         -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     echo "Database update complete"
