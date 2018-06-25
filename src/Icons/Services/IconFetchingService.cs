@@ -100,7 +100,7 @@ namespace Bit.Icons.Services
                 var links = document.QuerySelectorAll("head link[href]");
                 if(links != null)
                 {
-                    foreach(var link in links.Take(40))
+                    foreach(var link in links.Take(200))
                     {
                         var hrefAttr = link.Attributes["href"];
                         if(string.IsNullOrWhiteSpace(hrefAttr?.Value))
@@ -136,7 +136,7 @@ namespace Bit.Icons.Services
                 }
 
                 var iconResultTasks = new List<Task>();
-                foreach(var icon in icons)
+                foreach(var icon in icons.OrderBy(i => i.Priority).Take(10))
                 {
                     Uri iconUri = null;
                     if(icon.Path.StartsWith("//") && Uri.TryCreate($"{GetScheme(uri)}://{icon.Path.Substring(2)}",
