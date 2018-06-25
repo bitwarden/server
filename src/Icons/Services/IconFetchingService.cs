@@ -139,9 +139,10 @@ namespace Bit.Icons.Services
                 foreach(var icon in icons)
                 {
                     Uri iconUri = null;
-                    if(icon.Path.StartsWith("//"))
+                    if(icon.Path.StartsWith("//") && Uri.TryCreate($"{GetScheme(uri)}://{icon.Path.Substring(2)}",
+                        UriKind.Absolute, out var slashUri))
                     {
-                        iconUri = new Uri($"{GetScheme(uri)}://{icon.Path.Substring(2)}");
+                        iconUri = slashUri;
                     }
                     else if(Uri.TryCreate(icon.Path, UriKind.Relative, out var relUri))
                     {
@@ -282,7 +283,18 @@ namespace Bit.Icons.Services
             Uri location = null;
             if(response.Headers.Location.IsAbsoluteUri)
             {
-                location = response.Headers.Location;
+                if(response.Headers.Location.Scheme != "http" && response.Headers.Location.Scheme != "https")
+                {
+                    if(Uri.TryCreate($"https://{response.Headers.Location.OriginalString}",
+                        UriKind.Absolute, out var newUri))
+                    {
+                        location = newUri;
+                    }
+                }
+                else
+                {
+                    location = response.Headers.Location;
+                }
             }
             else
             {
