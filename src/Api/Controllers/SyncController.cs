@@ -46,7 +46,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<SyncResponseModel> Get()
+        public async Task<SyncResponseModel> Get([FromQuery]bool excludeDomains = false)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
             }
 
             var response = new SyncResponseModel(_globalSettings, user, organizationUserDetails, folders,
-                collections, ciphers, collectionCiphersGroupDict);
+                collections, ciphers, collectionCiphersGroupDict, excludeDomains);
             return response;
         }
     }
