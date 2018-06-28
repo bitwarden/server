@@ -50,7 +50,12 @@ namespace Bit.Icons.Services
 
         public async Task<IconResult> GetIconAsync(string domain)
         {
-            var uri = new Uri($"https://{domain}");
+            if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedUri))
+            {
+                return null;
+            }
+
+            var uri = parsedUri;
             var response = await GetAndFollowAsync(uri, 2);
             if(response == null || !response.IsSuccessStatusCode)
             {
