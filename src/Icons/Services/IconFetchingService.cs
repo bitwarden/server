@@ -60,12 +60,12 @@ namespace Bit.Icons.Services
             if(response == null || !response.IsSuccessStatusCode)
             {
                 Cleanup(response);
-                uri = new Uri($"http://{domain}");
+                uri = new Uri($"http://{parsedUri.Host}");
                 response = await GetAndFollowAsync(uri, 2);
                 if(response == null || !response.IsSuccessStatusCode)
                 {
                     Cleanup(response);
-                    uri = new Uri($"https://www.{domain}");
+                    uri = new Uri($"https://www.{parsedUri.Host}");
                     response = await GetAndFollowAsync(uri, 2);
                 }
             }
