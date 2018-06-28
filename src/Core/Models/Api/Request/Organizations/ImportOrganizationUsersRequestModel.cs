@@ -48,7 +48,7 @@ namespace Bit.Core.Models.Api
             {
                 var importedUser = new ImportedOrganizationUser
                 {
-                    Email = Email,
+                    Email = Email.ToLowerInvariant(),
                     ExternalId = ExternalId
                 };
 
