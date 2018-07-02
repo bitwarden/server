@@ -50,22 +50,25 @@ namespace Bit.Icons.Services
 
         public async Task<IconResult> GetIconAsync(string domain)
         {
-            if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedUri))
+            if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedHttpsUri))
             {
                 return null;
             }
 
-            var uri = parsedUri;
+            var uri = parsedHttpsUri;
             var response = await GetAndFollowAsync(uri, 2);
-            if(response == null || !response.IsSuccessStatusCode)
+            if((response == null || !response.IsSuccessStatusCode) &&
+                Uri.TryCreate($"http://{parsedHttpsUri.Host}", UriKind.Absolute, out var parsedHttpUri))
             {
                 Cleanup(response);
-                uri = new Uri($"http://{parsedUri.Host}");
+                uri = parsedHttpUri;
                 response = await GetAndFollowAsync(uri, 2);
-                if(response == null || !response.IsSuccessStatusCode)
+
+                if((response == null || !response.IsSuccessStatusCode) &&
+                    Uri.TryCreate($"https://www.{parsedHttpsUri.Host}", UriKind.Absolute, out var parsedWwwUri))
                 {
                     Cleanup(response);
-                    uri = new Uri($"https://www.{parsedUri.Host}");
+                    uri = parsedWwwUri;
                     response = await GetAndFollowAsync(uri, 2);
                 }
             }
