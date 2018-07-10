@@ -1,11 +1,15 @@
 ﻿using System;
+using Bit.Core;
+using Bit.Core.Utilities;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
+using Serilog.Events;
 
 namespace Bit.Icons
 {
@@ -24,6 +28,7 @@ namespace Bit.Icons
             services.AddOptions();
 
             // Settings
+            var globalSettings = services.AddGlobalSettingsServices(Configuration);
             var iconsSettings = new IconsSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
             services.AddSingleton(s => iconsSettings);
@@ -44,8 +49,13 @@ namespace Bit.Icons
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env)
+            IHostingEnvironment env,
+            ILoggerFactory loggerFactory,
+            IApplicationLifetime appLifetime,
+            GlobalSettings globalSettings)
         {
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

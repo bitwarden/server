@@ -22,4 +22,8 @@
     <EmbeddedResource Include="Resources\public_suffix_list.dat" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+
 </Project>
