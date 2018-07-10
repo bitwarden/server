@@ -12,15 +12,18 @@ namespace Bit.Core.Services
     {
         private readonly IEventService _eventService;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
 
         public GroupService(
             IEventService eventService,
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
         }
 
@@ -64,6 +67,17 @@ namespace Bit.Core.Services
         {
             await _groupRepository.DeleteAsync(group);
             await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
+        }
+
+        public async Task DeleteUserAsync(Group group, Guid organizationUserId)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            if(orgUser == null || orgUser.OrganizationId != group.OrganizationId)
+            {
+                throw new NotFoundException();
+            }
+            await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_UpdatedGroups);
         }
     }
 }

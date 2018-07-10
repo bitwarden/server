@@ -155,7 +155,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _collectionRepository.DeleteUserAsync(collection.Id, new Guid(orgUserId));
+            await _collectionService.DeleteUserAsync(collection, new Guid(orgUserId));
         }
     }
 }

@@ -8,7 +8,6 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
-using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -98,7 +97,6 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [HttpPost("{id}")]
         public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody]GroupRequestModel model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -112,7 +110,6 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -125,7 +122,6 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}/user/{orgUserId}")]
-        [HttpPost("{id}/delete-user/{orgUserId}")]
         public async Task Delete(string orgId, string id, string orgUserId)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -134,7 +130,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _groupRepository.DeleteUserAsync(group.Id, new Guid(orgUserId));
+            await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
         }
     }
 }

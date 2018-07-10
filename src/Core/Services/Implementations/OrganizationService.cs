@@ -919,7 +919,7 @@ namespace Bit.Core.Services
                     organizationId, email, false);
                 if(existingOrgUserCount > 0)
                 {
-                    throw new BadRequestException("User already invited.");
+                    continue;
                 }
 
                 var orgUser = new OrganizationUser
@@ -946,6 +946,7 @@ namespace Bit.Core.Services
                 }
 
                 await SendInviteAsync(orgUser);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Invited);
                 orgUsers.Add(orgUser);
             }
 

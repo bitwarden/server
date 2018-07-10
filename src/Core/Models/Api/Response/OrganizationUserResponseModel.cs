@@ -57,6 +57,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     }
+
     public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
     {
         public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,

@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using System;
 
 namespace Bit.Core.Services
 {
@@ -9,5 +10,6 @@ namespace Bit.Core.Services
     {
         Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null);
         Task DeleteAsync(Collection collection);
+        Task DeleteUserAsync(Collection collection, Guid organizationUserId);
     }
 }

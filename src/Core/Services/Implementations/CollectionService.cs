@@ -84,5 +84,16 @@ namespace Bit.Core.Services
             await _collectionRepository.DeleteAsync(collection);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
         }
+
+        public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            if(orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
+            {
+                throw new NotFoundException();
+            }
+            await _collectionRepository.DeleteUserAsync(collection.Id, organizationUserId);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
+        }
     }
 }
