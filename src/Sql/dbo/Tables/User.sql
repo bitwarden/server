@@ -17,6 +17,7 @@
     [PrivateKey]                      VARCHAR (MAX)    NULL,
     [Premium]                         BIT              NOT NULL,
     [PremiumExpirationDate]           DATETIME2 (7)    NULL,
+    [RenewalReminderDate]             DATETIME2 (7)    NULL,
     [Storage]                         BIGINT           NULL,
     [MaxStorageGb]                    SMALLINT         NULL,
     [Gateway]                         TINYINT          NULL,
@@ -32,4 +33,8 @@
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_User_Email]
     ON [dbo].[User]([Email] ASC);
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [IX_User_Premium_PremiumExpirationDate_RenewalReminderDate]
+    ON [dbo].[User]([Premium] ASC, [PremiumExpirationDate] ASC, [RenewalReminderDate] ASC);
 

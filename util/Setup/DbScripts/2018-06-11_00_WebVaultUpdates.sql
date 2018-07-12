@@ -1,4 +1,13 @@
-﻿IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
+﻿IF COL_LENGTH('[dbo].[User]', 'RenewalReminderDate') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[User]
+    ADD
+        [RenewalReminderDate] DATETIME2 (7) NULL
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Collection_ReadByUserId]
 END
@@ -235,4 +244,18 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
+BEGIN
+    DROP VIEW [dbo].[UserView]
+END
+GO
+
+CREATE VIEW [dbo].[UserView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[User]
 GO
