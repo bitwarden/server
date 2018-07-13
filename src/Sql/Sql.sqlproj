@@ -226,5 +226,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadWithoutOrganizationsByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
+    <Build Include="dbo\Stored Procedures\User_ReadByPremiumRenewal.sql" />
+    <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
   </ItemGroup>
 </Project>

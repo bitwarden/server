@@ -63,6 +63,18 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<ICollection<User>> GetManyByPremiumRenewalAsync()
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<User>(
+                    "[dbo].[User_ReadByPremiumRenewal]",
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<string> GetPublicKeyAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
@@ -115,6 +127,17 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Id = id },
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 180);
+            }
+        }
+
+        public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[User_UpdateRenewalReminderDate]",
+                    new { Id = id, RenewalReminderDate = renewalReminderDate },
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

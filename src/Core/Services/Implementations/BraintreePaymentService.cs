@@ -156,6 +156,24 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task<BillingInfo.BillingInvoice> GetUpcomingInvoiceAsync(ISubscriber subscriber)
+        {
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+            {
+                var sub = await _gateway.Subscription.FindAsync(subscriber.GatewaySubscriptionId);
+                if(sub != null)
+                {
+                    var cancelAtEndDate = !sub.NeverExpires.GetValueOrDefault();
+                    var cancelled = sub.Status == SubscriptionStatus.CANCELED;
+                    if(!cancelled && !cancelAtEndDate && sub.NextBillingDate.HasValue)
+                    {
+                        return new BillingInfo.BillingInvoice(sub);
+                    }
+                }
+            }
+            return null;
+        }
+
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();

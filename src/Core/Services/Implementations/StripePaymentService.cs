@@ -320,6 +320,32 @@ namespace Bit.Core.Services
             return updatedSubscriber;
         }
 
+        public async Task<BillingInfo.BillingInvoice> GetUpcomingInvoiceAsync(ISubscriber subscriber)
+        {
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+            {
+                var subscriptionService = new StripeSubscriptionService();
+                var invoiceService = new StripeInvoiceService();
+                var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
+                if(sub != null)
+                {
+                    if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+                    {
+                        try
+                        {
+                            var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId);
+                            if(upcomingInvoice != null)
+                            {
+                                return new BillingInfo.BillingInvoice(upcomingInvoice);
+                            }
+                        }
+                        catch(StripeException) { }
+                    }
+                }
+            }
+            return null;
+        }
+
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();

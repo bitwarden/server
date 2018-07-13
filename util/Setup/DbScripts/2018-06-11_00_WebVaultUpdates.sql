@@ -7,6 +7,59 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[User_UpdateRenewalReminderDate]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_UpdateRenewalReminderDate]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_UpdateRenewalReminderDate]
+    @Id UNIQUEIDENTIFIER,
+    @RenewalReminderDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[User]
+    SET
+        [RenewalReminderDate] = @RenewalReminderDate
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[User_ReadByPremiumRenewal]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_ReadByPremiumRenewal]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_ReadByPremiumRenewal]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @WindowRef DATETIME2(7) = GETUTCDATE()
+    DECLARE @WindowStart DATETIME2(7) = DATEADD (day, -15, @WindowRef)
+    DECLARE @WindowEnd DATETIME2(7) = DATEADD (day, 15, @WindowRef)
+
+    SELECT
+        *
+    FROM
+        [dbo].[UserView]
+    WHERE
+        [Premium] = 1
+        AND [PremiumExpirationDate] >= @WindowRef
+        AND [PremiumExpirationDate] < @WindowEnd
+        AND (
+            [RenewalReminderDate] IS NULL
+            OR [RenewalReminderDate] < @WindowStart
+        )
+        AND [Gateway] = 1 -- Braintree
+END
+GO
+
 IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Collection_ReadByUserId]

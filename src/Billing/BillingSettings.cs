@@ -2,6 +2,7 @@
 {
     public class BillingSettings
     {
+        public virtual string JobsKey { get; set; }
         public virtual string StripeWebhookKey { get; set; }
         public virtual string StripeWebhookSecret { get; set; }
         public virtual string BraintreeWebhookKey { get; set; }
