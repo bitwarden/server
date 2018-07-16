@@ -135,6 +135,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [HttpPost("{id}")]
         public async Task Put(string orgId, string id, [FromBody]OrganizationUserUpdateRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
@@ -155,6 +156,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}/groups")]
+        [HttpPost("{id}/groups")]
         public async Task PutGroups(string orgId, string id, [FromBody]OrganizationUserUpdateGroupsRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
@@ -178,6 +180,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
             var orgGuidId = new Guid(orgId);
