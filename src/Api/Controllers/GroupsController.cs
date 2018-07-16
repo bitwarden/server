@@ -97,6 +97,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [HttpPost("{id}")]
         public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody]GroupRequestModel model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -110,6 +111,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -122,6 +124,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{id}/user/{orgUserId}")]
+        [HttpPost("{id}/delete-user/{orgUserId}")]
         public async Task Delete(string orgId, string id, string orgUserId)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
