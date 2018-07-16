@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core.Repositories;

@@ -8,8 +8,6 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using jsreport.AspNetCore;
@@ -224,10 +222,9 @@ namespace Bit.Api.Controllers
             return new OrganizationResponseModel(organization);
         }
 
-        [HttpPut("{id}/payment")]
         [HttpPost("{id}/payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutPayment(string id, [FromBody]PaymentRequestModel model)
+        public async Task PostPayment(string id, [FromBody]PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -237,11 +234,10 @@ namespace Bit.Api.Controllers
 
             await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
         }
-
-        [HttpPut("{id}/upgrade")]
+        
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        public async Task PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -251,11 +247,10 @@ namespace Bit.Api.Controllers
 
             await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
         }
-
-        [HttpPut("{id}/seat")]
+        
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -265,11 +260,10 @@ namespace Bit.Api.Controllers
 
             await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         }
-
-        [HttpPut("{id}/storage")]
+        
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutStorage(string id, [FromBody]StorageRequestModel model)
+        public async Task PostStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -292,11 +286,10 @@ namespace Bit.Api.Controllers
 
             await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
         }
-
-        [HttpPut("{id}/cancel")]
+        
         [HttpPost("{id}/cancel")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutCancel(string id)
+        public async Task PostCancel(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -306,11 +299,10 @@ namespace Bit.Api.Controllers
 
             await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
         }
-
-        [HttpPut("{id}/reinstate")]
+        
         [HttpPost("{id}/reinstate")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutReinstate(string id)
+        public async Task PostReinstate(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -366,11 +358,10 @@ namespace Bit.Api.Controllers
                 await _organizationService.DeleteAsync(organization);
             }
         }
-
-        [HttpPut("{id}/license")]
+        
         [HttpPost("{id}/license")]
         [SelfHosted(SelfHostedOnly = true)]
-        public async Task PutLicense(string id, LicenseRequestModel model)
+        public async Task PostLicense(string id, LicenseRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
