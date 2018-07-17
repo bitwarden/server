@@ -16,6 +16,7 @@ namespace Bit.Core.Services
     {
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
+        private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -27,6 +28,7 @@ namespace Bit.Core.Services
         public CipherService(
             ICipherRepository cipherRepository,
             IFolderRepository folderRepository,
+            ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
@@ -37,6 +39,7 @@ namespace Bit.Core.Services
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
+            _collectionRepository = collectionRepository;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -529,6 +532,20 @@ namespace Bit.Core.Services
             IEnumerable<KeyValuePair<int, int>> collectionRelationships,
             Guid importingUserId)
         {
+            if(collections.Count > 0)
+            {
+                var org = await _organizationRepository.GetByIdAsync(collections[0].OrganizationId);
+                if(org != null && org.MaxCollections.HasValue)
+                {
+                    var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
+                    if(org.MaxCollections.Value <= (collectionCount + collections.Count))
+                    {
+                        throw new BadRequestException("This organization can only have a maximum of " +
+                            $"{org.MaxCollections.Value} collections.");
+                    }
+                }
+            }
+
             // Init. ids for ciphers
             foreach(var cipher in ciphers)
             {
