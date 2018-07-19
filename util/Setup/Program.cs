@@ -189,9 +189,6 @@ namespace Bit.Setup
             };
             environmentFileBuilder.BuildForInstaller();
 
-            var appSettingsBuilder = new AppSettingsBuilder();
-            appSettingsBuilder.Build();
-
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
 
@@ -255,7 +252,7 @@ namespace Bit.Setup
                     .JournalToSqlTable("dbo", "Migration")
                     .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                         s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransaction()
+                    .WithTransactionPerScript()
                     .WithExecutionTimeout(new TimeSpan(0, 5, 0))
                     .LogToConsole()
                     .Build();
@@ -272,7 +269,7 @@ namespace Bit.Setup
             }
             catch(SqlException e)
             {
-                if(e.Message.Contains("Server is in script upgrade mode") && attempt < 3)
+                if(e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
                 {
                     var nextAttempt = attempt + 1;
                     Console.WriteLine("Database is in script upgrade mode. " +
@@ -350,9 +347,6 @@ namespace Bit.Setup
 
             var nginxBuilder = new NginxConfigBuilder(domain, url);
             nginxBuilder.BuildForUpdater();
-
-            var appSettingsBuilder = new AppSettingsBuilder();
-            appSettingsBuilder.Build();
 
             var appIdBuilder = new AppIdBuilder(url);
             appIdBuilder.Build();
