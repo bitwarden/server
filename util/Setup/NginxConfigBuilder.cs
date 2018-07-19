@@ -154,7 +154,7 @@ server {{
   add_header Referrer-Policy same-origin;
 
   # Content-Security-Policy to prevent malicious XSS code
-  add_header Content-Security-Policy {ContentSecurityPolicy}");
+  add_header Content-Security-Policy ""{ContentSecurityPolicy}""");
 
                 sw.WriteLine($@"
   location / {{
