@@ -36,6 +36,10 @@ mkdir -p /bitwarden/ssl
 mkdir -p /bitwarden/letsencrypt
 mkdir -p /bitwarden/identity
 mkdir -p /bitwarden/nginx
+mkdir -p /bitwarden/ca-certificates
 chown -R $USERNAME:$GROUPNAME /bitwarden
+
+cp /bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ \
+    && update-ca-certificates
 
 exec gosu $USERNAME:$GROUPNAME "$@"
