@@ -252,7 +252,7 @@ namespace Bit.Setup
                     .JournalToSqlTable("dbo", "Migration")
                     .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                         s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransactionPerScript()
+                    .WithTransaction()
                     .WithExecutionTimeout(new TimeSpan(0, 5, 0))
                     .LogToConsole()
                     .Build();

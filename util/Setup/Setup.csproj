@@ -11,11 +11,9 @@
     <None Remove="DbScripts\2018-04-02_00_Org2fa.sql" />
     <None Remove="DbScripts\2018-04-24_00_CipherQueryTuning.sql" />
     <None Remove="DbScripts\2018-06-11_00_WebVaultUpdates.sql" />
-    <None Remove="DbScripts\2018-07-19_00_UserPremiumIndex.sql" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="DbScripts\2018-07-19_00_UserPremiumIndex.sql" />
     <EmbeddedResource Include="DbScripts\2018-06-11_00_WebVaultUpdates.sql" />
     <EmbeddedResource Include="DbScripts\2018-04-24_00_CipherQueryTuning.sql" />
     <EmbeddedResource Include="DbScripts\2018-04-02_00_Org2fa.sql" />
