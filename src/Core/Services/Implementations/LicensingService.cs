@@ -39,7 +39,8 @@ namespace Bit.Core.Services
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
 
-            var certThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+            var certThumbprint = environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
+                "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
             _globalSettings = globalSettings;
             _certificate = !_globalSettings.SelfHosted ? CoreHelpers.GetCertificate(certThumbprint)
                 : CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
