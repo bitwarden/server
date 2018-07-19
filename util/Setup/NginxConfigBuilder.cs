@@ -12,6 +12,10 @@ namespace Bit.Setup
             "ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:" +
             "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:" +
             "AES128-SHA256:AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
+        private const string ContentSecurityPolicy =
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
+            "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
+            "connect-src 'self' https://haveibeenpwned.com https://api.pwnedpasswords.com;";
 
         public NginxConfigBuilder(string domain, string url, bool ssl, bool selfSignedSsl, bool letsEncrypt,
             bool trusted, bool diffieHellman)
@@ -149,7 +153,8 @@ server {{
   # This header controls what referrer information is shared
   add_header Referrer-Policy same-origin;
 
-  # Content-Security-Policy is set via meta tag on the website so it is not included here");
+  # Content-Security-Policy to prevent malicious XSS code
+  add_header Content-Security-Policy {ContentSecurityPolicy}");
 
                 sw.WriteLine($@"
   location / {{
