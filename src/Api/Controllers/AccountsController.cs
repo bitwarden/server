@@ -310,8 +310,9 @@ namespace Bit.Api.Controllers
             return new KeysResponseModel(user);
         }
 
+        [HttpDelete]
         [HttpPost("delete")]
-        public async Task PostDelete([FromBody]DeleteAccountRequestModel model)
+        public async Task Delete([FromBody]DeleteAccountRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
