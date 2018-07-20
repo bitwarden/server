@@ -38,7 +38,7 @@ chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
 chown -R $USERNAME:$GROUPNAME /app
 
-cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ \
+cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
     && update-ca-certificates
 
 exec gosu $USERNAME:$GROUPNAME dotnet /app/Identity.dll
