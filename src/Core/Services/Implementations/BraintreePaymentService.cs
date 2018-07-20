@@ -164,8 +164,8 @@ namespace Bit.Core.Services
                 if(sub != null)
                 {
                     var cancelAtEndDate = !sub.NeverExpires.GetValueOrDefault();
-                    var cancelled = sub.Status == SubscriptionStatus.CANCELED;
-                    if(!cancelled && !cancelAtEndDate && sub.NextBillingDate.HasValue)
+                    var canceled = sub.Status == SubscriptionStatus.CANCELED;
+                    if(!canceled && !cancelAtEndDate && sub.NextBillingDate.HasValue)
                     {
                         return new BillingInfo.BillingInvoice(sub);
                     }

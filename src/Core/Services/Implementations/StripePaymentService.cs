@@ -193,9 +193,9 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if(sub.CanceledAt.HasValue || sub.Status == "cancelled")
+            if(sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid")
             {
-                // Already cancelled
+                // Already canceled
                 return;
             }
 
