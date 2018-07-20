@@ -188,7 +188,7 @@ namespace Bit.Core.Models.Business
             {
                 var valid =
                     globalSettings.Installation.Id == InstallationId &&
-                    organization.LicenseKey.Equals(LicenseKey) &&
+                    organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
                     organization.Enabled == Enabled &&
                     organization.PlanType == PlanType &&
                     organization.Seats == Seats &&
