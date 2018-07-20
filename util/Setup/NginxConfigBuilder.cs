@@ -141,14 +141,13 @@ server {{
                 }
 
                 sw.WriteLine($@"
-  # Security headers
-  #add_header X-Frame-Options SAMEORIGIN;
-  add_header X-Content-Type-Options nosniff;
-  add_header X-XSS-Protection ""1; mode=block"";
-  add_header Referrer-Policy same-origin;
-
   location / {{
     proxy_pass http://web:5000/;
+    # Security headers
+    #add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection ""1; mode=block"";
+    add_header Referrer-Policy same-origin;
     add_header Content-Security-Policy ""{ContentSecurityPolicy}"";
   }}
 
