@@ -141,24 +141,15 @@ server {{
                 }
 
                 sw.WriteLine($@"
-  # X-Frame-Options is to prevent from click-jacking attack
+  # Security headers
   #add_header X-Frame-Options SAMEORIGIN;
-
-  # Disable content-type sniffing on some browsers.
   add_header X-Content-Type-Options nosniff;
-
-  # This header enables the Cross-site scripting (XSS) filter
   add_header X-XSS-Protection ""1; mode=block"";
-
-  # This header controls what referrer information is shared
   add_header Referrer-Policy same-origin;
 
-  # Content-Security-Policy to prevent malicious XSS code
-  add_header Content-Security-Policy ""{ContentSecurityPolicy}"";");
-
-                sw.WriteLine($@"
   location / {{
     proxy_pass http://web:5000/;
+    add_header Content-Security-Policy ""{ContentSecurityPolicy}"";
   }}
 
   location = /app-id.json {{
