@@ -12,7 +12,8 @@ BEGIN
         FROM
             [dbo].[U2f]
         WHERE
-            [CreationDate] < @Threshold
+            [CreationDate] IS NULL
+            OR [CreationDate] < @Threshold
 
         SET @BatchSize = @@ROWCOUNT
     END
