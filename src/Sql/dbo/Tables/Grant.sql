@@ -14,3 +14,7 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Grant_SubjectId_ClientId_Type]
     ON [dbo].[Grant]([SubjectId] ASC, [ClientId] ASC, [Type] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_Grant_ExpirationDate]
+    ON [dbo].[Grant]([ExpirationDate] ASC);
+

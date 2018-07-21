@@ -17,6 +17,16 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_Grant_ExpirationDate'
+    AND object_id = OBJECT_ID('[dbo].[Grant]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Grant_ExpirationDate]
+        ON [dbo].[Grant]([ExpirationDate] ASC)
+END
+GO
+
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
 BEGIN
     DROP VIEW [dbo].[UserView]
@@ -29,6 +39,33 @@ SELECT
     *
 FROM
     [dbo].[User]
+GO
+
+IF OBJECT_ID('[dbo].[Grant_DeleteExpired]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Grant_DeleteExpired]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Grant_DeleteExpired]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @BatchSize INT = 100
+    DECLARE @Now DATETIME2(7) = GETUTCDATE()
+
+    WHILE @BatchSize > 0
+    BEGIN
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Grant]
+        WHERE
+            [ExpirationDate] < @Now
+
+        SET @BatchSize = @@ROWCOUNT
+    END
+END
 GO
 
 IF OBJECT_ID('[dbo].[User_Create]') IS NOT NULL
