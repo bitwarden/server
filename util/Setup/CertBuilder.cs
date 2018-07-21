@@ -32,7 +32,7 @@ namespace Bit.Setup
                         $"-keyout /bitwarden/ssl/self/{Domain}/private.key " +
                         $"-out /bitwarden/ssl/self/{Domain}/certificate.crt " +
                         $"-reqexts SAN -extensions SAN " +
-                        $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{Domain}')) " +
+                        $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{Domain}\nbasicConstraints=CA:true')) " +
                         $"-subj \"/C=US/ST=Florida/L=Jacksonville/O=8bit Solutions LLC/OU=Bitwarden/CN={Domain}\"");
                 }
             }
