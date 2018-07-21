@@ -10,6 +10,7 @@ using System.Linq;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Exceptions;
+using System;
 
 namespace Bit.Core.Identity
 {
@@ -80,7 +81,8 @@ namespace Bit.Core.Identity
                     Challenge = auth.Challenge,
                     KeyHandle = auth.KeyHandle,
                     Version = auth.Version,
-                    UserId = user.Id
+                    UserId = user.Id,
+                    CreationDate = DateTime.UtcNow
                 });
 
                 challenges.Add(new

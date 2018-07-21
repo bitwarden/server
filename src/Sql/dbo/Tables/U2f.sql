@@ -10,3 +10,13 @@
     CONSTRAINT [FK_U2f_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_U2f_CreationDate]
+    ON [dbo].[U2f]([CreationDate] ASC)
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_U2f_UserId]
+    ON [dbo].[U2f]([UserId] ASC);
+

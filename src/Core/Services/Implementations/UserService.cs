@@ -281,13 +281,14 @@ namespace Bit.Core.Services
         public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
         {
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-            var reg = U2fLib.StartRegistration(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings));
+            var reg = U2fLib.StartRegistration(CoreHelpers.U2fAppIdUrl(_globalSettings));
             await _u2fRepository.CreateAsync(new U2f
             {
                 AppId = reg.AppId,
                 Challenge = reg.Challenge,
                 Version = reg.Version,
-                UserId = user.Id
+                UserId = user.Id,
+                CreationDate = DateTime.UtcNow
             });
 
             return new U2fRegistration

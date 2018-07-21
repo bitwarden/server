@@ -27,6 +27,26 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_U2f_CreationDate'
+    AND object_id = OBJECT_ID('[dbo].[U2f]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_U2f_CreationDate]
+        ON [dbo].[U2f]([CreationDate] ASC)
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_U2f_UserId'
+    AND object_id = OBJECT_ID('[dbo].[U2f]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_U2f_UserId]
+        ON [dbo].[U2f]([UserId] ASC)
+END
+GO
+
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
 BEGIN
     DROP VIEW [dbo].[UserView]
@@ -39,6 +59,33 @@ SELECT
     *
 FROM
     [dbo].[User]
+GO
+
+IF OBJECT_ID('[dbo].[U2f_DeleteOld]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[U2f_DeleteOld]
+END
+GO
+
+CREATE PROCEDURE [dbo].[U2f_DeleteOld]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @BatchSize INT = 100
+    DECLARE @Threshold DATETIME2(7) = DATEADD (day, -7, GETUTCDATE())
+
+    WHILE @BatchSize > 0
+    BEGIN
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[U2f]
+        WHERE
+            [CreationDate] < @Threshold
+
+        SET @BatchSize = @@ROWCOUNT
+    END
+END
 GO
 
 IF OBJECT_ID('[dbo].[Grant_DeleteExpired]') IS NOT NULL
