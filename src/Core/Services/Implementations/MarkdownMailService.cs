@@ -202,7 +202,6 @@ namespace Bit.Core.Services
 
             var message = await CreateMessageAsync("Your Subscription Will Renew Soon", email,
                 "InvoiceUpcoming", model);
-            message.BccEmails = new List<string> { "kyle@bitwarden.com" };
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
