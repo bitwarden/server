@@ -33,7 +33,7 @@ FROM
 INNER JOIN
     [CTE] OU ON C.[UserId] IS NULL AND C.[OrganizationId] IN (SELECT [OrganizationId] FROM [CTE])
 INNER JOIN
-    [dbo].[Organization] O ON O.[Id] = OU.OrganizationId AND O.[Id] = C.[OrganizationId] AND O.[Enabled] = 1
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId] AND O.[Id] = C.[OrganizationId] AND O.[Enabled] = 1
 LEFT JOIN
     [dbo].[CollectionCipher] CC ON OU.[AccessAll] = 0 AND CC.[CipherId] = C.[Id]
 LEFT JOIN
