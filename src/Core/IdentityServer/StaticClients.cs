@@ -11,7 +11,7 @@ namespace Bit.Core.IdentityServer
             return new List<Client>
             {
                 new ApiClient("mobile", 90, 1),
-                new ApiClient("web", 1, 1),
+                new ApiClient("web", 30, 1),
                 new ApiClient("browser", 30, 1),
                 new ApiClient("desktop", 30, 1),
                 new ApiClient("cli", 30, 1),
