@@ -22,8 +22,6 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     LEFT JOIN
-        [dbo].[User] U ON U.[Id] = OU.[UserId]
-    LEFT JOIN
         [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = OU.[Id] AND CU.[CollectionId] = @CollectionId
     LEFT JOIN
         [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND OU.[AccessAll] = 0 AND GU.[OrganizationUserId] = OU.[Id]
@@ -31,6 +29,8 @@ BEGIN
         [dbo].[Group] G ON G.[Id] = GU.[GroupId]
     LEFT JOIN
         [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = @CollectionId
+    LEFT JOIN
+        [dbo].[User] U ON U.[Id] = OU.[UserId]
     WHERE
         CU.[CollectionId] IS NOT NULL
         OR CG.[CollectionId] IS NOT NULL
