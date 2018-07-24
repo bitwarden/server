@@ -35,6 +35,7 @@ namespace Bit.Core.Models.Api
             UseEvents = organization.UseEvents;
             UseTotp = organization.UseTotp;
             Use2fa = organization.Use2fa;
+            UsersGetPremium = organization.UsersGetPremium;
         }
 
         public string Id { get; set; }
@@ -56,6 +57,7 @@ namespace Bit.Core.Models.Api
         public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
+        public bool UsersGetPremium { get; set; }
     }
 
     public class OrganizationBillingResponseModel : OrganizationResponseModel
