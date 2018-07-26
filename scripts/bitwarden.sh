@@ -66,7 +66,7 @@ function checkOutputDirExists() {
 }
 
 function checkOutputDirNotExists() {
-    if [ -d "$OUTPUT" ]
+    if [ -d "$OUTPUT/docker" ]
     then
         echo "Looks like Bitwarden is already installed at $OUTPUT."
         exit 1
@@ -78,7 +78,7 @@ function checkOutputDirNotExists() {
 if [ "$1" == "install" ]
 then
     checkOutputDirNotExists
-    mkdir $OUTPUT
+    mkdir -p $OUTPUT
     downloadRunFile
     $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "start" -o "$1" == "restart" ]
