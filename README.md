@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.imgur.com/lcoBQEZ.png" alt="Bitwarden" />
+  <img src="https://i.imgur.com/hyegAjI.png" alt="Bitwarden" />
 </p>
 <p align="center">
   <a href="https://ci.appveyor.com/project/bitwarden/core/branch/master" target="_blank">
