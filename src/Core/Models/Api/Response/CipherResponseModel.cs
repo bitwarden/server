@@ -55,6 +55,7 @@ namespace Bit.Core.Models.Api
             Name = cipherData.Name;
             Notes = cipherData.Notes;
             Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
+            PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
@@ -72,6 +73,7 @@ namespace Bit.Core.Models.Api
         public CipherIdentityModel Identity { get; set; }
         public CipherSecureNoteModel SecureNote { get; set; }
         public IEnumerable<CipherFieldModel> Fields { get; set; }
+        public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }

@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 using Bit.Core.Enums;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Api
 
             Username = data.Username;
             Password = data.Password;
+            PasswordRevisionDate = data.PasswordRevisionDate;
             Totp = data.Totp;
         }
 
@@ -52,6 +53,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [StringLength(1000)]
         public string Password { get; set; }
+        public DateTime? PasswordRevisionDate { get; set; }
         [EncryptedString]
         [StringLength(1000)]
         public string Totp { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -17,6 +18,7 @@ namespace Bit.Core.Models.Data
             Uris = cipher.Login.Uris?.Where(u => u != null).Select(u => new CipherLoginUriData(u));
             Username = cipher.Login.Username;
             Password = cipher.Login.Password;
+            PasswordRevisionDate = cipher.Login.PasswordRevisionDate;
             Totp = cipher.Login.Totp;
         }
 
@@ -28,6 +30,7 @@ namespace Bit.Core.Models.Data
         public IEnumerable<CipherLoginUriData> Uris { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public DateTime? PasswordRevisionDate { get; set; }
         public string Totp { get; set; }
 
         public class CipherLoginUriData

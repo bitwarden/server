@@ -28,6 +28,7 @@ namespace Bit.Core.Models.Api
         [StringLength(10000)]
         public string Notes { get; set; }
         public IEnumerable<CipherFieldModel> Fields { get; set; }
+        public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
         public Dictionary<string, string> Attachments { get; set; }
 
         public CipherLoginModel Login { get; set; }
