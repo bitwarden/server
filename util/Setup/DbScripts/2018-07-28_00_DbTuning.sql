@@ -1,4 +1,20 @@
-﻿CREATE PROCEDURE [dbo].[CollectionUserDetails_ReadByCollectionId]
+﻿IF NOT EXISTS (
+    SELECT * FROM sys.indexes  WHERE [Name]='IX_OrganizationUser_OrganizationId'
+    AND object_id = OBJECT_ID('[dbo].[OrganizationUser]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
+        ON [dbo].[OrganizationUser]([OrganizationId] ASC)
+END
+GO
+
+IF OBJECT_ID('[dbo].[CollectionUserDetails_ReadByCollectionId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUserDetails_ReadByCollectionId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[CollectionUserDetails_ReadByCollectionId]
     @CollectionId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER
 AS
@@ -40,3 +56,4 @@ BEGIN
             OR G.[AccessAll] = 1
         )
 END
+GO
