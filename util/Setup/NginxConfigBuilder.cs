@@ -13,7 +13,8 @@ namespace Bit.Setup
             "ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:" +
             "AES128-SHA256:AES256-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4:@STRENGTH";
         private const string ContentSecurityPolicy =
-            "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
             "connect-src 'self' https://haveibeenpwned.com https://api.pwnedpasswords.com;";
 
