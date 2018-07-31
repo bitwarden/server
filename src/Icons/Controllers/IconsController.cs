@@ -42,10 +42,11 @@ namespace Bit.Icons.Controllers
             }
 
             var domain = uri.Host;
-            if(DomainName.TryParseBaseDomain(domain, out var baseDomain))
-            {
-                domain = baseDomain;
-            }
+            // Convert sub.domain.com => domain.com
+            //if(DomainName.TryParseBaseDomain(domain, out var baseDomain))
+            //{
+            //    domain = baseDomain;
+            //}
 
             var mappedDomain = _domainMappingService.MapDomain(domain);
             if(!_iconsSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out Icon icon))
