@@ -157,7 +157,7 @@ namespace Bit.Core.Models.Api
                     new string[] { nameof(Cipher.OrganizationId) });
             }
 
-            if(!CollectionIds?.Any() ?? false)
+            if(!CollectionIds?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one collection.",
                     new string[] { nameof(CollectionIds) });
@@ -193,7 +193,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!Ciphers?.Any() ?? false)
+            if(!Ciphers?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one cipher.",
                     new string[] { nameof(Ciphers) });
@@ -222,7 +222,7 @@ namespace Bit.Core.Models.Api
                 }
             }
 
-            if(!CollectionIds?.Any() ?? false)
+            if(!CollectionIds?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one collection.",
                     new string[] { nameof(CollectionIds) });
