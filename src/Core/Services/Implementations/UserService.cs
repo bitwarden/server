@@ -215,7 +215,7 @@ namespace Bit.Core.Services
             var tokenValid = false;
             if(_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
             {
-                tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token, 
+                tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
                     user.Email, orgUserId.Value);
             }
 
@@ -456,6 +456,11 @@ namespace Bit.Core.Services
 
             if(await CheckPasswordAsync(user, masterPassword))
             {
+                if(user.Key != null)
+                {
+                    throw new BadRequestException("User already has an updated encryption key.");
+                }
+
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
