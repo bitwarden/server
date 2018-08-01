@@ -456,7 +456,7 @@ namespace Bit.Core.Services
 
             if(await CheckPasswordAsync(user, masterPassword))
             {
-                if(user.Key != null)
+                if(!string.IsNullOrWhiteSpace(user.Key))
                 {
                     throw new BadRequestException("User already has an updated encryption key.");
                 }
