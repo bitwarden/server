@@ -5,9 +5,9 @@ echo "`n## Building Icons"
 echo "`nBuilding app"
 echo ".NET Core version $(dotnet --version)"
 echo "Clean"
-dotnet clean $dir\Icons.csproj -f netcoreapp2.0 -c "Release" -o $dir\obj\Docker\publish
+dotnet clean $dir\Icons.csproj -f netcoreapp2.1 -c "Release" -o $dir\obj\Docker\publish
 echo "Publish"
-dotnet publish $dir\Icons.csproj -f netcoreapp2.0 -c "Release" -o $dir\obj\Docker\publish
+dotnet publish $dir\Icons.csproj -f netcoreapp2.1 -c "Release" -o $dir\obj\Docker\publish
 
 echo "`nBuilding docker image"
 docker --version
