@@ -1,4 +1,4 @@
-FROM microsoft/mssql-server-linux:2017-CU7
+FROM microsoft/mssql-server-linux:2017-CU9
 
 LABEL com.bitwarden.product="bitwarden"
 
