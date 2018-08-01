@@ -7,6 +7,8 @@ echo -e "\n## Building Admin"
 
 echo -e "\nBuilding app"
 echo ".NET Core version $(dotnet --version)"
+echo "Restore"
+dotnet restore $DIR/Admin.csproj
 echo "Clean"
 dotnet clean $DIR/Admin.csproj -f netcoreapp2.1 -c "Release" -o $DIR/obj/Docker/publish
 echo "Node Build"

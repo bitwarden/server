@@ -7,6 +7,8 @@ echo -e "\n## Building Server"
 
 echo -e "\nBuilding app"
 echo ".NET Core version $(dotnet --version)"
+echo "Restore"
+dotnet restore $DIR/Server.csproj
 echo "Clean"
 dotnet clean $DIR/Server.csproj -c "Release" -o $DIR/obj/Docker/publish
 echo "Publish"
