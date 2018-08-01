@@ -96,7 +96,7 @@
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="1.0.9" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.1' ">
     <PackageReference Include="System.Data.SqlClient" Version="4.4.3" />
   </ItemGroup>
 
