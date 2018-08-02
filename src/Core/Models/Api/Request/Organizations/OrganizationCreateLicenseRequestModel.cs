@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public string Key { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
     }
 }

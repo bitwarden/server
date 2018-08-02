@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api
 {
@@ -14,7 +15,8 @@ namespace Bit.Core.Models.Api
             LastUsedDate = data.LastUsedDate;
         }
 
-        [StringLength(2000)]
+        [EncryptedString]
+        [EncryptedStringLength(2000)]
         [Required]
         public string Password { get; set; }
         [Required]

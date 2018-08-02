@@ -22,10 +22,10 @@ namespace Bit.Core.Models.Api
         public bool Favorite { get; set; }
         [Required]
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Name { get; set; }
         [EncryptedString]
-        [StringLength(10000)]
+        [EncryptedStringLength(10000)]
         public string Notes { get; set; }
         public IEnumerable<CipherFieldModel> Fields { get; set; }
         public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }

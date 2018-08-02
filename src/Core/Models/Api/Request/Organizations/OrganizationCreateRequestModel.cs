@@ -27,7 +27,7 @@ namespace Bit.Core.Models.Api
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
         public string Country { get; set; }
 

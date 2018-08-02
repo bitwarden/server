@@ -27,7 +27,7 @@ namespace Bit.Core.Models.Api
         }
 
         [EncryptedString]
-        [StringLength(10000)]
+        [EncryptedStringLength(10000)]
         public string Uri
         {
             get => Uris?.FirstOrDefault()?.Uri;
@@ -48,14 +48,14 @@ namespace Bit.Core.Models.Api
         }
         public List<CipherLoginUriModel> Uris { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Username { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Password { get; set; }
         public DateTime? PasswordRevisionDate { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Totp { get; set; }
 
         public class CipherLoginUriModel
@@ -74,7 +74,7 @@ namespace Bit.Core.Models.Api
             }
 
             [EncryptedString]
-            [StringLength(10000)]
+            [EncryptedStringLength(10000)]
             public string Uri { get; set; }
             public UriMatchType? Match { get; set; } = null;
         }

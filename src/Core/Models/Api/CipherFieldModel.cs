@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api
 {
@@ -16,9 +17,9 @@ namespace Bit.Core.Models.Api
         }
 
         public FieldType Type { get; set; }
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Name { get; set; }
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Value { get; set; }
     }
 }

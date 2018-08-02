@@ -31,58 +31,58 @@ namespace Bit.Core.Models.Api
         }
 
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Title { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string FirstName { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string MiddleName { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string LastName { get; set; }
         [EncryptedString]
         [StringLength(1000)]
         public string Address1 { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Address2 { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Address3 { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string City { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string State { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string PostalCode { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Country { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Company { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Email { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Phone { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string SSN { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Username { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string PassportNumber { get; set; }
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string LicenseNumber { get; set; }
     }
 }

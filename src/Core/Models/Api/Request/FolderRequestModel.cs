@@ -10,7 +10,7 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         [EncryptedString]
-        [StringLength(1000)]
+        [EncryptedStringLength(1000)]
         public string Name { get; set; }
 
         public Folder ToFolder(Guid userId)
