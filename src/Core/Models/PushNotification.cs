@@ -1,43 +1,20 @@
 ﻿using Bit.Core.Enums;
-using Newtonsoft.Json;
 using System;
 
 namespace Bit.Core.Models
 {
-    public class PayloadPushNotification
+    public class PushNotificationData<T>
     {
-        [JsonProperty(PropertyName = "data")]
-        public DataObj Data { get; set; }
-
-        public class DataObj
+        public PushNotificationData(PushType type, T payload, string contextId)
         {
-            public DataObj(PushType type, string payload)
-            {
-                Type = type;
-                Payload = payload;
-            }
-
-            [JsonProperty(PropertyName = "type")]
-            public PushType Type { get; set; }
-            [JsonProperty(PropertyName = "payload")]
-            public string Payload { get; set; }
+            Type = type;
+            Payload = payload;
+            ContextId = contextId;
         }
-    }
-
-    public class ApplePayloadPushNotification : PayloadPushNotification
-    {
-        [JsonProperty(PropertyName = "aps")]
-        public AppleData Aps { get; set; } = new AppleData { ContentAvailable = 1 };
-
-        public class AppleData
-        {
-            [JsonProperty(PropertyName = "badge")]
-            public dynamic Badge { get; set; } = null;
-            [JsonProperty(PropertyName = "alert")]
-            public string Alert { get; set; }
-            [JsonProperty(PropertyName = "content-available")]
-            public int ContentAvailable { get; set; }
-        }
+        
+        public PushType Type { get; set; }
+        public T Payload { get; set; }
+        public string ContextId { get; set; }
     }
 
     public class SyncCipherPushNotification

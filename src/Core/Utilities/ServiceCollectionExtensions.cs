@@ -22,6 +22,7 @@ using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Collections.Generic;
 
 namespace Bit.Core.Utilities
 {
@@ -82,24 +83,22 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
             }
 
+            services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
             if(globalSettings.SelfHosted &&
                 CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
                 globalSettings.Installation?.Id != null &&
                 CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
             {
-                services.AddSingleton<IPushNotificationService, RelayPushNotificationService>();
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
 #if NET471
             else if(!globalSettings.SelfHosted)
             {
-                services.AddSingleton<IPushNotificationService, NotificationHubPushNotificationService>();
                 services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             }
 #endif
             else
             {
-                services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             }
 
