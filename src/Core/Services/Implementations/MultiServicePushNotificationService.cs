@@ -33,7 +33,7 @@ namespace Bit.Core.Services
 #if NET471
                 _services.Add(new NotificationHubPushNotificationService(globalSettings, httpContextAccessor));
 #endif
-                _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
+                // _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
             }
         }
 
@@ -99,12 +99,14 @@ namespace Bit.Core.Services
 
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
         {
-            throw new NotImplementedException();
+            PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier));
+            return Task.FromResult(0);
         }
 
         public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
         {
-            throw new NotImplementedException();
+            PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier));
+            return Task.FromResult(0);
         }
 
         private void PushToServices(Func<IPushNotificationService, Task> pushFunc)

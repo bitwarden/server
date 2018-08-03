@@ -154,12 +154,14 @@ namespace Bit.Core.Services
 
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
         {
-            throw new NotImplementedException();
+            // Noop
+            return Task.FromResult(0);
         }
 
         public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
         {
-            throw new NotImplementedException();
+            // Noop
+            return Task.FromResult(0);
         }
     }
 }
