@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Hub
 {
-    public class TimedHostedService : IHostedService, IDisposable
+    public class AzureQueueHostedService : IHostedService, IDisposable
     {
         private readonly ILogger _logger;
         private readonly IHubContext<SyncHub> _hubContext;
@@ -23,7 +23,7 @@ namespace Bit.Hub
         private CancellationTokenSource _cts;
         private CloudQueue _queue;
 
-        public TimedHostedService(ILogger<TimedHostedService> logger, IHubContext<SyncHub> hubContext,
+        public AzureQueueHostedService(ILogger<AzureQueueHostedService> logger, IHubContext<SyncHub> hubContext,
             GlobalSettings globalSettings)
         {
             _logger = logger;

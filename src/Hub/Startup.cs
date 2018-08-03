@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.IdentityServer;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -71,7 +70,7 @@ namespace Bit.Hub
             services.AddMvc();
 
             // Hosted Services
-            services.AddHostedService<TimedHostedService>();
+            services.AddHostedService<AzureQueueHostedService>();
         }
 
         public void Configure(
