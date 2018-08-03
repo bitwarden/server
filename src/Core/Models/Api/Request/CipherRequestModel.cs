@@ -184,7 +184,7 @@ namespace Bit.Core.Models.Api
         public string FolderId { get; set; }
     }
 
-    public class CipherBulkShareRequestModel
+    public class CipherBulkShareRequestModel : IValidatableObject
     {
         [Required]
         public IEnumerable<string> CollectionIds { get; set; }
