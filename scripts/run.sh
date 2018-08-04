@@ -179,7 +179,8 @@ function waitForDB() {
     i=0
     echo -n "Pausing for database to come online. Please wait..."
     # sqlagent.out is a binary file, sed then removes all non-ascii characters so that grep can correctly match
-    while ! sed 's/[^a-zA-Z ]//g' $OUTPUT_DIR/logs/mssql/sqlagent.out 2>/dev/null | tr '\n' ' ' | grep -iq "Waiting for SQL Server to start .* SQLServerAgent service successfully started"
+    while ! sed 's/[^a-zA-Z ]//g' $OUTPUT_DIR/logs/mssql/sqlagent.out 2>/dev/null | tr '\n' ' ' |
+            grep -iq "Waiting for SQL Server to start .* SQLServerAgent service successfully started"
     do
         sleep 2
         i=$(($i+2))
