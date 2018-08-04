@@ -30,7 +30,7 @@ namespace Bit.Billing.Controllers
         }
 
         [HttpPost("premium-renewal-reminders")]
-        public async Task<IActionResult> GetPremiumRenewalReminders([FromQuery] string key)
+        public async Task<IActionResult> PostPremiumRenewalReminders([FromQuery] string key)
         {
             if(key != _billingSettings.JobsKey)
             {
