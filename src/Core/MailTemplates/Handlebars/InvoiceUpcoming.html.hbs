@@ -1,0 +1,30 @@
+﻿{{#>FullHtmlLayout}}
+<p>
+    This is a reminder that your Bitwarden subscription is due for renewal soon.
+    Your payment method on file will be charged for <b>{{usd AmountDue}}</b> on
+    <b>{{date DueDate 'MMM dd, yyyy'}}</b>.
+</p>
+{{#if Items}}
+<p>
+    <b><u>Summary Of Charges</u></b><br />
+    {{#each Items}}
+    {{this}}<br />
+    {{/each}}
+</p>
+{{/if}}
+<p>
+    To avoid any interruption in service, please ensure that your payment method
+    on file is up to date and can be charged for the above amount. You can manage your
+    subscription and payment method by logging into the web vault at
+    {{{link WebVaultUrl}}}. Once logged in, navigate to the Billing page for your account.
+</p>
+{{#if MentionInvoices}}
+<p>
+    Invoices for your payments can also be downloaded from Billing page for your account.
+</p>
+{{/if}}
+<p>
+    If you have any questions or problems, please feel free to email us at
+    hello@bitwarden.com.
+</p>
+{{/FullHtmlLayout}}

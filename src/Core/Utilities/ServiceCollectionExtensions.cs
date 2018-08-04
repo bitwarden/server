@@ -66,7 +66,7 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            services.AddSingleton<IMailService, BackupMailService>();
+            services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
             services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
 
