@@ -1,5 +1,4 @@
-﻿#if NET471
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Enums;
@@ -10,13 +9,15 @@ namespace Bit.Core.Services
 {
     public class NotificationHubPushRegistrationService : IPushRegistrationService
     {
-        private readonly NotificationHubClient _client;
+        private readonly GlobalSettings _globalSettings;
+        
+        private NotificationHubClient _client = null;
+        private DateTime? _clientExpires = null;
 
         public NotificationHubPushRegistrationService(
             GlobalSettings globalSettings)
         {
-            _client = NotificationHubClient.CreateClientFromConnectionString(globalSettings.NotificationHub.ConnectionString,
-                globalSettings.NotificationHub.HubName);
+            _globalSettings = globalSettings;
         }
 
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -76,9 +77,11 @@ namespace Bit.Core.Services
 
             BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
             BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
-            BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate, userId, identifier);
+            BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
+                userId, identifier);
 
-            await _client.CreateOrUpdateInstallationAsync(installation);
+            await RenewClientAndExecuteAsync(async client =>
+                await client.CreateOrUpdateInstallationAsync(installation));
         }
 
         private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
@@ -113,7 +116,7 @@ namespace Bit.Core.Services
         {
             try
             {
-                await _client.DeleteInstallationAsync(deviceId);
+                await RenewClientAndExecuteAsync(async client => await client.DeleteInstallationAsync(deviceId));
             }
             catch(Exception e)
             {
@@ -135,7 +138,8 @@ namespace Bit.Core.Services
                 $"organizationId:{organizationId}");
         }
 
-        private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op, string tag)
+        private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
+            string tag)
         {
             if(!deviceIds.Any())
             {
@@ -161,7 +165,8 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
+                    await RenewClientAndExecuteAsync(async client =>
+                        await client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation }));
                 }
                 catch(Exception e)
                 {
@@ -172,6 +177,18 @@ namespace Bit.Core.Services
                 }
             }
         }
+
+        private async Task RenewClientAndExecuteAsync(Func<NotificationHubClient, Task> task)
+        {
+            var now = DateTime.UtcNow;
+            if(_client == null || !_clientExpires.HasValue || _clientExpires.Value < now)
+            {
+                _clientExpires = now.Add(TimeSpan.FromMinutes(30));
+                _client = NotificationHubClient.CreateClientFromConnectionString(
+                    _globalSettings.NotificationHub.ConnectionString,
+                    _globalSettings.NotificationHub.HubName);
+            }
+            await task(_client);
+        }
     }
 }
-#endif

@@ -91,12 +91,10 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
-#if NET471
             else if(!globalSettings.SelfHosted)
             {
                 services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             }
-#endif
             else
             {
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();

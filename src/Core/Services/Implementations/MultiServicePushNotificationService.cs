@@ -30,9 +30,7 @@ namespace Bit.Core.Services
             }
             else
             {
-#if NET471
                 _services.Add(new NotificationHubPushNotificationService(globalSettings, httpContextAccessor));
-#endif
                 // _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
             }
         }
