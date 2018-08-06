@@ -1,9 +1,0 @@
-﻿@model Bit.Core.Models.Mail.VerifyDeleteModel
-@{
-    Layout = "_BasicMailLayout";
-}
-<p>
-    Click the link below to delete your Bitwarden account (@Model.Email). 
-    If you did not request this email to delete your Bitwarden account, you can safely ignore it.
-</p>
-<p><a href="@Raw(Model.Url)" target="_blank" clicktracking=off>@Model.Url</a></p>

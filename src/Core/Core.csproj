@@ -8,8 +8,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
-    <EmbeddedResource Include="MailTemplates\Markdown\**\*.md" />
-    <EmbeddedResource Include="MailTemplates\Razor\**\*.cshtml" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
   </ItemGroup>
 
@@ -35,11 +33,9 @@
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.5.0" />
-    <PackageReference Include="CommonMark.NET" Version="0.15.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
-    <PackageReference Include="RazorLight" Version="2.0.0-alpha3" />
     <PackageReference Include="Sendgrid" Version="9.9.0" />
-    <PackageReference Include="Stripe.net" Version="17.7.0" />
+    <PackageReference Include="Stripe.net" Version="17.8.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
