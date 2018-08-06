@@ -1,27 +1,37 @@
 ﻿{{#>FullHtmlLayout}}
-<p>
-    This is a reminder that your Bitwarden subscription is due for renewal soon. Your payment method on file will
-    be charged for <b>{{usd AmountDue}}</b> on <b>{{date DueDate 'MMM dd, yyyy'}}</b>.
-</p>
-{{#if Items}}
-<p>
-    <b><u>Summary Of Charges</u></b><br />
-    {{#each Items}}
-    {{this}}<br />
-    {{/each}}
-</p>
-{{/if}}
-<p>
-    To avoid any interruption in service, please ensure that your payment method on file is up to date and can be
-    charged for the above amount. You can manage your subscription and payment method by logging into the web vault at
-    {{{link WebVaultUrl}}}. Once logged in, navigate to the Billing page for your account.
-</p>
-{{#if MentionInvoices}}
-<p>
-    Invoices for your payments can also be downloaded from Billing page for your account.
-</p>
-{{/if}}
-<p>
-    If you have any questions or problems, please feel free to email us at hello@bitwarden.com.
-</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
+            This is a reminder that your Bitwarden subscription is due for renewal soon. Your payment method on file will be charged for <b style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">{{usd AmountDue}}</b> on <b style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">{{date DueDate 'MMM dd, yyyy'}}</b>.
+        </td>
+    </tr>
+    {{#if Items}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
+            <b style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;"><u style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">Summary Of Charges</u></b><br />
+            {{#each Items}}
+            {{this}}<br style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;" />
+            {{/each}}
+        </td>
+    </tr>
+    {{/if}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
+            To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount. You can manage your subscription and payment method by logging into the web vault at {{{link WebVaultUrl}}}. Once logged in, navigate to the Billing page for your account.
+        </td>
+    </tr>
+    {{#if MentionInvoices}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
+            Invoices for your payments can also be downloaded from Billing page for your account.
+        </td>
+    </tr>
+    {{/if}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block last" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
+            If you have any questions or problems, please feel free to email us at hello@bitwarden.com.
+        </td>
+    </tr>
+</table>
 {{/FullHtmlLayout}}
+
