@@ -11,11 +11,11 @@ echo "Restore"
 dotnet restore $DIR/Api.csproj
 dotnet restore $DIR/../Jobs/Jobs.csproj
 echo "Clean"
-dotnet clean $DIR/Api.csproj -f netcoreapp2.1 -c "Release" -o $DIR/obj/Docker/publish/Api
-dotnet clean $DIR/../Jobs/Jobs.csproj -f netcoreapp2.1 -c "Release" -o $DIR/obj/Docker/publish/Jobs
+dotnet clean $DIR/Api.csproj -c "Release" -o $DIR/obj/Docker/publish/Api
+dotnet clean $DIR/../Jobs/Jobs.csproj -c "Release" -o $DIR/obj/Docker/publish/Jobs
 echo "Publish"
-dotnet publish $DIR/Api.csproj -f netcoreapp2.1 -c "Release" -o $DIR/obj/Docker/publish/Api
-dotnet publish $DIR/../Jobs/Jobs.csproj -f netcoreapp2.1 -c "Release" -o $DIR/obj/Docker/publish/Jobs
+dotnet publish $DIR/Api.csproj -c "Release" -o $DIR/obj/Docker/publish/Api
+dotnet publish $DIR/../Jobs/Jobs.csproj -c "Release" -o $DIR/obj/Docker/publish/Jobs
 
 echo -e "\nBuilding docker image"
 docker --version
