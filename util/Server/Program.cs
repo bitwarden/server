@@ -14,7 +14,9 @@ namespace Bit.Server
             var builder = new WebHostBuilder()
                 .UseConfiguration(config)
                 .UseKestrel()
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                // ref: https://github.com/aspnet/KestrelHttpServer/issues/2694
+                .UseLibuv();
 
             var contentRoot = config.GetValue<string>("contentRoot");
             if(string.IsNullOrWhiteSpace(contentRoot))

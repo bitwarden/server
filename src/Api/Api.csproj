@@ -17,6 +17,7 @@
     <PackageReference Include="jsreport.Local" Version="1.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.2" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="2.6.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="2.1.2" />
   </ItemGroup>
 
 </Project>
