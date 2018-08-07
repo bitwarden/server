@@ -31,8 +31,7 @@ namespace Bit.Server
                 .AddConsole()
                 .AddDebug();
 
-            var serveUnknown = configuration.GetValue<bool?>("serveUnknown") ?? false;
-            if(serveUnknown)
+            if(configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
                 app.UseStaticFiles(new StaticFileOptions
                 {
@@ -40,7 +39,7 @@ namespace Bit.Server
                     DefaultContentType = "application/octet-stream"
                 });
             }
-            else
+            else if(configuration.GetValue<bool?>("webVault") ?? false)
             {
                 var options = new DefaultFilesOptions();
                 options.DefaultFileNames.Clear();
@@ -50,7 +49,8 @@ namespace Bit.Server
                 {
                     OnPrepareResponse = ctx =>
                     {
-                        if(!ctx.Context.Request.Path.HasValue)
+                        if(!ctx.Context.Request.Path.HasValue ||
+                            ctx.Context.Response.Headers.ContainsKey("Cache-Control"))
                         {
                             return;
                         }
@@ -67,6 +67,10 @@ namespace Bit.Server
                         }
                     }
                 });
+            }
+            else
+            {
+                app.UseFileServer();
             }
         }
     }
