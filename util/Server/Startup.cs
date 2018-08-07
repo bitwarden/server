@@ -50,7 +50,6 @@ namespace Bit.Server
                 {
                     OnPrepareResponse = ctx =>
                     {
-                        System.Console.WriteLine("Path: " + ctx.Context.Request.Path.Value);
                         if(!ctx.Context.Request.Path.HasValue)
                         {
                             return;
