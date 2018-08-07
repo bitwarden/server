@@ -57,7 +57,7 @@
 <h1>User <small>@Model.User.Email</small></h1>
 
 <h2>Information</h2>
-@Html.Partial("_ViewInformation", Model)
+@Html.PartialAsync("_ViewInformation", Model)
 <form method="post" id="edit-form">
     <h2>General</h2>
     <div class="row">
