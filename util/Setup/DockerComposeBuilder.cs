@@ -101,7 +101,7 @@ version: '3'
 services:
   mssql:
     image: bitwarden/mssql:{CoreVersion}
-    container_name: bitwarden-mssql
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-mssql
     restart: always
     volumes:");
 
@@ -126,7 +126,7 @@ services:
 
   web:
     image: bitwarden/web:{WebVersion}
-    container_name: bitwarden-web
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-web
     restart: always
     volumes:
       - ../web:/etc/bitwarden/web
@@ -135,7 +135,7 @@ services:
 
   attachments:
     image: bitwarden/attachments:{CoreVersion}
-    container_name: bitwarden-attachments
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-attachments
     restart: always
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
@@ -144,7 +144,7 @@ services:
 
   api:
     image: bitwarden/api:{CoreVersion}
-    container_name: bitwarden-api
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-api
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
@@ -157,7 +157,7 @@ services:
 
   identity:
     image: bitwarden/identity:{CoreVersion}
-    container_name: bitwarden-identity
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-identity
     restart: always
     volumes:
       - ../identity:/etc/bitwarden/identity
@@ -171,7 +171,7 @@ services:
 
   admin:
     image: bitwarden/admin:{CoreVersion}
-    container_name: bitwarden-admin
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-admin
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
@@ -184,14 +184,14 @@ services:
 
   icons:
     image: bitwarden/icons:{CoreVersion}
-    container_name: bitwarden-icons
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-icons
     restart: always
     env_file:
       - ../env/uid.env
 
   nginx:
     image: bitwarden/nginx:{CoreVersion}
-    container_name: bitwarden-nginx
+    container_name: ${COMPOSE_CONTAINER_PREFIX:-bitwarden}-nginx
     restart: always
     ports:");
 
