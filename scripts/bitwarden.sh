@@ -48,6 +48,12 @@ function downloadSelf() {
 }
 
 function downloadRunFile() {
+    # docker-compose project name has been introduced in a new run.sh script,
+    # so we need to stop an instance which could be running without a project name
+    if [ -f $SCRIPTS_DIR/run.sh ] && ! grep -q COMPOSE_PROJECT_NAME $SCRIPTS_DIR/run.sh
+    then
+        $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+    fi
     if [ ! -d "$SCRIPTS_DIR" ]
     then
         mkdir $SCRIPTS_DIR

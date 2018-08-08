@@ -8,6 +8,8 @@ NC='\033[0m' # No Color
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+export COMPOSE_PROJECT_NAME=bw_${DIR%/bwdata*}
+
 OUTPUT_DIR=".."
 if [ $# -gt 1 ]
 then
