@@ -81,23 +81,29 @@ function install() {
         then
             echo -e -n "${CYAN}(!)${NC} Enter your email address (Let's Encrypt will send you certificate expiration reminders): "
             read EMAIL
-            echo ""
-    
             mkdir -p $OUTPUT_DIR/letsencrypt
-            docker pull certbot/certbot
-            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
-                certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
-                --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
+            echo ""    
         fi
     fi
-    
+
     pullSetup
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION
-    
     echo ""
+
+    if [ "$LETS_ENCRYPT" == "y" ]
+    then
+        portsLetsEncrypt
+        docker pull certbot/certbot
+        docker run -it --rm --name certbot $http_port $https_port $http_port_default $https_port_default \
+            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
+            --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
+        echo ""
+    fi
+
     echo "Setup complete"
     echo ""
 }
@@ -133,11 +139,31 @@ function dockerPrune() {
     docker image prune -f --filter="label=com.bitwarden.product=bitwarden"
 }
 
+function portsLetsEncrypt() {
+    http_port=$(awk -F= '/Parameter:HttpPort=/ && $2!=0 {print "-p "$2":80"}' $OUTPUT_DIR/docker/docker-compose.yml)
+    https_port=$(awk -F= '/Parameter:HttpsPort=/ && $2!=0 {print "-p "$2":443"}' $OUTPUT_DIR/docker/docker-compose.yml)
+    if [ "$http_port" != "-p 80:80" ]
+    then
+        if ! netstat -an | grep LISTEN | grep -qE '[.:]80 '
+        then
+            http_port_default="-p 80:80"
+        fi
+    fi
+    if [ "$https_port" != "-p 443:443" ]
+    then
+        if ! netstat -an | grep LISTEN | grep -qE '[.:]443 '
+        then
+            https_port_default="-p 443:443"
+        fi
+    fi
+}
+
 function updateLetsEncrypt() {
     if [ -d "${OUTPUT_DIR}/letsencrypt/live" ]
     then
+        portsLetsEncrypt
         docker pull certbot/certbot
-        docker run -i --rm --name certbot -p 443:443 -p 80:80 \
+        docker run -i --rm --name certbot $http_port $https_port $http_port_default $https_port_default \
             -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
     fi
