@@ -105,9 +105,9 @@ function install() {
 function dockerComposeUp() {
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d $1
     else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
+        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d $1
     fi
 }
 
@@ -118,19 +118,25 @@ function dockerComposeDown() {
     else
         docker-compose -f $DOCKER_DIR/docker-compose.yml down
     fi
+    # Manually rotate previous sqlagent logfile so that waitForDB() will not match against it
+    if [ -f $OUTPUT_DIR/logs/mssql/sqlagent.out ]
+    then
+        mv $OUTPUT_DIR/logs/mssql/sqlagent.out $OUTPUT_DIR/logs/mssql/sqlagent.old
+    fi
 }
 
 function dockerComposePull() {
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml pull
+        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml pull $1
     else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml pull
+        docker-compose -f $DOCKER_DIR/docker-compose.yml pull $1
     fi
 }
 
 function dockerPrune() {
-    docker image prune -f
+    docker image prune -f --filter="label=com.bitwarden.product=bitwarden"
+    # Perhaps we could add "-a", to recover disk space after automatic update ?
 }
 
 function updateLetsEncrypt() {
@@ -165,17 +171,22 @@ function printEnvironment() {
         dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
 }
 
-function restart() {
-    dockerComposeDown
-    dockerComposePull
-    updateLetsEncrypt
-    dockerComposeUp
-    dockerPrune
-    printEnvironment
-}
-
 function pullSetup() {
     docker pull bitwarden/setup:$COREVERSION
+}
+
+function waitForDB() {
+    i=0
+    echo -n "Pausing for database to come online. Please wait..."
+    # sqlagent.out is a binary file, sed then removes all non-ascii characters so that grep can correctly match
+    while ! sed 's/[^a-zA-Z ]//g' $OUTPUT_DIR/logs/mssql/sqlagent.out 2>/dev/null | tr '\n' ' ' |
+            grep -iq "Waiting for SQL Server to start .* SQLServerAgent service successfully started"
+    do
+        sleep 2
+        i=$(($i+2))
+        echo -n .
+    done
+    echo " ($i s)"
 }
 
 # Commands
@@ -185,22 +196,39 @@ then
     install
 elif [ "$1" == "start" -o "$1" == "restart" ]
 then
-    restart
-elif [ "$1" == "pull" ]
-then
+    dockerComposeDown
     dockerComposePull
+    updateLetsEncrypt
+    dockerComposeUp mssql
+    waitForDB
+    dockerComposeUp
+    printEnvironment
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown
+elif [ "$1" == "updateapp" ]
+then
+    dockerComposeDown
+    update
+    dockerComposePull
+    updateLetsEncrypt
 elif [ "$1" == "updatedb" ]
 then
+    dockerComposeDown
+    dockerComposePull mssql
+    dockerComposeUp mssql
+    waitForDB
     updateDatabase
 elif [ "$1" == "update" ]
 then
     dockerComposeDown
     update
-    restart
-    echo "Pausing 60 seconds for database to come online. Please wait..."
-    sleep 60
+    dockerComposePull
+    updateLetsEncrypt
+    dockerComposeUp mssql
+    waitForDB
     updateDatabase
+    dockerComposeUp
+    dockerPrune
+    printEnvironment
 fi
