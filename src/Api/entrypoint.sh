@@ -29,18 +29,11 @@ mkhomedir_helper $USERNAME
 
 # The rest...
 
-touch /var/log/cron.log
-chown $USERNAME:$GROUPNAME /var/log/cron.log
 chown -R $USERNAME:$GROUPNAME /app
-chown -R $USERNAME:$GROUPNAME /jobs
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
 mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
-
-# Sounds like gosu keeps env when switching, but of course cron does not
-env > /etc/environment
-cron
 
 cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
     && update-ca-certificates

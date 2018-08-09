@@ -22,7 +22,6 @@ using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Collections.Generic;
 
 namespace Bit.Core.Utilities
 {

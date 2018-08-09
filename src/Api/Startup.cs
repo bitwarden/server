@@ -126,9 +126,15 @@ namespace Bit.Api
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
             }).AddJsonOptions(o => o.SerializerSettings.ContractResolver = new DefaultContractResolver());
 
-            // PDF generation
-            if(!globalSettings.SelfHosted)
+            if(globalSettings.SelfHosted)
             {
+                // Jobs service
+                Jobs.JobsHostedService.AddJobsServices(services);
+                services.AddHostedService<Jobs.JobsHostedService>();
+            }
+            else
+            {
+                // PDF generation
                 services.AddJsReport(new jsreport.Local.LocalReporting()
                     .UseBinary(jsreport.Binary.JsReportBinary.GetBinary())
                     .AsUtility()
