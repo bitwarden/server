@@ -34,8 +34,8 @@ function Install() {
     
         if ($letsEncrypt -eq "y") {
             Write-Host "(!) " -f cyan -nonewline
-            [string]$email = $( Read-Host "Enter your email address (Let's Encrypt will send you certificate " +
-                "expiration reminders)" )
+            [string]$email = $( Read-Host ("Enter your email address (Let's Encrypt will send you certificate " +
+                "expiration reminders)") )
             echo ""
     
             $letsEncryptPath = "${outputDir}/letsencrypt"
