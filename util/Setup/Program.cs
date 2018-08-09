@@ -245,6 +245,10 @@ namespace Bit.Setup
                         "CREATE DATABASE [vault];", connection);
                     command.Connection.Open();
                     command.ExecuteNonQuery();
+                    command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
+                        "FROM sys.databases WHERE [name] = 'vault') = 1) " +
+                        "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
+                    command.ExecuteNonQuery();
                 }
 
                 var upgrader = DeployChanges.To
