@@ -21,7 +21,7 @@ namespace Bit.Api.Jobs
         {
             var everyTopOfTheHourTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("* * * * * ?")
+                .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var everyTopOfTheSixthHourTrigger = TriggerBuilder.Create()
                 .StartNow()
