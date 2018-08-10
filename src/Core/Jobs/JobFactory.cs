@@ -2,7 +2,7 @@
 using Quartz;
 using Quartz.Spi;
 
-namespace Bit.Api.Jobs
+namespace Bit.Core.Jobs
 {
     public class JobFactory : IJobFactory
     {

@@ -1,34 +1,26 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Bit.Core.Jobs;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Bit.Api.Jobs
 {
-    public class ValidateUsersJob : IJob
+    public class ValidateUsersJob : BaseJob
     {
         private readonly ILicensingService _licensingService;
-        private readonly ILogger<ValidateUsersJob> _logger;
 
         public ValidateUsersJob(
             ILicensingService licensingService,
             ILogger<ValidateUsersJob> logger)
+            : base(logger)
         {
             _licensingService = licensingService;
-            _logger = logger;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            try
-            {
-                await _licensingService.ValidateUsersAsync();
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(2, e, "Error performing {0}.", nameof(ValidateUsersJob));
-            }
+            await _licensingService.ValidateUsersAsync();
         }
     }
 }
