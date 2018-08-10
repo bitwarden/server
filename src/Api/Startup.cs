@@ -159,7 +159,8 @@ namespace Bit.Api
                 }
 
                 if(e.Level == LogEventLevel.Information &&
-                    (context.Contains(typeof(IpRateLimitMiddleware).FullName) || context.StartsWith("\"Bit.Api.Jobs")))
+                    (context.Contains(typeof(IpRateLimitMiddleware).FullName) || 
+                    context.StartsWith("\"Bit.Api.Jobs") || context.StartsWith("\"Bit.Core.Jobs")))
                 {
                     return true;
                 }

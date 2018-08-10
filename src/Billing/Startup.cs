@@ -58,6 +58,10 @@ namespace Bit.Billing
                 config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+            // Jobs service
+            Jobs.JobsHostedService.AddJobsServices(services);
+            services.AddHostedService<Jobs.JobsHostedService>();
         }
 
         public void Configure(
@@ -67,7 +71,17 @@ namespace Bit.Billing
             GlobalSettings globalSettings,
             ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
+            {
+                var context = e.Properties["SourceContext"].ToString();
+                if(e.Level == LogEventLevel.Information &&
+                    (context.StartsWith("\"Bit.Billing.Jobs") || context.StartsWith("\"Bit.Core.Jobs")))
+                {
+                    return true;
+                }
+
+                return e.Level >= LogEventLevel.Error;
+            });
 
             if(env.IsDevelopment())
             {

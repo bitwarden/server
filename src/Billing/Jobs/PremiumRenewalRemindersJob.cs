@@ -1,27 +1,30 @@
-﻿using Bit.Core;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core;
+using Bit.Core.Jobs;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Quartz;
 
-namespace Bit.Billing.Controllers
+namespace Bit.Billing.Jobs
 {
-    [Route("jobs")]
-    public class JobsController : Controller
+    public class PremiumRenewalRemindersJob : BaseJob
     {
         private readonly BillingSettings _billingSettings;
         private readonly GlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
 
-        public JobsController(
+        public PremiumRenewalRemindersJob(
             IOptions<BillingSettings> billingSettings,
             GlobalSettings globalSettings,
             IUserRepository userRepository,
-            IMailService mailService)
+            IMailService mailService,
+            ILogger<PremiumRenewalRemindersJob> logger)
+            : base(logger)
         {
             _billingSettings = billingSettings?.Value;
             _globalSettings = globalSettings;
@@ -29,14 +32,8 @@ namespace Bit.Billing.Controllers
             _mailService = mailService;
         }
 
-        [HttpPost("premium-renewal-reminders")]
-        public async Task<IActionResult> PostPremiumRenewalReminders([FromQuery] string key)
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            if(key != _billingSettings.JobsKey)
-            {
-                return new BadRequestResult();
-            }
-
             var users = await _userRepository.GetManyByPremiumRenewalAsync();
             foreach(var user in users)
             {
@@ -50,8 +47,6 @@ namespace Bit.Billing.Controllers
                 }
                 await _userRepository.UpdateRenewalReminderDateAsync(user.Id, DateTime.UtcNow);
             }
-
-            return new OkResult();
         }
     }
 }
