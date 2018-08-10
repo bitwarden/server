@@ -64,12 +64,23 @@ namespace Bit.Icons.Services
                 uri = parsedHttpUri;
                 response = await GetAndFollowAsync(uri, 2);
 
-                if((response == null || !response.IsSuccessStatusCode) &&
-                    Uri.TryCreate($"https://www.{parsedHttpsUri.Host}", UriKind.Absolute, out var parsedWwwUri))
+                if(response == null || !response.IsSuccessStatusCode)
                 {
-                    Cleanup(response);
-                    uri = parsedWwwUri;
-                    response = await GetAndFollowAsync(uri, 2);
+                    var dotCount = domain.Count(c => c == '.');
+                    if(dotCount > 1 && DomainName.TryParseBaseDomain(domain, out var baseDomain) &&
+                        Uri.TryCreate($"https://{baseDomain}", UriKind.Absolute, out var parsedBaseUri))
+                    {
+                        Cleanup(response);
+                        uri = parsedBaseUri;
+                        response = await GetAndFollowAsync(uri, 2);
+                    }
+                    else if(dotCount < 2 &&
+                        Uri.TryCreate($"https://www.{parsedHttpsUri.Host}", UriKind.Absolute, out var parsedWwwUri))
+                    {
+                        Cleanup(response);
+                        uri = parsedWwwUri;
+                        response = await GetAndFollowAsync(uri, 2);
+                    }
                 }
             }
 
