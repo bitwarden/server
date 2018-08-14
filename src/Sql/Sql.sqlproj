@@ -230,5 +230,6 @@
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteExpired.sql" />
     <Build Include="dbo\Stored Procedures\U2f_DeleteOld.sql" />
+    <Build Include="dbo\Stored Procedures\User_ReadKdfByEmail.sql" />
   </ItemGroup>
 </Project>

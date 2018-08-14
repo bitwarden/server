@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Dapper;
 
@@ -30,6 +31,19 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_ReadByEmail]",
+                    new { Email = email },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
+        public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<UserKdfInformation>(
+                    $"[{Schema}].[{Table}_ReadKdfByEmail]",
                     new { Email = email },
                     commandType: CommandType.StoredProcedure);
 

@@ -24,6 +24,8 @@
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
     @LicenseKey VARCHAR(100),
+    @Kdf TINYINT,
+    @KdfIterations INT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -57,6 +59,8 @@ BEGIN
         [GatewayCustomerId],
         [GatewaySubscriptionId],
         [LicenseKey],
+        [Kdf],
+        [KdfIterations],
         [CreationDate],
         [RevisionDate]
     )
@@ -87,6 +91,8 @@ BEGIN
         @GatewayCustomerId,
         @GatewaySubscriptionId,
         @LicenseKey,
+        @Kdf,
+        @KdfIterations,
         @CreationDate,
         @RevisionDate
     )

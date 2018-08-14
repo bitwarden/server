@@ -1,0 +1,33 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
+
+namespace Bit.Core.Models.Api
+{
+    public class KdfRequestModel : PasswordRequestModel, IValidatableObject
+    {
+        [Required]
+        public KdfType? Kdf { get; set; }
+        [Required]
+        public int? KdfIterations { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(Kdf.HasValue && KdfIterations.HasValue)
+            {
+                switch(Kdf.Value)
+                {
+                    case KdfType.PBKDF2:
+                        if(KdfIterations.Value < 5000 || KdfIterations.Value > 1_000_000)
+                        {
+                            yield return new ValidationResult("KDF iterations must be between 5000 and 1000000.");
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+}

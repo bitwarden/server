@@ -20,6 +20,7 @@ namespace Bit.Api.Controllers
     public class AccountsController : Controller
     {
         private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licenseService;
@@ -27,16 +28,30 @@ namespace Bit.Api.Controllers
 
         public AccountsController(
             IUserService userService,
+            IUserRepository userRepository,
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licenseService,
             GlobalSettings globalSettings)
         {
             _userService = userService;
+            _userRepository = userRepository;
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
             _licenseService = licenseService;
             _globalSettings = globalSettings;
+        }
+
+        [HttpPost("prelogin")]
+        [AllowAnonymous]
+        public async Task<PreloginResponseModel> PostPrelogin([FromBody]PreloginRequestModel model)
+        {
+            var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
+            if(kdfInformation == null)
+            {
+                throw new NotFoundException();
+            }
+            return new PreloginResponseModel(kdfInformation);
         }
 
         [HttpPost("register")]
@@ -156,6 +171,31 @@ namespace Bit.Api.Controllers
 
             var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
                 model.NewMasterPasswordHash, model.Key);
+            if(result.Succeeded)
+            {
+                return;
+            }
+
+            foreach(var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+        }
+
+        [HttpPost("kdf")]
+        public async Task PostKdf([FromBody]KdfRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
+                model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value);
             if(result.Succeeded)
             {
                 return;

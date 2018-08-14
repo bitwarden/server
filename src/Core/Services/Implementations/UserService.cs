@@ -446,6 +446,34 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
+        public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
+            string key, KdfType kdf, int kdfIterations)
+        {
+            if(user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            if(await CheckPasswordAsync(user, masterPassword))
+            {
+                var result = await UpdatePasswordHash(user, newMasterPassword);
+                if(!result.Succeeded)
+                {
+                    return result;
+                }
+
+                user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                user.Key = key;
+                user.Kdf = kdf;
+                user.KdfIterations = kdfIterations;
+                await _userRepository.ReplaceAsync(user);
+                return IdentityResult.Success;
+            }
+
+            Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
+            return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
+        }
+
         public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
@@ -477,7 +505,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Success;
             }
 
-            Logger.LogWarning("Update key for user {userId}.", user.Id);
+            Logger.LogWarning("Update key failed for user {userId}.", user.Id);
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 

@@ -24,6 +24,8 @@
     [GatewayCustomerId]               VARCHAR (50)     NULL,
     [GatewaySubscriptionId]           VARCHAR (50)     NULL,
     [LicenseKey]                      VARCHAR (100)    NULL,
+    [Kdf]                             TINYINT          NOT NULL,
+    [KdfIterations]                   INT              NOT NULL,
     [CreationDate]                    DATETIME2 (7)    NOT NULL,
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
