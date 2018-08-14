@@ -8,7 +8,9 @@ namespace Bit.Setup
         private const string ConfFile = "/bitwarden/nginx/default.conf";
         private const string SslCiphers =
             "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:" +
-            "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256";
+            "ECDHE-RSA-CHACHA20-POLY1305:" +
+            "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:" +
+            "ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256";
         private const string ContentSecurityPolicy =
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
