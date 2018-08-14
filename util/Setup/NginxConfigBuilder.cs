@@ -7,10 +7,9 @@ namespace Bit.Setup
     {
         private const string ConfFile = "/bitwarden/nginx/default.conf";
         private const string SslCiphers =
-            "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:" +
-            "ECDHE-RSA-CHACHA20-POLY1305:" +
-            "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:" +
-            "ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256";
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:" +
+            "ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:" +
+            "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
         private const string ContentSecurityPolicy =
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
@@ -115,7 +114,7 @@ server {{
                     }
 
                     sw.WriteLine($@"
-  # SSL protocol TLSv1.2 is allowed. Disabed SSLv3, TLSv1, and TLSv1.1
+  # SSL protocol TLSv1.2 is allowed. Disabled SSLv3, TLSv1, and TLSv1.1
   ssl_protocols TLSv1.2;
   # Enable most secure cipher suites only.
   ssl_ciphers ""{SslCiphers}"";
