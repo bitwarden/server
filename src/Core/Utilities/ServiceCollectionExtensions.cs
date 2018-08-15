@@ -22,6 +22,9 @@ using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using IdentityServer4.AccessTokenValidation;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.Utilities
 {
@@ -227,6 +230,39 @@ namespace Bit.Core.Utilities
             });
 
             return identityBuilder;
+        }
+
+        public static void AddIdentityAuthenticationServices(
+            this IServiceCollection services, GlobalSettings globalSettings, IHostingEnvironment environment,
+            Action<AuthorizationOptions> addAuthorization = null)
+        {
+            services
+                .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                .AddIdentityServerAuthentication(options =>
+                {
+                    options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
+                    options.RequireHttpsMetadata = !environment.IsDevelopment() &&
+                        globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
+                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
+                    options.NameClaimType = ClaimTypes.Email;
+                    options.SupportedTokens = SupportedTokens.Jwt;
+                });
+
+            services.AddAuthorization(config =>
+            {
+                if(addAuthorization != null)
+                {
+                    addAuthorization?.Invoke(config);
+                }
+                else
+                {
+                    config.AddPolicy("Application", policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    });
+                }
+            });
         }
 
         public static IIdentityServerBuilder AddCustomIdentityServerServices(

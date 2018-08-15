@@ -1,9 +1,5 @@
-﻿using System.Security.Claims;
-using Bit.Core;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core;
 using Bit.Core.Utilities;
-using IdentityModel;
-using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -41,26 +37,7 @@ namespace Bit.Hub
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services
-                .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-                .AddIdentityServerAuthentication(options =>
-                {
-                    options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
-                    options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
-                        globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
-                    options.NameClaimType = ClaimTypes.Email;
-                    options.SupportedTokens = SupportedTokens.Jwt;
-                });
-
-            services.AddAuthorization(config =>
-            {
-                config.AddPolicy("Application", policy =>
-                {
-                    policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
-                });
-            });
+            services.AddIdentityAuthenticationServices(globalSettings, Environment);
 
             // SignalR
             services.AddSignalR();

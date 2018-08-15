@@ -1,6 +1,4 @@
-﻿using System;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,9 +13,7 @@ using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
-using IdentityServer4.AccessTokenValidation;
 using jsreport.AspNetCore;
-using Bit.Core.IdentityServer;
 using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Api
@@ -73,20 +69,7 @@ namespace Bit.Api
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
-
-            services
-                .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-                .AddIdentityServerAuthentication(options =>
-                {
-                    options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
-                    options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
-                        globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                    options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
-                    options.NameClaimType = ClaimTypes.Email;
-                    options.SupportedTokens = SupportedTokens.Jwt;
-                });
-
-            services.AddAuthorization(config =>
+            services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
             {
                 config.AddPolicy("Application", policy =>
                 {
@@ -159,7 +142,7 @@ namespace Bit.Api
                 }
 
                 if(e.Level == LogEventLevel.Information &&
-                    (context.Contains(typeof(IpRateLimitMiddleware).FullName) || 
+                    (context.Contains(typeof(IpRateLimitMiddleware).FullName) ||
                     context.StartsWith("\"Bit.Api.Jobs") || context.StartsWith("\"Bit.Core.Jobs")))
                 {
                     return true;
