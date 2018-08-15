@@ -26,14 +26,16 @@ namespace Bit.Core.Jobs
         public Task JobToBeExecuted(IJobExecutionContext context,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            _logger.LogInformation("Starting job {0} at {1}.", context.JobDetail.JobType.Name, DateTime.UtcNow);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null, "Starting job {0} at {1}.",
+                context.JobDetail.JobType.Name, DateTime.UtcNow);
             return Task.FromResult(0);
         }
 
         public Task JobWasExecuted(IJobExecutionContext context, JobExecutionException jobException,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            _logger.LogInformation("Finished job {0} at {1}.", context.JobDetail.JobType.Name, DateTime.UtcNow);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null, "Finished job {0} at {1}.",
+                context.JobDetail.JobType.Name, DateTime.UtcNow);
             return Task.FromResult(0);
         }
     }

@@ -64,7 +64,8 @@ namespace Bit.Core.Services
             }
 
             var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-            _logger.LogInformation("Validating licenses for {0} organizations.", enabledOrgs.Count);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Validating licenses for {0} organizations.", enabledOrgs.Count);
 
             foreach(var org in enabledOrgs)
             {
@@ -95,7 +96,8 @@ namespace Bit.Core.Services
 
         private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
         {
-            _logger.LogInformation("Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
                 org.Id, org.Name, reason);
             org.Enabled = false;
             org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
@@ -111,7 +113,8 @@ namespace Bit.Core.Services
             }
 
             var premiumUsers = await _userRepository.GetManyByPremiumAsync(true);
-            _logger.LogInformation("Validating premium for {0} users.", premiumUsers.Count);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Validating premium for {0} users.", premiumUsers.Count);
 
             foreach(var user in premiumUsers)
             {
@@ -119,14 +122,16 @@ namespace Bit.Core.Services
             }
 
             var nonPremiumUsers = await _userRepository.GetManyByPremiumAsync(false);
-            _logger.LogInformation("Checking to restore premium for {0} users.", nonPremiumUsers.Count);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Checking to restore premium for {0} users.", nonPremiumUsers.Count);
 
             foreach(var user in nonPremiumUsers)
             {
                 var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
                 if(details.Any(d => d.SelfHost && d.UsersGetPremium && d.Enabled))
                 {
-                    _logger.LogInformation("Granting premium to user {0}({1}) because they are in an active organization " +
+                    _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                        "Granting premium to user {0}({1}) because they are in an active organization " +
                         "with premium features.", user.Id, user.Email);
 
                     user.Premium = true;
@@ -170,7 +175,8 @@ namespace Bit.Core.Services
                 _userCheckCache.Add(user.Id, now);
             }
 
-            _logger.LogInformation("Validating premium license for user {0}({1}).", user.Id, user.Email);
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Validating premium license for user {0}({1}).", user.Id, user.Email);
             return await ProcessUserValidationAsync(user);
         }
 
@@ -196,8 +202,8 @@ namespace Bit.Core.Services
 
             if(!valid)
             {
-                _logger.LogInformation("User {0}({1}) has an invalid license and premium is being disabled.",
-                    user.Id, user.Email);
+                _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                    "User {0}({1}) has an invalid license and premium is being disabled.", user.Id, user.Email);
 
                 user.Premium = false;
                 user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;

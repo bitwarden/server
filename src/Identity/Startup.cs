@@ -75,15 +75,15 @@ namespace Bit.Identity
             loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
             {
                 var context = e.Properties["SourceContext"].ToString();
+                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
+                {
+                    return true;
+                }
+
                 if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
                     context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                 {
                     return e.Level > LogEventLevel.Error;
-                }
-
-                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
-                {
-                    return true;
                 }
 
                 return e.Level >= LogEventLevel.Error;

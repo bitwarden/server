@@ -22,14 +22,23 @@ namespace Bit.Core.Utilities
                 return factory;
             }
 
-            if(filter == null)
+            bool inclusionPredicate(LogEvent e)
             {
-                filter = (e) => true;
+                if(filter == null)
+                {
+                    return true;
+                }
+                var eventId = e.Properties.ContainsKey("EventId") ? e.Properties["EventId"].ToString() : null;
+                if(eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
+                {
+                    return true;
+                }
+                return filter(e);
             }
 
             var config = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .Filter.ByIncludingOnly(filter);
+                .Filter.ByIncludingOnly(inclusionPredicate);
 
             if(CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
                 CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))

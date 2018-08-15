@@ -16,7 +16,7 @@ namespace Bit.Core.Utilities
         private readonly IpRateLimitOptions _options;
         private readonly IMemoryCache _memoryCache;
         private readonly IBlockIpService _blockIpService;
-        private readonly ILogger<IpRateLimitMiddleware> _logger;
+        private readonly ILogger<CustomIpRateLimitMiddleware> _logger;
 
         public CustomIpRateLimitMiddleware(
             IMemoryCache memoryCache,
@@ -25,7 +25,7 @@ namespace Bit.Core.Utilities
             IOptions<IpRateLimitOptions> options,
             IRateLimitCounterStore counterStore,
             IIpPolicyStore policyStore,
-            ILogger<IpRateLimitMiddleware> logger,
+            ILogger<CustomIpRateLimitMiddleware> logger,
             IIpAddressParser ipParser = null)
             : base(next, options, counterStore, policyStore, logger, ipParser)
         {
@@ -59,11 +59,13 @@ namespace Bit.Core.Utilities
             if(blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
-                _logger.LogInformation($"Banned {identity.ClientIp}. \nInfo: \n{GetRequestInfo(httpContext)}");
+                _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                    "Banned {0}. \nInfo: \n{1}", identity.ClientIp, GetRequestInfo(httpContext));
             }
             else
             {
-                _logger.LogInformation($"Request blocked {identity.ClientIp}. \nInfo: \n{GetRequestInfo(httpContext)}");
+                _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                    "Request blocked {0}. \nInfo: \n{1}", identity.ClientIp, GetRequestInfo(httpContext));
                 _memoryCache.Set(key, blockedCount,
                     new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
