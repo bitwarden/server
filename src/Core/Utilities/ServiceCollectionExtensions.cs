@@ -234,7 +234,7 @@ namespace Bit.Core.Utilities
 
         public static void AddIdentityAuthenticationServices(
             this IServiceCollection services, GlobalSettings globalSettings, IHostingEnvironment environment,
-            Action<AuthorizationOptions> addAuthorization = null)
+            Action<AuthorizationOptions> addAuthorization)
         {
             services
                 .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
@@ -248,21 +248,13 @@ namespace Bit.Core.Utilities
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
 
-            services.AddAuthorization(config =>
+            if(addAuthorization != null)
             {
-                if(addAuthorization != null)
+                services.AddAuthorization(config =>
                 {
-                    addAuthorization?.Invoke(config);
-                }
-                else
-                {
-                    config.AddPolicy("Application", policy =>
-                    {
-                        policy.RequireAuthenticatedUser();
-                        policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
-                    });
-                }
-            });
+                    addAuthorization.Invoke(config);
+                });
+            }
         }
 
         public static IIdentityServerBuilder AddCustomIdentityServerServices(

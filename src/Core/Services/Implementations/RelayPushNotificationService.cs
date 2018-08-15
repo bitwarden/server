@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
-    public class RelayPushNotificationService : BaseRelayPushNotificationService, IPushNotificationService
+    public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<RelayPushNotificationService> _logger;
@@ -19,7 +19,13 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<RelayPushNotificationService> logger)
-            : base(globalSettings, logger)
+            : base(
+                  globalSettings.PushRelayBaseUri,
+                  globalSettings.Installation.IdentityUri,
+                  "api.push",
+                  $"installation.{globalSettings.Installation.Id}",
+                  globalSettings.Installation.Key,
+                  logger)
         {
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
@@ -168,12 +174,12 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/send"))
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/send"))
             };
 
             try
             {
-                await PushClient.SendAsync(message);
+                await Client.SendAsync(message);
             }
             catch(Exception e)
             {

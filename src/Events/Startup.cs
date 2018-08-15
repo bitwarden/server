@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -36,7 +37,15 @@ namespace Bit.Events
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddIdentityAuthenticationServices(globalSettings, Environment);
+            services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
+            {
+                config.AddPolicy("Application", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                });
+            });
 
             // Services
             services.AddScoped<IEventService, EventService>();

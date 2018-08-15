@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Hub
 {
-    [Authorize("Application")]
+    [Authorize("Internal")]
     public class EventsController : Controller
     {
         private readonly IHubContext<SyncHub> _syncHubContext;

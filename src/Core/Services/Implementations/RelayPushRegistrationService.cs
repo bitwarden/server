@@ -9,14 +9,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
-    public class RelayPushRegistrationService : BaseRelayPushNotificationService, IPushRegistrationService
+    public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
     {
         private readonly ILogger<RelayPushRegistrationService> _logger;
 
         public RelayPushRegistrationService(
             GlobalSettings globalSettings,
             ILogger<RelayPushRegistrationService> logger)
-            : base(globalSettings, logger)
+            : base(
+                  globalSettings.PushRelayBaseUri,
+                  globalSettings.Installation.IdentityUri,
+                  "api.push",
+                  $"installation.{globalSettings.Installation.Id}",
+                  globalSettings.Installation.Key,
+                  logger)
         {
             _logger = logger;
         }
@@ -42,12 +48,12 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/register"))
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/register"))
             };
 
             try
             {
-                await PushClient.SendAsync(message);
+                await Client.SendAsync(message);
             }
             catch(Exception e)
             {
@@ -66,12 +72,12 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(AccessToken)
             {
                 Method = HttpMethod.Delete,
-                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/", deviceId))
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/", deviceId))
             };
 
             try
             {
-                await PushClient.SendAsync(message);
+                await Client.SendAsync(message);
             }
             catch(Exception e)
             {
@@ -96,12 +102,12 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Put,
-                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/add-organization"))
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/add-organization"))
             };
 
             try
             {
-                await PushClient.SendAsync(message);
+                await Client.SendAsync(message);
             }
             catch(Exception e)
             {
@@ -126,12 +132,12 @@ namespace Bit.Core.Services
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = HttpMethod.Put,
-                RequestUri = new Uri(string.Concat(PushClient.BaseAddress, "/push/delete-organization"))
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/delete-organization"))
             };
 
             try
             {
-                await PushClient.SendAsync(message);
+                await Client.SendAsync(message);
             }
             catch(Exception e)
             {

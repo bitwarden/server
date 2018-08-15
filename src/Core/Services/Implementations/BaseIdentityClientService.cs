@@ -12,35 +12,44 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
-    public abstract class BaseRelayPushNotificationService
+    public abstract class BaseIdentityClientService
     {
+        private readonly string _identityScope;
+        private readonly string _identityClientId;
+        private readonly string _identityClientSecret;
+        private readonly ILogger<BaseIdentityClientService> _logger;
+
         private dynamic _decodedToken;
         private DateTime? _nextAuthAttempt = null;
-        private readonly ILogger<BaseRelayPushNotificationService> _logger;
 
-        public BaseRelayPushNotificationService(
-            GlobalSettings globalSettings,
-            ILogger<BaseRelayPushNotificationService> logger)
+        public BaseIdentityClientService(
+            string baseClientServerUri,
+            string baseIdentityServerUri,
+            string identityScope,
+            string identityClientId,
+            string identityClientSecret,
+            ILogger<BaseIdentityClientService> logger)
         {
+            _identityScope = identityScope;
+            _identityClientId = identityClientId;
+            _identityClientSecret = identityClientSecret;
             _logger = logger;
-            GlobalSettings = globalSettings;
 
-            PushClient = new HttpClient
+            Client = new HttpClient
             {
-                BaseAddress = new Uri(globalSettings.PushRelayBaseUri)
+                BaseAddress = new Uri(baseClientServerUri)
             };
-            PushClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             IdentityClient = new HttpClient
             {
-                BaseAddress = new Uri(globalSettings.Installation.IdentityUri)
+                BaseAddress = new Uri(baseIdentityServerUri)
             };
             IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        protected HttpClient PushClient { get; private set; }
+        protected HttpClient Client { get; private set; }
         protected HttpClient IdentityClient { get; private set; }
-        protected GlobalSettings GlobalSettings { get; private set; }
         protected string AccessToken { get; private set; }
 
         protected async Task<bool> HandleTokenStateAsync()
@@ -63,9 +72,9 @@ namespace Bit.Core.Services
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
-                    { "scope", "api.push" },
-                    { "client_id", $"installation.{GlobalSettings.Installation.Id}" },
-                    { "client_secret", $"{GlobalSettings.Installation.Key}" }
+                    { "scope", _identityScope },
+                    { "client_id", _identityClientId },
+                    { "client_secret", _identityClientSecret }
                 })
             };
 
@@ -76,7 +85,7 @@ namespace Bit.Core.Services
             }
             catch(Exception e)
             {
-                _logger.LogError(12339, e, "Unable to auth for push.");
+                _logger.LogError(12339, e, "Unable to authenticate with identity server.");
             }
 
             if(response == null)

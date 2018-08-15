@@ -311,12 +311,9 @@ namespace Bit.Core.Utilities
 
         public static bool SettingHasValue(string setting)
         {
-            if(string.IsNullOrWhiteSpace(setting) || setting.Equals("SECRET") || setting.Equals("REPLACE"))
-            {
-                return false;
-            }
-
-            return true;
+            var normalizedSetting = setting?.ToLowerInvariant();
+            return !string.IsNullOrWhiteSpace(normalizedSetting) && !normalizedSetting.Equals("secret") &&
+                !normalizedSetting.Equals("replace");
         }
 
         public static string Base64UrlEncode(byte[] input)

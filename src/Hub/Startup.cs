@@ -1,5 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -37,7 +38,20 @@ namespace Bit.Hub
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddIdentityAuthenticationServices(globalSettings, Environment);
+            services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
+            {
+                config.AddPolicy("Application", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                });
+                config.AddPolicy("Internal", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "internal");
+                });
+            });
 
             // SignalR
             services.AddSignalR();
