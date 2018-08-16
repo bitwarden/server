@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     public class Program
     {

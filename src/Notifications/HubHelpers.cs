@@ -4,12 +4,12 @@ using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     public static class HubHelpers
     {
         public static async Task SendNotificationToHubAsync(PushNotificationData<object> notification,
-            IHubContext<SyncHub> hubContext, CancellationToken cancellationToken = default(CancellationToken))
+            IHubContext<NotificationsHub> hubContext, CancellationToken cancellationToken = default(CancellationToken))
         {
             switch(notification.Type)
             {

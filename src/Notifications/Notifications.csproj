@@ -3,8 +3,8 @@
   <PropertyGroup>
     <Version>1.23.0</Version>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RootNamespace>Bit.Hub</RootNamespace>
-    <UserSecretsId>bitwarden-Hub</UserSecretsId>
+    <RootNamespace>Bit.Notifications</RootNamespace>
+    <UserSecretsId>bitwarden-Notifications</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

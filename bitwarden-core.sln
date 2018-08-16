@@ -43,7 +43,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventsProcessor", "src\Even
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Admin", "src\Admin\Admin.csproj", "{B131CEF3-89FB-4C90-ADB0-9E9C4246EB56}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hub", "src\Hub\Hub.csproj", "{28635027-20E5-42FA-B218-B6C878DE5350}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Notifications", "src\Notifications\Notifications.csproj", "{28635027-20E5-42FA-B218-B6C878DE5350}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

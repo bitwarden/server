@@ -11,19 +11,21 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     public class AzureQueueHostedService : IHostedService, IDisposable
     {
         private readonly ILogger _logger;
-        private readonly IHubContext<SyncHub> _hubContext;
+        private readonly IHubContext<NotificationsHub> _hubContext;
         private readonly GlobalSettings _globalSettings;
 
         private Task _executingTask;
         private CancellationTokenSource _cts;
         private CloudQueue _queue;
 
-        public AzureQueueHostedService(ILogger<AzureQueueHostedService> logger, IHubContext<SyncHub> hubContext,
+        public AzureQueueHostedService(
+            ILogger<AzureQueueHostedService> logger, 
+            IHubContext<NotificationsHub> hubContext,
             GlobalSettings globalSettings)
         {
             _logger = logger;
@@ -56,7 +58,7 @@ namespace Bit.Hub
 
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var storageAccount = CloudStorageAccount.Parse(_globalSettings.Events.ConnectionString);
+            var storageAccount = CloudStorageAccount.Parse(_globalSettings.Notifications.ConnectionString);
             var queueClient = storageAccount.CreateCloudQueueClient();
             _queue = queueClient.GetQueueReference("notifications");
 

@@ -3,10 +3,10 @@ using System.Threading.Tasks;
 using Bit.Core;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     [Authorize("Application")]
-    public class SyncHub : Microsoft.AspNetCore.SignalR.Hub
+    public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
     {
         public override async Task OnConnectedAsync()
         {

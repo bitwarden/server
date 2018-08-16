@@ -5,23 +5,23 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     [Authorize("Internal")]
     [SelfHosted(SelfHostedOnly = true)]
     public class NotificationsController : Controller
     {
-        private readonly IHubContext<SyncHub> _syncHubContext;
+        private readonly IHubContext<NotificationsHub> _hubContext;
 
-        public NotificationsController(IHubContext<SyncHub> syncHubContext)
+        public NotificationsController(IHubContext<NotificationsHub> hubContext)
         {
-            _syncHubContext = syncHubContext;
+            _hubContext = hubContext;
         }
 
         [HttpPost("~/notifications")]
         public async Task PostNotification([FromBody]PushNotificationData<object> model)
         {
-            await HubHelpers.SendNotificationToHubAsync(model, _syncHubContext);
+            await HubHelpers.SendNotificationToHubAsync(model, _hubContext);
         }
     }
 }

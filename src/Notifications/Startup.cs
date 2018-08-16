@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
 using Serilog.Events;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     public class Startup
     {
@@ -61,7 +61,11 @@ namespace Bit.Hub
             services.AddMvc();
 
             // Hosted Services
-            services.AddHostedService<AzureQueueHostedService>();
+            if(!globalSettings.SelfHosted &&
+                CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddHostedService<AzureQueueHostedService>();
+            }
         }
 
         public void Configure(
@@ -101,7 +105,7 @@ namespace Bit.Hub
             // Add SignlarR
             app.UseSignalR(routes =>
             {
-                routes.MapHub<SyncHub>("/sync");
+                routes.MapHub<NotificationsHub>("/notifications-hub");
             });
 
             // Add MVC to the request pipeline.

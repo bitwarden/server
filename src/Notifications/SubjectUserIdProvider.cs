@@ -1,7 +1,7 @@
 ﻿using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Hub
+namespace Bit.Notifications
 {
     public class SubjectUserIdProvider : IUserIdProvider
     {
