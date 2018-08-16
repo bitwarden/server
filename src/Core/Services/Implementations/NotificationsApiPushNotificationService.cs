@@ -10,7 +10,7 @@ using System.Net.Http;
 
 namespace Bit.Core.Services
 {
-    public class HubApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
+    public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
     {
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -20,10 +20,10 @@ namespace Bit.Core.Services
             NullValueHandling = NullValueHandling.Ignore
         };
 
-        public HubApiPushNotificationService(
+        public NotificationsApiPushNotificationService(
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<HubApiPushNotificationService> logger)
+            ILogger<NotificationsApiPushNotificationService> logger)
             : base(
                  globalSettings.BaseServiceUri.InternalNotifications,
                  globalSettings.BaseServiceUri.InternalIdentity,

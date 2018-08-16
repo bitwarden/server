@@ -17,7 +17,7 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<RelayPushNotificationService> relayLogger,
-            ILogger<HubApiPushNotificationService> hubLogger)
+            ILogger<NotificationsApiPushNotificationService> hubLogger)
         {
             if(globalSettings.SelfHosted)
             {
@@ -30,7 +30,8 @@ namespace Bit.Core.Services
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
-                    // _services.Add(new HubApiPushNotificationService(globalSettings, httpContextAccessor, hubLogger));
+                    // _services.Add(new NotificationsApiPushNotificationService(
+                    //    globalSettings, httpContextAccessor, hubLogger));
                 }
             }
             else
