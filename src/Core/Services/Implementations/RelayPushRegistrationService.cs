@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net.Http;
-using System;
 using Bit.Core.Models.Api;
 using Bit.Core.Enums;
 using System.Linq;
@@ -30,12 +29,6 @@ namespace Bit.Core.Services
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
             string identifier, DeviceType type)
         {
-            var tokenStateResponse = await HandleTokenStateAsync();
-            if(!tokenStateResponse)
-            {
-                return;
-            }
-
             var requestModel = new PushRegistrationRequestModel
             {
                 DeviceId = deviceId,
@@ -44,45 +37,12 @@ namespace Bit.Core.Services
                 Type = type,
                 UserId = userId
             };
-
-            var message = new TokenHttpRequestMessage(requestModel, AccessToken)
-            {
-                Method = HttpMethod.Post,
-                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/register"))
-            };
-
-            try
-            {
-                await Client.SendAsync(message);
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(12335, e, "Unable to create push registration.");
-            }
+            await SendAsync(HttpMethod.Post, "/push/register", requestModel);
         }
 
         public async Task DeleteRegistrationAsync(string deviceId)
         {
-            var tokenStateResponse = await HandleTokenStateAsync();
-            if(!tokenStateResponse)
-            {
-                return;
-            }
-
-            var message = new TokenHttpRequestMessage(AccessToken)
-            {
-                Method = HttpMethod.Delete,
-                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/", deviceId))
-            };
-
-            try
-            {
-                await Client.SendAsync(message);
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(12336, e, "Unable to delete push registration.");
-            }
+            await SendAsync(HttpMethod.Delete, string.Concat("/push/", deviceId));
         }
 
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -92,27 +52,8 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var tokenStateResponse = await HandleTokenStateAsync();
-            if(!tokenStateResponse)
-            {
-                return;
-            }
-
             var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
-            var message = new TokenHttpRequestMessage(requestModel, AccessToken)
-            {
-                Method = HttpMethod.Put,
-                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/add-organization"))
-            };
-
-            try
-            {
-                await Client.SendAsync(message);
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(12337, e, "Unable to add user org push registration.");
-            }
+            await SendAsync(HttpMethod.Put, "/push/add-organization", requestModel);
         }
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -122,27 +63,8 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var tokenStateResponse = await HandleTokenStateAsync();
-            if(!tokenStateResponse)
-            {
-                return;
-            }
-
             var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
-            var message = new TokenHttpRequestMessage(requestModel, AccessToken)
-            {
-                Method = HttpMethod.Put,
-                RequestUri = new Uri(string.Concat(Client.BaseAddress, "/push/delete-organization"))
-            };
-
-            try
-            {
-                await Client.SendAsync(message);
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(12338, e, "Unable to delete user org push registration.");
-            }
+            await SendAsync(HttpMethod.Put, "/push/delete-organization", requestModel);
         }
     }
 }

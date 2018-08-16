@@ -70,49 +70,7 @@ namespace Bit.Hub
                     {
                         var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(
                             message.AsString);
-                        switch(notification.Type)
-                        {
-                            case Core.Enums.PushType.SyncCipherUpdate:
-                            case Core.Enums.PushType.SyncCipherCreate:
-                            case Core.Enums.PushType.SyncCipherDelete:
-                            case Core.Enums.PushType.SyncLoginDelete:
-                                var cipherNotification =
-                                    JsonConvert.DeserializeObject<PushNotificationData<SyncCipherPushNotification>>(
-                                        message.AsString);
-                                if(cipherNotification.Payload.UserId.HasValue)
-                                {
-                                    await _hubContext.Clients.User(cipherNotification.Payload.UserId.ToString())
-                                        .SendAsync("ReceiveMessage", notification, cancellationToken);
-                                }
-                                else if(cipherNotification.Payload.OrganizationId.HasValue)
-                                {
-                                    await _hubContext.Clients.Group(
-                                        $"Organization_{cipherNotification.Payload.OrganizationId}")
-                                        .SendAsync("ReceiveMessage", notification, cancellationToken);
-                                }
-                                break;
-                            case Core.Enums.PushType.SyncFolderUpdate:
-                            case Core.Enums.PushType.SyncFolderCreate:
-                            case Core.Enums.PushType.SyncFolderDelete:
-                                var folderNotification =
-                                    JsonConvert.DeserializeObject<PushNotificationData<SyncFolderPushNotification>>(
-                                        message.AsString);
-                                await _hubContext.Clients.User(folderNotification.Payload.UserId.ToString())
-                                        .SendAsync("ReceiveMessage", notification, cancellationToken);
-                                break;
-                            case Core.Enums.PushType.SyncCiphers:
-                            case Core.Enums.PushType.SyncVault:
-                            case Core.Enums.PushType.SyncOrgKeys:
-                            case Core.Enums.PushType.SyncSettings:
-                                var userNotification =
-                                    JsonConvert.DeserializeObject<PushNotificationData<SyncUserPushNotification>>(
-                                        message.AsString);
-                                await _hubContext.Clients.User(userNotification.Payload.UserId.ToString())
-                                        .SendAsync("ReceiveMessage", notification, cancellationToken);
-                                break;
-                            default:
-                                break;
-                        }
+                        await HubHelpers.SendNotificationToHubAsync(notification, _hubContext, cancellationToken);
                         await _queue.DeleteMessageAsync(message);
                     }
                 }

@@ -52,6 +52,30 @@ namespace Bit.Core.Services
         protected HttpClient IdentityClient { get; private set; }
         protected string AccessToken { get; private set; }
 
+        protected async Task SendAsync(HttpMethod method, string path, object requestModel = null)
+        {
+            var tokenStateResponse = await HandleTokenStateAsync();
+            if(!tokenStateResponse)
+            {
+                return;
+            }
+
+            var message = new TokenHttpRequestMessage(requestModel, AccessToken)
+            {
+                Method = method,
+                RequestUri = new Uri(string.Concat(Client.BaseAddress, path))
+            };
+
+            try
+            {
+                await Client.SendAsync(message);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
+            }
+        }
+
         protected async Task<bool> HandleTokenStateAsync()
         {
             if(_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
@@ -119,8 +143,11 @@ namespace Bit.Core.Services
             public TokenHttpRequestMessage(object requestObject, string token)
                 : this(token)
             {
-                var stringContent = JsonConvert.SerializeObject(requestObject);
-                Content = new StringContent(stringContent, Encoding.UTF8, "application/json");
+                if(requestObject != null)
+                {
+                    var stringContent = JsonConvert.SerializeObject(requestObject);
+                    Content = new StringContent(stringContent, Encoding.UTF8, "application/json");
+                }
             }
         }
 

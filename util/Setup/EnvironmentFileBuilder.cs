@@ -42,6 +42,7 @@ namespace Bit.Setup
                 ["globalSettings__baseServiceUri__api"] = $"{Url}/api",
                 ["globalSettings__baseServiceUri__identity"] = $"{Url}/identity",
                 ["globalSettings__baseServiceUri__admin"] = $"{Url}/admin",
+                ["globalSettings__baseServiceUri__hub"] = $"{Url}/hub",
                 ["globalSettings__sqlServer__connectionString"] = $"\"{ dbConnectionString }\"",
                 ["globalSettings__identityServer__certificatePassword"] = IdentityCertPassword,
                 ["globalSettings__attachment__baseDirectory"] = $"{OutputDirectory}/core/attachments",
@@ -129,6 +130,8 @@ globalSettings__baseServiceUri__vault=http://localhost
 globalSettings__baseServiceUri__api=http://localhost/api
 globalSettings__baseServiceUri__identity=http://localhost/identity
 globalSettings__baseServiceUri__admin=http://localhost/admin
+globalSettings__baseServiceUri__hub=http://localhost/hub
+globalSettings__baseServiceUri__internalHub=http://hub:5000
 globalSettings__baseServiceUri__internalAdmin=http://admin:5000
 globalSettings__baseServiceUri__internalIdentity=http://identity:5000
 globalSettings__baseServiceUri__internalApi=http://api:5000
