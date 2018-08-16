@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json;
 
 namespace Bit.Hub
 {
@@ -17,8 +17,8 @@ namespace Bit.Hub
                 case Core.Enums.PushType.SyncCipherCreate:
                 case Core.Enums.PushType.SyncCipherDelete:
                 case Core.Enums.PushType.SyncLoginDelete:
-                    var cipherPayload = (SyncCipherPushNotification)Convert.ChangeType(
-                        notification.Payload, typeof(SyncCipherPushNotification));
+                    var cipherPayload = JsonConvert.DeserializeObject<SyncCipherPushNotification>(
+                        JsonConvert.SerializeObject(notification.Payload));
                     if(cipherPayload.UserId.HasValue)
                     {
                         await hubContext.Clients.User(cipherPayload.UserId.ToString())
@@ -34,8 +34,8 @@ namespace Bit.Hub
                 case Core.Enums.PushType.SyncFolderUpdate:
                 case Core.Enums.PushType.SyncFolderCreate:
                 case Core.Enums.PushType.SyncFolderDelete:
-                    var folderPayload = (SyncFolderPushNotification)Convert.ChangeType(
-                        notification.Payload, typeof(SyncFolderPushNotification));
+                    var folderPayload = JsonConvert.DeserializeObject<SyncFolderPushNotification>(
+                         JsonConvert.SerializeObject(notification.Payload));
                     await hubContext.Clients.User(folderPayload.UserId.ToString())
                             .SendAsync("ReceiveMessage", notification, cancellationToken);
                     break;
@@ -43,8 +43,8 @@ namespace Bit.Hub
                 case Core.Enums.PushType.SyncVault:
                 case Core.Enums.PushType.SyncOrgKeys:
                 case Core.Enums.PushType.SyncSettings:
-                    var userPayload = (SyncUserPushNotification)Convert.ChangeType(
-                        notification.Payload, typeof(SyncUserPushNotification));
+                    var userPayload = JsonConvert.DeserializeObject<SyncUserPushNotification>(
+                         JsonConvert.SerializeObject(notification.Payload));
                     await hubContext.Clients.User(userPayload.UserId.ToString())
                             .SendAsync("ReceiveMessage", notification, cancellationToken);
                     break;

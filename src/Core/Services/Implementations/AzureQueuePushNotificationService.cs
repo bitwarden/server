@@ -25,9 +25,9 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Events.ConnectionString);
+            var storageAccount = CloudStorageAccount.Parse(globalSettings.Notifications.ConnectionString);
             var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("sync");
+            _queue = queueClient.GetQueueReference("notifications");
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
         }

@@ -58,7 +58,7 @@ namespace Bit.Hub
         {
             var storageAccount = CloudStorageAccount.Parse(_globalSettings.Events.ConnectionString);
             var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("sync");
+            _queue = queueClient.GetQueueReference("notifications");
 
             while(!cancellationToken.IsCancellationRequested)
             {

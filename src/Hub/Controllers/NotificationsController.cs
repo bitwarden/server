@@ -9,16 +9,16 @@ namespace Bit.Hub
 {
     [Authorize("Internal")]
     [SelfHosted(SelfHostedOnly = true)]
-    public class NotificationController : Controller
+    public class NotificationsController : Controller
     {
         private readonly IHubContext<SyncHub> _syncHubContext;
 
-        public NotificationController(IHubContext<SyncHub> syncHubContext)
+        public NotificationsController(IHubContext<SyncHub> syncHubContext)
         {
             _syncHubContext = syncHubContext;
         }
 
-        [HttpPost("~/notification")]
+        [HttpPost("~/notifications")]
         public async Task PostNotification([FromBody]PushNotificationData<object> model)
         {
             await HubHelpers.SendNotificationToHubAsync(model, _syncHubContext);

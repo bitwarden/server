@@ -16,7 +16,8 @@ namespace Bit.Core.Services
         public MultiServicePushNotificationService(
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<RelayPushNotificationService> relayLogger)
+            ILogger<RelayPushNotificationService> relayLogger,
+            ILogger<HubApiPushNotificationService> hubLogger)
         {
             if(globalSettings.SelfHosted)
             {
@@ -26,12 +27,22 @@ namespace Bit.Core.Services
                 {
                     _services.Add(new RelayPushNotificationService(globalSettings, httpContextAccessor, relayLogger));
                 }
-                // TODO: ApiPushNotificationService for SignalR
+                if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                    CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalHub))
+                {
+                    // _services.Add(new HubApiPushNotificationService(globalSettings, httpContextAccessor, hubLogger));
+                }
             }
             else
             {
-                _services.Add(new NotificationHubPushNotificationService(globalSettings, httpContextAccessor));
-                // _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
+                if(CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
+                {
+                    _services.Add(new NotificationHubPushNotificationService(globalSettings, httpContextAccessor));
+                }
+                if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+                {
+                    // _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
+                }
             }
         }
 
