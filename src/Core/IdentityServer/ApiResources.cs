@@ -21,6 +21,7 @@ namespace Bit.Core.IdentityServer
                     "orgadmin",
                     "orguser"
                 }),
+                new ApiResource("internal", new string[] { JwtClaimTypes.Subject }),
                 new ApiResource("api.push", new string[] { JwtClaimTypes.Subject }),
                 new ApiResource("api.licensing", new string[] { JwtClaimTypes.Subject })
             };
