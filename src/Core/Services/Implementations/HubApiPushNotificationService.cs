@@ -25,7 +25,7 @@ namespace Bit.Core.Services
             IHttpContextAccessor httpContextAccessor,
             ILogger<HubApiPushNotificationService> logger)
             : base(
-                 globalSettings.BaseServiceUri.InternalHub,
+                 globalSettings.BaseServiceUri.InternalNotifications,
                  globalSettings.BaseServiceUri.InternalIdentity,
                  "internal",
                  $"internal.{globalSettings.ProjectName}",

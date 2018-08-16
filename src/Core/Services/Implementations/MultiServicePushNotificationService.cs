@@ -28,7 +28,7 @@ namespace Bit.Core.Services
                     _services.Add(new RelayPushNotificationService(globalSettings, httpContextAccessor, relayLogger));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
-                    CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalHub))
+                    CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
                     // _services.Add(new HubApiPushNotificationService(globalSettings, httpContextAccessor, hubLogger));
                 }
