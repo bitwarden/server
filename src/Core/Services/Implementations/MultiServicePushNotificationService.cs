@@ -30,8 +30,8 @@ namespace Bit.Core.Services
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
-                    // _services.Add(new NotificationsApiPushNotificationService(
-                    //    globalSettings, httpContextAccessor, hubLogger));
+                    _services.Add(new NotificationsApiPushNotificationService(
+                        globalSettings, httpContextAccessor, hubLogger));
                 }
             }
             else
@@ -42,7 +42,7 @@ namespace Bit.Core.Services
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
                 {
-                    // _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
+                    _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
                 }
             }
         }

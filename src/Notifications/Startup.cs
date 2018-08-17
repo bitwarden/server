@@ -105,7 +105,7 @@ namespace Bit.Notifications
             // Add SignlarR
             app.UseSignalR(routes =>
             {
-                routes.MapHub<NotificationsHub>("/notifications-hub");
+                routes.MapHub<NotificationsHub>("/hub");
             });
 
             // Add MVC to the request pipeline.
