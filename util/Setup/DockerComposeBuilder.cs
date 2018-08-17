@@ -186,8 +186,23 @@ services:
     image: bitwarden/icons:{CoreVersion}
     container_name: bitwarden-icons
     restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/icons:/etc/bitwarden/logs
     env_file:
       - ../env/uid.env
+
+  notifications:
+    image: bitwarden/notifications:{CoreVersion}
+    container_name: bitwarden-notifications
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/notifications:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
 
   nginx:
     image: bitwarden/nginx:{CoreVersion}

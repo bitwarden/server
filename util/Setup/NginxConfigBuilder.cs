@@ -172,6 +172,10 @@ server {{
     proxy_pass http://icons:5000/;
   }}
 
+  location /notifications/ {{
+    proxy_pass http://notifications:5000/;
+  }}
+
   location /admin {{
     proxy_pass http://admin:5000;
   }}
