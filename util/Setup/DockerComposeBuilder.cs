@@ -198,13 +198,13 @@ services:
                 if(HttpPort != default(int))
                 {
                     sw.Write($@"
-      - '{HttpPort}:8080'");
+      - '127.0.0.1:{HttpPort}:8080'");
                 }
 
                 if(HttpsPort != default(int))
                 {
                     sw.Write($@"
-      - '{HttpsPort}:8443'");
+      - '127.0.0.1:{HttpsPort}:8443'");
                 }
 
                 sw.Write($@"
