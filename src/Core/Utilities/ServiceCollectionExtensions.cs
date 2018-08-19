@@ -156,7 +156,7 @@ namespace Bit.Core.Utilities
             services.AddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
 
-            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 50000);
+            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 75000);
             services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
             {
                 options.TokenLifespan = TimeSpan.FromDays(30);
