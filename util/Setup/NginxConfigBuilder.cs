@@ -176,6 +176,11 @@ server {{
     proxy_pass http://notifications:5000/;
   }}
 
+  location /notifications/hub {{
+    proxy_pass http://notifications:5000/;
+    proxy_set_header Connection $http_connection;
+  }}
+
   location /admin {{
     proxy_pass http://admin:5000;
   }}
