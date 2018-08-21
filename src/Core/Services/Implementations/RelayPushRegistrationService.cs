@@ -37,12 +37,12 @@ namespace Bit.Core.Services
                 Type = type,
                 UserId = userId
             };
-            await SendAsync(HttpMethod.Post, "/push/register", requestModel);
+            await SendAsync(HttpMethod.Post, "push/register", requestModel);
         }
 
         public async Task DeleteRegistrationAsync(string deviceId)
         {
-            await SendAsync(HttpMethod.Delete, string.Concat("/push/", deviceId));
+            await SendAsync(HttpMethod.Delete, string.Concat("push/", deviceId));
         }
 
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -53,7 +53,7 @@ namespace Bit.Core.Services
             }
 
             var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
-            await SendAsync(HttpMethod.Put, "/push/add-organization", requestModel);
+            await SendAsync(HttpMethod.Put, "push/add-organization", requestModel);
         }
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
@@ -64,7 +64,7 @@ namespace Bit.Core.Services
             }
 
             var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
-            await SendAsync(HttpMethod.Put, "/push/delete-organization", requestModel);
+            await SendAsync(HttpMethod.Put, "push/delete-organization", requestModel);
         }
     }
 }

@@ -144,7 +144,7 @@ namespace Bit.Core.Services
                 ExcludeCurrentContext(request);
             }
 
-            await SendAsync(HttpMethod.Post, "/push/send", request);
+            await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
         private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
@@ -161,7 +161,7 @@ namespace Bit.Core.Services
                 ExcludeCurrentContext(request);
             }
 
-            await SendAsync(HttpMethod.Post, "/push/send", request);
+            await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
         private void ExcludeCurrentContext(PushSendRequestModel request)

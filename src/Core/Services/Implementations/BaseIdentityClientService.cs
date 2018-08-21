@@ -92,7 +92,7 @@ namespace Bit.Core.Services
             var requestMessage = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri(string.Concat(IdentityClient.BaseAddress, "/connect/token")),
+                RequestUri = new Uri(string.Concat(IdentityClient.BaseAddress, "connect/token")),
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
