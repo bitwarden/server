@@ -24,7 +24,7 @@ namespace Bit.Notifications
         private CloudQueue _queue;
 
         public AzureQueueHostedService(
-            ILogger<AzureQueueHostedService> logger, 
+            ILogger<AzureQueueHostedService> logger,
             IHubContext<NotificationsHub> hubContext,
             GlobalSettings globalSettings)
         {
@@ -52,9 +52,7 @@ namespace Bit.Notifications
         }
 
         public void Dispose()
-        {
-            // TODO
-        }
+        { }
 
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
