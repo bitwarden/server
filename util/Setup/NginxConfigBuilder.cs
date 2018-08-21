@@ -177,7 +177,7 @@ server {{
   }}
 
   location /notifications/hub {{
-    proxy_pass http://notifications:5000/;
+    proxy_pass http://notifications:5000/hub;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }}
