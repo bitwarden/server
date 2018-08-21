@@ -14,7 +14,7 @@ namespace Bit.Setup
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-            "connect-src 'self' https://haveibeenpwned.com https://api.pwnedpasswords.com;";
+            "connect-src 'self' wss://{0} https://haveibeenpwned.com https://api.pwnedpasswords.com;";
 
         public NginxConfigBuilder(string domain, string url, bool ssl, bool selfSignedSsl, bool letsEncrypt,
             bool trusted, bool diffieHellman)
@@ -147,7 +147,7 @@ server {{
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection ""1; mode=block"";
     add_header Referrer-Policy same-origin;
-    add_header Content-Security-Policy ""{ContentSecurityPolicy}"";
+    add_header Content-Security-Policy ""{string.Format(ContentSecurityPolicy, Domain)}"";
   }}
 
   location = /app-id.json {{
