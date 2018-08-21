@@ -62,7 +62,7 @@ namespace Bit.Core.Services
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
 
                 // push
-                await _pushService.PushSyncCipherCreateAsync(cipher);
+                await _pushService.PushSyncCipherCreateAsync(cipher, null);
             }
             else
             {
@@ -71,7 +71,7 @@ namespace Bit.Core.Services
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
-                await _pushService.PushSyncCipherUpdateAsync(cipher);
+                await _pushService.PushSyncCipherUpdateAsync(cipher, null);
             }
         }
 
@@ -95,7 +95,7 @@ namespace Bit.Core.Services
                 }
 
                 // push
-                await _pushService.PushSyncCipherCreateAsync(cipher);
+                await _pushService.PushSyncCipherCreateAsync(cipher, null);
             }
             else
             {
@@ -104,7 +104,7 @@ namespace Bit.Core.Services
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
-                await _pushService.PushSyncCipherUpdateAsync(cipher);
+                await _pushService.PushSyncCipherUpdateAsync(cipher, null);
             }
         }
 
@@ -180,7 +180,7 @@ namespace Bit.Core.Services
             }
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
         public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
@@ -264,7 +264,7 @@ namespace Bit.Core.Services
             await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
         public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
@@ -401,7 +401,7 @@ namespace Bit.Core.Services
             await _attachmentStorageService.CleanupAsync(cipher.Id);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
         }
 
         public async Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId,
@@ -476,7 +476,7 @@ namespace Bit.Core.Services
             await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_UpdatedCollections);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher);
+            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
         }
 
         public async Task ImportCiphersAsync(

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
@@ -7,7 +8,7 @@ namespace Bit.Core.Services
 {
     public class NoopPushNotificationService : IPushNotificationService
     {
-        public Task PushSyncCipherCreateAsync(Cipher cipher)
+        public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             return Task.FromResult(0);
         }
@@ -22,7 +23,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task PushSyncCipherUpdateAsync(Cipher cipher)
+        public Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             return Task.FromResult(0);
         }

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace Bit.Core.Models
 {
@@ -22,6 +23,7 @@ namespace Bit.Core.Models
         public Guid Id { get; set; }
         public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
+        public IEnumerable<Guid> CollectionIds { get; set; }
         public DateTime RevisionDate { get; set; }
     }
 

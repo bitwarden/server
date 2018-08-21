@@ -2,13 +2,14 @@
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
     public interface IPushNotificationService
     {
-        Task PushSyncCipherCreateAsync(Cipher cipher);
-        Task PushSyncCipherUpdateAsync(Cipher cipher);
+        Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
+        Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
         Task PushSyncCipherDeleteAsync(Cipher cipher);
         Task PushSyncFolderCreateAsync(Folder folder);
         Task PushSyncFolderUpdateAsync(Folder folder);

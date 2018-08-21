@@ -47,15 +47,15 @@ namespace Bit.Core.Services
             }
         }
 
-        public Task PushSyncCipherCreateAsync(Cipher cipher)
+        public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
-            PushToServices((s) => s.PushSyncCipherCreateAsync(cipher));
+            PushToServices((s) => s.PushSyncCipherCreateAsync(cipher, collectionIds));
             return Task.FromResult(0);
         }
 
-        public Task PushSyncCipherUpdateAsync(Cipher cipher)
+        public Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
-            PushToServices((s) => s.PushSyncCipherUpdateAsync(cipher));
+            PushToServices((s) => s.PushSyncCipherUpdateAsync(cipher, collectionIds));
             return Task.FromResult(0);
         }
 

@@ -7,6 +7,7 @@ using Bit.Core.Models;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
@@ -32,22 +33,22 @@ namespace Bit.Core.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task PushSyncCipherCreateAsync(Cipher cipher)
+        public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
-            await PushCipherAsync(cipher, PushType.SyncCipherCreate);
+            await PushCipherAsync(cipher, PushType.SyncCipherCreate, collectionIds);
         }
 
-        public async Task PushSyncCipherUpdateAsync(Cipher cipher)
+        public async Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
-            await PushCipherAsync(cipher, PushType.SyncCipherUpdate);
+            await PushCipherAsync(cipher, PushType.SyncCipherUpdate, collectionIds);
         }
 
         public async Task PushSyncCipherDeleteAsync(Cipher cipher)
         {
-            await PushCipherAsync(cipher, PushType.SyncLoginDelete);
+            await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
         }
 
-        private async Task PushCipherAsync(Cipher cipher, PushType type)
+        private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
         {
             if(cipher.OrganizationId.HasValue)
             {
@@ -56,6 +57,7 @@ namespace Bit.Core.Services
                     Id = cipher.Id,
                     OrganizationId = cipher.OrganizationId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendMessageAsync(type, message, true);
