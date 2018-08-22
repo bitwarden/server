@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="2.1.2" />
+    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.0-preview1-10015" />
   </ItemGroup>
 
   <ItemGroup>

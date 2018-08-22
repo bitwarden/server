@@ -54,7 +54,14 @@ namespace Bit.Notifications
             });
 
             // SignalR
-            services.AddSignalR();
+            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
+            {
+                services.AddSignalR().AddAzureSignalR(globalSettings.Notifications.AzureSignalRConnectionString);
+            }
+            else
+            {
+                services.AddSignalR();
+            }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
             // Mvc
@@ -103,10 +110,14 @@ namespace Bit.Notifications
             app.UseAuthentication();
 
             // Add SignlarR
-            app.UseSignalR(routes =>
+            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
             {
-                routes.MapHub<NotificationsHub>("/hub");
-            });
+                app.UseAzureSignalR(routes => routes.MapHub<NotificationsHub>("/hub"));
+            }
+            else
+            {
+                app.UseSignalR(routes => routes.MapHub<NotificationsHub>("/hub"));
+            }
 
             // Add MVC to the request pipeline.
             app.UseMvc();
