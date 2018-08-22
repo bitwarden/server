@@ -215,7 +215,8 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Not enough storage available for this organization.");
                 }
 
-                await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId, attachmentId);
+                await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId,
+                    attachmentId);
             }
             catch
             {
@@ -246,7 +247,8 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCiphersAsync(deletingUserId);
         }
 
-        public async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false)
+        public async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+            bool orgAdmin = false)
         {
             if(!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
             {
@@ -364,7 +366,8 @@ namespace Bit.Core.Services
                     // migrate attachments
                     foreach(var attachment in attachments)
                     {
-                        await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                        await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId,
+                            attachment.Key);
                         migratedAttachments = true;
                     }
                 }
@@ -390,7 +393,8 @@ namespace Bit.Core.Services
 
                 foreach(var attachment in attachments)
                 {
-                    await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId, attachment.Key);
+                    await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId,
+                        attachment.Key);
                 }
 
                 await _attachmentStorageService.CleanupAsync(cipher.Id);
@@ -450,7 +454,8 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCiphersAsync(sharingUserId);
         }
 
-        public async Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin)
+        public async Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId,
+            bool orgAdmin)
         {
             if(cipher.Id == default(Guid))
             {
@@ -462,11 +467,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Cipher must belong to an organization.");
             }
 
-            // The sprocs will validate that all collections belong to this org/user and that they have proper write permissions.
+            cipher.RevisionDate = DateTime.UtcNow;
+
+            // The sprocs will validate that all collections belong to this org/user and that they have 
+            // proper write permissions.
             if(orgAdmin)
             {
-                await _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value,
-                    collectionIds);
+                await _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id,
+                    cipher.OrganizationId.Value, collectionIds);
             }
             else
             {
