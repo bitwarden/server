@@ -35,8 +35,20 @@ namespace Bit.Core.Services
             if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Username) &&
                 !string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Password))
             {
-                client.Credentials = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password);
+                if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.AuthType))
+                {
+                    var cred = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
+                        _globalSettings.Mail.Smtp.Password);
+                    var cache = new CredentialCache();
+                    cache.Add(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
+                        _globalSettings.Mail.Smtp.AuthType, cred);
+                    client.Credentials = cache;
+                }
+                else
+                {
+                    client.Credentials = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
+                        _globalSettings.Mail.Smtp.Password);
+                }
             }
 
             var smtpMessage = new MailMessage();
