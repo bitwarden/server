@@ -31,12 +31,6 @@ namespace Bit.Notifications
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
 
-            // Repositories
-            services.AddSqlServerRepositories(globalSettings);
-
-            // Context
-            services.AddScoped<CurrentContext>();
-
             // Identity
             services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
             {
@@ -63,15 +57,20 @@ namespace Bit.Notifications
                 services.AddSignalR();
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
+            services.AddSingleton<ConnectionCounter>();
 
             // Mvc
             services.AddMvc();
 
-            // Hosted Services
-            if(!globalSettings.SelfHosted &&
-                CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            if(!globalSettings.SelfHosted)
             {
-                services.AddHostedService<AzureQueueHostedService>();
+                // Hosted Services
+                Jobs.JobsHostedService.AddJobsServices(services);
+                services.AddHostedService<Jobs.JobsHostedService>();
+                if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+                {
+                    services.AddHostedService<AzureQueueHostedService>();
+                }
             }
         }
 
@@ -104,9 +103,6 @@ namespace Bit.Notifications
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            // Default Middleware
-            app.UseDefaultMiddleware(env);
 
             // Add Cors
             app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());

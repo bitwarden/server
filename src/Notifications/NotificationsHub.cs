@@ -8,6 +8,13 @@ namespace Bit.Notifications
     [Authorize("Application")]
     public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
     {
+        private readonly ConnectionCounter _connectionCounter;
+
+        public NotificationsHub(ConnectionCounter connectionCounter)
+        {
+            _connectionCounter = connectionCounter;
+        }
+
         public override async Task OnConnectedAsync()
         {
             var currentContext = new CurrentContext();
@@ -16,6 +23,7 @@ namespace Bit.Notifications
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
             }
+            _connectionCounter.Increment();
             await base.OnConnectedAsync();
         }
 
@@ -27,6 +35,7 @@ namespace Bit.Notifications
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
             }
+            _connectionCounter.Decrement();
             await base.OnDisconnectedAsync(exception);
         }
     }
