@@ -92,6 +92,11 @@ namespace Bit.Notifications
                     return e.Level > LogEventLevel.Error;
                 }
 
+                if(e.Level == LogEventLevel.Error && e.MessageTemplate.Text == "Failed connection handshake.")
+                {
+                    return false;
+                }
+
                 return e.Level >= LogEventLevel.Error;
             });
 
@@ -116,7 +121,11 @@ namespace Bit.Notifications
             }
             else
             {
-                app.UseSignalR(routes => routes.MapHub<NotificationsHub>("/hub"));
+                app.UseSignalR(routes => routes.MapHub<NotificationsHub>("/hub", options =>
+                {
+                    options.ApplicationMaxBufferSize = 20; // client => server messages are not even used
+                    options.TransportMaxBufferSize = 2048;
+                }));
             }
 
             // Add MVC to the request pipeline.
