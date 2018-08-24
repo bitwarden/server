@@ -131,6 +131,7 @@ services:
     volumes:
       - ../web:/etc/bitwarden/web
     env_file:
+      - global.env
       - ../env/uid.env
 
   attachments:
@@ -140,6 +141,7 @@ services:
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
     env_file:
+      - global.env
       - ../env/uid.env
 
   api:
@@ -190,6 +192,7 @@ services:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/icons:/etc/bitwarden/logs
     env_file:
+      - global.env
       - ../env/uid.env
 
   notifications:
