@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Collections.Generic;
+using Bit.Core;
 using Bit.Core.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.Builder;
@@ -54,7 +55,13 @@ namespace Bit.Notifications
             }
             else
             {
-                services.AddSignalR();
+                services.AddSignalR().AddMessagePackProtocol(options =>
+                {
+                    options.FormatterResolvers = new List<MessagePack.IFormatterResolver>()
+                    {
+                        MessagePack.Resolvers.ContractlessStandardResolver.Instance
+                    };
+                });
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
             services.AddSingleton<ConnectionCounter>();

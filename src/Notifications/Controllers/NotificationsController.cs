@@ -1,9 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using Bit.Core.Models;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json;
 
 namespace Bit.Notifications
 {
@@ -19,9 +22,17 @@ namespace Bit.Notifications
         }
 
         [HttpPost("~/notifications")]
-        public async Task PostNotification([FromBody]PushNotificationData<object> model)
+        public async Task PostNotification()
         {
-            await HubHelpers.SendNotificationToHubAsync(model, _hubContext);
+            using(var reader = new StreamReader(Request.Body, Encoding.UTF8))
+            {
+                var notificationJson = await reader.ReadToEndAsync();
+                if(!string.IsNullOrWhiteSpace(notificationJson))
+                {
+                    var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(notificationJson);
+                    await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson, _hubContext);
+                }
+            }
         }
     }
 }

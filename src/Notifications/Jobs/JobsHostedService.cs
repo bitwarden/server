@@ -21,7 +21,7 @@ namespace Bit.Notifications.Jobs
         {
             var everyFiveMinutesTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 */5 * * * ?")
+                .WithCronSchedule("0 */30 * * * ?")
                 .Build();
 
             Jobs = new List<Tuple<Type, ITrigger>>

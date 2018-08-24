@@ -68,9 +68,11 @@ namespace Bit.Notifications
                 {
                     foreach(var message in messages)
                     {
+                        var notificationJson = message.AsString;
                         var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(
-                            message.AsString);
-                        await HubHelpers.SendNotificationToHubAsync(notification, _hubContext, cancellationToken);
+                            notificationJson);
+                        await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson,
+                            _hubContext, cancellationToken);
                         await _queue.DeleteMessageAsync(message);
                     }
                 }
