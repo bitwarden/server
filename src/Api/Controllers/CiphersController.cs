@@ -10,7 +10,6 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Utilities;
-using Core.Models.Data;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 

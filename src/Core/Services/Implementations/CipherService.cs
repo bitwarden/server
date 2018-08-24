@@ -478,6 +478,10 @@ namespace Bit.Core.Services
             }
             else
             {
+                if(!(await UserCanEditAsync(cipher, savingUserId)))
+                {
+                    throw new BadRequestException("You do not have permissions to edit this.");
+                }
                 await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
             }
 
