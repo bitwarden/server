@@ -34,7 +34,7 @@ BEGIN
         LEFT JOIN
             [dbo].[Group] G ON G.[Id] = GU.[GroupId]
         LEFT JOIN
-            [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[GroupId] = GU.[GroupId]
+            [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
         WHERE
             O.[Id] = @OrganizationId
             AND O.[Enabled] = 1
