@@ -60,34 +60,26 @@ namespace Bit.Notifications
             var queueClient = storageAccount.CreateCloudQueueClient();
             _queue = queueClient.GetQueueReference("notifications");
 
-            _logger.LogInformation("starting queue read");
-            try
+            while(!cancellationToken.IsCancellationRequested)
             {
-                while(!cancellationToken.IsCancellationRequested)
+                var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
+                    null, null, cancellationToken);
+                if(messages.Any())
                 {
-                    var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                        null, null, cancellationToken);
-                    if(messages.Any())
+                    foreach(var message in messages)
                     {
-                        foreach(var message in messages)
-                        {
-                            var notificationJson = message.AsString;
-                            var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(
-                                notificationJson);
-                            await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson,
-                                _hubContext, cancellationToken);
-                            await _queue.DeleteMessageAsync(message);
-                        }
-                    }
-                    else
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                        var notificationJson = message.AsString;
+                        var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(
+                            notificationJson);
+                        await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson,
+                            _hubContext, cancellationToken);
+                        await _queue.DeleteMessageAsync(message);
                     }
                 }
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(e, "error from queue");
+                else
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
             }
         }
     }
