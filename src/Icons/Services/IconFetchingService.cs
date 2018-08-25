@@ -55,7 +55,7 @@ namespace Bit.Icons.Services
         {
             if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedHttpsUri))
             {
-                _logger.LogInformation("Bad domain.");
+                _logger.LogWarning("Bad domain: {0}.", domain);
                 return null;
             }
 
@@ -90,7 +90,8 @@ namespace Bit.Icons.Services
 
             if(response?.Content == null || !response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Couldn't load a website: {0}.", response?.StatusCode.ToString() ?? "null");
+                _logger.LogWarning("Couldn't load a website for {0}: {1}.", domain,
+                    response?.StatusCode.ToString() ?? "null");
                 Cleanup(response);
                 return null;
             }
@@ -103,7 +104,7 @@ namespace Bit.Icons.Services
                 uri = response.RequestMessage.RequestUri;
                 if(document.DocumentElement == null)
                 {
-                    _logger.LogInformation("No DocumentElement.");
+                    _logger.LogWarning("No DocumentElement for {0}.", domain);
                     return null;
                 }
 
@@ -204,7 +205,7 @@ namespace Bit.Icons.Services
                     }
                     else
                     {
-                        _logger.LogInformation("No favicon.ico found.");
+                        _logger.LogWarning("No favicon.ico found for {0}.", uri.Host);
                         return null;
                     }
                 }

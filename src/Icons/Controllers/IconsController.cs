@@ -58,7 +58,7 @@ namespace Bit.Icons.Controllers
                 var result = await _iconFetchingService.GetIconAsync(domain);
                 if(result == null)
                 {
-                    _logger.LogInformation("Null result returned.");
+                    _logger.LogWarning("Null result returned for {0}.", domain);
                     icon = null;
                 }
                 else
@@ -69,7 +69,7 @@ namespace Bit.Icons.Controllers
                 // Only cache not found and smaller images (<= 50kb)
                 if(_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
                 {
-                    _logger.LogInformation("Cache the icon.");
+                    _logger.LogWarning("Cache the icon for {0}.", domain);
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0),
