@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
 using AngleSharp.Parser.Html;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Icons.Services
 {
@@ -29,9 +30,11 @@ namespace Bit.Icons.Services
 
         private readonly HashSet<string> _allowedMediaTypes;
         private readonly HttpClient _httpClient;
+        private readonly ILogger<IIconFetchingService> _logger;
 
-        public IconFetchingService()
+        public IconFetchingService(ILogger<IIconFetchingService> logger)
         {
+            _logger = logger;
             _allowedMediaTypes = new HashSet<string>
             {
                 _pngMediaType,
@@ -52,6 +55,7 @@ namespace Bit.Icons.Services
         {
             if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedHttpsUri))
             {
+                _logger.LogInformation("Bad domain.");
                 return null;
             }
 
@@ -87,6 +91,7 @@ namespace Bit.Icons.Services
             if(response?.Content == null || !response.IsSuccessStatusCode)
             {
                 Cleanup(response);
+                _logger.LogInformation("Couldn't load a website: {0}.", response.StatusCode);
                 return null;
             }
 
@@ -98,6 +103,7 @@ namespace Bit.Icons.Services
                 uri = response.RequestMessage.RequestUri;
                 if(document.DocumentElement == null)
                 {
+                    _logger.LogInformation("No DocumentElement.");
                     return null;
                 }
 
@@ -198,6 +204,7 @@ namespace Bit.Icons.Services
                     }
                     else
                     {
+                        _logger.LogInformation("No favicon.ico found.");
                         return null;
                     }
                 }
