@@ -141,7 +141,7 @@ namespace Bit.Core.Services
         {
             var contextId = GetContextIdentifier(excludeCurrentContext);
             var request = new PushNotificationData<T>(type, payload, contextId);
-            await SendAsync(HttpMethod.Post, "notifications", request);
+            await SendAsync(HttpMethod.Post, "send", request);
         }
 
         private string GetContextIdentifier(bool excludeCurrentContext)

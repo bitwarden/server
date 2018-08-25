@@ -12,17 +12,17 @@ namespace Bit.Notifications
 {
     [Authorize("Internal")]
     [SelfHosted(SelfHostedOnly = true)]
-    public class NotificationsController : Controller
+    public class SendController : Controller
     {
         private readonly IHubContext<NotificationsHub> _hubContext;
 
-        public NotificationsController(IHubContext<NotificationsHub> hubContext)
+        public SendController(IHubContext<NotificationsHub> hubContext)
         {
             _hubContext = hubContext;
         }
 
-        [HttpPost("~/notifications")]
-        public async Task PostNotification()
+        [HttpPost("~/send")]
+        public async Task PostSend()
         {
             using(var reader = new StreamReader(Request.Body, Encoding.UTF8))
             {
