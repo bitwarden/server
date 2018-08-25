@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bit.Icons.Models;
 using AngleSharp.Parser.Html;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace Bit.Icons.Services
 {
@@ -31,10 +32,16 @@ namespace Bit.Icons.Services
         private readonly HashSet<string> _allowedMediaTypes;
         private readonly HttpClient _httpClient;
         private readonly ILogger<IIconFetchingService> _logger;
+        private readonly Regex _ipRegex;
 
         public IconFetchingService(ILogger<IIconFetchingService> logger)
         {
             _logger = logger;
+            _ipRegex = new Regex("^" +
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
             _allowedMediaTypes = new HashSet<string>
             {
                 _pngMediaType,
@@ -53,6 +60,12 @@ namespace Bit.Icons.Services
 
         public async Task<IconResult> GetIconAsync(string domain)
         {
+            if(_ipRegex.IsMatch(domain))
+            {
+                _logger.LogWarning("IP address: {0}.", domain);
+                return null;
+            }
+
             if(!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var parsedHttpsUri))
             {
                 _logger.LogWarning("Bad domain: {0}.", domain);

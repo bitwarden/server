@@ -69,7 +69,7 @@ namespace Bit.Icons.Controllers
                 // Only cache not found and smaller images (<= 50kb)
                 if(_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
                 {
-                    _logger.LogWarning("Cache the icon for {0}.", domain);
+                    _logger.LogInformation("Cache icon for {0}.", domain);
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0),
