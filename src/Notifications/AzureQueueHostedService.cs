@@ -3,13 +3,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core;
-using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Newtonsoft.Json;
 
 namespace Bit.Notifications
 {
@@ -68,11 +66,7 @@ namespace Bit.Notifications
                 {
                     foreach(var message in messages)
                     {
-                        var notificationJson = message.AsString;
-                        var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(
-                            notificationJson);
-                        await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson,
-                            _hubContext, cancellationToken);
+                        await HubHelpers.SendNotificationToHubAsync(message.AsString, _hubContext, cancellationToken);
                         await _queue.DeleteMessageAsync(message);
                     }
                 }

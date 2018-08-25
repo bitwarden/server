@@ -1,12 +1,10 @@
 ﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Bit.Core.Models;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Newtonsoft.Json;
 
 namespace Bit.Notifications
 {
@@ -29,8 +27,7 @@ namespace Bit.Notifications
                 var notificationJson = await reader.ReadToEndAsync();
                 if(!string.IsNullOrWhiteSpace(notificationJson))
                 {
-                    var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(notificationJson);
-                    await HubHelpers.SendNotificationToHubAsync(notification.Type, notificationJson, _hubContext);
+                    await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
                 }
             }
         }

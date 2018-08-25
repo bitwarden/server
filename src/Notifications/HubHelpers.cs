@@ -9,10 +9,11 @@ namespace Bit.Notifications
 {
     public static class HubHelpers
     {
-        public static async Task SendNotificationToHubAsync(PushType type, string notificationJson,
+        public static async Task SendNotificationToHubAsync(string notificationJson,
             IHubContext<NotificationsHub> hubContext, CancellationToken cancellationToken = default(CancellationToken))
         {
-            switch(type)
+            var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(notificationJson);
+            switch(notification.Type)
             {
                 case PushType.SyncCipherUpdate:
                 case PushType.SyncCipherCreate:
