@@ -90,8 +90,8 @@ namespace Bit.Icons.Services
 
             if(response?.Content == null || !response.IsSuccessStatusCode)
             {
+                _logger.LogInformation("Couldn't load a website: {0}.", response?.StatusCode.ToString() ?? "null");
                 Cleanup(response);
-                _logger.LogInformation("Couldn't load a website: {0}.", response.StatusCode);
                 return null;
             }
 
