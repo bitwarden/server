@@ -39,7 +39,7 @@ namespace Bit.Core.Models.Table
         public string GatewayCustomerId { get; set; }
         public string GatewaySubscriptionId { get; set; }
         public string LicenseKey { get; set; }
-        public KdfType Kdf { get; set; } = KdfType.PBKDF2;
+        public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
         public int KdfIterations { get; set; } = 5000;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
