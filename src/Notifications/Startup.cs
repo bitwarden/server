@@ -49,19 +49,16 @@ namespace Bit.Notifications
             });
 
             // SignalR
+            var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
+            {
+                options.FormatterResolvers = new List<MessagePack.IFormatterResolver>()
+                {
+                    MessagePack.Resolvers.ContractlessStandardResolver.Instance
+                };
+            });
             if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
             {
-                services.AddSignalR().AddAzureSignalR(globalSettings.Notifications.AzureSignalRConnectionString);
-            }
-            else
-            {
-                services.AddSignalR().AddMessagePackProtocol(options =>
-                {
-                    options.FormatterResolvers = new List<MessagePack.IFormatterResolver>()
-                    {
-                        MessagePack.Resolvers.ContractlessStandardResolver.Instance
-                    };
-                });
+                signalRServerBuilder.AddAzureSignalR(globalSettings.Notifications.AzureSignalRConnectionString);
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
             services.AddSingleton<ConnectionCounter>();
