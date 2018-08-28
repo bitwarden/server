@@ -18,6 +18,7 @@ namespace Bit.Core.Services
         Task PushSyncVaultAsync(Guid userId);
         Task PushSyncOrgKeysAsync(Guid userId);
         Task PushSyncSettingsAsync(Guid userId);
+        Task PushLogOutAsync(Guid userId);
         Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier);
         Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier);
     }

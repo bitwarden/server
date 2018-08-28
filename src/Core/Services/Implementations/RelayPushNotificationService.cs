@@ -101,27 +101,32 @@ namespace Bit.Core.Services
 
         public async Task PushSyncCiphersAsync(Guid userId)
         {
-            await PushSyncUserAsync(userId, PushType.SyncCiphers);
+            await PushUserAsync(userId, PushType.SyncCiphers);
         }
 
         public async Task PushSyncVaultAsync(Guid userId)
         {
-            await PushSyncUserAsync(userId, PushType.SyncVault);
+            await PushUserAsync(userId, PushType.SyncVault);
         }
 
         public async Task PushSyncOrgKeysAsync(Guid userId)
         {
-            await PushSyncUserAsync(userId, PushType.SyncOrgKeys);
+            await PushUserAsync(userId, PushType.SyncOrgKeys);
         }
 
         public async Task PushSyncSettingsAsync(Guid userId)
         {
-            await PushSyncUserAsync(userId, PushType.SyncSettings);
+            await PushUserAsync(userId, PushType.SyncSettings);
         }
 
-        private async Task PushSyncUserAsync(Guid userId, PushType type)
+        public async Task PushLogOutAsync(Guid userId)
         {
-            var message = new SyncUserPushNotification
+            await PushUserAsync(userId, PushType.LogOut);
+        }
+
+        private async Task PushUserAsync(Guid userId, PushType type)
+        {
+            var message = new UserPushNotification
             {
                 UserId = userId,
                 Date = DateTime.UtcNow

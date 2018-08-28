@@ -47,8 +47,9 @@ namespace Bit.Notifications
                 case PushType.SyncVault:
                 case PushType.SyncOrgKeys:
                 case PushType.SyncSettings:
+                case PushType.LogOut:
                     var userNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<SyncUserPushNotification>>(
+                        JsonConvert.DeserializeObject<PushNotificationData<UserPushNotification>>(
                             notificationJson);
                     await hubContext.Clients.User(userNotification.Payload.UserId.ToString())
                             .SendAsync("ReceiveMessage", userNotification, cancellationToken);

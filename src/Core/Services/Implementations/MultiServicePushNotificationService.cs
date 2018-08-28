@@ -107,6 +107,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task PushLogOutAsync(Guid userId)
+        {
+            PushToServices((s) => s.PushLogOutAsync(userId));
+            return Task.FromResult(0);
+        }
+
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
         {
             PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier));

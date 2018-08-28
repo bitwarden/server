@@ -58,6 +58,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task PushLogOutAsync(Guid userId)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
         {
             return Task.FromResult(0);
