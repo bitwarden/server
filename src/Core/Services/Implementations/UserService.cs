@@ -183,6 +183,7 @@ namespace Bit.Core.Services
             }
 
             await _userRepository.DeleteAsync(user);
+            await _pushService.PushLogOutAsync(user.Id);
             return IdentityResult.Success;
         }
 
@@ -408,6 +409,7 @@ namespace Bit.Core.Services
             user.EmailVerified = true;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+            await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
         }
@@ -438,6 +440,7 @@ namespace Bit.Core.Services
 
                 await _userRepository.ReplaceAsync(user);
                 await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+                await _pushService.PushLogOutAsync(user.Id);
 
                 return IdentityResult.Success;
             }
@@ -467,6 +470,7 @@ namespace Bit.Core.Services
                 user.Kdf = kdf;
                 user.KdfIterations = kdfIterations;
                 await _userRepository.ReplaceAsync(user);
+                await _pushService.PushLogOutAsync(user.Id);
                 return IdentityResult.Success;
             }
 
@@ -502,6 +506,7 @@ namespace Bit.Core.Services
                     await _userRepository.ReplaceAsync(user);
                 }
 
+                await _pushService.PushLogOutAsync(user.Id);
                 return IdentityResult.Success;
             }
 
@@ -525,6 +530,7 @@ namespace Bit.Core.Services
                 }
 
                 await SaveUserAsync(user);
+                await _pushService.PushLogOutAsync(user.Id);
                 return IdentityResult.Success;
             }
 
@@ -657,6 +663,7 @@ namespace Bit.Core.Services
             try
             {
                 await SaveUserAsync(user);
+                await _pushService.PushSyncVaultAsync(user.Id);
             }
             catch when(!_globalSettings.SelfHosted)
             {
