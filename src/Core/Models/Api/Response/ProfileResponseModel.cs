@@ -3,12 +3,14 @@ using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
+using Bit.Core.Services;
 
 namespace Bit.Core.Models.Api
 {
     public class ProfileResponseModel : ResponseModel
     {
-        public ProfileResponseModel(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails)
+        public ProfileResponseModel(User user,
+            IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails, bool twoFactorEnabled)
             : base("profile")
         {
             if(user == null)
@@ -23,7 +25,7 @@ namespace Bit.Core.Models.Api
             Premium = user.Premium;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
-            TwoFactorEnabled = user.TwoFactorIsEnabled();
+            TwoFactorEnabled = twoFactorEnabled;
             Key = user.Key;
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;

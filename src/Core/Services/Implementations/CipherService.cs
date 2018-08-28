@@ -24,6 +24,7 @@ namespace Bit.Core.Services
         private readonly IPushNotificationService _pushService;
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly IEventService _eventService;
+        private readonly IUserService _userService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -35,7 +36,8 @@ namespace Bit.Core.Services
             ICollectionCipherRepository collectionCipherRepository,
             IPushNotificationService pushService,
             IAttachmentStorageService attachmentStorageService,
-            IEventService eventService)
+            IEventService eventService,
+            IUserService userService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -47,6 +49,7 @@ namespace Bit.Core.Services
             _pushService = pushService;
             _attachmentStorageService = attachmentStorageService;
             _eventService = eventService;
+            _userService = userService;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
@@ -125,9 +128,9 @@ namespace Bit.Core.Services
             if(cipher.UserId.HasValue)
             {
                 var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
-                if(!user.Premium)
+                if(!(await _userService.CanAccessPremium(user)))
                 {
-                    throw new BadRequestException("You must be a premium user to use attachments.");
+                    throw new BadRequestException("You must have premium status to use attachments.");
                 }
 
                 storageBytesRemaining = user.StorageBytesRemaining();

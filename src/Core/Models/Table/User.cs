@@ -3,7 +3,6 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using System.Linq;
 using Bit.Core.Services;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Identity;
@@ -110,7 +109,7 @@ namespace Bit.Core.Models.Table
             return await userService.CanAccessPremium(this);
         }
 
-        public bool TwoFactorIsEnabled()
+        public async Task<bool> TwoFactorIsEnabledAsync(IUserService userService)
         {
             var providers = GetTwoFactorProviders();
             if(providers == null)
@@ -118,8 +117,21 @@ namespace Bit.Core.Models.Table
                 return false;
             }
 
-            return providers.Any(p => (p.Value?.Enabled ?? false) &&
-                (Premium || !TwoFactorProvider.RequiresPremium(p.Key)));
+            foreach(var p in providers)
+            {
+                if(p.Value?.Enabled ?? false)
+                {
+                    if(!TwoFactorProvider.RequiresPremium(p.Key))
+                    {
+                        return true;
+                    }
+                    if(await userService.CanAccessPremium(this))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
@@ -177,7 +189,7 @@ namespace Bit.Core.Models.Table
             return paymentService;
         }
 
-        public IdentityUser ToIdentityUser()
+        public IdentityUser ToIdentityUser(bool twoFactorEnabled)
         {
             return new IdentityUser
             {
@@ -187,7 +199,7 @@ namespace Bit.Core.Models.Table
                 EmailConfirmed = EmailVerified,
                 UserName = Email,
                 NormalizedUserName = Email,
-                TwoFactorEnabled = TwoFactorIsEnabled(),
+                TwoFactorEnabled = twoFactorEnabled,
                 SecurityStamp = SecurityStamp
             };
         }

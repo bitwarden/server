@@ -1,4 +1,5 @@
 ﻿@model UsersModel
+@inject Bit.Core.Services.IUserService userService
 @{
     ViewData["Title"] = "Users";
 }
@@ -68,7 +69,7 @@
                             {
                                 <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
                             }
-                            @if(user.TwoFactorIsEnabled())
+                            @if(await user.TwoFactorIsEnabledAsync(userService))
                             {
                                 <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
                             }

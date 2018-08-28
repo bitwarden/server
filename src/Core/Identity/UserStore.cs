@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity
 {
@@ -14,13 +16,16 @@ namespace Bit.Core.Identity
         IUserTwoFactorStore<User>,
         IUserSecurityStampStore<User>
     {
+        private readonly IServiceProvider _serviceProvider;
         private readonly IUserRepository _userRepository;
         private readonly CurrentContext _currentContext;
 
         public UserStore(
+            IServiceProvider serviceProvider,
             IUserRepository userRepository,
             CurrentContext currentContext)
         {
+            _serviceProvider = serviceProvider;
             _userRepository = userRepository;
             _currentContext = currentContext;
         }
@@ -162,9 +167,9 @@ namespace Bit.Core.Identity
             return Task.FromResult(0);
         }
 
-        public Task<bool> GetTwoFactorEnabledAsync(User user, CancellationToken cancellationToken)
+        public async Task<bool> GetTwoFactorEnabledAsync(User user, CancellationToken cancellationToken)
         {
-            return Task.FromResult(user.TwoFactorIsEnabled());
+            return await user.TwoFactorIsEnabledAsync(_serviceProvider.GetRequiredService<IUserService>());
         }
 
         public Task SetSecurityStampAsync(User user, string stamp, CancellationToken cancellationToken)

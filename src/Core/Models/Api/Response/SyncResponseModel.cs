@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Api
         public SyncResponseModel(
             GlobalSettings globalSettings,
             User user,
+            bool userTwoFactorEnabled,
             IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
             IEnumerable<Folder> folders,
             IEnumerable<CollectionDetails> collections,
@@ -20,7 +21,7 @@ namespace Bit.Core.Models.Api
             bool excludeDomains)
             : base("sync")
         {
-            Profile = new ProfileResponseModel(user, organizationUserDetails);
+            Profile = new ProfileResponseModel(user, organizationUserDetails, userTwoFactorEnabled);
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
             Collections = collections?.Select(

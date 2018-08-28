@@ -282,7 +282,8 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
-            var response = new ProfileResponseModel(user, organizationUserDetails);
+            var response = new ProfileResponseModel(user, organizationUserDetails,
+                await user.TwoFactorIsEnabledAsync(_userService));
             return response;
         }
 
@@ -307,7 +308,7 @@ namespace Bit.Api.Controllers
             }
 
             await _userService.SaveUserAsync(model.ToUser(user));
-            var response = new ProfileResponseModel(user, null);
+            var response = new ProfileResponseModel(user, null, await user.TwoFactorIsEnabledAsync(_userService));
             return response;
         }
 
@@ -437,7 +438,7 @@ namespace Bit.Api.Controllers
 
             await _userService.SignUpPremiumAsync(user, model.PaymentToken,
                 model.AdditionalStorageGb.GetValueOrDefault(0), license);
-            return new ProfileResponseModel(user, null);
+            return new ProfileResponseModel(user, null, await user.TwoFactorIsEnabledAsync(_userService));
         }
 
         [HttpGet("billing")]

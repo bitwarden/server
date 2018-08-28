@@ -49,7 +49,7 @@ namespace Bit.Core.Identity
 
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
                 return null;
             }
@@ -108,7 +108,7 @@ namespace Bit.Core.Identity
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(!user.Premium || string.IsNullOrWhiteSpace(token))
+            if(!(await _userService.CanAccessPremium(user)) || string.IsNullOrWhiteSpace(token))
             {
                 return false;
             }

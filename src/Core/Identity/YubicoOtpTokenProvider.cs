@@ -44,7 +44,7 @@ namespace Bit.Core.Identity
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
                 return false;
             }

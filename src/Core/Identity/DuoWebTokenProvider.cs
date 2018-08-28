@@ -37,41 +37,41 @@ namespace Bit.Core.Identity
             return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, _userService);
         }
 
-        public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+        public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
-                return Task.FromResult<string>(null);
+                return null;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             if(!HasProperMetaData(provider))
             {
-                return Task.FromResult<string>(null);
+                return null;
             }
 
             var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
                 _globalSettings.Duo.AKey, user.Email);
-            return Task.FromResult(signatureRequest);
+            return signatureRequest;
         }
 
-        public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+        public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
             if(!HasProperMetaData(provider))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
                 _globalSettings.Duo.AKey, token);
 
-            return Task.FromResult(response == user.Email);
+            return response == user.Email;
         }
 
         private bool HasProperMetaData(TwoFactorProvider provider)

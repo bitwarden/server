@@ -1,4 +1,5 @@
 ﻿@model UserViewModel
+@inject Bit.Core.Services.IUserService userService
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
     <dd class="col-sm-8 col-lg-9"><code>@Model.User.Id</code></dd>
@@ -13,7 +14,7 @@
     <dd class="col-sm-8 col-lg-9">@(Model.User.EmailVerified ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.TwoFactorIsEnabled() ? "Yes" : "No")</dd>
+    <dd class="col-sm-8 col-lg-9">@(await Model.User.TwoFactorIsEnabledAsync(userService) ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Items</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>

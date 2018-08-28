@@ -47,6 +47,7 @@ namespace Bit.Admin
             services.AddScoped<CurrentContext>();
 
             // Identity
+            services.AddBasicCustomIdentityServices(globalSettings);
             services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
             if(globalSettings.SelfHosted)
             {

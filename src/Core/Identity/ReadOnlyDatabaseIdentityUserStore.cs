@@ -3,15 +3,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class ReadOnlyDatabaseIdentityUserStore : ReadOnlyIdentityUserStore
     {
+        private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
 
-        public ReadOnlyDatabaseIdentityUserStore(IUserRepository userRepository)
+        public ReadOnlyDatabaseIdentityUserStore(
+            IUserService userService,
+            IUserRepository userRepository)
         {
+            _userService = userService;
             _userRepository = userRepository;
         }
 
@@ -19,7 +24,7 @@ namespace Bit.Core.Identity
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var user = await _userRepository.GetByEmailAsync(normalizedEmail);
-            return user?.ToIdentityUser();
+            return user?.ToIdentityUser(await user.TwoFactorIsEnabledAsync(_userService));
         }
 
         public override async Task<IdentityUser> FindByIdAsync(string userId,
@@ -31,7 +36,7 @@ namespace Bit.Core.Identity
             }
 
             var user = await _userRepository.GetByIdAsync(userIdGuid);
-            return user?.ToIdentityUser();
+            return user?.ToIdentityUser(await user.TwoFactorIsEnabledAsync(_userService));
         }
     }
 }
