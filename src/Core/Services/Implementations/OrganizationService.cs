@@ -1143,6 +1143,7 @@ namespace Bit.Core.Services
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                 await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
+                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
             }
         }
 
@@ -1168,6 +1169,7 @@ namespace Bit.Core.Services
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                 await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
+                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
             }
         }
 
