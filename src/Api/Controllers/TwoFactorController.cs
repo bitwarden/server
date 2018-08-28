@@ -342,9 +342,9 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(premium && !user.Premium)
+            if(premium && !(await _userService.CanAccessPremium(user)))
             {
-                throw new BadRequestException("Premium membership required.");
+                throw new BadRequestException("Premium status is required.");
             }
 
             return user;

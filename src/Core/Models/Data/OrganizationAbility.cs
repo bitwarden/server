@@ -14,6 +14,7 @@ namespace Bit.Core.Models.Data
             Use2fa = organization.Use2fa;
             Using2fa = organization.Use2fa && organization.TwoFactorProviders != null &&
                 organization.TwoFactorProviders != "{}";
+            UsersGetPremium = organization.UsersGetPremium;
             Enabled = organization.Enabled;
         }
 
@@ -21,6 +22,7 @@ namespace Bit.Core.Models.Data
         public bool UseEvents { get; set; }
         public bool Use2fa { get; set; }
         public bool Using2fa { get; set; }
+        public bool UsersGetPremium { get; set; }
         public bool Enabled { get; set; }
     }
 }

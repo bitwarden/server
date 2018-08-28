@@ -4,30 +4,37 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using YubicoDotNetClient;
 using System.Linq;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     {
+        private readonly IUserService _userService;
         private readonly GlobalSettings _globalSettings;
 
-        public YubicoOtpTokenProvider(GlobalSettings globalSettings)
+        public YubicoOtpTokenProvider(
+            IUserService userService,
+            GlobalSettings globalSettings)
         {
+            _userService = userService;
             _globalSettings = globalSettings;
         }
 
-        public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+        public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-            var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.YubiKey)
-                && (provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? false);
+            if(!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
+            {
+                return false;
+            }
 
-            return Task.FromResult(canGenerate);
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, _userService);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

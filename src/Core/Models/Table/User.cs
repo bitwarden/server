@@ -7,6 +7,7 @@ using System.Linq;
 using Bit.Core.Services;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Identity;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Models.Table
 {
@@ -92,15 +93,21 @@ namespace Bit.Core.Models.Table
             _twoFactorProviders = providers;
         }
 
-        public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
+        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider,
+            IUserService userService)
         {
             var providers = GetTwoFactorProviders();
-            if(providers == null || !providers.ContainsKey(provider))
+            if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
             {
                 return false;
             }
 
-            return providers[provider].Enabled && (Premium || !TwoFactorProvider.RequiresPremium(provider));
+            if(!TwoFactorProvider.RequiresPremium(provider))
+            {
+                return true;
+            }
+
+            return await userService.CanAccessPremium(this);
         }
 
         public bool TwoFactorIsEnabled()
@@ -111,7 +118,7 @@ namespace Bit.Core.Models.Table
                 return false;
             }
 
-            return providers.Any(p => (p.Value?.Enabled ?? false) && 
+            return providers.Any(p => (p.Value?.Enabled ?? false) &&
                 (Premium || !TwoFactorProvider.RequiresPremium(p.Key)));
         }
 

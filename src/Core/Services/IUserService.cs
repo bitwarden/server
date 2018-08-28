@@ -53,5 +53,6 @@ namespace Bit.Core.Services
         Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
         Task<UserLicense> GenerateLicenseAsync(User user, BillingInfo billingInfo = null);
         Task<bool> CheckPasswordAsync(User user, string password);
+        Task<bool> CanAccessPremium(User user);
     }
 }

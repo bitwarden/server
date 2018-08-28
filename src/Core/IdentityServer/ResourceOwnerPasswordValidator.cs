@@ -162,8 +162,13 @@ namespace Bit.Core.IdentityServer
 
             if(user.GetTwoFactorProviders() != null)
             {
-                enabledProviders.AddRange(
-                    user.GetTwoFactorProviders().Where(p => user.TwoFactorProviderIsEnabled(p.Key)));
+                foreach(var p in user.GetTwoFactorProviders())
+                {
+                    if(await user.TwoFactorProviderIsEnabledAsync(p.Key, _userService))
+                    {
+                        enabledProviders.Add(p);
+                    }
+                }
             }
 
             if(!enabledProviders.Any())
@@ -273,13 +278,14 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.Remember:
-                    if(type != TwoFactorProviderType.Remember && !user.TwoFactorProviderIsEnabled(type))
+                    if(type != TwoFactorProviderType.Remember &&
+                        !(await user.TwoFactorProviderIsEnabledAsync(type, _userService)))
                     {
                         return false;
                     }
                     return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
                 case TwoFactorProviderType.Email:
-                    if(!user.TwoFactorProviderIsEnabled(type))
+                    if(!(await user.TwoFactorProviderIsEnabledAsync(type, _userService)))
                     {
                         return false;
                     }
@@ -305,7 +311,7 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.YubiKey:
-                    if(!user.TwoFactorProviderIsEnabled(type))
+                    if(!(await user.TwoFactorProviderIsEnabledAsync(type, _userService)))
                     {
                         return null;
                     }

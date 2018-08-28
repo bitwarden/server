@@ -39,6 +39,7 @@ namespace Bit.Core.Services
         private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
         private readonly ILicensingService _licenseService;
         private readonly IEventService _eventService;
+        private readonly IApplicationCacheService _applicationCacheService;
         private readonly IDataProtector _organizationServiceDataProtector;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
@@ -61,6 +62,7 @@ namespace Bit.Core.Services
             ILogger<UserManager<User>> logger,
             ILicensingService licenseService,
             IEventService eventService,
+            IApplicationCacheService applicationCacheService,
             IDataProtectionProvider dataProtectionProvider,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
@@ -87,6 +89,7 @@ namespace Bit.Core.Services
             _passwordValidators = passwordValidators;
             _licenseService = licenseService;
             _eventService = eventService;
+            _applicationCacheService = applicationCacheService;
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
             _currentContext = currentContext;
@@ -820,6 +823,22 @@ namespace Bit.Core.Services
                 Logger.LogWarning(0, "Invalid password for user {userId}.", user.Id);
             }
             return success;
+        }
+
+        public async Task<bool> CanAccessPremium(User user)
+        {
+            if(user.Premium)
+            {
+                return true;
+            }
+            if(!_currentContext?.Organizations?.Any() ?? true)
+            {
+                return false;
+            }
+
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            return _currentContext.Organizations.Any(o => orgAbilities.ContainsKey(o.Id) &&
+                orgAbilities[o.Id].UsersGetPremium);
         }
 
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,

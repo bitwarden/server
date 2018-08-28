@@ -11,32 +11,40 @@ using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Exceptions;
 using System;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class U2fTokenProvider : IUserTwoFactorTokenProvider<User>
     {
+        private readonly IUserService _userService;
         private readonly IU2fRepository _u2fRepository;
         private readonly GlobalSettings _globalSettings;
 
         public U2fTokenProvider(
+            IUserService userService,
             IU2fRepository u2fRepository,
             GlobalSettings globalSettings)
         {
+            _userService = userService;
             _u2fRepository = u2fRepository;
             _globalSettings = globalSettings;
         }
 
-        public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+        public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.U2f) && HasProperMetaData(provider);
-            return Task.FromResult(canGenerate);
+            if(!HasProperMetaData(provider))
+            {
+                return false;
+            }
+
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.U2f, _userService);
         }
 
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

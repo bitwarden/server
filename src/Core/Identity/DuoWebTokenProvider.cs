@@ -4,28 +4,37 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Utilities.Duo;
 using Bit.Core.Models;
+using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
     {
+        private readonly IUserService _userService;
         private readonly GlobalSettings _globalSettings;
 
-        public DuoWebTokenProvider(GlobalSettings globalSettings)
+        public DuoWebTokenProvider(
+            IUserService userService,
+            GlobalSettings globalSettings)
         {
+            _userService = userService;
             _globalSettings = globalSettings;
         }
 
-        public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+        public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            if(!user.Premium)
+            if(!(await _userService.CanAccessPremium(user)))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            var canGenerate = user.TwoFactorProviderIsEnabled(TwoFactorProviderType.Duo) && HasProperMetaData(provider);
-            return Task.FromResult(canGenerate);
+            if(!HasProperMetaData(provider))
+            {
+                return false;
+            }
+
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, _userService);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
