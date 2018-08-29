@@ -21,7 +21,7 @@ namespace Bit.Api.Jobs
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            await _licensingService.ValidateUsersAsync();
+            await _licensingService.ValidateOrganizationsAsync();
         }
     }
 }
