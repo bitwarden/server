@@ -4,26 +4,29 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Utilities.Duo;
 using Bit.Core.Models;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Services;
 
 namespace Bit.Core.Identity
 {
     public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
     {
-        private readonly IUserService _userService;
+        private readonly IServiceProvider _serviceProvider;
         private readonly GlobalSettings _globalSettings;
 
         public DuoWebTokenProvider(
-            IUserService userService,
+            IServiceProvider serviceProvider,
             GlobalSettings globalSettings)
         {
-            _userService = userService;
+            _serviceProvider = serviceProvider;
             _globalSettings = globalSettings;
         }
 
         public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            if(!(await _userService.CanAccessPremium(user)))
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            if(!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }
@@ -34,12 +37,13 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, _userService);
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, userService);
         }
 
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
-            if(!(await _userService.CanAccessPremium(user)))
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            if(!(await userService.CanAccessPremium(user)))
             {
                 return null;
             }
@@ -57,7 +61,8 @@ namespace Bit.Core.Identity
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(!(await _userService.CanAccessPremium(user)))
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            if(!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }

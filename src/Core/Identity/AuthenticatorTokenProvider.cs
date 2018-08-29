@@ -5,16 +5,17 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using OtpNet;
 using Bit.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity
 {
     public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
     {
-        private readonly IUserService _userService;
+        private readonly IServiceProvider _serviceProvider;
 
-        public AuthenticatorTokenProvider(IUserService userService)
+        public AuthenticatorTokenProvider(IServiceProvider serviceProvider)
         {
-            _userService = userService;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
@@ -24,7 +25,8 @@ namespace Bit.Core.Identity
             {
                 return false;
             }
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, _userService);
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, 
+                _serviceProvider.GetRequiredService<IUserService>());
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

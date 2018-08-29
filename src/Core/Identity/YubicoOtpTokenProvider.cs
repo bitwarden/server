@@ -5,25 +5,28 @@ using Bit.Core.Enums;
 using YubicoDotNetClient;
 using System.Linq;
 using Bit.Core.Services;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity
 {
     public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     {
-        private readonly IUserService _userService;
+        private readonly IServiceProvider _serviceProvider;
         private readonly GlobalSettings _globalSettings;
 
         public YubicoOtpTokenProvider(
-            IUserService userService,
+            IServiceProvider serviceProvider,
             GlobalSettings globalSettings)
         {
-            _userService = userService;
+            _serviceProvider = serviceProvider;
             _globalSettings = globalSettings;
         }
 
         public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
-            if(!(await _userService.CanAccessPremium(user)))
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            if(!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }
@@ -34,7 +37,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, _userService);
+            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, userService);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -44,7 +47,8 @@ namespace Bit.Core.Identity
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
-            if(!(await _userService.CanAccessPremium(user)))
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            if(!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }
