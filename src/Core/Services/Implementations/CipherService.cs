@@ -133,7 +133,16 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You must have premium status to use attachments.");
                 }
 
-                storageBytesRemaining = user.StorageBytesRemaining();
+                if(user.Premium)
+                {
+                    storageBytesRemaining = user.StorageBytesRemaining();
+                }
+                else
+                {
+                    // Users that get access to file storage/premium from their organization get the default
+                    // 1 GB max storage.
+                    storageBytesRemaining = user.StorageBytesRemaining(1);
+                }
             }
             else if(cipher.OrganizationId.HasValue)
             {
