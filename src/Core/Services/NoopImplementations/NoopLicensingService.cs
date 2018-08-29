@@ -12,10 +12,10 @@ namespace Bit.Core.Services
             IHostingEnvironment environment,
             GlobalSettings globalSettings)
         {
-            if(!environment.IsDevelopment() && globalSettings.SelfHosted)
-            {
-                throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
-            }
+            //if(!environment.IsDevelopment() && globalSettings.SelfHosted)
+            //{
+            //    throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
+            //}
         }
 
         public Task ValidateOrganizationsAsync()
@@ -30,7 +30,7 @@ namespace Bit.Core.Services
 
         public Task<bool> ValidateUserPremiumAsync(User user)
         {
-            return Task.FromResult(user.Premium);
+            return Task.FromResult(true);
         }
 
         public bool VerifyLicense(ILicense license)
