@@ -25,6 +25,7 @@ namespace Bit.Core.Services
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly IEventService _eventService;
         private readonly IUserService _userService;
+        private readonly GlobalSettings _globalSettings;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -37,7 +38,8 @@ namespace Bit.Core.Services
             IPushNotificationService pushService,
             IAttachmentStorageService attachmentStorageService,
             IEventService eventService,
-            IUserService userService)
+            IUserService userService,
+            GlobalSettings globalSettings)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -50,6 +52,7 @@ namespace Bit.Core.Services
             _attachmentStorageService = attachmentStorageService;
             _eventService = eventService;
             _userService = userService;
+            _globalSettings = globalSettings;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
@@ -141,7 +144,8 @@ namespace Bit.Core.Services
                 {
                     // Users that get access to file storage/premium from their organization get the default
                     // 1 GB max storage.
-                    storageBytesRemaining = user.StorageBytesRemaining(1);
+                    storageBytesRemaining = user.StorageBytesRemaining(
+                        _globalSettings.SelfHosted ? (short)1024 : (short)1);
                 }
             }
             else if(cipher.OrganizationId.HasValue)
