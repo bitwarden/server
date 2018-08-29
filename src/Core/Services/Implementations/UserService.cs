@@ -838,7 +838,7 @@ namespace Bit.Core.Services
 
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             return _currentContext.Organizations.Any(o => orgAbilities.ContainsKey(o.Id) &&
-                orgAbilities[o.Id].UsersGetPremium);
+                orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
