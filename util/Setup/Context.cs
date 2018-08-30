@@ -188,7 +188,9 @@ namespace Bit.Setup
 
         public class Configuration
         {
-            [Description("Full URL for accessing the installation from a browser. (Required)")]
+            [Description("Note: After making changes to this file you need to run the `rebuild` or `update`\n" +
+                "command for them to be applied.\n\n" +
+                "Full URL for accessing the installation from a browser. (Required)")]
             public string Url { get; set; } = "https://localhost";
 
             [Description("Auto-generate the `./docker/docker-compose.yml` config file.\n" +

@@ -71,7 +71,7 @@ namespace Bit.Setup
 
             var certBuilder = new CertBuilder(_context);
             certBuilder.BuildForInstall();
-            
+
             // Set the URL
             _context.Config.Url = string.Format("http{0}://{1}",
                 _context.Config.Ssl ? "s" : string.Empty, _context.Install.Domain);
@@ -89,6 +89,13 @@ namespace Bit.Setup
             dockerComposeBuilder.BuildForInstaller();
 
             _context.SaveConfiguration();
+
+            Console.WriteLine("\nInstallation complete.");
+            Console.WriteLine("If you need to make additional configuration changes, you can modify\n" +
+                "the settings in `{0}` and then run {1}",
+                _context.HostOS == "win" ? ".\\bwdata\\config.yml" : "./bwdata/config.yml",
+                _context.HostOS == "win" ? "`.\\bitwarden.ps1 -rebuild` or `.\\bitwarden.ps1 -update`" :
+                    "`./bitwarden.sh rebuild` or `./bitwarden.sh update`");
         }
 
         private static void Update()
@@ -112,11 +119,11 @@ namespace Bit.Setup
             Console.Write("to update, run ");
             if(_context.HostOS == "win")
             {
-                Console.Write("'.\\bitwarden.ps1 -updateself' and then '.\\bitwarden.ps1 -update'");
+                Console.Write("`.\\bitwarden.ps1 -updateself` and then `.\\bitwarden.ps1 -update`");
             }
             else
             {
-                Console.Write("'./bitwarden.sh updateself' and then './bitwarden.sh update'");
+                Console.Write("`./bitwarden.sh updateself` and then `./bitwarden.sh update`");
             }
             Console.WriteLine("\n");
         }
