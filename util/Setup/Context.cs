@@ -24,6 +24,8 @@ namespace Bit.Setup
         {
             if(!File.Exists(ConfigPath))
             {
+                Console.WriteLine("No existing `config.yml` detected. Let's generate one.");
+
                 // Looks like updating from older version. Try to create config file.
                 var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
                 if(!Uri.TryCreate(url, UriKind.Absolute, out var uri))
