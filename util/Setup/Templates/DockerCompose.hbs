@@ -5,7 +5,7 @@
 # this file, you can create a `docker-compose.override.yml` file in the
 # same directory and it will be merged into this file at runtime.
 
-version: '3'
+version: '3.5'
 
 services:
   mssql:
@@ -131,3 +131,8 @@ services:
 volumes:
   mssql_data:
 {{/if}}
+
+networks:
+  default:
+    driver: bridge
+    name: bitwarden_network
