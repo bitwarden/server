@@ -5,48 +5,44 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net.Http;
 using System.Reflection;
-using System.IO;
 
 namespace Bit.Setup
 {
     public class Program
     {
-        private static string[] _args = null;
-        private static IDictionary<string, string> _parameters = null;
-        private static Guid? _installationId = null;
-        private static string _installationKey = null;
-        private static string _hostOs = "win";
-        private static string _coreVersion = "latest";
-        private static string _webVersion = "latest";
+        private static Context _context;
 
         public static void Main(string[] args)
         {
             Console.WriteLine();
+            _context = new Context
+            {
+                Args = args
+            };
+            ParseParameters();
 
-            _args = args;
-            _parameters = ParseParameters();
-            if(_parameters.ContainsKey("os"))
+            if(_context.Parameters.ContainsKey("os"))
             {
-                _hostOs = _parameters["os"];
+                _context.HostOS = _context.Parameters["os"];
             }
-            if(_parameters.ContainsKey("corev"))
+            if(_context.Parameters.ContainsKey("corev"))
             {
-                _coreVersion = _parameters["corev"];
+                _context.CoreVersion = _context.Parameters["corev"];
             }
-            if(_parameters.ContainsKey("webv"))
+            if(_context.Parameters.ContainsKey("webv"))
             {
-                _webVersion = _parameters["webv"];
+                _context.WebVersion = _context.Parameters["webv"];
             }
 
-            if(_parameters.ContainsKey("install"))
+            if(_context.Parameters.ContainsKey("install"))
             {
                 Install();
             }
-            else if(_parameters.ContainsKey("update"))
+            else if(_context.Parameters.ContainsKey("update"))
             {
                 Update();
             }
-            else if(_parameters.ContainsKey("printenv"))
+            else if(_context.Parameters.ContainsKey("printenv"))
             {
                 PrintEnvironment();
             }
@@ -58,147 +54,46 @@ namespace Bit.Setup
 
         private static void Install()
         {
-            var outputDir = _parameters.ContainsKey("out") ?
-                _parameters["out"].ToLowerInvariant() : "/etc/bitwarden";
-            var domain = _parameters.ContainsKey("domain") ?
-                _parameters["domain"].ToLowerInvariant() : "localhost";
-            var letsEncrypt = _parameters.ContainsKey("letsencrypt") ?
-                _parameters["letsencrypt"].ToLowerInvariant() == "y" : false;
+            if(_context.Parameters.ContainsKey("letsencrypt"))
+            {
+                _context.Config.SslManagedLetsEncrypt =
+                    _context.Parameters["letsencrypt"].ToLowerInvariant() == "y";
+            }
+            if(_context.Parameters.ContainsKey("domain"))
+            {
+                _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
+            }
 
             if(!ValidateInstallation())
             {
                 return;
             }
 
-            var ssl = letsEncrypt;
-            if(!letsEncrypt)
-            {
-                ssl = Helpers.ReadQuestion("Do you have a SSL certificate to use?");
-                if(ssl)
-                {
-                    Directory.CreateDirectory($"/bitwarden/ssl/{domain}/");
-                    var message = "Make sure 'certificate.crt' and 'private.key' are provided in the \n" +
-                                  "appropriate directory before running 'start' (see docs for info).";
-                    Helpers.ShowBanner("NOTE", message);
-                }
-            }
+            var certBuilder = new CertBuilder(_context);
+            certBuilder.BuildForInstall();
+            
+            // Set the URL
+            _context.Config.Url = string.Format("http{0}://{1}",
+                _context.Config.Ssl ? "s" : string.Empty, _context.Install.Domain);
 
-            var identityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
-            var certBuilder = new CertBuilder(domain, identityCertPassword, letsEncrypt, ssl);
-            var selfSignedSsl = certBuilder.BuildForInstall();
-            ssl = certBuilder.Ssl; // Ssl prop can get flipped during the build
-
-            var sslTrusted = letsEncrypt;
-            var sslDiffieHellman = letsEncrypt;
-            if(ssl && !selfSignedSsl && !letsEncrypt)
-            {
-                sslDiffieHellman = Helpers.ReadQuestion("Use Diffie Hellman ephemeral parameters for SSL " +
-                    "(requires dhparam.pem, see docs)?");
-                sslTrusted = Helpers.ReadQuestion("Is this a trusted SSL certificate (requires ca.crt, see docs)?");
-            }
-
-            if(!ssl)
-            {
-                var message = "You are not using a SSL certificate. Bitwarden requires HTTPS to operate. \n" +
-                              "You must front your installation with a HTTPS proxy. The web vault (and \n" +
-                              "other Bitwarden apps) will not work properly without HTTPS.";
-                Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
-            }
-            else if(ssl && !sslTrusted)
-            {
-                var message = "You are using an untrusted SSL certificate. This certificate will not be \n" +
-                              "trusted by Bitwarden client applications. You must add this certificate to \n" +
-                              "the trusted store on each device or else you will receive errors when trying \n" +
-                              "to connect to your installation.";
-                Helpers.ShowBanner("WARNING", message, ConsoleColor.Yellow);
-            }
-
-            var url = $"https://{domain}";
-            int httpPort = default(int), httpsPort = default(int);
-            if(Helpers.ReadQuestion("Do you want to use the default ports for HTTP (80) and HTTPS (443)?"))
-            {
-                httpPort = 80;
-                if(ssl)
-                {
-                    httpsPort = 443;
-                }
-            }
-            else if(ssl)
-            {
-                httpsPort = 443;
-                if(int.TryParse(Helpers.ReadInput("HTTPS port").Trim(), out httpsPort) && httpsPort != 443)
-                {
-                    url += (":" + httpsPort);
-                }
-                else
-                {
-                    Console.WriteLine("Using default port.");
-                }
-            }
-            else
-            {
-                httpPort = 80;
-                if(!int.TryParse(Helpers.ReadInput("HTTP port").Trim(), out httpPort) && httpPort != 80)
-                {
-                    Console.WriteLine("Using default port.");
-                }
-            }
-
-            if(Helpers.ReadQuestion("Is your installation behind a reverse proxy?"))
-            {
-                if(Helpers.ReadQuestion("Do you use the default HTTPS port (443) on your reverse proxy?"))
-                {
-                    url = $"https://{domain}";
-                }
-                else
-                {
-                    if(int.TryParse(Helpers.ReadInput("Proxy HTTPS port").Trim(), out var httpsReversePort)
-                        && httpsReversePort != 443)
-                    {
-                        url += (":" + httpsReversePort);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Using default port.");
-                        url = $"https://{domain}";
-                    }
-                }
-            }
-            else if(!ssl)
-            {
-                Console.WriteLine("ERROR: You must use a reverse proxy if not using SSL.");
-                return;
-            }
-
-            var push = Helpers.ReadQuestion("Do you want to use push notifications?");
-
-            var nginxBuilder = new NginxConfigBuilder(domain, url, ssl, selfSignedSsl, letsEncrypt,
-                sslTrusted, sslDiffieHellman);
+            var nginxBuilder = new NginxConfigBuilder(_context);
             nginxBuilder.BuildForInstaller();
 
-            var environmentFileBuilder = new EnvironmentFileBuilder
-            {
-                DatabasePassword = Helpers.SecureRandomString(32),
-                Domain = domain,
-                IdentityCertPassword = identityCertPassword,
-                InstallationId = _installationId,
-                InstallationKey = _installationKey,
-                OutputDirectory = outputDir,
-                Push = push,
-                Url = url
-            };
+            var environmentFileBuilder = new EnvironmentFileBuilder(_context);
             environmentFileBuilder.BuildForInstaller();
 
-            var appIdBuilder = new AppIdBuilder(url);
+            var appIdBuilder = new AppIdBuilder(_context);
             appIdBuilder.Build();
 
-            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs, _webVersion, _coreVersion);
-            dockerComposeBuilder.BuildForInstaller(httpPort, httpsPort);
+            var dockerComposeBuilder = new DockerComposeBuilder(_context);
+            dockerComposeBuilder.BuildForInstaller();
+
+            _context.SaveConfiguration();
         }
 
         private static void Update()
         {
-            if(_parameters.ContainsKey("db"))
+            if(_context.Parameters.ContainsKey("db"))
             {
                 MigrateDatabase();
             }
@@ -210,12 +105,12 @@ namespace Bit.Setup
 
         private static void PrintEnvironment()
         {
-            var vaultUrl = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
+            _context.LoadConfiguration();
             Console.WriteLine("\nBitwarden is up and running!");
             Console.WriteLine("===================================================");
-            Console.WriteLine("\nvisit {0}", vaultUrl);
+            Console.WriteLine("\nvisit {0}", _context.Config.Url);
             Console.Write("to update, run ");
-            if(_hostOs == "win")
+            if(_context.HostOS == "win")
             {
                 Console.Write("'.\\bitwarden.ps1 -updateself' and then '.\\bitwarden.ps1 -update'");
             }
@@ -296,13 +191,13 @@ namespace Bit.Setup
                 return false;
             }
 
-            _installationId = installationidGuid;
-            _installationKey = Helpers.ReadInput("Enter your installation key");
+            _context.Install.InstallationId = installationidGuid;
+            _context.Install.InstallationKey = Helpers.ReadInput("Enter your installation key");
 
             try
             {
-                var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" + _installationId)
-                    .GetAwaiter().GetResult();
+                var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" +
+                    _context.Install.InstallationId).GetAwaiter().GetResult();
 
                 if(!response.IsSuccessStatusCode)
                 {
@@ -337,42 +232,35 @@ namespace Bit.Setup
 
         private static void RebuildConfigs()
         {
-            var environmentFileBuilder = new EnvironmentFileBuilder();
+            _context.LoadConfiguration();
+
+            var environmentFileBuilder = new EnvironmentFileBuilder(_context);
             environmentFileBuilder.BuildForUpdater();
 
-            var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
-            if(!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
-            {
-                Console.WriteLine("Unable to determine existing installation url.");
-                return;
-            }
-
-            var domain = uri.Host;
-
-            var nginxBuilder = new NginxConfigBuilder(domain, url);
+            var nginxBuilder = new NginxConfigBuilder(_context);
             nginxBuilder.BuildForUpdater();
 
-            var appIdBuilder = new AppIdBuilder(url);
+            var appIdBuilder = new AppIdBuilder(_context);
             appIdBuilder.Build();
 
-            var dockerComposeBuilder = new DockerComposeBuilder(_hostOs, _webVersion, _coreVersion);
+            var dockerComposeBuilder = new DockerComposeBuilder(_context);
             dockerComposeBuilder.BuildForUpdater();
+
+            _context.SaveConfiguration();
         }
 
-        private static IDictionary<string, string> ParseParameters()
+        private static void ParseParameters()
         {
-            var dict = new Dictionary<string, string>();
-            for(var i = 0; i < _args.Length; i = i + 2)
+            _context.Parameters = new Dictionary<string, string>();
+            for(var i = 0; i < _context.Args.Length; i = i + 2)
             {
-                if(!_args[i].StartsWith("-"))
+                if(!_context.Args[i].StartsWith("-"))
                 {
                     continue;
                 }
 
-                dict.Add(_args[i].Substring(1), _args[i + 1]);
+                _context.Parameters.Add(_context.Args[i].Substring(1), _context.Args[i + 1]);
             }
-
-            return dict;
         }
     }
 }

@@ -1,0 +1,133 @@
+﻿# https://docs.docker.com/compose/compose-file/
+#
+# WARNING: This file is generated. Do not make changes to this file.
+# They will be overwritten on update. If you want to make additions to
+# this file, you can create a `docker-compose.override.yml` file in the
+# same directory and it will be merged into this file at runtime.
+
+version: '3'
+
+services:
+  mssql:
+    image: bitwarden/mssql:{{{CoreVersion}}}
+    container_name: bitwarden-mssql
+    restart: always
+    volumes:
+{{#if MssqlDataDockerVolume}}
+        - mssql_data:/var/opt/mssql/data
+{{else}}
+        - ../mssql/data:/var/opt/mssql/data
+{{/if}}
+      - ../logs/mssql:/var/opt/mssql/log
+      - ../mssql/backups:/etc/bitwarden/mssql/backups
+    env_file:
+      - mssql.env
+      - ../env/uid.env
+      - ../env/mssql.override.env
+
+  web:
+    image: bitwarden/web:{{{WebVersion}}}
+    container_name: bitwarden-web
+    restart: always
+    volumes:
+      - ../web:/etc/bitwarden/web
+    env_file:
+      - global.env
+      - ../env/uid.env
+
+  attachments:
+    image: bitwarden/attachments:{{{CoreVersion}}}
+    container_name: bitwarden-attachments
+    restart: always
+    volumes:
+      - ../core/attachments:/etc/bitwarden/core/attachments
+    env_file:
+      - global.env
+      - ../env/uid.env
+
+  api:
+    image: bitwarden/api:{{{CoreVersion}}}
+    container_name: bitwarden-api
+    restart: always
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/api:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
+  identity:
+    image: bitwarden/identity:{{{CoreVersion}}}
+    container_name: bitwarden-identity
+    restart: always
+    volumes:
+      - ../identity:/etc/bitwarden/identity
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/identity:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
+  admin:
+    image: bitwarden/admin:{{{CoreVersion}}}
+    container_name: bitwarden-admin
+    restart: always
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/admin:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
+  icons:
+    image: bitwarden/icons:{{{CoreVersion}}}
+    container_name: bitwarden-icons
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/icons:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+
+  notifications:
+    image: bitwarden/notifications:{{{CoreVersion}}}
+    container_name: bitwarden-notifications
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/notifications:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
+  nginx:
+    image: bitwarden/nginx:{{{CoreVersion}}}
+    container_name: bitwarden-nginx
+    restart: always
+    ports:
+{{#if HttpPort}}
+      - '{{{HttpPort}}}:8080'
+{{/if}}
+{{#if HttpsPort}}
+      - '{{{HttpsPort}}}:8443'
+{{/if}}
+    volumes:
+      - ../nginx:/etc/bitwarden/nginx
+      - ../letsencrypt:/etc/letsencrypt
+      - ../ssl:/etc/ssl
+      - ../logs/nginx:/var/log/nginx
+    env_file:
+      - ../env/uid.env
+{{#if MssqlDataDockerVolume}}
+
+volumes:
+  mssql_data:
+{{/if}}

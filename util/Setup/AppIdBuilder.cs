@@ -5,35 +5,32 @@ namespace Bit.Setup
 {
     public class AppIdBuilder
     {
-        public AppIdBuilder(string url)
-        {
-            Url = url;
-        }
+        private readonly Context _context;
 
-        public string Url { get; private set; }
+        public AppIdBuilder(Context context)
+        {
+            _context = context;
+        }
 
         public void Build()
         {
+            var model = new TemplateModel
+            {
+                Url = _context.Config.Url
+            };
+
             Console.WriteLine("Building FIDO U2F app id.");
             Directory.CreateDirectory("/bitwarden/web/");
+            var template = Helpers.ReadTemplate("AppId");
             using(var sw = File.CreateText("/bitwarden/web/app-id.json"))
             {
-                sw.Write($@"{{
-  ""trustedFacets"": [
-    {{
-      ""version"": {{
-        ""major"": 1,
-        ""minor"": 0
-      }},
-      ""ids"": [
-        ""{Url}"",
-        ""ios:bundle-id:com.8bit.bitwarden"",
-        ""android:apk-key-hash:dUGFzUzf3lmHSLBDBIv+WaFyZMI""
-      ]
-    }}
-  ]
-}}");
+                sw.Write(template(model));
             }
+        }
+
+        public class TemplateModel
+        {
+            public string Url { get; set; }
         }
     }
 }

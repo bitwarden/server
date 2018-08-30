@@ -2,6 +2,8 @@
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -191,6 +193,22 @@ namespace Bit.Setup
             Console.WriteLine(message);
             Console.WriteLine();
             Console.ResetColor();
+        }
+
+        public static Func<object, string> ReadTemplate(string templateName)
+        {
+            var assembly = typeof(Helpers).GetTypeInfo().Assembly;
+            var fullTemplateName = $"Bit.Setup.Templates.{templateName}.hbs";
+            if(!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
+            {
+                return null;
+            }
+            using(var s = assembly.GetManifestResourceStream(fullTemplateName))
+            using(var sr = new StreamReader(s))
+            {
+                var templateText = sr.ReadToEnd();
+                return HandlebarsDotNet.Handlebars.Compile(templateText);
+            }
         }
     }
 }

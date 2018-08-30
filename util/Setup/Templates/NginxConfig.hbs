@@ -1,0 +1,99 @@
+﻿# WARNING: This file is generated. Do not make changes to this file.
+# They will be overwritten on update.
+
+server {
+  listen 8080 default_server;
+  listen [::]:8080 default_server;
+  server_name {{{Domain}}};
+{{#if Ssl}}
+
+  return 301 {{{Url}}}$request_uri;
+}
+
+server {
+  listen 8443 ssl http2;
+  listen [::]:8443 ssl http2;
+  server_name {{{Domain}}};
+
+  ssl_certificate {{{CertificatePath}}};
+  ssl_certificate_key {{{KeyPath}}};
+  ssl_session_timeout 30m;
+  ssl_session_cache shared:SSL:20m;
+  ssl_session_tickets off;
+{{#if DiffieHellmanPath}}
+
+  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
+  ssl_dhparam {{{DiffieHellmanPath}}};
+{{/if}}
+
+  # SSL protocol TLSv1.2 is allowed. Disabled SSLv3, TLSv1, and TLSv1.1
+  ssl_protocols TLSv1.2;
+  # Enable most secure cipher suites only.
+  ssl_ciphers "{{{SslCiphers}}}";
+  # Enables server-side protection from BEAST attacks
+  ssl_prefer_server_ciphers on;
+{{#if CaPath}}
+
+  # OCSP Stapling ---
+  # Fetch OCSP records from URL in ssl_certificate and cache them
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  # Verify chain of trust of OCSP response using Root CA and Intermediate certs
+  ssl_trusted_certificate {{{CaPath}}};
+  resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
+{{/if}}
+{{/if}}
+
+  # Security headers
+  add_header Referrer-Policy same-origin;
+  #add_header X-Frame-Options SAMEORIGIN;
+{{#if Ssl}}
+  add_header X-Content-Type-Options nosniff;
+  # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
+  add_header Strict-Transport-Security max-age=15768000;
+{{/if}}
+
+  location / {
+    proxy_pass http://web:5000/;
+    # Security headers
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
+  }
+
+  location = /app-id.json {
+    proxy_pass http://web:5000/app-id.json;
+    proxy_hide_header Content-Type;
+    add_header Content-Type $fido_content_type;
+  }
+
+  location /attachments/ {
+    proxy_pass http://attachments:5000/;
+  }
+
+  location /api/ {
+    proxy_pass http://api:5000/;
+  }
+
+  location /identity/ {
+    proxy_pass http://identity:5000/;
+  }
+
+  location /icons/ {
+    proxy_pass http://icons:5000/;
+  }
+
+  location /notifications/ {
+    proxy_pass http://notifications:5000/;
+  }
+
+  location /notifications/hub {
+    proxy_pass http://notifications:5000/hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+
+  location /admin {
+    proxy_pass http://admin:5000;
+  }
+}
