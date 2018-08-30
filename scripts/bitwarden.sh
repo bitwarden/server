@@ -90,6 +90,10 @@ then
     checkOutputDirExists
     downloadRunFile
     $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "rebuild" ]
+then
+    checkOutputDirExists
+    $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists

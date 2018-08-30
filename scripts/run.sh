@@ -152,7 +152,10 @@ function updateDatabase() {
 }
 
 function update() {
-    pullSetup
+    if [ "$1" == "withpull" ]
+    then
+        pullSetup
+    fi
     docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
@@ -198,9 +201,13 @@ then
 elif [ "$1" == "update" ]
 then
     dockerComposeDown
-    update
+    update withpull
     restart
     echo "Pausing 60 seconds for database to come online. Please wait..."
     sleep 60
     updateDatabase
+elif [ "$1" == "rebuild" ]
+then
+    dockerComposeDown
+    update nopull
 fi

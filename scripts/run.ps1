@@ -108,8 +108,10 @@ function Update-Database {
     echo "Database update complete"
 }
 
-function Update {
-    Pull-Setup
+function Update([switch] $withpull) {
+    if ($withpull) {
+        Pull-Setup
+    }
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion
 }
@@ -152,9 +154,13 @@ elseif ($updatedb) {
 }
 elseif ($update) {
     Docker-Compose-Down
-    Update
+    Update -withpull
     Restart
     echo "Pausing 60 seconds for database to come online. Please wait..."
     Start-Sleep -s 60
     Update-Database
+}
+elseif ($rebuild) {
+    Docker-Compose-Down
+    Update
 }
