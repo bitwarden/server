@@ -155,18 +155,22 @@ namespace Bit.Setup
 
             [Description("Auto-generate the `./docker/docker-compose.yml` config file.\n" +
                 "WARNING: Disabling generated config files can break future updates. You will be\n" +
-                "responsible for maintaining this config file.")]
+                "responsible for maintaining this config file.\n" +
+                "Template: https://github.com/bitwarden/core/blob/master/util/Setup/Templates/DockerCompose.hbs")]
             public bool GenerateComposeConfig { get; set; } = true;
 
             [Description("Auto-generate the `./nginx/default.conf` file.\n" +
                 "WARNING: Disabling generated config files can break future updates. You will be\n" +
-                "responsible for maintaining this config file.")]
+                "responsible for maintaining this config file.\n" +
+                "Template: https://github.com/bitwarden/core/blob/master/util/Setup/Templates/NginxConfig.hbs")]
             public bool GenerateNginxConfig { get; set; } = true;
 
-            [Description("Docker compose file port mapping for HTTP. Leave empty for remove the port mapping.")]
+            [Description("Docker compose file port mapping for HTTP. Leave empty for remove the port mapping.\n" +
+                "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
             public string HttpPort { get; set; } = "80";
 
-            [Description("Docker compose file port mapping for HTTPS. Leave empty for remove the port mapping.")]
+            [Description("Docker compose file port mapping for HTTPS. Leave empty for remove the port mapping.\n" +
+                "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
             public string HttpsPort { get; set; } = "443";
 
             [Description("Configure Nginx for SSL.")]
@@ -176,24 +180,24 @@ namespace Bit.Setup
             public bool SslManagedLetsEncrypt { get; set; }
 
             [Description("The actual certificate. (Required if using SSL without managed Let's Encrypt)\n" +
-                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
-                "mapped to `/etc/ssl` within the container.")]
+                "Note: Path uses the container's ssl directory. The `./ssl` host directory is mapped to\n" +
+                "`/etc/ssl` within the container.")]
             public string SslCertificatePath { get; set; }
 
             [Description("The certificate's private key. (Required if using SSL without managed Let's Encrypt)\n" +
-                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
-                "mapped to `/etc/ssl` within the container.")]
+                "Note: Path uses the container's ssl directory. The `./ssl` host directory is mapped to\n" +
+                "`/etc/ssl` within the container.")]
             public string SslKeyPath { get; set; }
 
             [Description("If the certificate is trusted by a CA, you should provide the CA's certificate.\n" +
-                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
-                "mapped to `/etc/ssl` within the container.")]
+                "Note: Path uses the container's ssl directory. The `./ssl` host directory is mapped to\n" +
+                "`/etc/ssl` within the container.")]
             public string SslCaPath { get; set; }
 
             [Description("Diffie Hellman ephemeral parameters\n" +
                 "Learn more: https://security.stackexchange.com/q/94390/79072\n" +
-                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
-                "mapped to `/etc/ssl` within the container.")]
+                "Note: Path uses the container's ssl directory. The `./ssl` host directory is mapped to\n" +
+                "`/etc/ssl` within the container.")]
             public string SslDiffieHellmanPath { get; set; }
 
             [Description("Communicate with the Bitwarden push relay service (push.bitwarden.com) for mobile\n" +
