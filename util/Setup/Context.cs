@@ -41,6 +41,7 @@ namespace Bit.Setup
                 var composeFile = "/bitwarden/docker/docker-compose.yml";
                 if(File.Exists(composeFile))
                 {
+                    Console.WriteLine("1");
                     var fileLines = File.ReadAllLines(composeFile);
                     foreach(var line in fileLines)
                     {
@@ -79,54 +80,13 @@ namespace Bit.Setup
                 var nginxFile = "/bitwarden/nginx/default.conf";
                 if(File.Exists(nginxFile))
                 {
-                    var selfSigned = false;
-                    var diffieHellman = false;
-                    var trusted = false;
-                    var fileLines = File.ReadAllLines(nginxFile);
-                    foreach(var line in fileLines)
-                    {
-                        if(!line.StartsWith("# Parameter:"))
-                        {
-                            continue;
-                        }
-
-                        var paramParts = line.Split("=");
-                        if(paramParts.Length < 2)
-                        {
-                            continue;
-                        }
-
-                        if(paramParts[0] == "# Parameter:Ssl" && bool.TryParse(paramParts[1], out var ssl))
-                        {
-                            Config.Ssl = ssl;
-                            continue;
-                        }
-
-                        if(paramParts[0] == "# Parameter:LetsEncrypt" && bool.TryParse(paramParts[1], out var le))
-                        {
-                            Config.SslManagedLetsEncrypt = le;
-                            continue;
-                        }
-
-                        if(paramParts[0] == "# Parameter:SelfSignedSsl" && bool.TryParse(paramParts[1], out var self))
-                        {
-                            selfSigned = self;
-                            return;
-                        }
-
-                        if(paramParts[0] == "# Parameter:DiffieHellman" && bool.TryParse(paramParts[1], out var dh))
-                        {
-                            diffieHellman = dh;
-                            return;
-                        }
-
-                        if(paramParts[0] == "# Parameter:Trusted" && bool.TryParse(paramParts[1], out var trust))
-                        {
-                            trusted = trust;
-                            return;
-                        }
-                    }
-
+                    Console.WriteLine("2");
+                    var confContent = File.ReadAllText(nginxFile);
+                    var selfSigned = confContent.Contains("/etc/ssl/self/");
+                    Config.Ssl = confContent.Contains("ssl http2;");
+                    Config.SslManagedLetsEncrypt = !selfSigned && confContent.Contains("/etc/letsencrypt/live/");
+                    var diffieHellman = confContent.Contains("/dhparam.pem;");
+                    var trusted = confContent.Contains("ssl_trusted_certificate ");
                     if(Config.SslManagedLetsEncrypt)
                     {
                         Config.Ssl = true;

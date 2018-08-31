@@ -254,6 +254,7 @@ namespace Bit.Setup
             dockerComposeBuilder.BuildForUpdater();
 
             _context.SaveConfiguration();
+            Console.WriteLine(string.Empty);
         }
 
         private static void ParseParameters()
