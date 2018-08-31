@@ -150,6 +150,7 @@ namespace Bit.Setup
         {
             [Description("Note: After making changes to this file you need to run the `rebuild` or `update`\n" +
                 "command for them to be applied.\n\n" +
+
                 "Full URL for accessing the installation from a browser. (Required)")]
             public string Url { get; set; } = "https://localhost";
 
@@ -179,6 +180,14 @@ namespace Bit.Setup
 
             [Description("Configure Nginx for SSL.")]
             public bool Ssl { get; set; } = true;
+
+            [Description("SSL versions used by Nginx (ssl_protocols). Leave empty for recommended default.\n" +
+                "Learn more: https://wiki.mozilla.org/Security/Server_Side_TLS")]
+            public string SslVersions { get; set; }
+
+            [Description("SSL ciphersuites used by Nginx (ssl_ciphers). Leave empty for recommended default.\n" +
+                "Learn more: https://wiki.mozilla.org/Security/Server_Side_TLS")]
+            public string SslCiphersuites { get; set; }
 
             [Description("Installation uses a managed Let's Encrypt certificate.")]
             public bool SslManagedLetsEncrypt { get; set; }

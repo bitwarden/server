@@ -6,10 +6,6 @@ namespace Bit.Setup
     public class NginxConfigBuilder
     {
         private const string ConfFile = "/bitwarden/nginx/default.conf";
-        private const string SslCiphers =
-            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:" +
-            "ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:" +
-            "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
         private const string ContentSecurityPolicy =
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
@@ -98,6 +94,27 @@ namespace Bit.Setup
                         DiffieHellmanPath = context.Config.SslDiffieHellmanPath;
                     }
                 }
+
+                if(!string.IsNullOrWhiteSpace(context.Config.SslCiphersuites))
+                {
+                    SslCiphers = context.Config.SslCiphersuites;
+                }
+                else
+                {
+                    SslCiphers = "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:" +
+                        "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:" +
+                        "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:" +
+                        "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+                }
+
+                if(!string.IsNullOrWhiteSpace(context.Config.SslVersions))
+                {
+                    SslProtocols = context.Config.SslVersions;
+                }
+                else
+                {
+                    SslProtocols = "TLSv1.2";
+                }
             }
 
             public bool Ssl { get; set; }
@@ -107,8 +124,9 @@ namespace Bit.Setup
             public string KeyPath { get; set; }
             public string CaPath { get; set; }
             public string DiffieHellmanPath { get; set; }
+            public string SslCiphers { get; set; }
+            public string SslProtocols { get; set; }
             public string ContentSecurityPolicy => string.Format(NginxConfigBuilder.ContentSecurityPolicy, Domain);
-            public string SslCiphers => NginxConfigBuilder.SslCiphers;
         }
     }
 }

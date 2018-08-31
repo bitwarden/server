@@ -28,9 +28,7 @@ server {
   ssl_dhparam {{{DiffieHellmanPath}}};
 {{/if}}
 
-  # SSL protocol TLSv1.2 is allowed. Disabled SSLv3, TLSv1, and TLSv1.1
-  ssl_protocols TLSv1.2;
-  # Enable most secure cipher suites only.
+  ssl_protocols {{{SslProtocols}}};
   ssl_ciphers "{{{SslCiphers}}}";
   # Enables server-side protection from BEAST attacks
   ssl_prefer_server_ciphers on;
