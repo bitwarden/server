@@ -89,8 +89,7 @@ namespace Bit.Setup
             dockerComposeBuilder.BuildForInstaller();
 
             _context.SaveConfiguration();
-
-            Console.WriteLine("\nInstallation complete.");
+            
             Console.WriteLine("If you need to make additional configuration changes, you can modify\n" +
                 "the settings in `{0}` and then run {1}",
                 _context.HostOS == "win" ? ".\\bwdata\\config.yml" : "./bwdata/config.yml",
