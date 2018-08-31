@@ -41,7 +41,6 @@ namespace Bit.Setup
                 var composeFile = "/bitwarden/docker/docker-compose.yml";
                 if(File.Exists(composeFile))
                 {
-                    Console.WriteLine("1");
                     var fileLines = File.ReadAllLines(composeFile);
                     foreach(var line in fileLines)
                     {
@@ -80,7 +79,6 @@ namespace Bit.Setup
                 var nginxFile = "/bitwarden/nginx/default.conf";
                 if(File.Exists(nginxFile))
                 {
-                    Console.WriteLine("2");
                     var confContent = File.ReadAllText(nginxFile);
                     var selfSigned = confContent.Contains("/etc/ssl/self/");
                     Config.Ssl = confContent.Contains("ssl http2;");
@@ -156,49 +154,55 @@ namespace Bit.Setup
             public string Url { get; set; } = "https://localhost";
 
             [Description("Auto-generate the `./docker/docker-compose.yml` config file.\n" +
-                "WARNING: Disabling generated config files can break future updates. You will be responsible\n" +
-                "for maintaining this config file.")]
+                "WARNING: Disabling generated config files can break future updates. You will be\n" +
+                "responsible for maintaining this config file.")]
             public bool GenerateComposeConfig { get; set; } = true;
 
             [Description("Auto-generate the `./nginx/default.conf` file.\n" +
-                "WARNING: Disabling generated config files can break future updates. You will be responsible\n" +
-                "for maintaining this config file.")]
+                "WARNING: Disabling generated config files can break future updates. You will be\n" +
+                "responsible for maintaining this config file.")]
             public bool GenerateNginxConfig { get; set; } = true;
 
-            [Description("Compose file port mapping for HTTP. Leave empty for remove the port mapping.")]
+            [Description("Docker compose file port mapping for HTTP. Leave empty for remove the port mapping.")]
             public string HttpPort { get; set; } = "80";
 
-            [Description("Compose file port mapping for HTTPS. Leave empty for remove the port mapping.")]
+            [Description("Docker compose file port mapping for HTTPS. Leave empty for remove the port mapping.")]
             public string HttpsPort { get; set; } = "443";
 
-            [Description("Set up the Nginx config file for SSL.")]
+            [Description("Configure Nginx for SSL.")]
             public bool Ssl { get; set; } = true;
 
             [Description("Installation uses a managed Let's Encrypt certificate.")]
             public bool SslManagedLetsEncrypt { get; set; }
 
             [Description("The actual certificate. (Required if using SSL without managed Let's Encrypt)\n" +
-                "Note: The `./ssl` directory is mapped to `/etc/ssl` within the container.")]
+                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
+                "mapped to `/etc/ssl` within the container.")]
             public string SslCertificatePath { get; set; }
 
             [Description("The certificate's private key. (Required if using SSL without managed Let's Encrypt)\n" +
-                "Note: The `./ssl` directory is mapped to `/etc/ssl` within the container.")]
+                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
+                "mapped to `/etc/ssl` within the container.")]
             public string SslKeyPath { get; set; }
 
             [Description("If the certificate is trusted by a CA, you should provide the CA's certificate.\n" +
-                "Note: The `./ssl` directory is mapped to `/etc/ssl` within the container.")]
+                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
+                "mapped to `/etc/ssl` within the container.")]
             public string SslCaPath { get; set; }
 
             [Description("Diffie Hellman ephemeral parameters\n" +
                 "Learn more: https://security.stackexchange.com/q/94390/79072\n" +
-                "Note: The `./ssl` directory is mapped to `/etc/ssl` within the container.")]
+                "Note: Path must be relative to the container's ssl directory. The `./ssl` host directory is\n" +
+                "mapped to `/etc/ssl` within the container.")]
             public string SslDiffieHellmanPath { get; set; }
 
-            [Description("Communicate with the Bitwarden push relay service (push.bitwarden.com) for mobile app live sync.")]
+            [Description("Communicate with the Bitwarden push relay service (push.bitwarden.com) for mobile\n" +
+                "app live sync.")]
             public bool PushNotifications { get; set; } = true;
 
             [Description("Use a docker volume instead of a host-mapped volume for the persisted database.\n" +
-                "WARNING: Changing this value will cause you to lose access to the existing persisted database.")]
+                "WARNING: Changing this value will cause you to lose access to the existing persisted\n" +
+                "database.")]
             public bool DatabaseDockerVolume { get; set; }
 
             [YamlIgnore]
