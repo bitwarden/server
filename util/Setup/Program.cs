@@ -89,12 +89,25 @@ namespace Bit.Setup
             dockerComposeBuilder.BuildForInstaller();
 
             _context.SaveConfiguration();
-            
-            Console.WriteLine("If you need to make additional configuration changes, you can modify\n" +
+
+            Console.WriteLine("\nInstallation complete");
+
+            Console.WriteLine("\nIf you need to make additional configuration changes, you can modify\n" +
                 "the settings in `{0}` and then run {1}",
                 _context.HostOS == "win" ? ".\\bwdata\\config.yml" : "./bwdata/config.yml",
                 _context.HostOS == "win" ? "`.\\bitwarden.ps1 -rebuild` or `.\\bitwarden.ps1 -update`" :
                     "`./bitwarden.sh rebuild` or `./bitwarden.sh update`");
+
+            Console.WriteLine("\nNext steps, run:");
+            if(_context.HostOS == "win")
+            {
+                Console.WriteLine("`.\\bitwarden.ps1 -start` and then `.\\bitwarden.ps1 -updatedb`");
+            }
+            else
+            {
+                Console.WriteLine("`./bitwarden.sh start` and then `./bitwarden.sh updatedb`");
+            }
+            Console.WriteLine(string.Empty);
         }
 
         private static void Update()
