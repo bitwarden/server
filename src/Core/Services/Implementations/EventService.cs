@@ -46,35 +46,16 @@ namespace Bit.Core.Services
             };
 
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            IEnumerable<IEvent> orgEvents;
-            if(_currentContext.UserId.HasValue)
-            {
-                orgEvents = _currentContext.Organizations
-                    .Where(o => CanUseEvents(orgAbilities, o.Id))
-                    .Select(o => new EventMessage(_currentContext)
-                    {
-                        OrganizationId = o.Id,
-                        UserId = userId,
-                        ActingUserId = userId,
-                        Type = type,
-                        Date = DateTime.UtcNow
-                    });
-            }
-            else
-            {
-                var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
-                orgEvents = orgs
-                    .Where(o => o.Status == OrganizationUserStatusType.Confirmed &&
-                        CanUseEvents(orgAbilities, o.OrganizationId))
-                    .Select(o => new EventMessage(_currentContext)
-                    {
-                        OrganizationId = o.OrganizationId,
-                        UserId = userId,
-                        ActingUserId = userId,
-                        Type = type,
-                        Date = DateTime.UtcNow
-                    });
-            }
+            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
+            var orgEvents = orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
+                .Select(o => new EventMessage(_currentContext)
+                {
+                    OrganizationId = o.Id,
+                    UserId = userId,
+                    ActingUserId = userId,
+                    Type = type,
+                    Date = DateTime.UtcNow
+                });
 
             if(orgEvents.Any())
             {

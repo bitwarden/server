@@ -224,16 +224,16 @@ namespace Bit.Core.IdentityServer
 
             Organization firstEnabledOrg = null;
             var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-                .Where(o => o.Status == OrganizationUserStatusType.Confirmed).ToList();
+                .ToList();
             if(orgs.Any())
             {
                 var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-                var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.OrganizationId));
+                var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.Id));
                 if(twoFactorOrgs.Any())
                 {
                     var userOrgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     firstEnabledOrg = userOrgs.FirstOrDefault(
-                        o => orgs.Any(om => om.OrganizationId == o.Id) && o.TwoFactorIsEnabled());
+                        o => orgs.Any(om => om.Id == o.Id) && o.TwoFactorIsEnabled());
                 }
             }
 

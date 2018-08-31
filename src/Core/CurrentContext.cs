@@ -15,8 +15,6 @@ namespace Bit.Core
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
         private string _ip;
-        private Dictionary<Guid, ICollection<OrganizationUser>> _orgUsers =
-            new Dictionary<Guid, ICollection<OrganizationUser>>();
 
         public virtual HttpContext HttpContext { get; set; }
         public virtual Guid? UserId { get; set; }
@@ -24,8 +22,7 @@ namespace Bit.Core
         public virtual string DeviceIdentifier { get; set; }
         public virtual DeviceType? DeviceType { get; set; }
         public virtual string IpAddress => GetRequestIp();
-        public virtual List<CurrentContentOrganization> Organizations { get; set; } =
-            new List<CurrentContentOrganization>();
+        public virtual List<CurrentContentOrganization> Organizations { get; set; }
         public virtual Guid? InstallationId { get; set; }
 
         public void Build(HttpContext httpContext)
@@ -84,6 +81,7 @@ namespace Bit.Core
 
             DeviceIdentifier = GetClaimValue(claimsDict, "device");
 
+            Organizations = new List<CurrentContentOrganization>();
             if(claimsDict.ContainsKey("orgowner"))
             {
                 Organizations.AddRange(claimsDict["orgowner"].Select(c =>
@@ -117,27 +115,30 @@ namespace Bit.Core
 
         public bool OrganizationUser(Guid orgId)
         {
-            return Organizations.Any(o => o.Id == orgId);
+            return Organizations?.Any(o => o.Id == orgId) ?? false;
         }
+
         public bool OrganizationAdmin(Guid orgId)
         {
-            return Organizations.Any(o => o.Id == orgId &&
-                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin));
+            return Organizations?.Any(o => o.Id == orgId &&
+                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin)) ?? false;
         }
+
         public bool OrganizationOwner(Guid orgId)
         {
-            return Organizations.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner);
+            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
         }
 
-        public async Task<ICollection<OrganizationUser>> OrganizationMembershipAsync(
+        public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId)
         {
-            if(!_orgUsers.ContainsKey(userId))
+            if(Organizations == null)
             {
-                _orgUsers.Add(userId, await organizationUserRepository.GetManyByUserAsync(userId));
+                var userOrgs = await organizationUserRepository.GetManyByUserAsync(userId);
+                Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
+                    .Select(ou => new CurrentContentOrganization(ou)).ToList();
             }
-
-            return _orgUsers[userId];
+            return Organizations;
         }
 
         private string GetRequestIp()
@@ -172,6 +173,14 @@ namespace Bit.Core
 
         public class CurrentContentOrganization
         {
+            public CurrentContentOrganization() { }
+
+            public CurrentContentOrganization(OrganizationUser orgUser)
+            {
+                Id = orgUser.OrganizationId;
+                Type = orgUser.Type;
+            }
+
             public Guid Id { get; set; }
             public OrganizationUserType Type { get; set; }
         }

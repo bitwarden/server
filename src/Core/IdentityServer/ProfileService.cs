@@ -59,29 +59,26 @@ namespace Bit.Core.IdentityServer
                 var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
                 if(orgs.Any())
                 {
-                    var groupedOrgs = orgs.Where(o => o.Status == Enums.OrganizationUserStatusType.Confirmed)
-                        .GroupBy(o => o.Type);
-
-                    foreach(var group in groupedOrgs)
+                    foreach(var group in orgs.GroupBy(o => o.Type))
                     {
                         switch(group.Key)
                         {
                             case Enums.OrganizationUserType.Owner:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orgowner", org.OrganizationId.ToString()));
+                                    newClaims.Add(new Claim("orgowner", org.Id.ToString()));
                                 }
                                 break;
                             case Enums.OrganizationUserType.Admin:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orgadmin", org.OrganizationId.ToString()));
+                                    newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
                                 }
                                 break;
                             case Enums.OrganizationUserType.User:
                                 foreach(var org in group)
                                 {
-                                    newClaims.Add(new Claim("orguser", org.OrganizationId.ToString()));
+                                    newClaims.Add(new Claim("orguser", org.Id.ToString()));
                                 }
                                 break;
                             default:

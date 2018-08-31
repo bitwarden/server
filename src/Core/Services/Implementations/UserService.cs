@@ -831,13 +831,13 @@ namespace Bit.Core.Services
             {
                 return true;
             }
-            if(!_currentContext?.Organizations?.Any() ?? true)
+            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
+            if(!orgs.Any())
             {
                 return false;
             }
-
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            return _currentContext.Organizations.Any(o => orgAbilities.ContainsKey(o.Id) &&
+            return orgs.Any(o => orgAbilities.ContainsKey(o.Id) &&
                 orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 

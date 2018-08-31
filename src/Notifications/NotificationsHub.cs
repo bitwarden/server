@@ -19,9 +19,12 @@ namespace Bit.Notifications
         {
             var currentContext = new CurrentContext();
             currentContext.Build(Context.User);
-            foreach(var org in currentContext.Organizations)
+            if(currentContext.Organizations != null)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
+                foreach(var org in currentContext.Organizations)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
+                }
             }
             _connectionCounter.Increment();
             await base.OnConnectedAsync();
@@ -31,9 +34,12 @@ namespace Bit.Notifications
         {
             var currentContext = new CurrentContext();
             currentContext.Build(Context.User);
-            foreach(var org in currentContext.Organizations)
+            if(currentContext.Organizations != null)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
+                foreach(var org in currentContext.Organizations)
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Organization_{org.Id}");
+                }
             }
             _connectionCounter.Decrement();
             await base.OnDisconnectedAsync(exception);
