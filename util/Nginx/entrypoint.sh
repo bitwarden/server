@@ -35,8 +35,9 @@ mkdir -p /etc/letsencrypt
 chown -R $USERNAME:$GROUPNAME /etc/letsencrypt
 mkdir -p /etc/ssl
 chown -R $USERNAME:$GROUPNAME /etc/ssl
-touch /var/run/nginx.pid
-chown -R $USERNAME:$GROUPNAME /var/run/nginx.pid
+mkdir -p /var/run/nginx
+touch /var/run/nginx/nginx.pid
+chown -R $USERNAME:$GROUPNAME /var/run/nginx
 chown -R $USERNAME:$GROUPNAME /var/cache/nginx
 chown -R $USERNAME:$GROUPNAME /var/log/nginx
 
