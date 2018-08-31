@@ -47,7 +47,7 @@ server {
 
   # Security headers
   add_header Referrer-Policy same-origin;
-  #add_header X-Frame-Options SAMEORIGIN;
+  add_header X-Frame-Options SAMEORIGIN;
 {{#if Ssl}}
   add_header X-Content-Type-Options nosniff;
   # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
@@ -65,6 +65,16 @@ server {
     proxy_pass http://web:5000/app-id.json;
     proxy_hide_header Content-Type;
     add_header Content-Type $fido_content_type;
+  }
+
+  location = /duo-connector.html {
+    proxy_pass http://web:5000/duo-connector.html;
+    proxy_hide_header X-Frame-Options;
+  }
+
+  location = /u2f-connector.html {
+    proxy_pass http://web:5000/u2f-connector.html;
+    proxy_hide_header X-Frame-Options;
   }
 
   location /attachments/ {
