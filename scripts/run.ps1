@@ -60,31 +60,27 @@ function Install() {
 }
 
 function Docker-Compose-Up {
-    if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
-        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml up -d
-    }
-    else {
-        docker-compose -f ${dockerDir}\docker-compose.yml up -d
-    }
+    Docker-Compose-Files
+    docker-compose up -d
 }
 
 function Docker-Compose-Down {
-    if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
-        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml down
-    }
-    else {
-        docker-compose -f ${dockerDir}\docker-compose.yml down
-    }
+    Docker-Compose-Files
+    docker-compose down
 }
 
 function Docker-Compose-Pull {
+    Docker-Compose-Files
+    docker-compose pull
+}
+
+function Docker-Compose-Files {
     if (Test-Path -Path "${dockerDir}\docker-compose.override.yml" -PathType leaf) {
-        docker-compose -f ${dockerDir}\docker-compose.yml -f ${dockerDir}\docker-compose.override.yml pull
+        $env:COMPOSE_FILE = "${dockerDir}\docker-compose.yml;${dockerDir}\docker-compose.override.yml"
     }
     else {
-        docker-compose -f ${dockerDir}\docker-compose.yml pull
+        $env:COMPOSE_FILE = "${dockerDir}\docker-compose.yml"
     }
-    
 }
 
 function Docker-Prune {

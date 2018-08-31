@@ -103,29 +103,26 @@ function install() {
 }
 
 function dockerComposeUp() {
-    if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
-    then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml up -d
-    else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml up -d
-    fi
+    dockerComposeFiles
+    docker-compose up -d
 }
 
 function dockerComposeDown() {
-    if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
-    then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml down
-    else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml down
-    fi
+    dockerComposeFiles
+    docker-compose down
 }
 
 function dockerComposePull() {
+    dockerComposeFiles
+    docker-compose pull
+}
+
+function dockerComposeFiles() {
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
-        docker-compose -f $DOCKER_DIR/docker-compose.yml -f $DOCKER_DIR/docker-compose.override.yml pull
+        export COMPOSE_FILE="$DOCKER_DIR/docker-compose.yml:$DOCKER_DIR/docker-compose.override.yml"
     else
-        docker-compose -f $DOCKER_DIR/docker-compose.yml pull
+        export COMPOSE_FILE="$DOCKER_DIR/docker-compose.yml"
     fi
 }
 
