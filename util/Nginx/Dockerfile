@@ -10,6 +10,8 @@ RUN apt-get update \
 COPY nginx.conf /etc/nginx
 COPY proxy.conf /etc/nginx
 COPY mime.types /etc/nginx
+COPY security-headers.conf /etc/nginx
+COPY security-headers-ssl.conf /etc/nginx
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 

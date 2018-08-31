@@ -43,38 +43,45 @@ server {
   ssl_trusted_certificate {{{CaPath}}};
   resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
 {{/if}}
-{{/if}}
 
-  # Security headers
-  add_header Referrer-Policy same-origin;
-  add_header X-Frame-Options SAMEORIGIN;
-{{#if Ssl}}
-  add_header X-Content-Type-Options nosniff;
-  # This will enforce HTTP browsing into HTTPS and avoid ssl stripping attack. 6 months age
-  add_header Strict-Transport-Security max-age=15768000;
+  include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
 
   location / {
     proxy_pass http://web:5000/;
-    # Security headers
-    add_header X-XSS-Protection "1; mode=block";
+    include /etc/nginx/security-headers.conf;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
     add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
   }
 
   location = /app-id.json {
     proxy_pass http://web:5000/app-id.json;
+    include /etc/nginx/security-headers.conf;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
     proxy_hide_header Content-Type;
     add_header Content-Type $fido_content_type;
   }
 
   location = /duo-connector.html {
     proxy_pass http://web:5000/duo-connector.html;
-    proxy_hide_header X-Frame-Options;
+    include /etc/nginx/security-headers.conf;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    add_header X-Frame-Options "";
   }
 
   location = /u2f-connector.html {
     proxy_pass http://web:5000/u2f-connector.html;
-    proxy_hide_header X-Frame-Options;
+    include /etc/nginx/security-headers.conf;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    add_header X-Frame-Options "";
   }
 
   location /attachments/ {
