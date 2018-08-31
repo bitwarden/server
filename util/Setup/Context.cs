@@ -165,13 +165,17 @@ namespace Bit.Setup
                 "Template: https://github.com/bitwarden/core/blob/master/util/Setup/Templates/NginxConfig.hbs")]
             public bool GenerateNginxConfig { get; set; } = true;
 
-            [Description("Docker compose file port mapping for HTTP. Leave empty for remove the port mapping.\n" +
+            [Description("Docker compose file port mapping for HTTP. Leave empty to remove the port mapping.\n" +
                 "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
             public string HttpPort { get; set; } = "80";
 
-            [Description("Docker compose file port mapping for HTTPS. Leave empty for remove the port mapping.\n" +
+            [Description("Docker compose file port mapping for HTTPS. Leave empty to remove the port mapping.\n" +
                 "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
             public string HttpsPort { get; set; } = "443";
+
+            [Description("Docker compose file version. Leave empty for default.\n" +
+                "Learn more: https://docs.docker.com/compose/compose-file/compose-versioning/")]
+            public string ComposeVersion { get; set; }
 
             [Description("Configure Nginx for SSL.")]
             public bool Ssl { get; set; } = true;

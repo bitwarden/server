@@ -45,13 +45,24 @@ namespace Bit.Setup
         {
             public TemplateModel(Context context)
             {
+                if(!string.IsNullOrWhiteSpace(context.Config.ComposeVersion))
+                {
+                    ComposeVersion = context.Config.ComposeVersion;
+                }
                 MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
                 HttpPort = context.Config.HttpPort;
                 HttpsPort = context.Config.HttpsPort;
-                CoreVersion = context.CoreVersion;
-                WebVersion = context.WebVersion;
+                if(!string.IsNullOrWhiteSpace(context.CoreVersion))
+                {
+                    CoreVersion = context.CoreVersion;
+                }
+                if(!string.IsNullOrWhiteSpace(context.WebVersion))
+                {
+                    WebVersion = context.WebVersion;
+                }
             }
 
+            public string ComposeVersion { get; set; } = "3";
             public bool MssqlDataDockerVolume { get; set; }
             public string HttpPort { get; set; }
             public string HttpsPort { get; set; }
