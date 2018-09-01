@@ -55,6 +55,7 @@ server {
 {{/if}}
     include /etc/nginx/security-headers.conf;
     add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
+    add_header X-Frame-Options SAMEORIGIN;
   }
 
   location = /app-id.json {
@@ -103,5 +104,10 @@ server {
 
   location /admin {
     proxy_pass http://admin:5000;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
   }
 }
