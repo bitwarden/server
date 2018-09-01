@@ -199,7 +199,7 @@ namespace Bit.Core.Utilities
             Action<IdentityOptions> setAction = null)
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
-            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 75000);
+            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
 
             var identityBuilder = services.AddIdentityWithoutCookieAuth<User, Role>(setAction);
 
