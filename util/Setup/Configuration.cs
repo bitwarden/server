@@ -77,7 +77,8 @@ namespace Bit.Setup
 
         [Description("Use a docker volume (`mssql_data`) instead of a host-mapped volume for the persisted " +
             "database.\n" +
-            "WARNING: Changing this value will cause you to lose access to the existing persisted database.")]
+            "WARNING: Changing this value will cause you to lose access to the existing persisted database.\n" +
+            "Learn more: https://docs.docker.com/storage/volumes/")]
         public bool DatabaseDockerVolume { get; set; }
 
         [YamlIgnore]
