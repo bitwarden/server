@@ -29,7 +29,8 @@ mkhomedir_helper $USERNAME
 
 # The rest...
 
-touch /var/log/cron.log
+# ref: https://stackoverflow.com/a/38850273
+touch /var/log/cron.log /etc/crontab /etc/cron.*/*
 chown $USERNAME:$GROUPNAME /var/log/cron.log
 mkdir -p /etc/bitwarden/mssql/backups
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
