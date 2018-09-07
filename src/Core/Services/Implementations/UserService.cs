@@ -182,7 +182,11 @@ namespace Bit.Core.Services
             if(!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
             {
                 var paymentService = user.GetPaymentService(_globalSettings);
-                await paymentService.CancelSubscriptionAsync(user, true);
+                try
+                {
+                    await paymentService.CancelSubscriptionAsync(user, true);
+                }
+                catch(GatewayException) { }
             }
 
             await _userRepository.DeleteAsync(user);
