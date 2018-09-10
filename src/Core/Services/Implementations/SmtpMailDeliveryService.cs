@@ -11,6 +11,7 @@ namespace Bit.Core.Services
     {
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<SmtpMailDeliveryService> _logger;
+        private readonly string _replyDomain;
 
         public SmtpMailDeliveryService(
             GlobalSettings globalSettings,
@@ -19,6 +20,10 @@ namespace Bit.Core.Services
             if(globalSettings.Mail?.Smtp?.Host == null)
             {
                 throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
+            }
+            if(globalSettings.Mail?.ReplyToEmail?.Contains("@") ?? false)
+            {
+                _replyDomain = globalSettings.Mail.ReplyToEmail.Split('@')[1];
             }
 
             _globalSettings = globalSettings;
@@ -57,6 +62,10 @@ namespace Bit.Core.Services
             smtpMessage.SubjectEncoding = Encoding.UTF8;
             smtpMessage.BodyEncoding = Encoding.UTF8;
             smtpMessage.BodyTransferEncoding = System.Net.Mime.TransferEncoding.QuotedPrintable;
+            if(!string.IsNullOrWhiteSpace(_replyDomain))
+            {
+                smtpMessage.Headers.Add("Message-ID", $"<{Guid.NewGuid()}@{_replyDomain}>");
+            }
             foreach(var address in message.ToEmails)
             {
                 smtpMessage.To.Add(new MailAddress(address));
