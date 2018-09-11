@@ -46,7 +46,7 @@ gulp.task('lib', ['clean:lib'], () => {
             dest: paths.libDir + 'bootstrap/js'
         },
         {
-            src: paths.npmDir + 'popper.js/dist/*',
+            src: paths.npmDir + 'popper.js/dist/umd/*',
             dest: paths.libDir + 'popper'
         },
         {
