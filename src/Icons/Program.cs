@@ -11,8 +11,6 @@ namespace Bit.Icons
             WebHost
                 .CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                // ref: https://github.com/aspnet/KestrelHttpServer/issues/2694
-                .UseLibuv()
                 .Build()
                 .Run();
         }

@@ -10,8 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.9.10" />
-    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="2.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.1.2-runtime
+FROM microsoft/dotnet:2.1.4-runtime
 
 LABEL com.bitwarden.product="bitwarden"
 
