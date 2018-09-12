@@ -153,13 +153,15 @@ namespace Bit.Core.Utilities
         public static IdentityBuilder AddCustomIdentityServices(
             this IServiceCollection services, GlobalSettings globalSettings)
         {
+            services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
             services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
             {
                 options.TokenLifespan = TimeSpan.FromDays(30);
             });
-
-            var identityBuilder = services.AddBasicCustomIdentityServices(globalSettings, options =>
+            
+            var identityBuilder = services.AddIdentityWithoutCookieAuth<User, Role>(options =>
             {
                 options.User = new UserOptions
                 {
@@ -184,6 +186,9 @@ namespace Bit.Core.Utilities
             });
 
             identityBuilder
+                .AddUserStore<UserStore>()
+                .AddRoleStore<RoleStore>()
+                .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
                 .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
                 .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
                 .AddTokenProvider<DuoWebTokenProvider>(TwoFactorProviderType.Duo.ToString())
@@ -194,25 +199,8 @@ namespace Bit.Core.Utilities
             return identityBuilder;
         }
 
-        public static IdentityBuilder AddBasicCustomIdentityServices(
-            this IServiceCollection services, GlobalSettings globalSettings,
-            Action<IdentityOptions> setAction = null)
-        {
-            services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
-            services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
-
-            var identityBuilder = services.AddIdentityWithoutCookieAuth<User, Role>(setAction);
-
-            identityBuilder
-                .AddUserStore<UserStore>()
-                .AddRoleStore<RoleStore>()
-                .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider);
-
-            return identityBuilder;
-        }
-
         public static IdentityBuilder AddPasswordlessIdentityServices<TUserStore>(
-        this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
+            this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.Configure<DataProtectionTokenProviderOptions>(options =>
