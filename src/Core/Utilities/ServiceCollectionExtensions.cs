@@ -153,14 +153,13 @@ namespace Bit.Core.Utilities
         public static IdentityBuilder AddCustomIdentityServices(
             this IServiceCollection services, GlobalSettings globalSettings)
         {
-            services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
             services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
             services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
             {
                 options.TokenLifespan = TimeSpan.FromDays(30);
             });
-            
+
             var identityBuilder = services.AddIdentityWithoutCookieAuth<User, Role>(options =>
             {
                 options.User = new UserOptions
@@ -199,7 +198,7 @@ namespace Bit.Core.Utilities
             return identityBuilder;
         }
 
-        public static IdentityBuilder AddPasswordlessIdentityServices<TUserStore>(
+        public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
             this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
@@ -208,10 +207,13 @@ namespace Bit.Core.Utilities
                 options.TokenLifespan = TimeSpan.FromMinutes(15);
             });
 
-            var identityBuilder = services.AddIdentity<IdentityUser, Role>()
+            var passwordlessIdentityBuilder = services.AddIdentity<IdentityUser, Role>()
                 .AddUserStore<TUserStore>()
                 .AddRoleStore<RoleStore>()
                 .AddDefaultTokenProviders();
+
+            var regularIdentityBuilder = services.AddIdentityCore<User>()
+                .AddUserStore<UserStore>();
 
             services.TryAddScoped<PasswordlessSignInManager<IdentityUser>, PasswordlessSignInManager<IdentityUser>>();
 
@@ -227,7 +229,7 @@ namespace Bit.Core.Utilities
                 options.SlidingExpiration = true;
             });
 
-            return identityBuilder;
+            return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
         }
 
         public static void AddIdentityAuthenticationServices(

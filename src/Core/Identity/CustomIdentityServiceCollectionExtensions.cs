@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -28,7 +29,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddScoped<IUserValidator<TUser>, UserValidator<TUser>>();
             services.TryAddScoped<IPasswordValidator<TUser>, PasswordValidator<TUser>>();
             services.TryAddScoped<IPasswordHasher<TUser>, PasswordHasher<TUser>>();
-            services.TryAddScoped<ILookupNormalizer, UpperInvariantLookupNormalizer>();
+            services.TryAddScoped<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.TryAddScoped<IRoleValidator<TRole>, RoleValidator<TRole>>();
             // No interface for the error describer so we can add errors without rev'ing the interface
             services.TryAddScoped<IdentityErrorDescriber>();
