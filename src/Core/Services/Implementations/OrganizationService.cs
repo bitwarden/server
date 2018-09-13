@@ -447,7 +447,7 @@ namespace Bit.Core.Services
             StripeSubscription subscription = null;
 
             // Pre-generate the org id so that we can save it with the Stripe subscription..
-            Guid newOrgId = CoreHelpers.GenerateComb();
+            var newOrgId = CoreHelpers.GenerateComb();
 
             if(plan.Type == PlanType.Free)
             {
