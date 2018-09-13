@@ -10,9 +10,6 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
-using jsreport.AspNetCore;
-using jsreport.Types;
-using Bit.Api.Models;
 using Stripe;
 using Microsoft.Extensions.Options;
 using Bit.Core.Utilities;
@@ -29,7 +26,6 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
-        private readonly ApiSettings _apiSettings;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -37,8 +33,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IUserService userService,
             CurrentContext currentContext,
-            GlobalSettings globalSettings,
-            IOptions<ApiSettings> apiSettings)
+            GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -46,7 +41,6 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
-            _apiSettings = apiSettings.Value;
         }
 
         [HttpGet("{id}")]
@@ -100,7 +94,6 @@ namespace Bit.Api.Controllers
 
         [HttpGet("{id}/billing-invoice/{invoiceId}")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [MiddlewareFilter(typeof(JsReportPipeline))]
         public async Task<IActionResult> GetBillingInvoice(string id, string invoiceId)
         {
             var orgIdGuid = new Guid(id);
@@ -118,21 +111,15 @@ namespace Bit.Api.Controllers
             try
             {
                 var invoice = await new StripeInvoiceService().GetAsync(invoiceId);
-                if(invoice == null || invoice.CustomerId != organization.GatewayCustomerId)
+                if(invoice != null && invoice.CustomerId == organization.GatewayCustomerId &&
+                    !string.IsNullOrWhiteSpace(invoice.HostedInvoiceUrl))
                 {
-                    throw new NotFoundException();
+                    return new RedirectResult(invoice.HostedInvoiceUrl);
                 }
+            }
+            catch(StripeException) { }
 
-                var model = new InvoiceModel(organization, invoice, _apiSettings);
-                HttpContext.JsReportFeature().Recipe(Recipe.PhantomPdf)
-                    .OnAfterRender((r) => HttpContext.Response.Headers["Content-Disposition"] =
-                        $"attachment; filename=\"bitwarden_{model.InvoiceNumber}.pdf\"");
-                return View("Invoice", model);
-            }
-            catch(StripeException)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
         [HttpGet("{id}/license")]
@@ -234,7 +221,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
         }
-        
+
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
@@ -247,7 +234,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
         }
-        
+
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
@@ -260,7 +247,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         }
-        
+
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostStorage(string id, [FromBody]StorageRequestModel model)
@@ -286,7 +273,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
         }
-        
+
         [HttpPost("{id}/cancel")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostCancel(string id)
@@ -299,7 +286,7 @@ namespace Bit.Api.Controllers
 
             await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
         }
-        
+
         [HttpPost("{id}/reinstate")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PostReinstate(string id)
@@ -358,7 +345,7 @@ namespace Bit.Api.Controllers
                 await _organizationService.DeleteAsync(organization);
             }
         }
-        
+
         [HttpPost("{id}/license")]
         [SelfHosted(SelfHostedOnly = true)]
         public async Task PostLicense(string id, LicenseRequestModel model)

@@ -12,9 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="jsreport.AspNetCore" Version="1.0.1" />
-    <PackageReference Include="jsreport.Binary" Version="1.10.0" />
-    <PackageReference Include="jsreport.Local" Version="1.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />
   </ItemGroup>
 

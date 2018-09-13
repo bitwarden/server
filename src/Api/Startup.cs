@@ -13,7 +13,6 @@ using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
-using jsreport.AspNetCore;
 using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Bit.Api
@@ -38,7 +37,6 @@ namespace Bit.Api
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
-            services.Configure<ApiSettings>(Configuration.GetSection("apiSettings"));
             if(!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
@@ -114,14 +112,6 @@ namespace Bit.Api
                 // Jobs service
                 Jobs.JobsHostedService.AddJobsServices(services);
                 services.AddHostedService<Jobs.JobsHostedService>();
-            }
-            else
-            {
-                // PDF generation
-                services.AddJsReport(new jsreport.Local.LocalReporting()
-                    .UseBinary(jsreport.Binary.JsReportBinary.GetBinary())
-                    .AsUtility()
-                    .Create());
             }
         }
 
