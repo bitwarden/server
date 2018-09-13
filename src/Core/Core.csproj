@@ -37,7 +37,7 @@
     <PackageReference Include="Braintree" Version="4.5.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
     <PackageReference Include="Sendgrid" Version="9.9.0" />
-    <PackageReference Include="Stripe.net" Version="17.8.0" />
+    <PackageReference Include="Stripe.net" Version="19.6.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />

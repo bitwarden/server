@@ -26,6 +26,7 @@ namespace Bit.Core.Services
 
             var subCreateOptions = new StripeSubscriptionCreateOptions
             {
+                CustomerId = customer.Id,
                 Items = new List<StripeSubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -52,7 +53,7 @@ namespace Bit.Core.Services
             try
             {
                 var subscriptionService = new StripeSubscriptionService();
-                subscription = await subscriptionService.CreateAsync(customer.Id, subCreateOptions);
+                subscription = await subscriptionService.CreateAsync(subCreateOptions);
             }
             catch(StripeException)
             {
@@ -114,7 +115,8 @@ namespace Bit.Core.Services
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 var subscriptionService = new StripeSubscriptionService();
-                await subscriptionService.CancelAsync(subscriber.GatewaySubscriptionId, false);
+                await subscriptionService.CancelAsync(subscriber.GatewaySubscriptionId,
+                    new StripeSubscriptionCancelOptions());
             }
 
             if(string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -158,7 +160,7 @@ namespace Bit.Core.Services
                 try
                 {
                     // Owes more than prorateThreshold on next invoice.
-                    // Invoice them and pay now instead of waiting until next month.
+                    // Invoice them and pay now instead of waiting until next billing cycle.
                     var invoice = await invoiceService.CreateAsync(subscriber.GatewayCustomerId,
                         new StripeInvoiceCreateOptions
                         {
@@ -167,7 +169,7 @@ namespace Bit.Core.Services
 
                     if(invoice.AmountDue > 0)
                     {
-                        await invoiceService.PayAsync(invoice.Id);
+                        await invoiceService.PayAsync(invoice.Id, new StripeInvoicePayOptions());
                     }
                 }
                 catch(StripeException) { }
@@ -201,7 +203,10 @@ namespace Bit.Core.Services
 
             try
             {
-                var canceledSub = await subscriptionService.CancelAsync(sub.Id, endOfPeriod);
+                var canceledSub = endOfPeriod ?
+                    await subscriptionService.UpdateAsync(sub.Id,
+                        new StripeSubscriptionUpdateOptions { CancelAtPeriodEnd = true }) :
+                    await subscriptionService.CancelAsync(sub.Id, new StripeSubscriptionCancelOptions());
                 if(!canceledSub.CanceledAt.HasValue)
                 {
                     throw new GatewayException("Unable to cancel subscription.");
