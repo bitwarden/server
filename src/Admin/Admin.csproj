@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Version>1.24.0</Version>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RootNamespace>Bit.Billing</RootNamespace>
+    <RootNamespace>Bit.Admin</RootNamespace>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
   </PropertyGroup>
   

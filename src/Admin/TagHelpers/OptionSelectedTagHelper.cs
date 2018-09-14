@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace Bit.Billing.TagHelpers
+namespace Bit.Admin.TagHelpers
 {
     [HtmlTargetElement("option", Attributes = SelectedName)]
     public class OptionSelectedTagHelper : TagHelper
