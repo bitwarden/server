@@ -49,6 +49,11 @@ namespace Bit.Api.Utilities
                 errorModel.Message = exception.Message;
                 context.HttpContext.Response.StatusCode = 400;
             }
+            else if(exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
+            {
+                errorModel.Message = exception.Message;
+                context.HttpContext.Response.StatusCode = 400;
+            }
             else if(exception is ApplicationException)
             {
                 context.HttpContext.Response.StatusCode = 402;
