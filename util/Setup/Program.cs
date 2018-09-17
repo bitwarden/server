@@ -93,7 +93,7 @@ namespace Bit.Setup
             Console.WriteLine("\nInstallation complete");
 
             Console.WriteLine("\nIf you need to make additional configuration changes, you can modify\n" +
-                "the settings in `{0}` and then run {1}",
+                "the settings in `{0}` and then run:\n{1}",
                 _context.HostOS == "win" ? ".\\bwdata\\config.yml" : "./bwdata/config.yml",
                 _context.HostOS == "win" ? "`.\\bitwarden.ps1 -rebuild` or `.\\bitwarden.ps1 -update`" :
                     "`./bitwarden.sh rebuild` or `./bitwarden.sh update`");
