@@ -27,7 +27,7 @@
     <PackageReference Include="Quartz" Version="3.0.6" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />
-    <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.8.1" />
+    <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.8.0" />
     <PackageReference Include="Serilog.Sinks.Sentry.AspNetCore" Version="2.1.6" />
     <PackageReference Include="IdentityServer4" Version="2.2.0" />
     <PackageReference Include="Dapper" Version="1.50.5" />
