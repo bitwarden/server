@@ -96,10 +96,6 @@ function install() {
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION
-    
-    echo ""
-    echo "Setup complete"
-    echo ""
 }
 
 function dockerComposeUp() {

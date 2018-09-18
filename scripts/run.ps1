@@ -53,10 +53,6 @@ function Install() {
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
         -os win -corev $coreVersion -webv $webVersion
-    
-    echo ""
-    echo "Setup complete"
-    echo ""    
 }
 
 function Docker-Compose-Up {
