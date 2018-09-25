@@ -376,7 +376,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("purge")]
-        public async Task PostPurge([FromBody]CipherPurgeRequestModel model)
+        public async Task PostPurge([FromBody]CipherPurgeRequestModel model, string organizationId = null)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -391,7 +391,19 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException(ModelState);
             }
 
-            await _cipherRepository.DeleteByUserIdAsync(user.Id);
+            if(string.IsNullOrWhiteSpace(organizationId))
+            {
+                await _cipherRepository.DeleteByUserIdAsync(user.Id);
+            }
+            else
+            {
+                var orgId = new Guid(organizationId);
+                if(!_currentContext.OrganizationAdmin(orgId))
+                {
+                    throw new NotFoundException();
+                }
+                await _cipherService.PurgeAsync(orgId);
+            }
         }
 
         [HttpPost("{id}/attachment")]

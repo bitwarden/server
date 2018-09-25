@@ -217,6 +217,17 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DeleteByOrganizationIdAsync(Guid organizationId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_DeleteByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
             using(var connection = new SqlConnection(ConnectionString))

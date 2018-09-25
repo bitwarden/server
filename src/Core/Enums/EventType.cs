@@ -32,6 +32,7 @@
         OrganizationUser_Removed = 1503,
         OrganizationUser_UpdatedGroups = 1504,
 
-        Organization_Updated = 1600
+        Organization_Updated = 1600,
+        Organization_PurgedVault = 1601,
     }
 }

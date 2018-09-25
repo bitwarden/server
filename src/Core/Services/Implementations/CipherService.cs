@@ -285,6 +285,17 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
+        public async Task PurgeAsync(Guid organizationId)
+        {
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if(org == null)
+            {
+                throw new NotFoundException();
+            }
+            await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
+            await _eventService.LogOrganizationEventAsync(org, Enums.EventType.Organization_PurgedVault);
+        }
+
         public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
         {
             if(destinationFolderId.HasValue)

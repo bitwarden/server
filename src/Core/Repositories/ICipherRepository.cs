@@ -24,6 +24,7 @@ namespace Bit.Core.Repositories
         Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
         Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
         Task DeleteByUserIdAsync(Guid userId);
+        Task DeleteByOrganizationIdAsync(Guid organizationId);
         Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
