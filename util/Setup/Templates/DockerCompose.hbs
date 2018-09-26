@@ -120,12 +120,14 @@ services:
     image: bitwarden/nginx:{{{CoreVersion}}}
     container_name: bitwarden-nginx
     restart: always
+{{#if HasPort}}
     ports:
 {{#if HttpPort}}
       - '{{{HttpPort}}}:8080'
 {{/if}}
 {{#if HttpsPort}}
       - '{{{HttpsPort}}}:8443'
+{{/if}}
 {{/if}}
     volumes:
       - ../nginx:/etc/bitwarden/nginx

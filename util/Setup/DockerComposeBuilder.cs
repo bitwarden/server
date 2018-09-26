@@ -66,6 +66,7 @@ namespace Bit.Setup
             public bool MssqlDataDockerVolume { get; set; }
             public string HttpPort { get; set; }
             public string HttpsPort { get; set; }
+            public bool HasPort => !string.IsNullOrWhiteSpace(HttpPort) || !string.IsNullOrWhiteSpace(HttpsPort);
             public string CoreVersion { get; set; } = "latest";
             public string WebVersion { get; set; } = "latest";
         }
