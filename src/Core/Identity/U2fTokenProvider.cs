@@ -174,7 +174,10 @@ namespace Bit.Core.Identity
             // Update database
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
             key.Counter = registration.Counter;
-            key.Compromised = registration.IsCompromised;
+            if(key.Counter > 0)
+            {
+                key.Compromised = registration.IsCompromised;
+            }
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.U2f].MetaData["Key1"] = key;
