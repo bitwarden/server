@@ -9,6 +9,7 @@ using Bit.Icons.Models;
 using AngleSharp.Parser.Html;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace Bit.Icons.Services
 {
@@ -21,6 +22,7 @@ namespace Bit.Icons.Services
 
         private readonly string _pngMediaType = "image/png";
         private readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
+        private readonly byte[] _webpHeader = Encoding.UTF8.GetBytes("RIFF");
 
         private readonly string _icoMediaType = "image/x-icon";
         private readonly string _icoAltMediaType = "image/vnd.microsoft.icon";
@@ -246,7 +248,7 @@ namespace Bit.Icons.Services
                     {
                         format = _icoMediaType;
                     }
-                    else if(HeaderMatch(bytes, _pngHeader))
+                    else if(HeaderMatch(bytes, _pngHeader) || HeaderMatch(bytes, _webpHeader))
                     {
                         format = _pngMediaType;
                     }
