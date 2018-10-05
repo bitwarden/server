@@ -18,8 +18,8 @@
     <PackageReference Include="Microsoft.AspNetCore.HttpOverrides" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.1.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="2.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.1.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.1.3" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.1.1" />
@@ -37,7 +37,7 @@
     <PackageReference Include="Braintree" Version="4.5.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
     <PackageReference Include="Sendgrid" Version="9.10.0" />
-    <PackageReference Include="Stripe.net" Version="19.6.0" />
+    <PackageReference Include="Stripe.net" Version="19.9.2" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
