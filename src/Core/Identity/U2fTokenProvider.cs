@@ -10,6 +10,7 @@ using System.Linq;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Exceptions;
+using U2F.Core.Utils;
 using System;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,19 +59,7 @@ namespace Bit.Core.Identity
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if(!HasProperMetaData(provider))
-            {
-                return null;
-            }
-
-            var keys = new List<TwoFactorProvider.U2fMetaData>();
-
-            var key1 = new TwoFactorProvider.U2fMetaData((dynamic)provider.MetaData["Key1"]);
-            if(!key1?.Compromised ?? false)
-            {
-                keys.Add(key1);
-            }
-
+            var keys = LoadKeys(provider);
             if(keys.Count == 0)
             {
                 return null;
@@ -78,14 +67,16 @@ namespace Bit.Core.Identity
 
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
 
+            var challengeBytes = U2fLib.Crypto.GenerateChallenge();
             var challenges = new List<object>();
             foreach(var key in keys)
             {
-                var registration = new DeviceRegistration(key.KeyHandleBytes, key.PublicKeyBytes,
-                    key.CertificateBytes, key.Counter);
-                var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration);
+                var registration = new DeviceRegistration(key.Item2.KeyHandleBytes, key.Item2.PublicKeyBytes,
+                    key.Item2.CertificateBytes, key.Item2.Counter);
+                var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration,
+                    challengeBytes);
 
-                // Maybe move this to a bulk create when we support more than 1 key?
+                // TODO: Maybe move this to a bulk create?
                 await _u2fRepository.CreateAsync(new U2f
                 {
                     AppId = auth.AppId,
@@ -118,26 +109,14 @@ namespace Bit.Core.Identity
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if(!HasProperMetaData(provider))
-            {
-                return false;
-            }
-
-            var keys = new List<TwoFactorProvider.U2fMetaData>();
-
-            var key1 = new TwoFactorProvider.U2fMetaData((dynamic)provider.MetaData["Key1"]);
-            if(!key1?.Compromised ?? false)
-            {
-                keys.Add(key1);
-            }
-
+            var keys = LoadKeys(provider);
             if(keys.Count == 0)
             {
                 return false;
             }
 
             var authenticateResponse = BaseModel.FromJson<AuthenticateResponse>(token);
-            var key = keys.FirstOrDefault(f => f.KeyHandle == authenticateResponse.KeyHandle);
+            var key = keys.FirstOrDefault(f => f.Item2.KeyHandle == authenticateResponse.KeyHandle);
 
             if(key == null)
             {
@@ -159,8 +138,8 @@ namespace Bit.Core.Identity
             }
 
             var success = true;
-            var registration = new DeviceRegistration(key.KeyHandleBytes, key.PublicKeyBytes, key.CertificateBytes,
-                key.Counter);
+            var registration = new DeviceRegistration(key.Item2.KeyHandleBytes, key.Item2.PublicKeyBytes,
+                key.Item2.CertificateBytes, key.Item2.Counter);
             try
             {
                 var auth = new StartedAuthentication(challenge.Challenge, challenge.AppId, challenge.KeyHandle);
@@ -173,14 +152,14 @@ namespace Bit.Core.Identity
 
             // Update database
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-            key.Counter = registration.Counter;
-            if(key.Counter > 0)
+            key.Item2.Counter = registration.Counter;
+            if(key.Item2.Counter > 0)
             {
-                key.Compromised = registration.IsCompromised;
+                key.Item2.Compromised = registration.IsCompromised;
             }
 
             var providers = user.GetTwoFactorProviders();
-            providers[TwoFactorProviderType.U2f].MetaData["Key1"] = key;
+            providers[TwoFactorProviderType.U2f].MetaData[key.Item1] = key.Item2;
             user.SetTwoFactorProviders(providers);
             await manager.UpdateAsync(user);
 
@@ -189,7 +168,32 @@ namespace Bit.Core.Identity
 
         private bool HasProperMetaData(TwoFactorProvider provider)
         {
-            return provider?.MetaData != null && provider.MetaData.ContainsKey("Key1");
+            return (provider?.MetaData?.Count ?? 0) > 0;
+        }
+
+        private List<Tuple<string, TwoFactorProvider.U2fMetaData>> LoadKeys(TwoFactorProvider provider)
+        {
+            var keys = new List<Tuple<string, TwoFactorProvider.U2fMetaData>>();
+            if(!HasProperMetaData(provider))
+            {
+                return keys;
+            }
+
+            // Support up to 5 keys
+            for(var i = 1; i <= 5; i++)
+            {
+                var keyName = $"Key{i}";
+                if(provider.MetaData.ContainsKey(keyName))
+                {
+                    var key = new TwoFactorProvider.U2fMetaData((dynamic)provider.MetaData[keyName]);
+                    if(!key?.Compromised ?? false)
+                    {
+                        keys.Add(new Tuple<string, TwoFactorProvider.U2fMetaData>(keyName, key));
+                    }
+                }
+            }
+
+            return keys;
         }
     }
 }

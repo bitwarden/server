@@ -23,7 +23,8 @@ namespace Bit.Core.Services
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
         Task<U2fRegistration> StartU2fRegistrationAsync(User user);
-        Task<bool> CompleteU2fRegistrationAsync(User user, string deviceResponse);
+        Task<bool> DeleteU2fKeyAsync(User user, int id);
+        Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse);
         Task SendEmailVerificationAsync(User user);
         Task<IdentityResult> ConfirmEmailAsync(User user, string token);
         Task InitiateEmailChangeAsync(User user, string newEmail);

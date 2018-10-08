@@ -199,18 +199,18 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorU2fResponseModel> GetU2f([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if(provider == null || !provider.Enabled || (provider.MetaData?.Count ?? 0) > 0)
-            {
-                var reg = await _userService.StartU2fRegistrationAsync(user);
-                var response = new TwoFactorU2fResponseModel(user, provider, reg);
-                return response;
-            }
-            else
-            {
-                var response = new TwoFactorU2fResponseModel(user, provider);
-                return response;
-            }
+            var response = new TwoFactorU2fResponseModel(user);
+            return response;
+        }
+
+        [HttpPost("get-u2f-challenge")]
+        public async Task<TwoFactorU2fResponseModel.ChallengeModel> GetU2fChallenge(
+            [FromBody]TwoFactorRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, true);
+            var reg = await _userService.StartU2fRegistrationAsync(user);
+            var challenge = new TwoFactorU2fResponseModel.ChallengeModel(user, reg);
+            return challenge;
         }
 
         [HttpPut("u2f")]
@@ -218,7 +218,16 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            await _userService.CompleteU2fRegistrationAsync(user, model.DeviceResponse);
+            await _userService.CompleteU2fRegistrationAsync(user, model.Id.Value, model.Name, model.DeviceResponse);
+            var response = new TwoFactorU2fResponseModel(user);
+            return response;
+        }
+        
+        [HttpDelete("u2f")]
+        public async Task<TwoFactorU2fResponseModel> DeleteU2f([FromBody]TwoFactorU2fDeleteRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, true);
+            await _userService.DeleteU2fKeyAsync(user, model.Id.Value);
             var response = new TwoFactorU2fResponseModel(user);
             return response;
         }
@@ -284,7 +293,7 @@ namespace Bit.Api.Controllers
             var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
             return response;
         }
-        
+
         [HttpPut("~/organizations/{id}/two-factor/disable")]
         [HttpPost("~/organizations/{id}/two-factor/disable")]
         public async Task<TwoFactorProviderResponseModel> PutOrganizationDisable(string id,

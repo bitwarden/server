@@ -35,10 +35,9 @@
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.2" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.5.0" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
     <PackageReference Include="Sendgrid" Version="9.10.0" />
     <PackageReference Include="Stripe.net" Version="19.9.2" />
-    <PackageReference Include="U2F.Core" Version="1.0.4" />
+    <PackageReference Include="U2F.Core" Version="2.0.0" />
     <PackageReference Include="Otp.NET" Version="1.2.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
   </ItemGroup>

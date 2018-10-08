@@ -307,7 +307,7 @@ namespace Bit.Core.Services
             };
         }
 
-        public async Task<bool> CompleteU2fRegistrationAsync(User user, string deviceResponse)
+        public async Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse)
         {
             if(string.IsNullOrWhiteSpace(deviceResponse))
             {
@@ -323,8 +323,8 @@ namespace Bit.Core.Services
             var registerResponse = BaseModel.FromJson<RegisterResponse>(deviceResponse);
 
             var challenge = challenges.OrderBy(i => i.Id).Last(i => i.KeyHandle == null);
-            var statedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
-            var reg = U2fLib.FinishRegistration(statedReg, registerResponse);
+            var startedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
+            var reg = U2fLib.FinishRegistration(startedReg, registerResponse);
 
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
 
@@ -334,29 +334,74 @@ namespace Bit.Core.Services
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.U2f))
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
+            if(provider == null)
+            {
+                provider = new TwoFactorProvider();
+            }
+            if(provider.MetaData == null)
+            {
+                provider.MetaData = new Dictionary<string, object>();
+            }
+
+            if(provider.MetaData.Count >= 5)
+            {
+                // Can only register up to 5 keys
+                return false;
+            }
+
+            var keyId = $"Key{id}";
+            if(provider.MetaData.ContainsKey(keyId))
+            {
+                provider.MetaData.Remove(keyId);
+            }
+
+            provider.Enabled = true;
+            provider.MetaData.Add(keyId, new TwoFactorProvider.U2fMetaData
+            {
+                Name = name,
+                KeyHandle = reg.KeyHandle == null ? null : Utils.ByteArrayToBase64String(reg.KeyHandle),
+                PublicKey = reg.PublicKey == null ? null : Utils.ByteArrayToBase64String(reg.PublicKey),
+                Certificate = reg.AttestationCert == null ? null : Utils.ByteArrayToBase64String(reg.AttestationCert),
+                Compromised = false,
+                Counter = reg.Counter
+            });
+
+            if(providers.ContainsKey(TwoFactorProviderType.U2f))
             {
                 providers.Remove(TwoFactorProviderType.U2f);
             }
 
-            providers.Add(TwoFactorProviderType.U2f, new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object>
-                {
-                    ["Key1"] = new TwoFactorProvider.U2fMetaData
-                    {
-                        KeyHandle = reg.KeyHandle == null ? null : Utils.ByteArrayToBase64String(reg.KeyHandle),
-                        PublicKey = reg.PublicKey == null ? null : Utils.ByteArrayToBase64String(reg.PublicKey),
-                        Certificate = reg.AttestationCert == null ? null : Utils.ByteArrayToBase64String(reg.AttestationCert),
-                        Compromised = false,
-                        Counter = reg.Counter
-                    }
-                },
-                Enabled = true
-            });
+            providers.Add(TwoFactorProviderType.U2f, provider);
             user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
+            return true;
+        }
 
+        public async Task<bool> DeleteU2fKeyAsync(User user, int id)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                return false;
+            }
+
+            var keyName = $"Key{id}";
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
+            if(!provider?.MetaData?.ContainsKey(keyName) ?? true)
+            {
+                return false;
+            }
+
+            if(provider.MetaData.Count < 2)
+            {
+                return false;
+            }
+
+            provider.MetaData.Remove(keyName);
+            providers[TwoFactorProviderType.U2f] = provider;
+            user.SetTwoFactorProviders(providers);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
             return true;
         }
 
