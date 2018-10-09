@@ -66,6 +66,10 @@ namespace Bit.Admin
                 config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+            // Jobs service
+            Jobs.JobsHostedService.AddJobsServices(services);
+            services.AddHostedService<Jobs.JobsHostedService>();
         }
 
         public void Configure(

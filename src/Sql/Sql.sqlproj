@@ -232,5 +232,6 @@
     <Build Include="dbo\Stored Procedures\U2f_DeleteOld.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadKdfByEmail.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\AzureSQLMaintenance.sql" />
   </ItemGroup>
 </Project>

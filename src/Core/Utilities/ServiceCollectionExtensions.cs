@@ -44,6 +44,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
             services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
             services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
+            services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
 
             if(globalSettings.SelfHosted)
             {
