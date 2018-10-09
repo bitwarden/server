@@ -606,7 +606,7 @@ namespace Bit.Core.Services
                 user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             }
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_Enabled2fa);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
