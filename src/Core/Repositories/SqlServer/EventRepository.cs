@@ -13,11 +13,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class EventRepository : Repository<Event, Guid>, IEventRepository
     {
         public EventRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public EventRepository(string connectionString)
-            : base(connectionString)
+        public EventRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,

@@ -12,11 +12,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class GrantRepository : BaseRepository, IGrantRepository
     {
         public GrantRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public GrantRepository(string connectionString)
-            : base(connectionString)
+        public GrantRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<Grant> GetByKeyAsync(string key)

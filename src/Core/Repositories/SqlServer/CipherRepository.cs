@@ -16,11 +16,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     {
         public CipherRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public CipherRepository(string connectionString)
-            : base(connectionString)
+        public CipherRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)

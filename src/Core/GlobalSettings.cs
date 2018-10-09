@@ -48,6 +48,7 @@ namespace Bit.Core
         public class SqlServerSettings
         {
             private string _connectionString;
+            private string _readOnlyConnectionString;
 
             public string ConnectionString
             {
@@ -55,6 +56,16 @@ namespace Bit.Core
                 set
                 {
                     _connectionString = value.Trim('"');
+                }
+            }
+
+            public string ReadOnlyConnectionString
+            {
+                get => string.IsNullOrWhiteSpace(_readOnlyConnectionString) ?
+                    _connectionString : _readOnlyConnectionString;
+                set
+                {
+                    _readOnlyConnectionString = value.Trim('"');
                 }
             }
         }

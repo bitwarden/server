@@ -13,11 +13,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
     {
         public CollectionCipherRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public CollectionCipherRepository(string connectionString)
-            : base(connectionString)
+        public CollectionCipherRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)

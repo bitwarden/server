@@ -12,8 +12,9 @@ namespace Bit.Core.Repositories.SqlServer
         where TId : IEquatable<TId>
         where T : class, ITableObject<TId>
     {
-        public Repository(string connectionString, string schema = null, string table = null)
-            : base(connectionString)
+        public Repository(string connectionString, string readOnlyConnectionString,
+            string schema = null, string table = null)
+            : base(connectionString, readOnlyConnectionString)
         {
             if(!string.IsNullOrWhiteSpace(table))
             {

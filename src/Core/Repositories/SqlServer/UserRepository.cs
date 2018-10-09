@@ -13,11 +13,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class UserRepository : Repository<User, Guid>, IUserRepository
     {
         public UserRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public UserRepository(string connectionString)
-            : base(connectionString)
+        public UserRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public override async Task<User> GetByIdAsync(Guid id)
@@ -53,7 +53,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using(var connection = new SqlConnection(ReadOnlyConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_Search]",

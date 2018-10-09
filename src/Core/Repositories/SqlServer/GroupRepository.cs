@@ -15,11 +15,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class GroupRepository : Repository<Group, Guid>, IGroupRepository
     {
         public GroupRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public GroupRepository(string connectionString)
-            : base(connectionString)
+        public GroupRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<Tuple<Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)

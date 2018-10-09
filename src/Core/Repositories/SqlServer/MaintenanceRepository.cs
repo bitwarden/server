@@ -8,11 +8,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
     {
         public MaintenanceRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public MaintenanceRepository(string connectionString)
-            : base(connectionString)
+        public MaintenanceRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task UpdateStatisticsAsync()

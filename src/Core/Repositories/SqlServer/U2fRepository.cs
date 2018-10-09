@@ -12,11 +12,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class U2fRepository : Repository<U2f, int>, IU2fRepository
     {
         public U2fRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public U2fRepository(string connectionString)
-            : base(connectionString)
+        public U2fRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<ICollection<U2f>> GetManyByUserIdAsync(Guid userId)

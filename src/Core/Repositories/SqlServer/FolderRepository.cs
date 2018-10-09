@@ -12,11 +12,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     {
         public FolderRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public FolderRepository(string connectionString)
-            : base(connectionString)
+        public FolderRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<Folder> GetByIdAsync(Guid id, Guid userId)

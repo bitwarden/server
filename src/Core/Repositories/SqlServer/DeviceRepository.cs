@@ -12,11 +12,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
     {
         public DeviceRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public DeviceRepository(string connectionString)
-            : base(connectionString)
+        public DeviceRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<Device> GetByIdAsync(Guid id, Guid userId)

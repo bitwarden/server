@@ -15,11 +15,11 @@ namespace Bit.Core.Repositories.SqlServer
     public class CollectionRepository : Repository<Collection, Guid>, ICollectionRepository
     {
         public CollectionRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public CollectionRepository(string connectionString)
-            : base(connectionString)
+        public CollectionRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
         { }
 
         public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
