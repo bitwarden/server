@@ -38,5 +38,16 @@ namespace Bit.Core.Repositories.SqlServer
                     commandTimeout: 86400);
             }
         }
+
+        public async Task DeleteExpiredGrantsAsync()
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[Grant_DeleteExpired]",
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 86400);
+            }
+        }
     }
 }

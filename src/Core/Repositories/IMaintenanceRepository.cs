@@ -6,5 +6,6 @@ namespace Bit.Core.Repositories
     {
         Task UpdateStatisticsAsync();
         Task RebuildIndexesAsync();
+        Task DeleteExpiredGrantsAsync();
     }
 }

@@ -19,6 +19,10 @@ namespace Bit.Admin.Jobs
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
+            var everyFridayAt1145pmTrigger = TriggerBuilder.Create()
+                .StartNow()
+                .WithCronSchedule("0 45 23 ? * FRI")
+                .Build();
             var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
                 .StartNow()
                 .WithCronSchedule("0 0 0 ? * SAT")
@@ -30,6 +34,7 @@ namespace Bit.Admin.Jobs
 
             Jobs = new List<Tuple<Type, ITrigger>>
             {
+                new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt1145pmTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger)
             };
@@ -41,6 +46,7 @@ namespace Bit.Admin.Jobs
         {
             services.AddTransient<DatabaseUpdateStatisticsJob>();
             services.AddTransient<DatabaseRebuildlIndexesJob>();
+            services.AddTransient<DatabaseExpiredGrantsJob>();
         }
     }
 }
