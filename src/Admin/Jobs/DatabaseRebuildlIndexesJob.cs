@@ -13,7 +13,7 @@ namespace Bit.Admin.Jobs
 
         public DatabaseRebuildlIndexesJob(
             IMaintenanceRepository maintenanceRepository,
-            ILogger<DatabaseUpdateStatisticsJob> logger)
+            ILogger<DatabaseRebuildlIndexesJob> logger)
             : base(logger)
         {
             _maintenanceRepository = maintenanceRepository;
