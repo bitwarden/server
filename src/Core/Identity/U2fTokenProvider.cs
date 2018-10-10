@@ -10,6 +10,7 @@ using System.Linq;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Exceptions;
+using U2F.Core.Utils;
 using System;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,13 +70,14 @@ namespace Bit.Core.Identity
             try
             {
                 var challengeBytes = U2fLib.Crypto.GenerateChallenge();
-                var challenges = new List<object>();
+                var appId = Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings);
+                var oldChallenges = new List<object>();
+                var challengeKeys = new List<object>();
                 foreach(var key in keys)
                 {
                     var registration = new DeviceRegistration(key.Item2.KeyHandleBytes, key.Item2.PublicKeyBytes,
                         key.Item2.CertificateBytes, key.Item2.Counter);
-                    var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration,
-                        challengeBytes);
+                    var auth = U2fLib.StartAuthentication(appId, registration, challengeBytes);
 
                     // TODO: Maybe move this to a bulk create?
                     await _u2fRepository.CreateAsync(new U2f
@@ -88,7 +90,14 @@ namespace Bit.Core.Identity
                         CreationDate = DateTime.UtcNow
                     });
 
-                    challenges.Add(new
+                    challengeKeys.Add(new
+                    {
+                        keyHandle = auth.KeyHandle,
+                        version = auth.Version
+                    });
+
+                    // TODO: Old challenges array is here for backwards compat. Remove in the future.
+                    oldChallenges.Add(new
                     {
                         appId = auth.AppId,
                         challenge = auth.Challenge,
@@ -97,8 +106,14 @@ namespace Bit.Core.Identity
                     });
                 }
 
-                var token = JsonConvert.SerializeObject(challenges);
-                return token;
+                var oldToken = JsonConvert.SerializeObject(oldChallenges);
+                var token = JsonConvert.SerializeObject(new
+                {
+                    appId = appId,
+                    challenge = challengeBytes.ByteArrayToBase64String(),
+                    keys = challengeKeys
+                });
+                return $"{token}|{oldToken}";
             }
             catch(U2fException)
             {

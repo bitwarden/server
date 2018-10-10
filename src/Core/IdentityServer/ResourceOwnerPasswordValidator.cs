@@ -327,9 +327,12 @@ namespace Bit.Core.IdentityServer
                     }
                     else if(type == TwoFactorProviderType.U2f)
                     {
+                        // TODO: Remove "Challenges" in a future update. Deprecated.
+                        var tokens = token?.Split('|');
                         return new Dictionary<string, object>
                         {
-                            ["Challenges"] = token
+                            ["Challenge"] = tokens.Length > 0 ? tokens[0] : null,
+                            ["Challenges"] = tokens.Length > 1 ? tokens[1] : null
                         };
                     }
                     else if(type == TwoFactorProviderType.Email)
