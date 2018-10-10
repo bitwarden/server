@@ -10,7 +10,6 @@ using System.Linq;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Exceptions;
-using U2F.Core.Utils;
 using System;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,37 +66,44 @@ namespace Bit.Core.Identity
 
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
 
-            var challengeBytes = U2fLib.Crypto.GenerateChallenge();
-            var challenges = new List<object>();
-            foreach(var key in keys)
+            try
             {
-                var registration = new DeviceRegistration(key.Item2.KeyHandleBytes, key.Item2.PublicKeyBytes,
-                    key.Item2.CertificateBytes, key.Item2.Counter);
-                var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration,
-                    challengeBytes);
-
-                // TODO: Maybe move this to a bulk create?
-                await _u2fRepository.CreateAsync(new U2f
+                var challengeBytes = U2fLib.Crypto.GenerateChallenge();
+                var challenges = new List<object>();
+                foreach(var key in keys)
                 {
-                    AppId = auth.AppId,
-                    Challenge = auth.Challenge,
-                    KeyHandle = auth.KeyHandle,
-                    Version = auth.Version,
-                    UserId = user.Id,
-                    CreationDate = DateTime.UtcNow
-                });
+                    var registration = new DeviceRegistration(key.Item2.KeyHandleBytes, key.Item2.PublicKeyBytes,
+                        key.Item2.CertificateBytes, key.Item2.Counter);
+                    var auth = U2fLib.StartAuthentication(Utilities.CoreHelpers.U2fAppIdUrl(_globalSettings), registration,
+                        challengeBytes);
 
-                challenges.Add(new
-                {
-                    appId = auth.AppId,
-                    challenge = auth.Challenge,
-                    keyHandle = auth.KeyHandle,
-                    version = auth.Version
-                });
+                    // TODO: Maybe move this to a bulk create?
+                    await _u2fRepository.CreateAsync(new U2f
+                    {
+                        AppId = auth.AppId,
+                        Challenge = auth.Challenge,
+                        KeyHandle = auth.KeyHandle,
+                        Version = auth.Version,
+                        UserId = user.Id,
+                        CreationDate = DateTime.UtcNow
+                    });
+
+                    challenges.Add(new
+                    {
+                        appId = auth.AppId,
+                        challenge = auth.Challenge,
+                        keyHandle = auth.KeyHandle,
+                        version = auth.Version
+                    });
+                }
+
+                var token = JsonConvert.SerializeObject(challenges);
+                return token;
             }
-
-            var token = JsonConvert.SerializeObject(challenges);
-            return token;
+            catch(U2fException)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)

@@ -218,11 +218,16 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            await _userService.CompleteU2fRegistrationAsync(user, model.Id.Value, model.Name, model.DeviceResponse);
+            var success = await _userService.CompleteU2fRegistrationAsync(
+                user, model.Id.Value, model.Name, model.DeviceResponse);
+            if(!success)
+            {
+                throw new BadRequestException("Unable to complete U2F key registration.");
+            }
             var response = new TwoFactorU2fResponseModel(user);
             return response;
         }
-        
+
         [HttpDelete("u2f")]
         public async Task<TwoFactorU2fResponseModel> DeleteU2f([FromBody]TwoFactorU2fDeleteRequestModel model)
         {
