@@ -610,16 +610,6 @@ namespace Bit.Core.Services
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
             File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
-
-            // self-hosted org users get premium access on some plans
-            if(organization.UsersGetPremium && !owner.Premium && result.Item1.Enabled)
-            {
-                owner.Premium = true;
-                owner.MaxStorageGb = 10240; // 10 TB
-                owner.RevisionDate = DateTime.UtcNow;
-                await _userRepository.ReplaceAsync(owner);
-            }
-
             return result;
         }
 
@@ -1064,15 +1054,6 @@ namespace Bit.Core.Services
 
             var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
             await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
-
-            // self-hosted org users get premium access
-            if(_globalSettings.SelfHosted && !user.Premium && org.UsersGetPremium && org.Enabled)
-            {
-                user.Premium = true;
-                user.MaxStorageGb = 10240; // 10 TB
-                user.RevisionDate = DateTime.UtcNow;
-                await _userRepository.ReplaceAsync(user);
-            }
 
             // push
             var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);

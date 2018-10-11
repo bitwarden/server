@@ -120,28 +120,6 @@ namespace Bit.Core.Services
             {
                 await ProcessUserValidationAsync(user);
             }
-
-            var nonPremiumUsers = await _userRepository.GetManyByPremiumAsync(false);
-            _logger.LogInformation(Constants.BypassFiltersEventId, null,
-                "Checking to restore premium for {0} users.", nonPremiumUsers.Count);
-
-            foreach(var user in nonPremiumUsers)
-            {
-                var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
-                if(details.Any(d => d.SelfHost && d.UsersGetPremium && d.Enabled))
-                {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, null,
-                        "Granting premium to user {0}({1}) because they are in an active organization " +
-                        "with premium features.", user.Id, user.Email);
-
-                    user.Premium = true;
-                    user.MaxStorageGb = 10240; // 10 TB
-                    user.RevisionDate = DateTime.UtcNow;
-                    user.PremiumExpirationDate = null;
-                    user.LicenseKey = null;
-                    await _userRepository.ReplaceAsync(user);
-                }
-            }
         }
 
         public async Task<bool> ValidateUserPremiumAsync(User user)
@@ -184,22 +162,6 @@ namespace Bit.Core.Services
         {
             var license = ReadUserLicense(user);
             var valid = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
-
-            if(!valid)
-            {
-                var details = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
-                valid = details.Any(d => d.SelfHost && d.UsersGetPremium && d.Enabled);
-
-                if(valid && (!string.IsNullOrWhiteSpace(user.LicenseKey) || user.PremiumExpirationDate.HasValue))
-                {
-                    // user used to be on a license but is now part of a organization that gives them premium.
-                    // update the record.
-                    user.PremiumExpirationDate = null;
-                    user.LicenseKey = null;
-                    await _userRepository.ReplaceAsync(user);
-                }
-            }
-
             if(!valid)
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, null,
