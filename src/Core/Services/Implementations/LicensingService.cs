@@ -161,19 +161,37 @@ namespace Bit.Core.Services
         private async Task<bool> ProcessUserValidationAsync(User user)
         {
             var license = ReadUserLicense(user);
-            var valid = license != null && license.VerifyData(user) && license.VerifySignature(_certificate);
-            if(!valid)
+            if(license == null)
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, null,
-                    "User {0}({1}) has an invalid license and premium is being disabled.", user.Id, user.Email);
-
-                user.Premium = false;
-                user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;
-                user.RevisionDate = DateTime.UtcNow;
-                await _userRepository.ReplaceAsync(user);
+                await DisablePremiumAsync(user, null, "No license file.");
+                return false;
             }
 
-            return valid;
+            if(!license.VerifyData(user))
+            {
+                await DisablePremiumAsync(user, license, "Invalid data.");
+                return false;
+            }
+
+            if(!license.VerifySignature(_certificate))
+            {
+                await DisablePremiumAsync(user, license, "Invalid signature.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task DisablePremiumAsync(User user, ILicense license, string reason)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "User {0}({1}) has an invalid license and premium is being disabled. Reason: {2}",
+                user.Id, user.Email, reason);
+
+            user.Premium = false;
+            user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
         }
 
         public bool VerifyLicense(ILicense license)
