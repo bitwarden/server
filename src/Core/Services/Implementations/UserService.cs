@@ -323,10 +323,8 @@ namespace Bit.Core.Services
 
             var registerResponse = BaseModel.FromJson<RegisterResponse>(deviceResponse);
 
-            /*
             try
             {
-            */
                 var challenge = challenges.OrderBy(i => i.Id).Last(i => i.KeyHandle == null);
                 var startedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
                 var reg = U2fLib.FinishRegistration(startedReg, registerResponse);
@@ -381,13 +379,11 @@ namespace Bit.Core.Services
                 user.SetTwoFactorProviders(providers);
                 await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
                 return true;
-            /*
             }
             catch(U2fException)
             {
                 return false;
             }
-            */
         }
 
         public async Task<bool> DeleteU2fKeyAsync(User user, int id)
