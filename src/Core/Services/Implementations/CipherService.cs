@@ -145,7 +145,7 @@ namespace Bit.Core.Services
                     // Users that get access to file storage/premium from their organization get the default
                     // 1 GB max storage.
                     storageBytesRemaining = user.StorageBytesRemaining(
-                        _globalSettings.SelfHosted ? (short)1024 : (short)1);
+                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
                 }
             }
             else if(cipher.OrganizationId.HasValue)
