@@ -58,7 +58,8 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_Search]",
                     new { Email = email, Skip = skip, Take = take },
-                    commandType: CommandType.StoredProcedure);
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 120);
 
                 return results.ToList();
             }
