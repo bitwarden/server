@@ -19,9 +19,11 @@ namespace Bit.Billing.Jobs
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
             var everyDayAtNinePmTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 0 21 * * ?")
+                .WithCronSchedule("0 0 21 * * ?", x => x.InTimeZone(timeZone))
                 .Build();
 
             Jobs = new List<Tuple<Type, ITrigger>>

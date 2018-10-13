@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,25 +12,34 @@ namespace Bit.Admin.Jobs
 {
     public class JobsHostedService : BaseJobsHostedService
     {
+        private readonly GlobalSettings _globalSettings;
+
         public JobsHostedService(
+            GlobalSettings globalSettings,
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
             ILogger<JobListener> listenerLogger)
-            : base(serviceProvider, logger, listenerLogger) { }
+            : base(serviceProvider, logger, listenerLogger)
+        {
+            _globalSettings = globalSettings;
+        }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
+            var timeZone = _globalSettings.SelfHosted ? TimeZoneInfo.Utc :
+                TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
             var everyFridayAt1145pmTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 45 23 ? * FRI")
+                .WithCronSchedule("0 45 23 ? * FRI", x => x.InTimeZone(timeZone))
                 .Build();
             var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 0 0 ? * SAT")
+                .WithCronSchedule("0 0 0 ? * SAT", x => x.InTimeZone(timeZone))
                 .Build();
             var everySundayAtMidnightTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 0 0 ? * SUN")
+                .WithCronSchedule("0 0 0 ? * SUN", x => x.InTimeZone(timeZone))
                 .Build();
 
             Jobs = new List<Tuple<Type, ITrigger>>
