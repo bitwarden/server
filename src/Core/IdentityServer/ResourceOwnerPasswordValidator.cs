@@ -331,8 +331,8 @@ namespace Bit.Core.IdentityServer
                         var tokens = token?.Split('|');
                         return new Dictionary<string, object>
                         {
-                            ["Challenge"] = tokens.Length > 0 ? tokens[0] : null,
-                            ["Challenges"] = tokens.Length > 1 ? tokens[1] : null
+                            ["Challenge"] = tokens != null && tokens.Length > 0 ? tokens[0] : null,
+                            ["Challenges"] = tokens != null && tokens.Length > 1 ? tokens[1] : null
                         };
                     }
                     else if(type == TwoFactorProviderType.Email)
