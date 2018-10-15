@@ -245,8 +245,8 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription is not marked for cancellation.");
             }
 
-            // Just touch the subscription.
-            var updatedSub = await subscriptionService.UpdateAsync(sub.Id, new StripeSubscriptionUpdateOptions { });
+            var updatedSub = await subscriptionService.UpdateAsync(sub.Id,
+                new StripeSubscriptionUpdateOptions { CancelAtPeriodEnd = false });
             if(updatedSub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Unable to reinstate subscription.");
