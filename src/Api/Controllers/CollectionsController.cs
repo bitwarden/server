@@ -8,7 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 
 namespace Bit.Api.Controllers
 {
@@ -36,25 +36,39 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}")]
         public async Task<CollectionResponseModel> Get(string orgId, string id)
         {
-            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
-            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             return new CollectionResponseModel(collection);
         }
 
         [HttpGet("{id}/details")]
         public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(new Guid(id));
-            if(collectionDetails?.Item1 == null || !_currentContext.OrganizationAdmin(collectionDetails.Item1.OrganizationId))
+            var orgIdGuid = new Guid(orgId);
+            if(!_currentContext.OrganizationManager(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            var idGuid = new Guid(id);
+            if(_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid);
+                if(collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                {
+                    throw new NotFoundException();
+                }
+                return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            }
+            else
+            {
+                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid,
+                    _currentContext.UserId.Value);
+                if(collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                {
+                    throw new NotFoundException();
+                }
+                return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            }
         }
 
         [HttpGet("")]
@@ -72,17 +86,10 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("~/collections")]
-        public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser([FromQuery]bool writeOnly = false)
+        public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
         {
             var collections = await _collectionRepository.GetManyByUserIdAsync(
                 _userService.GetProperUserId(User).Value);
-
-            // TODO: Deprecated. writeOnly flag can be removed after v1.21.0
-            if(writeOnly)
-            {
-                collections = collections.Where(c => !c.ReadOnly).ToList();
-            }
-
             var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
             return new ListResponseModel<CollectionDetailsResponseModel>(responses);
         }
@@ -90,13 +97,7 @@ namespace Bit.Api.Controllers
         [HttpGet("{id}/users")]
         public async Task<ListResponseModel<CollectionUserResponseModel>> GetUsers(string orgId, string id)
         {
-            var idGuid = new Guid(id);
-            var collection = await _collectionRepository.GetByIdAsync(idGuid);
-            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             var collectionUsers = await _collectionRepository.GetManyUserDetailsByIdAsync(collection.OrganizationId,
                 collection.Id);
             var responses = collectionUsers.Select(c => new CollectionUserResponseModel(c));
@@ -107,13 +108,14 @@ namespace Bit.Api.Controllers
         public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if(!_currentContext.OrganizationManager(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var collection = model.ToCollection(orgIdGuid);
-            await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()));
+            await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
+                !_currentContext.OrganizationAdmin(orgIdGuid) ? _currentContext.UserId : null);
             return new CollectionResponseModel(collection);
         }
 
@@ -121,12 +123,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}")]
         public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody]CollectionRequestModel model)
         {
-            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
-            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             await _collectionService.SaveAsync(model.ToCollection(collection),
                 model.Groups?.Select(g => g.ToSelectionReadOnly()));
             return new CollectionResponseModel(collection);
@@ -136,12 +133,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
-            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             await _collectionService.DeleteAsync(collection);
         }
 
@@ -149,13 +141,26 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete-user/{orgUserId}")]
         public async Task Delete(string orgId, string id, string orgUserId)
         {
-            var collection = await _collectionRepository.GetByIdAsync(new Guid(id));
-            if(collection == null || !_currentContext.OrganizationAdmin(collection.OrganizationId))
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            await _collectionService.DeleteUserAsync(collection, new Guid(orgUserId));
+        }
+
+        private async Task<Collection> GetCollectionAsync(Guid id, Guid orgId)
+        {
+            if(!_currentContext.OrganizationManager(orgId))
             {
                 throw new NotFoundException();
             }
 
-            await _collectionService.DeleteUserAsync(collection, new Guid(orgUserId));
+            var collection = _currentContext.OrganizationAdmin(orgId) ?
+                await _collectionRepository.GetByIdAsync(id) :
+                await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
+            if(collection == null || collection.OrganizationId != orgId)
+            {
+                throw new NotFoundException();
+            }
+
+            return collection;
         }
     }
 }

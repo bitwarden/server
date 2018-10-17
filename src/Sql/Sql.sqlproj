@@ -153,7 +153,6 @@
     <Build Include="dbo\Stored Procedures\Device_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Device_Update.sql" />
     <Build Include="dbo\Stored Procedures\User_Create.sql" />
-    <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\User_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadByEmail.sql" />
@@ -233,5 +232,10 @@
     <Build Include="dbo\Stored Procedures\User_ReadKdfByEmail.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\AzureSQLMaintenance.sql" />
+    <Build Include="dbo\Functions\UserCollectionDetails.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_UpdateUsers.sql" />
   </ItemGroup>
 </Project>

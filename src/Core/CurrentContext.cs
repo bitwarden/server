@@ -111,11 +111,28 @@ namespace Bit.Core
                         Type = OrganizationUserType.User
                     }));
             }
+
+            if(claimsDict.ContainsKey("orgmanager"))
+            {
+                Organizations.AddRange(claimsDict["orgmanager"].Select(c =>
+                    new CurrentContentOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Manager
+                    }));
+            }
         }
 
         public bool OrganizationUser(Guid orgId)
         {
             return Organizations?.Any(o => o.Id == orgId) ?? false;
+        }
+
+        public bool OrganizationManager(Guid orgId)
+        {
+            return Organizations?.Any(o => o.Id == orgId &&
+                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin ||
+                    o.Type == OrganizationUserType.Manager)) ?? false;
         }
 
         public bool OrganizationAdmin(Guid orgId)

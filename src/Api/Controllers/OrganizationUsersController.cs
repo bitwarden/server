@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
         {
             var orgGuidId = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(orgGuidId))
+            if(!_currentContext.OrganizationManager(orgGuidId))
             {
                 throw new NotFoundException();
             }

@@ -19,6 +19,7 @@ namespace Bit.Core.IdentityServer
                     "device",
                     "orgowner",
                     "orgadmin",
+                    "orgmanager",
                     "orguser"
                 }),
                 new ApiResource("internal", new string[] { JwtClaimTypes.Subject }),

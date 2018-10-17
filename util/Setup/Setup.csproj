@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <None Remove="DbScripts\2018-09-25_00_OrgPurge.sql" />
+    <None Remove="DbScripts\2018-10-17_00_ManagerRole.sql" />
   </ItemGroup>
 
   <ItemGroup>

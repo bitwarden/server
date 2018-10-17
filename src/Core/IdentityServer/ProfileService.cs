@@ -75,6 +75,12 @@ namespace Bit.Core.IdentityServer
                                     newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
                                 }
                                 break;
+                            case Enums.OrganizationUserType.Manager:
+                                foreach(var org in group)
+                                {
+                                    newClaims.Add(new Claim("orgmanager", org.Id.ToString()));
+                                }
+                                break;
                             case Enums.OrganizationUserType.User:
                                 foreach(var org in group)
                                 {
