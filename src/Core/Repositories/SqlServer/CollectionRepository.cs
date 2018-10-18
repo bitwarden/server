@@ -168,7 +168,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[CollectionUser_UpdateUsers]",
-                    new { Id = id, Users = users.ToArrayTVP() },
+                    new { CollectionId = id, Users = users.ToArrayTVP() },
                     commandType: CommandType.StoredProcedure);
             }
         }

@@ -96,12 +96,12 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/users")]
-        public async Task<ListResponseModel<SelectionReadOnlyResponseModel>> GetUsers(string orgId, string id)
+        public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(string orgId, string id)
         {
             var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             var collectionUsers = await _collectionRepository.GetManyUsersByIdAsync(collection.Id);
             var responses = collectionUsers.Select(cu => new SelectionReadOnlyResponseModel(cu));
-            return new ListResponseModel<SelectionReadOnlyResponseModel>(responses);
+            return responses;
         }
 
         [HttpPost("")]

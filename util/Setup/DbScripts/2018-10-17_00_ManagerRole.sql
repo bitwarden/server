@@ -124,13 +124,20 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers]
-    @Id UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
     @Users AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @OrganizationId UNIQUEIDENTIFIER = (SELECT [OrganizationId] FROM [dbo].[Collection] WHERE [Id] = @Id)
+    DECLARE @OrgId UNIQUEIDENTIFIER = (
+        SELECT TOP 1
+            [OrganizationId]
+        FROM
+            [dbo].[Collection]
+        WHERE
+            [Id] = @CollectionId
+    )
 
     ;WITH [AvailableUsersCTE] AS(
         SELECT
@@ -138,31 +145,31 @@ BEGIN
         FROM
             [dbo].[OrganizationUser]
         WHERE
-            OrganizationId = @OrganizationId
+            OrganizationId = @OrgId
     )
     MERGE
         [dbo].[CollectionUser] AS [Target]
     USING 
         @Users AS [Source]
     ON
-        [Target].[CollectionId] = @Id
+        [Target].[CollectionId] = @CollectionId
         AND [Target].[OrganizationUserId] = [Source].[Id]
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableUsersCTE]) THEN
         INSERT VALUES
         (
-            @Id,
+            @CollectionId,
             [Source].[Id],
             [Source].[ReadOnly]
         )
     WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
     WHEN NOT MATCHED BY SOURCE
-    AND [Target].[CollectionId] = @Id THEN
+    AND [Target].[CollectionId] = @CollectionId THEN
         DELETE
     ;
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrgId
 END
 GO
 
@@ -191,5 +198,32 @@ BEGIN
         [dbo].[CollectionUser]
     WHERE
         [CollectionId] = @CollectionId
+END
+GO
+
+IF OBJECT_ID('[dbo].[GroupUserDetails_ReadByGroupId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[GroupUserDetails_ReadByGroupId]
+END
+GO
+
+IF OBJECT_ID('[dbo].[GroupUser_ReadOrganizationUserIdsByGroupId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[GroupUser_ReadOrganizationUserIdsByGroupId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[GroupUser_ReadOrganizationUserIdsByGroupId]
+    @GroupId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [OrganizationUserId]
+    FROM
+        [dbo].[GroupUser]
+    WHERE
+        [GroupId] = @GroupId
 END
 GO

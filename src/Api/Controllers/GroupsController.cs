@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -68,7 +69,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/users")]
-        public async Task<ListResponseModel<GroupUserResponseModel>> GetUsers(string orgId, string id)
+        public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
         {
             var idGuid = new Guid(id);
             var group = await _groupRepository.GetByIdAsync(idGuid);
@@ -77,9 +78,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var groups = await _groupRepository.GetManyUserDetailsByIdAsync(idGuid);
-            var responses = groups.Select(g => new GroupUserResponseModel(g));
-            return new ListResponseModel<GroupUserResponseModel>(responses);
+            var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(idGuid);
+            return groupIds;
         }
 
         [HttpPost("")]
@@ -108,6 +108,17 @@ namespace Bit.Api.Controllers
 
             await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
             return new GroupResponseModel(group);
+        }
+
+        [HttpPut("{id}/users")]
+        public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<Guid> model)
+        {
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if(group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+            await _groupRepository.UpdateUsersAsync(group.Id, model);
         }
 
         [HttpDelete("{id}")]

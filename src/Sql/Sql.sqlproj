@@ -174,7 +174,6 @@
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateUsers.sql" />
-    <Build Include="dbo\Stored Procedures\GroupUserDetails_ReadByGroupId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadWithCollectionsById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateWithCollections.sql" />
@@ -237,5 +236,6 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_UpdateUsers.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadOrganizationUserIdsByGroupId.sql" />
   </ItemGroup>
 </Project>
