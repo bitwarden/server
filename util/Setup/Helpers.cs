@@ -111,7 +111,7 @@ namespace Bit.Setup
             return builder.ConnectionString;
         }
 
-        public static string GetValueFronEnvFile(string envFile, string key)
+        public static string GetValueFromEnvFile(string envFile, string key)
         {
             if(!File.Exists($"/bitwarden/env/{envFile}.override.env"))
             {

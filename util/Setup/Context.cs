@@ -26,7 +26,7 @@ namespace Bit.Setup
                 Console.WriteLine("No existing `config.yml` detected. Let's generate one.");
 
                 // Looks like updating from older version. Try to create config file.
-                var url = Helpers.GetValueFronEnvFile("global", "globalSettings__baseServiceUri__vault");
+                var url = Helpers.GetValueFromEnvFile("global", "globalSettings__baseServiceUri__vault");
                 if(!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 {
                     Console.WriteLine("Unable to determine existing installation url.");
@@ -34,7 +34,7 @@ namespace Bit.Setup
                 }
                 Config.Url = url;
 
-                var push = Helpers.GetValueFronEnvFile("global", "globalSettings__pushRelayBaseUri");
+                var push = Helpers.GetValueFromEnvFile("global", "globalSettings__pushRelayBaseUri");
                 Config.PushNotifications = push != "REPLACE";
 
                 var composeFile = "/bitwarden/docker/docker-compose.yml";
