@@ -1,0 +1,3 @@
+*.sh eol=lf
+.dockerignore eol=lf
+dockerfile eol=lf
