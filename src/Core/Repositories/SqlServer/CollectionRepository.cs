@@ -111,24 +111,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CollectionUserDetails>> GetManyUserDetailsByIdAsync(Guid organizationId,
-            Guid collectionId)
-        {
-            using(var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<CollectionUserDetails>(
-                    $"[{Schema}].[CollectionUserDetails_ReadByCollectionId]",
-                    new { OrganizationId = organizationId, CollectionId = collectionId },
-                    commandType: CommandType.StoredProcedure);
-
-                // Return distinct Id results. If at least one of the grouped results is not ReadOnly, that we return it.
-                return results
-                    .GroupBy(c => c.OrganizationUserId)
-                    .Select(g => g.OrderBy(og => og.ReadOnly).First())
-                    .ToList();
-            }
-        }
-
         public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             obj.SetNewId();
@@ -185,9 +167,22 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Collection_UpdateUsers]",
+                    $"[{Schema}].[CollectionUser_UpdateUsers]",
                     new { Id = id, Users = users.ToArrayTVP() },
                     commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task<ICollection<SelectionReadOnly>> GetManyUsersByIdAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SelectionReadOnly>(
+                    $"[{Schema}].[CollectionUser_ReadByCollectionId]",
+                    new { CollectionId = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
             }
         }
 

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Collection_UpdateUsers]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers]
     @Id UNIQUEIDENTIFIER,
     @Users AS [dbo].[SelectionReadOnlyArray] READONLY
 AS

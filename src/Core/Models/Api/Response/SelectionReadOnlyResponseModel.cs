@@ -3,9 +3,10 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Api
 {
-    public class SelectionReadOnlyResponseModel
+    public class SelectionReadOnlyResponseModel : ResponseModel
     {
         public SelectionReadOnlyResponseModel(SelectionReadOnly selection)
+            : base("selection")
         {
             if(selection == null)
             {

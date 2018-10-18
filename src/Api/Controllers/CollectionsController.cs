@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
 using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -95,13 +96,12 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/users")]
-        public async Task<ListResponseModel<CollectionUserResponseModel>> GetUsers(string orgId, string id)
+        public async Task<ListResponseModel<SelectionReadOnlyResponseModel>> GetUsers(string orgId, string id)
         {
             var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            var collectionUsers = await _collectionRepository.GetManyUserDetailsByIdAsync(collection.OrganizationId,
-                collection.Id);
-            var responses = collectionUsers.Select(c => new CollectionUserResponseModel(c));
-            return new ListResponseModel<CollectionUserResponseModel>(responses);
+            var collectionUsers = await _collectionRepository.GetManyUsersByIdAsync(collection.Id);
+            var responses = collectionUsers.Select(cu => new SelectionReadOnlyResponseModel(cu));
+            return new ListResponseModel<SelectionReadOnlyResponseModel>(responses);
         }
 
         [HttpPost("")]
@@ -127,6 +127,13 @@ namespace Bit.Api.Controllers
             await _collectionService.SaveAsync(model.ToCollection(collection),
                 model.Groups?.Select(g => g.ToSelectionReadOnly()));
             return new CollectionResponseModel(collection);
+        }
+
+        [HttpPut("{id}/users")]
+        public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<SelectionReadOnlyRequestModel> model)
+        {
+            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
         }
 
         [HttpDelete("{id}")]

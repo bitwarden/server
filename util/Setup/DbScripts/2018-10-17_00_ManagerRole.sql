@@ -117,7 +117,13 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_UpdateUsers]
+IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUser_UpdateUsers]
+END
+GO
+
+CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers]
     @Id UNIQUEIDENTIFIER,
     @Users AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
@@ -157,5 +163,33 @@ BEGIN
     ;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[CollectionUserDetails_ReadByCollectionId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUserDetails_ReadByCollectionId]
+END
+GO
+
+IF OBJECT_ID('[dbo].[CollectionUser_ReadByCollectionId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUser_ReadByCollectionId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[CollectionUser_ReadByCollectionId]
+    @CollectionId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [OrganizationUserId] [Id],
+        [ReadOnly]
+    FROM
+        [dbo].[CollectionUser]
+    WHERE
+        [CollectionId] = @CollectionId
 END
 GO

@@ -160,7 +160,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\User_Update.sql" />
-    <Build Include="dbo\Stored Procedures\CollectionUserDetails_ReadByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUser_ReadByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\Group_Create.sql" />
     <Build Include="dbo\Stored Procedures\Group_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Group_DeleteById.sql" />
@@ -236,6 +236,6 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
-    <Build Include="dbo\Stored Procedures\Collection_UpdateUsers.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUser_UpdateUsers.sql" />
   </ItemGroup>
 </Project>
