@@ -146,7 +146,7 @@ namespace Bit.Setup
             {
                 Console.WriteLine("Migrating database.");
 
-                var dbPass = Helpers.GetValueFronEnvFile("mssql", "SA_PASSWORD");
+                var dbPass = Helpers.GetValueFromEnvFile("mssql", "SA_PASSWORD");
                 var masterConnectionString = Helpers.MakeSqlConnectionString(
                     "mssql", "master", "sa", dbPass ?? string.Empty);
                 var vaultConnectionString = Helpers.MakeSqlConnectionString(
