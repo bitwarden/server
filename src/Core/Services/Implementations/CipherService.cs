@@ -55,16 +55,24 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false)
+        public async Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
+            bool skipPermissionCheck = false)
         {
-            if(!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
+            if(!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
 
             if(cipher.Id == default(Guid))
             {
-                await _cipherRepository.CreateAsync(cipher);
+                if(cipher.OrganizationId.HasValue && collectionIds != null)
+                {
+                    await _cipherRepository.CreateAsync(cipher, collectionIds);
+                }
+                else
+                {
+                    await _cipherRepository.CreateAsync(cipher);
+                }
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
 
                 // push
@@ -72,6 +80,10 @@ namespace Bit.Core.Services
             }
             else
             {
+                if(collectionIds != null)
+                {
+                    throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
+                }
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -81,9 +93,10 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId)
+        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId,
+            IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false)
         {
-            if(!(await UserCanEditAsync(cipher, savingUserId)))
+            if(!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
@@ -91,7 +104,14 @@ namespace Bit.Core.Services
             cipher.UserId = savingUserId;
             if(cipher.Id == default(Guid))
             {
-                await _cipherRepository.CreateAsync(cipher);
+                if(cipher.OrganizationId.HasValue && collectionIds != null)
+                {
+                    await _cipherRepository.CreateAsync(cipher, collectionIds);
+                }
+                else
+                {
+                    await _cipherRepository.CreateAsync(cipher);
+                }
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
 
                 if(cipher.OrganizationId.HasValue)
@@ -105,6 +125,10 @@ namespace Bit.Core.Services
             }
             else
             {
+                if(collectionIds != null)
+                {
+                    throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
+                }
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);

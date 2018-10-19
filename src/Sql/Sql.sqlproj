@@ -237,5 +237,8 @@
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_UpdateUsers.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadOrganizationUserIdsByGroupId.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_CreateWithCollections.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_UpdateCollections.sql" />
+    <Build Include="dbo\Stored Procedures\CipherDetails_CreateWithCollections.sql" />
   </ItemGroup>
 </Project>

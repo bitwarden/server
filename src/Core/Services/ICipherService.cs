@@ -9,8 +9,8 @@ namespace Bit.Core.Services
 {
     public interface ICipherService
     {
-        Task SaveAsync(Cipher cipher, Guid savingUserId, bool orgAdmin = false);
-        Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId);
+        Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false);
+        Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false);
         Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, long requestLength, Guid savingUserId,
             bool orgAdmin = false);
         Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength, string attachmentId,

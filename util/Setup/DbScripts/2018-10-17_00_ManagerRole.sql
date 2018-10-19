@@ -227,3 +227,202 @@ BEGIN
         [GroupId] = @GroupId
 END
 GO
+
+IF OBJECT_ID('[dbo].[Cipher_UpdateCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_UpdateCollections]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_UpdateCollections]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    IF @OrganizationId IS NULL OR (SELECT COUNT(1) FROM @CollectionIds) < 1
+    BEGIN
+        RETURN(-1)
+    END
+
+    CREATE TABLE #AvailableCollections (
+        [Id] UNIQUEIDENTIFIER
+    )
+
+    INSERT INTO #AvailableCollections
+        SELECT
+            C.[Id]
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            [Organization] O ON O.[Id] = C.[OrganizationId]
+        INNER JOIN
+            [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = O.[Id] AND OU.[UserId] = @UserId
+        LEFT JOIN
+            [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = OU.[Id]
+        LEFT JOIN
+            [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND OU.[AccessAll] = 0 AND GU.[OrganizationUserId] = OU.[Id]
+        LEFT JOIN
+            [dbo].[Group] G ON G.[Id] = GU.[GroupId]
+        LEFT JOIN
+            [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
+        WHERE
+            O.[Id] = @OrganizationId
+            AND O.[Enabled] = 1
+            AND OU.[Status] = 2 -- Confirmed
+            AND (
+                OU.[AccessAll] = 1
+                OR CU.[ReadOnly] = 0
+                OR G.[AccessAll] = 1
+                OR CG.[ReadOnly] = 0
+            )
+
+    IF (SELECT COUNT(1) FROM #AvailableCollections) < 1
+    BEGIN
+        -- No writable collections available to share with in this organization.
+        RETURN(-1)
+    END
+
+    INSERT INTO [dbo].[CollectionCipher]
+    (
+        [CollectionId],
+        [CipherId]
+    )
+    SELECT
+        [Id],
+        @Id
+    FROM
+        @CollectionIds
+    WHERE
+        [Id] IN (SELECT [Id] FROM #AvailableCollections)
+
+    RETURN(0)
+END
+GO
+
+IF OBJECT_ID('[dbo].[CipherDetails_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
+END
+GO
+
+CREATE PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX), -- not used
+    @Folders NVARCHAR(MAX), -- not used
+    @Attachments NVARCHAR(MAX), -- not used
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @FolderId UNIQUEIDENTIFIER,
+    @Favorite BIT,
+    @Edit BIT, -- not used
+    @OrganizationUseTotp BIT, -- not used
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
+        @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @OrganizationUseTotp
+
+    DECLARE @UpdateCollectionsSuccess INT
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+END
+GO
+
+IF OBJECT_ID('[dbo].[Cipher_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_CreateWithCollections]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
+        @Attachments, @CreationDate, @RevisionDate
+
+    DECLARE @UpdateCollectionsSuccess INT
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+END
+GO
+
+IF OBJECT_ID('[dbo].[Cipher_UpdateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_UpdateWithCollections]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_UpdateWithCollections]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    BEGIN TRANSACTION Cipher_UpdateWithCollections
+
+    DECLARE @UpdateCollectionsSuccess INT
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+
+    IF @UpdateCollectionsSuccess < 0
+    BEGIN
+        COMMIT TRANSACTION Cipher_UpdateWithCollections
+        SELECT -1 -- -1 = Failure
+        RETURN
+    END
+
+    UPDATE
+        [dbo].[Cipher]
+    SET
+        [UserId] = NULL,
+        [OrganizationId] = @OrganizationId,
+        [Data] = @Data,
+        [Attachments] = @Attachments,
+        [RevisionDate] = @RevisionDate
+        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
+    WHERE
+        [Id] = @Id
+
+    COMMIT TRANSACTION Cipher_UpdateWithCollections
+
+    IF @Attachments IS NOT NULL
+    BEGIN
+        EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
+        EXEC [dbo].[User_UpdateStorage] @UserId
+    END
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+
+    SELECT 0 -- 0 = Success
+END
+GO

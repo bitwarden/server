@@ -108,23 +108,42 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = model.ToCipherDetails(userId);
-            await _cipherService.SaveDetailsAsync(cipher, userId);
+            if(cipher.OrganizationId.HasValue && !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
 
+            await _cipherService.SaveDetailsAsync(cipher, userId, null, cipher.OrganizationId.HasValue);
+            var response = new CipherResponseModel(cipher, _globalSettings);
+            return response;
+        }
+
+        [HttpPost("create")]
+        public async Task<CipherResponseModel> PostCreate([FromBody]CipherCreateRequestModel model)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = model.Cipher.ToCipherDetails(userId);
+            if(cipher.OrganizationId.HasValue && !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.SaveDetailsAsync(cipher, userId, model.CollectionIds, cipher.OrganizationId.HasValue);
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
         }
 
         [HttpPost("admin")]
-        public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherRequestModel model)
+        public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherCreateRequestModel model)
         {
-            var cipher = model.ToOrganizationCipher();
+            var cipher = model.Cipher.ToOrganizationCipher();
             if(!_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.SaveAsync(cipher, userId, true);
+            await _cipherService.SaveAsync(cipher, userId, model.CollectionIds, true);
 
             var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
             return response;
@@ -168,7 +187,7 @@ namespace Bit.Api.Controllers
 
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = CoreHelpers.CloneObject(model.ToCipher(cipher));
-            await _cipherService.SaveAsync(cipherClone, userId, true);
+            await _cipherService.SaveAsync(cipherClone, userId, null, true);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
@@ -206,7 +225,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User).Value;
             var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-            var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId)).ToList();
+            var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
             await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
         }
 

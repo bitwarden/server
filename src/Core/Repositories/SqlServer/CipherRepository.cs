@@ -101,6 +101,21 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
+        {
+            cipher.SetNewId();
+            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(
+                JsonConvert.SerializeObject(cipher));
+            objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_CreateWithCollections]",
+                    objWithCollections,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public async Task CreateAsync(CipherDetails cipher)
         {
             cipher.SetNewId();
@@ -109,6 +124,21 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[CipherDetails_Create]",
                     cipher,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
+        {
+            cipher.SetNewId();
+            var objWithCollections = JsonConvert.DeserializeObject<CipherDetailsWithCollections>(
+                JsonConvert.SerializeObject(cipher));
+            objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[CipherDetails_CreateWithCollections]",
+                    objWithCollections,
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -713,6 +743,11 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             return collectionCiphersTable;
+        }
+
+        public class CipherDetailsWithCollections : CipherDetails
+        {
+            public DataTable CollectionIds { get; set; }
         }
 
         public class CipherWithCollections : Cipher

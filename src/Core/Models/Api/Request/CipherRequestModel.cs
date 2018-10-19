@@ -36,13 +36,14 @@ namespace Bit.Core.Models.Api
         public CipherIdentityModel Identity { get; set; }
         public CipherSecureNoteModel SecureNote { get; set; }
 
-        public CipherDetails ToCipherDetails(Guid userId)
+        public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
         {
+            var hasOrgId = !string.IsNullOrWhiteSpace(OrganizationId);
             var cipher = new CipherDetails
             {
                 Type = Type,
-                UserId = string.IsNullOrWhiteSpace(OrganizationId) ? (Guid?)userId : null,
-                OrganizationId = null,
+                UserId = !hasOrgId ? (Guid?)userId : null,
+                OrganizationId = allowOrgIdSet && hasOrgId ? new Guid(OrganizationId) : (Guid?)null,
                 Edit = true
             };
             ToCipherDetails(cipher);
@@ -139,6 +140,22 @@ namespace Bit.Core.Models.Api
             var cipher = ToCipherDetails(userId);
             cipher.Id = new Guid(Id);
             return cipher;
+        }
+    }
+
+    public class CipherCreateRequestModel : IValidatableObject
+    {
+        public IEnumerable<Guid> CollectionIds { get; set; }
+        [Required]
+        public CipherRequestModel Cipher { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if(!string.IsNullOrWhiteSpace(Cipher.OrganizationId) && (!CollectionIds?.Any() ?? true))
+            {
+                yield return new ValidationResult("You must select at least one collection.",
+                   new string[] { nameof(CollectionIds) });
+            }
         }
     }
 
