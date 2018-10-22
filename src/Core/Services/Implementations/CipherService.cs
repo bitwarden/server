@@ -63,11 +63,12 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
 
-            cipher.UserId = savingUserId;
             if(cipher.Id == default(Guid))
             {
                 if(cipher.OrganizationId.HasValue && collectionIds != null)
                 {
+                    // Set user ID to limit scope of collection ids in the create sproc
+                    cipher.UserId = savingUserId;
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
                 }
                 else
