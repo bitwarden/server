@@ -14,8 +14,10 @@ namespace Bit.Core.Models.Api
         public class Group
         {
             [Required]
+            [StringLength(100)]
             public string Name { get; set; }
             [Required]
+            [StringLength(300)]
             public string ExternalId { get; set; }
             public IEnumerable<string> Users { get; set; }
 
@@ -39,9 +41,11 @@ namespace Bit.Core.Models.Api
         public class User : IValidatableObject
         {
             [EmailAddress]
+            [StringLength(50)]
             public string Email { get; set; }
             public bool Deleted { get; set; }
             [Required]
+            [StringLength(300)]
             public string ExternalId { get; set; }
 
             public ImportedOrganizationUser ToImportedOrganizationUser()

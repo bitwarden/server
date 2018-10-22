@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         [EmailAddress]
+        [StringLength(50)]
         public string Email { get; set; }
 
         public Installation ToInstallation()

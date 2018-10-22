@@ -28,11 +28,16 @@ namespace Bit.Core.Models.Api
             }
 
             var attr = new EmailAddressAttribute();
-            for(int i = 0; i < Emails.Count(); i++)
+            for(var i = 0; i < Emails.Count(); i++)
             {
-                if(!attr.IsValid(Emails.ElementAt(i)))
+                var email = Emails.ElementAt(i);
+                if(!attr.IsValid(email))
                 {
                     yield return new ValidationResult($"Email #{i + 1} is not valid.", new string[] { nameof(Emails) });
+                }
+                else if(email.Length > 50)
+                {
+                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.", new string[] { nameof(Emails) });
                 }
             }
         }
