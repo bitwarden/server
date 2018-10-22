@@ -56,7 +56,7 @@ namespace Bit.Core.Services
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
-            bool skipPermissionCheck = false)
+            bool skipPermissionCheck = false, bool limitCollectionScope = true)
         {
             if(!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
             {
@@ -67,8 +67,11 @@ namespace Bit.Core.Services
             {
                 if(cipher.OrganizationId.HasValue && collectionIds != null)
                 {
-                    // Set user ID to limit scope of collection ids in the create sproc
-                    cipher.UserId = savingUserId;
+                    if(limitCollectionScope)
+                    {
+                        // Set user ID to limit scope of collection ids in the create sproc
+                        cipher.UserId = savingUserId;
+                    }
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
                 }
                 else

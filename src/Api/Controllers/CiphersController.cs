@@ -143,7 +143,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.SaveAsync(cipher, userId, model.CollectionIds, true);
+            await _cipherService.SaveAsync(cipher, userId, model.CollectionIds, true, false);
 
             var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
             return response;
@@ -188,7 +188,7 @@ namespace Bit.Api.Controllers
 
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = CoreHelpers.CloneObject(model.ToCipher(cipher));
-            await _cipherService.SaveAsync(cipherClone, userId, null, true);
+            await _cipherService.SaveAsync(cipherClone, userId, null, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
