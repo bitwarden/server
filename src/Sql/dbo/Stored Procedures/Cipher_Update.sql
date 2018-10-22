@@ -16,7 +16,7 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [UserId] = @UserId,
+        [UserId] = CASE WHEN @OrganizationId IS NULL THEN @UserId ELSE NULL END,
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
         [Data] = @Data,
