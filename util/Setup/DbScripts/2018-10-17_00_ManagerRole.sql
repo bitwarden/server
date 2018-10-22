@@ -1,4 +1,7 @@
-﻿IF OBJECT_ID('[dbo].[UserCollectionDetails]') IS NOT NULL
+﻿ALTER TABLE [dbo].[Group] ALTER COLUMN [Name] NVARCHAR (100) NOT NULL
+GO
+
+IF OBJECT_ID('[dbo].[UserCollectionDetails]') IS NOT NULL
 BEGIN
     DROP FUNCTION [dbo].[UserCollectionDetails]
 END

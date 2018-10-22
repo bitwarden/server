@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[Group] (
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
-    [Name]           NVARCHAR (50)    NOT NULL,
+    [Name]           NVARCHAR (100)   NOT NULL,
     [AccessAll]      BIT              NOT NULL,
     [ExternalId]     NVARCHAR (300)   NULL,
     [CreationDate]   DATETIME         NOT NULL,
