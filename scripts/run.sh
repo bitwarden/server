@@ -123,7 +123,7 @@ function dockerComposeFiles() {
 }
 
 function dockerPrune() {
-    docker image prune -f --filter="label=com.bitwarden.product=bitwarden"
+    docker image prune --all --force --filter="label=com.bitwarden.product=bitwarden"
 }
 
 function updateLetsEncrypt() {
