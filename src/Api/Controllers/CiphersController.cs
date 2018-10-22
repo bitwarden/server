@@ -160,7 +160,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? (Guid?)null : new Guid(model.OrganizationId);
+            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? 
+                (Guid?)null : new Guid(model.OrganizationId);
             if(cipher.OrganizationId != modelOrgId)
             {
                 throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this item, " +
@@ -194,7 +195,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("organization-details")]
-        public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(string organizationId)
+        public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(
+            string organizationId)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
@@ -230,7 +232,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("import-organization")]
-        public async Task PostImport([FromQuery]string organizationId, [FromBody]ImportOrganizationCiphersRequestModel model)
+        public async Task PostImport([FromQuery]string organizationId,
+            [FromBody]ImportOrganizationCiphersRequestModel model)
         {
             if(!_globalSettings.SelfHosted &&
                 (model.Ciphers.Count() > 5000 || model.CollectionRelationships.Count() > 5000 ||
@@ -273,8 +276,8 @@ namespace Bit.Api.Controllers
             }
 
             var original = CoreHelpers.CloneObject(cipher);
-            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
-                model.CollectionIds.Select(c => new Guid(c)), userId);
+            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), 
+                new Guid(model.Cipher.OrganizationId), model.CollectionIds.Select(c => new Guid(c)), userId);
         }
 
         [HttpPut("{id}/collections")]
@@ -289,7 +292,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(c => new Guid(c)), userId, false);
+            await _cipherService.SaveCollectionsAsync(cipher, 
+                model.CollectionIds.Select(c => new Guid(c)), userId, false);
         }
 
         [HttpPut("{id}/collections-admin")]
@@ -304,7 +308,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, model.CollectionIds.Select(c => new Guid(c)), userId, true);
+            await _cipherService.SaveCollectionsAsync(cipher, 
+                model.CollectionIds.Select(c => new Guid(c)), userId, true);
         }
 
         [HttpDelete("{id}")]
