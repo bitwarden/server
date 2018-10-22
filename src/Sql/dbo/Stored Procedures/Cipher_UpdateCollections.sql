@@ -24,7 +24,7 @@ BEGIN
             FROM
                 [dbo].[Collection]
             WHERE
-                [Id] = @OrganizationId
+                [OrganizationId] = @OrganizationId
     END
     ELSE
     BEGIN
