@@ -168,7 +168,8 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
-            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(
+                JsonConvert.SerializeObject(obj));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
             using(var connection = new SqlConnection(ConnectionString))
