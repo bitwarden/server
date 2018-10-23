@@ -265,10 +265,11 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/share")]
         [HttpPost("{id}/share")]
-        public async Task PutShare(string id, [FromBody]CipherShareRequestModel model)
+        public async Task<CipherResponseModel> PutShare(string id, [FromBody]CipherShareRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var cipherId = new Guid(id);
+            var cipher = await _cipherRepository.GetByIdAsync(cipherId);
             if(cipher == null || cipher.UserId != userId ||
                 !_currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
             {
@@ -278,6 +279,10 @@ namespace Bit.Api.Controllers
             var original = CoreHelpers.CloneObject(cipher);
             await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), 
                 new Guid(model.Cipher.OrganizationId), model.CollectionIds.Select(c => new Guid(c)), userId);
+
+            var sharedCipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+            var response = new CipherResponseModel(sharedCipher, _globalSettings);
+            return response;
         }
 
         [HttpPut("{id}/collections")]
