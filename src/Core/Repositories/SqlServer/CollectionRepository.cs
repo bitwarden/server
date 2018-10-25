@@ -120,7 +120,7 @@ namespace Bit.Core.Repositories.SqlServer
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Collection_CreateWithGroupsAndUsers]",
+                    $"[{Schema}].[Collection_CreateWithGroups]",
                     objWithGroups,
                     commandType: CommandType.StoredProcedure);
             }
