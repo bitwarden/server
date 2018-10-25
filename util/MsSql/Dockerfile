@@ -17,6 +17,10 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
+# Enable traceflag 460 (requires MSSQL 2017 CU12 or later)
+# Ref: https://support.microsoft.com/en-us/help/4468101/optional-replacement-for-string-or-binary-data-would-be-truncated
+RUN /opt/mssql/bin/mssql-conf traceflag 460 on
+
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 # As the setting above does not work, let's use the workaround below
 RUN echo 127.0.0.1 settings-win.data.microsoft.com >> /etc/hosts
