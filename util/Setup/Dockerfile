@@ -1,6 +1,6 @@
 FROM microsoft/dotnet:2.1.5-runtime
 
-LABEL com.bitwarden.product="bitwarden"
+LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
