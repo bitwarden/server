@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 
@@ -68,7 +69,19 @@ namespace Bit.Setup
         private void Init()
         {
             var dbPassword = Helpers.SecureRandomString(32);
-            var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPassword);
+            var dbConnectionString = new SqlConnectionStringBuilder
+            {
+                DataSource = "tcp:mssql,1433",
+                InitialCatalog = "vault",
+                UserID = "sa",
+                Password = dbPassword,
+                MultipleActiveResultSets = false,
+                Encrypt = true,
+                ConnectTimeout = 30,
+                TrustServerCertificate = true,
+                PersistSecurityInfo = false
+            }.ConnectionString;
+
             _globalOverrideValues = new Dictionary<string, string>
             {
                 ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,

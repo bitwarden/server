@@ -146,11 +146,12 @@ namespace Bit.Setup
             {
                 Console.WriteLine("Migrating database.");
 
-                var dbPass = Helpers.GetValueFromEnvFile("mssql", "SA_PASSWORD");
-                var masterConnectionString = Helpers.MakeSqlConnectionString(
-                    "mssql", "master", "sa", dbPass ?? string.Empty);
-                var vaultConnectionString = Helpers.MakeSqlConnectionString(
-                    "mssql", "vault", "sa", dbPass ?? string.Empty);
+                var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
+                    "globalSettings__sqlServer__connectionString");
+                var masterConnectionString = new SqlConnectionStringBuilder(vaultConnectionString)
+                {
+                    InitialCatalog = "master"
+                }.ConnectionString;
 
                 using(var connection = new SqlConnection(masterConnectionString))
                 {

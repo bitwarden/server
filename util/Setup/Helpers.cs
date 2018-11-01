@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -92,23 +91,6 @@ namespace Bit.Setup
             }
 
             return characters;
-        }
-
-        public static string MakeSqlConnectionString(string server, string database, string username, string password)
-        {
-            var builder = new SqlConnectionStringBuilder
-            {
-                DataSource = $"tcp:{server},1433",
-                InitialCatalog = database,
-                UserID = username,
-                Password = password,
-                MultipleActiveResultSets = false,
-                Encrypt = true,
-                ConnectTimeout = 30,
-                TrustServerCertificate = true,
-                PersistSecurityInfo = false
-            };
-            return builder.ConnectionString;
         }
 
         public static string GetValueFromEnvFile(string envFile, string key)
