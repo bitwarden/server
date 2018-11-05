@@ -34,6 +34,7 @@ namespace Bit.Core.Services
             {
                 blob.Metadata.Add("organizationId", cipher.OrganizationId.Value.ToString());
             }
+            blob.Properties.ContentDisposition = "attachment";
             await blob.UploadFromStreamAsync(stream);
         }
 
@@ -43,6 +44,7 @@ namespace Bit.Core.Services
             var blob = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentId}");
             blob.Metadata.Add("cipherId", cipherId.ToString());
             blob.Metadata.Add("organizationId", organizationId.ToString());
+            blob.Properties.ContentDisposition = "attachment";
             await blob.UploadFromStreamAsync(stream);
         }
 
