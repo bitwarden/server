@@ -105,7 +105,7 @@ namespace Bit.Setup
             {
                 if(line.StartsWith($"{key}="))
                 {
-                    return line.Split(new char[] { '=' }, 2)[1];
+                    return line.Split(new char[] { '=' }, 2)[1].Trim('"');
                 }
             }
 
