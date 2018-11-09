@@ -45,7 +45,6 @@ namespace Bit.Core.Services
             blob.Metadata.Add("cipherId", cipherId.ToString());
             blob.Metadata.Add("organizationId", organizationId.ToString());
             blob.Properties.ContentDisposition = $"attachment; filename=\"{attachmentId}\"";
-            await blob.SetPropertiesAsync();
             await blob.UploadFromStreamAsync(stream);
         }
 
