@@ -77,6 +77,7 @@ function Docker-Compose-Files {
     else {
         $env:COMPOSE_FILE = "${dockerDir}\docker-compose.yml"
     }
+    $env:COMPOSE_HTTP_TIMEOUT = "300"
 }
 
 function Docker-Prune {
