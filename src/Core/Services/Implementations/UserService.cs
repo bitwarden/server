@@ -548,11 +548,6 @@ namespace Bit.Core.Services
 
             if(await CheckPasswordAsync(user, masterPassword))
             {
-                if(!string.IsNullOrWhiteSpace(user.Key))
-                {
-                    throw new BadRequestException("User already has an updated encryption key.");
-                }
-
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
