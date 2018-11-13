@@ -84,10 +84,17 @@ namespace Bit.Admin
             if(globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
-                app.UseForwardedHeaders(new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-                });
+                var options = new ForwardedHeadersOptions(){
+                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                    ForwardLimit = globalSettings.Proxy.ForwardLimit
+                };
+                if(globalSettings.Proxy.Address != null) {
+                    System.Net.IPAddress proxyIP;
+                    if(System.Net.IPAddress.TryParse(globalSettings.Proxy.Address,out proxyIP)){
+                        options.KnownProxies.Add(proxyIP);
+                    }
+                }
+                app.UseForwardedHeaders(options);
             }
 
             if(env.IsDevelopment())

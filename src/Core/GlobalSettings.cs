@@ -29,6 +29,7 @@ namespace Bit.Core
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+        public virtual ProxySettings Proxy { get; set; } = new ProxySettings();
 
         public class BaseServiceUriSettings
         {
@@ -185,6 +186,12 @@ namespace Bit.Core
             public Guid Id { get; set; }
             public string Key { get; set; }
             public string IdentityUri { get; set; }
+        }
+
+        public class ProxySettings
+        {
+            public int ForwardLimit { get; set; }
+            public string Address { get; set; }
         }
     }
 }
