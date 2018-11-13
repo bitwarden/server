@@ -94,6 +94,16 @@ namespace Bit.Admin
                         options.KnownProxies.Add(proxyIP);
                     }
                 }
+                if(globalSettings.Proxy.Network != null) {
+                    var split = globalSettings.Proxy.Network.Split('/');
+                    if(split.Length != 2) {
+                        throw new Exception($"Invalid IP Network Specification: {globalSettings.Proxy.Network}");
+                    }
+                    System.Net.IPAddress proxyPrefix;
+                    if(System.Net.IPAddress.TryParse(split[0],out proxyPrefix)){
+                        options.KnownNetworks.Add(new IPNetwork(proxyPrefix,Int32.Parse(split[1])));
+                    }
+                }
                 app.UseForwardedHeaders(options);
             }
 

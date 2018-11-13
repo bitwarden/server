@@ -192,6 +192,7 @@ namespace Bit.Core
         {
             public int ForwardLimit { get; set; }
             public string Address { get; set; }
+            public string Network { get; set; }
         }
     }
 }
