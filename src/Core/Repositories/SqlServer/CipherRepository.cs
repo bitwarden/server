@@ -340,6 +340,7 @@ namespace Bit.Core.Repositories.SqlServer
                                     [dbo].[Cipher]
                                 SET
                                     [Data] = TC.[Data],
+                                    [Attachments] = TC.[Attachments],
                                     [RevisionDate] = TC.[RevisionDate]
                                 FROM
                                     [dbo].[Cipher] C

@@ -29,7 +29,10 @@ namespace Bit.Core.Models.Api
         public string Notes { get; set; }
         public IEnumerable<CipherFieldModel> Fields { get; set; }
         public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
+        [Obsolete]
         public Dictionary<string, string> Attachments { get; set; }
+        // TODO: Rename to Attachments whenever the above is finally removed.
+        public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
         public CipherLoginModel Login { get; set; }
         public CipherCardModel Card { get; set; }
@@ -84,7 +87,10 @@ namespace Bit.Core.Models.Api
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
             }
 
-            if((Attachments?.Count ?? 0) == 0)
+            var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
+            var hasAttachments = (Attachments?.Count ?? 0) > 0;
+
+            if(!hasAttachments2 && !hasAttachments)
             {
                 return existingCipher;
             }
@@ -95,9 +101,22 @@ namespace Bit.Core.Models.Api
                 return existingCipher;
             }
 
-            foreach(var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+            if(hasAttachments2)
             {
-                attachment.Value.FileName = Attachments[attachment.Key];
+                foreach(var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
+                {
+                    var attachment2 = Attachments2[attachment.Key];
+                    attachment.Value.FileName = attachment2.FileName;
+                    attachment.Value.Key = attachment2.Key;
+                }
+            }
+            else if(hasAttachments)
+            {
+                foreach(var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+                {
+                    attachment.Value.FileName = Attachments[attachment.Key];
+                    attachment.Value.Key = null;
+                }
             }
 
             existingCipher.SetAttachments(attachments);
@@ -132,15 +151,7 @@ namespace Bit.Core.Models.Api
     public class CipherWithIdRequestModel : CipherRequestModel
     {
         [Required]
-        [StringLength(36)]
-        public string Id { get; set; }
-
-        public Cipher ToCipher(Guid userId)
-        {
-            var cipher = ToCipherDetails(userId);
-            cipher.Id = new Guid(Id);
-            return cipher;
-        }
+        public Guid? Id { get; set; }
     }
 
     public class CipherCreateRequestModel : IValidatableObject
@@ -224,7 +235,7 @@ namespace Bit.Core.Models.Api
                     organizationIds.Add(c.OrganizationId);
                     if(allHaveIds)
                     {
-                        allHaveIds = !(string.IsNullOrWhiteSpace(c.Id) || string.IsNullOrWhiteSpace(c.OrganizationId));
+                        allHaveIds = !(!c.Id.HasValue || string.IsNullOrWhiteSpace(c.OrganizationId));
                     }
                 }
 

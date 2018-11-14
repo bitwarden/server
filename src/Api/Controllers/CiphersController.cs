@@ -391,13 +391,12 @@ namespace Bit.Api.Controllers
             var shareCiphers = new List<Cipher>();
             foreach(var cipher in model.Ciphers)
             {
-                var cipherGuid = new Guid(cipher.Id);
-                if(!ciphersDict.ContainsKey(cipherGuid))
+                if(!ciphersDict.ContainsKey(cipher.Id.Value))
                 {
                     throw new BadRequestException("Trying to share ciphers that you do not own.");
                 }
 
-                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipherGuid]));
+                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipher.Id.Value]));
             }
 
             await _cipherService.ShareManyAsync(shareCiphers, organizationId,
@@ -450,9 +449,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
                         Request.ContentLength.GetValueOrDefault(0), userId);
             });
 
@@ -475,9 +474,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
                         Request.ContentLength.GetValueOrDefault(0), userId);
             });
 
@@ -498,9 +497,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName,
+                await _cipherService.CreateAttachmentShareAsync(cipher, stream,
                     Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
             });
         }

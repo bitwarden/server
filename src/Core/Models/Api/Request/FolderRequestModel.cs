@@ -31,14 +31,5 @@ namespace Bit.Core.Models.Api
     public class FolderWithIdRequestModel : FolderRequestModel
     {
         public Guid Id { get; set; }
-
-        public new Folder ToFolder(Guid userId)
-        {
-            return ToFolder(new Folder
-            {
-                UserId = userId,
-                Id = Id
-            });
-        }
     }
 }

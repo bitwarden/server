@@ -143,8 +143,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
-            Guid savingUserId, bool orgAdmin = false)
+        public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
+            long requestLength, Guid savingUserId, bool orgAdmin = false)
         {
             if(!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
             {
@@ -201,6 +201,7 @@ namespace Bit.Core.Services
                 var data = new CipherAttachment.MetaData
                 {
                     FileName = fileName,
+                    Key = key,
                     Size = stream.Length
                 };
 
@@ -228,7 +229,7 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
-        public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
+        public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength,
             string attachmentId, Guid organizationId)
         {
             try

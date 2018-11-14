@@ -12,6 +12,8 @@ using Bit.Core.Utilities;
 using Bit.Core;
 using Bit.Core.Models.Business;
 using Bit.Api.Utilities;
+using Bit.Core.Models.Table;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -21,6 +23,8 @@ namespace Bit.Api.Controllers
     {
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
+        private readonly ICipherRepository _cipherRepository;
+        private readonly IFolderRepository _folderRepository;
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licenseService;
@@ -29,6 +33,8 @@ namespace Bit.Api.Controllers
         public AccountsController(
             IUserService userService,
             IUserRepository userRepository,
+            ICipherRepository cipherRepository,
+            IFolderRepository folderRepository,
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licenseService,
@@ -36,6 +42,8 @@ namespace Bit.Api.Controllers
         {
             _userService = userService;
             _userRepository = userRepository;
+            _cipherRepository = cipherRepository;
+            _folderRepository = folderRepository;
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
             _licenseService = licenseService;
@@ -219,11 +227,27 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            // NOTE: It is assumed that the eventual repository call will make sure the updated
-            // ciphers belong to user making this call. Therefore, no check is done here.
+            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+            var ciphersDict = model.Ciphers?.ToDictionary(c => c.Id.Value);
+            var ciphers = new List<Cipher>();
+            if(existingCiphers.Any() && ciphersDict != null)
+            {
+                foreach(var cipher in existingCiphers.Where(c => ciphersDict.ContainsKey(c.Id)))
+                {
+                    ciphers.Add(ciphersDict[cipher.Id].ToCipher(cipher));
+                }
+            }
 
-            var ciphers = model.Ciphers.Select(c => c.ToCipher(user.Id));
-            var folders = model.Folders.Select(c => c.ToFolder(user.Id));
+            var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
+            var foldersDict = model.Folders?.ToDictionary(f => f.Id);
+            var folders = new List<Folder>();
+            if(existingFolders.Any() && foldersDict != null)
+            {
+                foreach(var folder in existingFolders.Where(f => foldersDict.ContainsKey(f.Id)))
+                {
+                    folders.Add(foldersDict[folder.Id].ToFolder(folder));
+                }
+            }
 
             var result = await _userService.UpdateKeyAsync(
                 user,
