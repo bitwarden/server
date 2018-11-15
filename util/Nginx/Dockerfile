@@ -13,6 +13,9 @@ COPY mime.types /etc/nginx
 COPY security-headers.conf /etc/nginx
 COPY security-headers-ssl.conf /etc/nginx
 COPY entrypoint.sh /
+
+EXPOSE 8080
+
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
