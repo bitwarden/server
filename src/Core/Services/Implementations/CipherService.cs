@@ -373,7 +373,8 @@ namespace Bit.Core.Services
             IEnumerable<Guid> collectionIds, Guid sharingUserId)
         {
             var attachments = cipher.GetAttachments();
-            var hasAttachments = (attachments?.Count ?? 0) > 0;
+            var hasAttachments = attachments?.Any() ?? false;
+            var hasOldAttachments = attachments?.Any(a => a.Key == null) ?? false;
             var updatedCipher = false;
             var migratedAttachments = false;
 
@@ -418,16 +419,22 @@ namespace Bit.Core.Services
                 updatedCipher = true;
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Shared);
 
-                if(hasAttachments)
+                if(hasOldAttachments)
                 {
-                    // migrate attachments
-                    foreach(var attachment in attachments)
+                    // migrate old attachments
+                    foreach(var attachment in attachments.Where(a => a.Key == null))
                     {
                         await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId,
                             attachment.Key);
                         migratedAttachments = true;
                     }
+
+                    // commit attachment migration
+                    await _attachmentStorageService.CleanupAsync(cipher.Id);
                 }
+
+                // push
+                await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
             }
             catch
             {
@@ -437,7 +444,7 @@ namespace Bit.Core.Services
                     await _cipherRepository.ReplaceAsync(originalCipher);
                 }
 
-                if(!hasAttachments || !migratedAttachments)
+                if(!hasOldAttachments || !migratedAttachments)
                 {
                     throw;
                 }
@@ -448,7 +455,7 @@ namespace Bit.Core.Services
                     await _organizationRepository.UpdateStorageAsync(organizationId);
                 }
 
-                foreach(var attachment in attachments)
+                foreach(var attachment in attachments.Where(a => a.Key == null))
                 {
                     await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId,
                         attachment.Key);
@@ -457,12 +464,6 @@ namespace Bit.Core.Services
                 await _attachmentStorageService.CleanupAsync(cipher.Id);
                 throw;
             }
-
-            // commit attachment migration
-            await _attachmentStorageService.CleanupAsync(cipher.Id);
-
-            // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
         }
 
         public async Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId,
@@ -484,11 +485,6 @@ namespace Bit.Core.Services
                 if(!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
                 {
                     throw new BadRequestException("One or more ciphers do not belong to you.");
-                }
-
-                if(!string.IsNullOrWhiteSpace(cipher.Attachments))
-                {
-                    throw new BadRequestException("One or more ciphers have attachments.");
                 }
 
                 cipher.UserId = null;
