@@ -26,6 +26,7 @@ namespace Bit.Core.Models.Api
         public short AdditionalSeats { get; set; }
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
+        public bool PremiumAccessAddon { get; set; }
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
@@ -42,6 +43,7 @@ namespace Bit.Core.Models.Api
                 PaymentToken = PaymentToken,
                 AdditionalSeats = AdditionalSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),
+                PremiumAccessAddon = PremiumAccessAddon,
                 BillingEmail = BillingEmail,
                 BusinessName = BusinessName,
                 BusinessCountry = Country,

@@ -265,7 +265,7 @@ namespace Bit.Core.Services
             }
 
             await BillingHelpers.AdjustStorageAsync(_stripePaymentService, organization, storageAdjustmentGb,
-                plan.StripStoragePlanId);
+                plan.StripeStoragePlanId);
             await ReplaceAndUpdateCache(organization);
         }
 
@@ -424,6 +424,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
+            if(!plan.CanBuyPremiumAccessAddon && signup.PremiumAccessAddon)
+            {
+                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            }
+
             if(plan.BaseSeats + signup.AdditionalSeats <= 0)
             {
                 throw new BadRequestException("You do not have any seats!");
@@ -499,8 +504,17 @@ namespace Bit.Core.Services
                 {
                     subCreateOptions.Items.Add(new StripeSubscriptionItemOption
                     {
-                        PlanId = plan.StripStoragePlanId,
+                        PlanId = plan.StripeStoragePlanId,
                         Quantity = signup.AdditionalStorageGb
+                    });
+                }
+
+                if(signup.PremiumAccessAddon && plan.StripePremiumAccessPlanId != null)
+                {
+                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    {
+                        PlanId = plan.StripePremiumAccessPlanId,
+                        Quantity = 1
                     });
                 }
 
@@ -537,7 +551,7 @@ namespace Bit.Core.Services
                 UseTotp = plan.UseTotp,
                 Use2fa = plan.Use2fa,
                 SelfHost = plan.SelfHost,
-                UsersGetPremium = plan.UsersGetPremium,
+                UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
                 Gateway = plan.Type == PlanType.Free ? null : (GatewayType?)GatewayType.Stripe,
                 GatewayCustomerId = customer?.Id,
