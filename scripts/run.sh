@@ -85,14 +85,14 @@ function install() {
     
             mkdir -p $OUTPUT_DIR/letsencrypt
             docker pull certbot/certbot
-            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            docker run --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
                 certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
                 --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
         fi
     fi
     
     pullSetup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION
