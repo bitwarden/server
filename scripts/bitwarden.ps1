@@ -44,7 +44,7 @@ if ($output -eq "") {
 $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/core/master"
 $coreVersion = "1.27.0"
-$webVersion = "2.6.1"
+$webVersion = "2.6.2"
 
 # Functions
 
