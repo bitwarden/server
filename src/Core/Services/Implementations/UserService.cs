@@ -31,6 +31,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
@@ -49,6 +50,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationRepository organizationRepository,
             IU2fRepository u2fRepository,
             IMailService mailService,
             IPushNotificationService pushService,
@@ -81,6 +83,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationRepository = organizationRepository;
             _u2fRepository = u2fRepository;
             _mailService = mailService;
             _pushService = pushService;
@@ -174,10 +177,30 @@ namespace Bit.Core.Services
             var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
             if(onlyOwnerCount > 0)
             {
-                return IdentityResult.Failed(new IdentityError
+                var deletedOrg = false;
+                var orgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+                    OrganizationUserStatusType.Confirmed);
+                if(orgs.Count == 1)
                 {
-                    Description = "You must leave or delete any organizations that you are the only owner of first."
-                });
+                    var org = await _organizationRepository.GetByIdAsync(orgs.First().OrganizationId);
+                    if(org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
+                    {
+                        var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
+                        if(orgCount == 1)
+                        {
+                            await _organizationRepository.DeleteAsync(org);
+                            deletedOrg = true;
+                        }
+                    }
+                }
+
+                if(!deletedOrg)
+                {
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Description = "You must leave or delete any organizations that you are the only owner of first."
+                    });
+                }
             }
 
             if(!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
