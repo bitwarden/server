@@ -186,7 +186,7 @@ namespace Bit.Core.Services
                     if(org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
                     {
                         var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
-                        if(orgCount == 1)
+                        if(orgCount <= 1)
                         {
                             await _organizationRepository.DeleteAsync(org);
                             deletedOrg = true;
