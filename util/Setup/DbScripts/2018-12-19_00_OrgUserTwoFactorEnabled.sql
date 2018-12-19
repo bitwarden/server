@@ -1,4 +1,10 @@
-﻿CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+﻿IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserUserDetailsView')
+BEGIN
+    DROP VIEW [dbo].[OrganizationUserUserDetailsView]
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
 AS
 SELECT
     OU.[Id],
@@ -16,3 +22,4 @@ FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
+GO

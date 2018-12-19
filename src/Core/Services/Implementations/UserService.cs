@@ -900,13 +900,18 @@ namespace Bit.Core.Services
             return success;
         }
 
-        public async Task<bool> CanAccessPremium(User user)
+        public async Task<bool> CanAccessPremium(ITwoFactorProvidersUser user)
         {
-            if(user.Premium)
+            var userId = user.GetUserId();
+            if(!userId.HasValue)
+            {
+                return false;
+            }
+            if(user.GetPremium())
             {
                 return true;
             }
-            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
+            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId.Value);
             if(!orgs.Any())
             {
                 return false;
@@ -916,7 +921,7 @@ namespace Bit.Core.Services
                 orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 
-        public async Task<bool> TwoFactorIsEnabledAsync(User user)
+        public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
         {
             var providers = user.GetTwoFactorProviders();
             if(providers == null)
@@ -941,7 +946,7 @@ namespace Bit.Core.Services
             return false;
         }
 
-        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, User user)
+        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user)
         {
             var providers = user.GetTwoFactorProviders();
             if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)

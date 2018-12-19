@@ -6,11 +6,10 @@ using Newtonsoft.Json;
 using Bit.Core.Services;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
 
 namespace Bit.Core.Models.Table
 {
-    public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
+    public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -81,6 +80,16 @@ namespace Bit.Core.Models.Table
             {
                 return null;
             }
+        }
+
+        public Guid? GetUserId()
+        {
+            return Id;
+        }
+
+        public bool GetPremium()
+        {
+            return Premium;
         }
 
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
