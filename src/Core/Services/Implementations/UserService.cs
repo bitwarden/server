@@ -916,6 +916,47 @@ namespace Bit.Core.Services
                 orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 
+        public async Task<bool> TwoFactorIsEnabledAsync(User user)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(providers == null)
+            {
+                return false;
+            }
+
+            foreach(var p in providers)
+            {
+                if(p.Value?.Enabled ?? false)
+                {
+                    if(!TwoFactorProvider.RequiresPremium(p.Key))
+                    {
+                        return true;
+                    }
+                    if(await CanAccessPremium(user))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, User user)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
+            {
+                return false;
+            }
+
+            if(!TwoFactorProvider.RequiresPremium(provider))
+            {
+                return true;
+            }
+
+            return await CanAccessPremium(user);
+        }
+
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {

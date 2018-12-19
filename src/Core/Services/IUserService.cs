@@ -55,5 +55,7 @@ namespace Bit.Core.Services
         Task<UserLicense> GenerateLicenseAsync(User user, BillingInfo billingInfo = null);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> CanAccessPremium(User user);
+        Task<bool> TwoFactorIsEnabledAsync(User user);
+        Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, User user);
     }
 }

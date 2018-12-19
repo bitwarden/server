@@ -37,7 +37,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, userService);
+            return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

@@ -25,8 +25,8 @@ namespace Bit.Core.Identity
             {
                 return false;
             }
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, 
-                _serviceProvider.GetRequiredService<IUserService>());
+            return await _serviceProvider.GetRequiredService<IUserService>()
+                .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, user);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

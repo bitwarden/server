@@ -69,7 +69,7 @@
                             {
                                 <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
                             }
-                            @if(await user.TwoFactorIsEnabledAsync(userService))
+                            @if(await userService.TwoFactorIsEnabledAsync(user))
                             {
                                 <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
                             }

@@ -14,7 +14,7 @@
     <dd class="col-sm-8 col-lg-9">@(Model.User.EmailVerified ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
-    <dd class="col-sm-8 col-lg-9">@(await Model.User.TwoFactorIsEnabledAsync(userService) ? "Yes" : "No")</dd>
+    <dd class="col-sm-8 col-lg-9">@(await userService.TwoFactorIsEnabledAsync(Model.User) ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Items</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>

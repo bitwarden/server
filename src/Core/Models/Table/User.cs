@@ -92,48 +92,6 @@ namespace Bit.Core.Models.Table
             _twoFactorProviders = providers;
         }
 
-        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider,
-            IUserService userService)
-        {
-            var providers = GetTwoFactorProviders();
-            if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
-            {
-                return false;
-            }
-
-            if(!TwoFactorProvider.RequiresPremium(provider))
-            {
-                return true;
-            }
-
-            return await userService.CanAccessPremium(this);
-        }
-
-        public async Task<bool> TwoFactorIsEnabledAsync(IUserService userService)
-        {
-            var providers = GetTwoFactorProviders();
-            if(providers == null)
-            {
-                return false;
-            }
-
-            foreach(var p in providers)
-            {
-                if(p.Value?.Enabled ?? false)
-                {
-                    if(!TwoFactorProvider.RequiresPremium(p.Key))
-                    {
-                        return true;
-                    }
-                    if(await userService.CanAccessPremium(this))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
         {
             var providers = GetTwoFactorProviders();
