@@ -79,7 +79,7 @@ namespace Bit.Core.Utilities.Duo
             return string.Concat("Basic ", Encode64(auth));
         }
 
-        public string ApiCall(string method, string path, Dictionary<string, string> parameters)
+        public string ApiCall(string method, string path, Dictionary<string, string> parameters = null)
         {
             return ApiCall(method, path, parameters, 0, out var statusCode);
         }
@@ -94,6 +94,11 @@ namespace Bit.Core.Utilities.Duo
         public string ApiCall(string method, string path, Dictionary<string, string> parameters, int timeout,
             out HttpStatusCode statusCode)
         {
+            if(parameters == null)
+            {
+                parameters = new Dictionary<string, string>();
+            }
+
             var canonParams = CanonicalizeParams(parameters);
             var query = string.Empty;
             if(!method.Equals("POST") && !method.Equals("PUT"))
@@ -151,7 +156,7 @@ namespace Bit.Core.Utilities.Duo
             }
         }
 
-        public T JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters)
+        public T JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters = null)
             where T : class
         {
             return JSONApiCall<T>(method, path, parameters, 0);

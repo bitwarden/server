@@ -12,6 +12,7 @@ using System.Linq;
 using Bit.Core;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Utilities.Duo;
 
 namespace Bit.Api.Controllers
 {
@@ -143,6 +144,16 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody]UpdateTwoFactorDuoRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
+            try
+            {
+                var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+                duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            }
+            catch(DuoException)
+            {
+                throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
+            }
+
             model.ToUser(user);
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
             var response = new TwoFactorDuoResponseModel(user);
