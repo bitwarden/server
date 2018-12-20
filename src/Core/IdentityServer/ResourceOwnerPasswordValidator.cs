@@ -14,6 +14,7 @@ using System.Linq;
 using Bit.Core.Models;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.IdentityServer
 {
@@ -137,7 +138,7 @@ namespace Bit.Core.IdentityServer
             if(sendRememberToken)
             {
                 var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                    TwoFactorProviderType.Remember.ToString());
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
                 customResponse.Add("TwoFactorToken", token);
             }
 
@@ -274,6 +275,7 @@ namespace Bit.Core.IdentityServer
             switch(type)
             {
                 case TwoFactorProviderType.Authenticator:
+                case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
@@ -283,13 +285,8 @@ namespace Bit.Core.IdentityServer
                     {
                         return false;
                     }
-                    return await _userManager.VerifyTwoFactorTokenAsync(user, type.ToString(), token);
-                case TwoFactorProviderType.Email:
-                    if(!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
-                    {
-                        return false;
-                    }
-                    return await _userService.VerifyTwoFactorEmailAsync(user, token);
+                    return await _userManager.VerifyTwoFactorTokenAsync(user,
+                        CoreHelpers.CustomProviderName(type), token);
                 case TwoFactorProviderType.OrganizationDuo:
                     if(!organization?.TwoFactorProviderIsEnabled(type) ?? true)
                     {
@@ -316,7 +313,8 @@ namespace Bit.Core.IdentityServer
                         return null;
                     }
 
-                    var token = await _userManager.GenerateTwoFactorTokenAsync(user, type.ToString());
+                    var token = await _userManager.GenerateTwoFactorTokenAsync(user,
+                        CoreHelpers.CustomProviderName(type));
                     if(type == TwoFactorProviderType.Duo)
                     {
                         return new Dictionary<string, object>
@@ -339,7 +337,7 @@ namespace Bit.Core.IdentityServer
                     {
                         return new Dictionary<string, object>
                         {
-                            ["Email"] = RedactEmail((string)provider.MetaData["Email"])
+                            ["Email"] = token
                         };
                     }
                     else if(type == TwoFactorProviderType.YubiKey)
@@ -363,37 +361,6 @@ namespace Bit.Core.IdentityServer
                 default:
                     return null;
             }
-        }
-
-        private static string RedactEmail(string email)
-        {
-            var emailParts = email.Split('@');
-
-            string shownPart = null;
-            if(emailParts[0].Length > 2 && emailParts[0].Length <= 4)
-            {
-                shownPart = emailParts[0].Substring(0, 1);
-            }
-            else if(emailParts[0].Length > 4)
-            {
-                shownPart = emailParts[0].Substring(0, 2);
-            }
-            else
-            {
-                shownPart = string.Empty;
-            }
-
-            string redactedPart = null;
-            if(emailParts[0].Length > 4)
-            {
-                redactedPart = new string('*', emailParts[0].Length - 2);
-            }
-            else
-            {
-                redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
-            }
-
-            return $"{shownPart}{redactedPart}@{emailParts[1]}";
         }
 
         private async Task<Device> SaveDeviceAsync(User user, ResourceOwnerPasswordValidationContext context)

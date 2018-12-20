@@ -14,6 +14,7 @@ using Dapper;
 using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Utilities
 {
@@ -473,6 +474,11 @@ namespace Bit.Core.Utilities
             }
 
             return !invalid;
+        }
+
+        public static string CustomProviderName(TwoFactorProviderType type)
+        {
+            return string.Concat("Custom_", type.ToString());
         }
     }
 }

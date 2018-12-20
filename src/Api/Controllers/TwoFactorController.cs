@@ -11,6 +11,7 @@ using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -91,7 +92,8 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -278,7 +280,8 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userService.VerifyTwoFactorEmailAsync(user, model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -371,7 +374,8 @@ namespace Bit.Api.Controllers
                 return;
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.YubiKey.ToString(), value))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException(name, $"{name} is invalid.");

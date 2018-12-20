@@ -844,7 +844,7 @@ namespace Bit.Core.Services
 
         public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
         {
-            if(!type.ToString().StartsWith("Organization"))
+            if(!type.ToString().Contains("Organization"))
             {
                 throw new ArgumentException("Not an organization provider type.");
             }
@@ -867,7 +867,7 @@ namespace Bit.Core.Services
 
         public async Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
         {
-            if(!type.ToString().StartsWith("Organization"))
+            if(!type.ToString().Contains("Organization"))
             {
                 throw new ArgumentException("Not an organization provider type.");
             }

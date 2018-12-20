@@ -189,11 +189,18 @@ namespace Bit.Core.Utilities
                 .AddUserStore<UserStore>()
                 .AddRoleStore<RoleStore>()
                 .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
-                .AddTokenProvider<AuthenticatorTokenProvider>(TwoFactorProviderType.Authenticator.ToString())
-                .AddTokenProvider<YubicoOtpTokenProvider>(TwoFactorProviderType.YubiKey.ToString())
-                .AddTokenProvider<DuoWebTokenProvider>(TwoFactorProviderType.Duo.ToString())
-                .AddTokenProvider<U2fTokenProvider>(TwoFactorProviderType.U2f.ToString())
-                .AddTokenProvider<TwoFactorRememberTokenProvider>(TwoFactorProviderType.Remember.ToString())
+                .AddTokenProvider<AuthenticatorTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
+                .AddTokenProvider<EmailTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
+                .AddTokenProvider<YubicoOtpTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
+                .AddTokenProvider<DuoWebTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
+                .AddTokenProvider<U2fTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.U2f))
+                .AddTokenProvider<TwoFactorRememberTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
 
             return identityBuilder;
