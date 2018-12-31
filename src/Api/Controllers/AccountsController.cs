@@ -547,7 +547,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.CancelPremiumAsync(user, true);
+            await _userService.CancelPremiumAsync(user);
         }
 
         [HttpPost("reinstate-premium")]

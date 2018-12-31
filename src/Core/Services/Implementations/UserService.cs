@@ -820,10 +820,16 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CancelPremiumAsync(User user, bool endOfPeriod = false)
+        public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
         {
             var paymentService = user.GetPaymentService(_globalSettings);
-            await paymentService.CancelSubscriptionAsync(user, endOfPeriod);
+            var eop = endOfPeriod.GetValueOrDefault(true);
+            if(!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
+                user.PremiumExpirationDate.Value < DateTime.UtcNow)
+            {
+                eop = false;
+            }
+            await paymentService.CancelSubscriptionAsync(user, eop);
         }
 
         public async Task ReinstatePremiumAsync(User user)

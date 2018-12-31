@@ -85,7 +85,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CancelSubscriptionAsync(Guid organizationId, bool endOfPeriod = false)
+        public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -93,7 +93,14 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await _stripePaymentService.CancelSubscriptionAsync(organization, endOfPeriod);
+            var eop = endOfPeriod.GetValueOrDefault(true);
+            if(!endOfPeriod.HasValue && organization.ExpirationDate.HasValue &&
+                organization.ExpirationDate.Value < DateTime.UtcNow)
+            {
+                eop = false;
+            }
+
+            await _stripePaymentService.CancelSubscriptionAsync(organization, eop);
         }
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)

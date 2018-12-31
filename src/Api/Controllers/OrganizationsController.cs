@@ -284,7 +284,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
+            await _organizationService.CancelSubscriptionAsync(orgIdGuid);
         }
 
         [HttpPost("{id}/reinstate")]

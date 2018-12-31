@@ -47,7 +47,7 @@ namespace Bit.Core.Services
         Task UpdateLicenseAsync(User user, UserLicense license);
         Task AdjustStorageAsync(User user, short storageAdjustmentGb);
         Task ReplacePaymentMethodAsync(User user, string paymentToken);
-        Task CancelPremiumAsync(User user, bool endOfPeriod = false);
+        Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
         Task ReinstatePremiumAsync(User user);
         Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
         Task DisablePremiumAsync(User user, DateTime? expirationDate);
