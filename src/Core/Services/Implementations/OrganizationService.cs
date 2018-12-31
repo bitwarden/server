@@ -785,7 +785,9 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    await _stripePaymentService.CancelSubscriptionAsync(organization, true);
+                    var eop = !organization.ExpirationDate.HasValue ||
+                        organization.ExpirationDate.Value >= DateTime.UtcNow;
+                    await _stripePaymentService.CancelSubscriptionAsync(organization, eop);
                 }
                 catch(GatewayException) { }
             }
