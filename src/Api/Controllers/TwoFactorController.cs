@@ -201,6 +201,16 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            try
+            {
+                var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+                duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            }
+            catch(DuoException)
+            {
+                throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
+            }
+
             model.ToOrganization(organization);
             await _organizationService.UpdateTwoFactorProviderAsync(organization,
                 TwoFactorProviderType.OrganizationDuo);
