@@ -45,7 +45,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Admin", "src\Admin\Admin.cs
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Notifications", "src\Notifications\Notifications.csproj", "{28635027-20E5-42FA-B218-B6C878DE5350}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "test\Core\Core.csproj", "{8EF31E6C-400A-4174-8BE3-502B08FB10B5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Test", "test\Core.Test\Core.Test.csproj", "{8EF31E6C-400A-4174-8BE3-502B08FB10B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
