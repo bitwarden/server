@@ -290,7 +290,7 @@ namespace Bit.Core.Services
         {
             var cipherIdsSet = new HashSet<Guid>(cipherIds);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
-            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id));
+            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
 
             await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
 
