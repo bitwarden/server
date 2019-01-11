@@ -54,8 +54,8 @@ namespace Bit.Core.Identity
                 return null;
             }
 
-            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
-                _globalSettings.Duo.AKey, user.Email);
+            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
+                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
             return signatureRequest;
         }
 
