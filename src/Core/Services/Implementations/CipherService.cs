@@ -288,7 +288,18 @@ namespace Bit.Core.Services
 
         public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
         {
+            var cipherIdsSet = new HashSet<Guid>(cipherIds);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
+            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id));
+
             await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
+
+            // TODO: move this to a single event?
+            foreach(var cipher in deletingCiphers)
+            {
+                await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Deleted);
+            }
+
             // push
             await _pushService.PushSyncCiphersAsync(deletingUserId);
         }
