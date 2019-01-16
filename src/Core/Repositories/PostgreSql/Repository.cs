@@ -12,7 +12,7 @@ namespace Bit.Core.Repositories.PostgreSql
         where TId : IEquatable<TId>
         where T : class, ITableObject<TId>
     {
-        public Repository(string connectionString, string readOnlyConnectionString, string table)
+        public Repository(string connectionString, string readOnlyConnectionString, string table = null)
             : base(connectionString, readOnlyConnectionString)
         {
             if(!string.IsNullOrWhiteSpace(table))
@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.PostgreSql
             }
             else
             {
-                Table = SnakeCase(typeof(T).Name);
+                Table = SnakeCase(typeof(T).Name).ToLowerInvariant();
             }
         }
 

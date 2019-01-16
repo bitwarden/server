@@ -15,7 +15,8 @@ namespace Bit.Core
         public virtual bool DisableUserRegistration { get; set; }
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
-        public virtual SqlServerSettings SqlServer { get; set; } = new SqlServerSettings();
+        public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
+        public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual StorageSettings Storage { get; set; } = new StorageSettings();
         public virtual StorageSettings Events { get; set; } = new StorageSettings();
@@ -45,7 +46,7 @@ namespace Bit.Core
             public string InternalVault { get; set; }
         }
 
-        public class SqlServerSettings
+        public class SqlSettings
         {
             private string _connectionString;
             private string _readOnlyConnectionString;

@@ -19,6 +19,7 @@ using Microsoft.WindowsAzure.Storage;
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
+using PostgreSqlRepos = Bit.Core.Repositories.PostgreSql;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,19 +33,26 @@ namespace Bit.Core.Utilities
     {
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
-            services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
-            services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
-            services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
-            services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
-            services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
-            services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
-            services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
-            services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
-            services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
-            services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
-            services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
-            services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
+            if(!string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString))
+            {
+                services.AddSingleton<IUserRepository, PostgreSqlRepos.UserRepository>();
+            }
+            else
+            {
+                services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
+                services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
+                services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
+                services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
+                services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
+                services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
+                services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
+                services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
+                services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
+                services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
+                services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
+                services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
+            }
 
             if(globalSettings.SelfHosted)
             {
