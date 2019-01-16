@@ -57,11 +57,12 @@ namespace Bit.Core.Services
                 sendGridMessage.AddSubstitutions(subs);
             }
 
+            var cats = new List<string> { "Bitwarden Server" };
             if(message.MetaData?.ContainsKey("SendGridCategories") ?? false)
             {
-                var cats = message.MetaData["SendGridCategories"] as List<string>;
-                sendGridMessage.AddCategories(cats);
+                cats.AddRange(message.MetaData["SendGridCategories"] as List<string>);
             }
+            sendGridMessage.AddCategories(cats);
 
             if(message.MetaData?.ContainsKey("SendGridBypassListManagement") ?? false)
             {
