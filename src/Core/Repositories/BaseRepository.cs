@@ -1,7 +1,7 @@
 ﻿using System;
 using Dapper;
 
-namespace Bit.Core.Repositories.SqlServer
+namespace Bit.Core.Repositories
 {
     public abstract class BaseRepository
     {
