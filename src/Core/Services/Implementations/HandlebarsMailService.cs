@@ -43,6 +43,7 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "VerifyEmail", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
+            message.MetaData.Add("SendGridCategories", new List<string> { "VerifyEmail" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -60,6 +61,7 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "VerifyDelete", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
+            message.MetaData.Add("SendGridCategories", new List<string> { "VerifyDelete" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -74,6 +76,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "ChangeEmailAlreadyExists", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "ChangeEmailAlreadyExists" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -88,6 +91,7 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "ChangeEmail", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
+            message.MetaData.Add("SendGridCategories", new List<string> { "ChangeEmail" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -102,6 +106,7 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "TwoFactorEmail", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
+            message.MetaData.Add("SendGridCategories", new List<string> { "TwoFactorEmail" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -115,6 +120,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "MasterPasswordHint", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "MasterPasswordHint" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -127,6 +133,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "NoMasterPasswordHint", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "NoMasterPasswordHint" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -142,6 +149,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "OrganizationUserAccepted", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "OrganizationUserAccepted" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -155,6 +163,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "OrganizationUserConfirmed" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -173,6 +182,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "OrganizationUserInvited", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "OrganizationUserInvited" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -185,6 +195,7 @@ namespace Bit.Core.Services
                 SiteName = _globalSettings.SiteName
             };
             await AddMessageContentAsync(message, "Welcome", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "Welcome" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -203,6 +214,7 @@ namespace Bit.Core.Services
                 Url = url.ToString()
             };
             await AddMessageContentAsync(message, "PasswordlessSignIn", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "PasswordlessSignIn" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -220,6 +232,7 @@ namespace Bit.Core.Services
                 MentionInvoices = mentionInvoices
             };
             await AddMessageContentAsync(message, "InvoiceUpcoming", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "InvoiceUpcoming" });
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
