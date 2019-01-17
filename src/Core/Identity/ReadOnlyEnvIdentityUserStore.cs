@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -26,22 +26,38 @@ namespace Bit.Core.Identity
             }
 
             var users = usersCsv.ToLowerInvariant().Split(',');
-            var user = users.Where(a => a.Trim() == normalizedEmail).FirstOrDefault();
-            if(user == null || !user.Contains("@"))
+            var usersDict = new Dictionary<string, string>();
+            foreach(var u in users)
+            {
+                var parts = u.Split(':');
+                if(parts.Length == 2)
+                {
+                    var email = parts[0].Trim();
+                    var stamp = parts[1].Trim();
+                    usersDict.Add(email, stamp);
+                }
+                else
+                {
+                    var email = parts[0].Trim();
+                    usersDict.Add(email, email);
+                }
+            }
+
+            var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
+            if(userStamp == null)
             {
                 return Task.FromResult<IdentityUser>(null);
             }
-
-            user = user.Trim();
+            
             return Task.FromResult(new IdentityUser
             {
-                Id = user,
-                Email = user,
-                NormalizedEmail = user,
+                Id = normalizedEmail,
+                Email = normalizedEmail,
+                NormalizedEmail = normalizedEmail,
                 EmailConfirmed = true,
-                UserName = user,
-                NormalizedUserName = user,
-                SecurityStamp = user
+                UserName = normalizedEmail,
+                NormalizedUserName = normalizedEmail,
+                SecurityStamp = userStamp
             });
         }
 
