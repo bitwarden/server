@@ -58,7 +58,7 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
     add_header X-Frame-Options SAMEORIGIN;
-    add_header X-Robots-Tag noindex;
+    add_header X-Robots-Tag "noindex, nofollow";
   }
 
   location = /app-id.json {
