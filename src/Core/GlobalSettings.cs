@@ -12,6 +12,7 @@ namespace Bit.Core
         public virtual string LicenseDirectory { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
         public virtual string InternalIdentityKey { get; set; }
+        public virtual string HibpBreachApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
