@@ -39,10 +39,10 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("breach")]
-        public async Task<IActionResult> Get(string email)
+        public async Task<IActionResult> Get(string username)
         {
-            var encodedEmail = WebUtility.UrlEncode(email);
-            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, encodedEmail));
+            var encodedUsername = WebUtility.UrlEncode(username);
+            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, encodedUsername));
             if(!string.IsNullOrWhiteSpace(_globalSettings.HibpBreachApiKey))
             {
                 request.Headers.Add("Authorization", $"Basic {_globalSettings.HibpBreachApiKey}");
