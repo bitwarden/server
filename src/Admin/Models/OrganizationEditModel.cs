@@ -21,11 +21,6 @@ namespace Bit.Admin.Models
 
             Name = org.Name;
             BusinessName = org.BusinessName;
-            BusinessAddress1 = org.BusinessAddress1;
-            BusinessAddress2 = org.BusinessAddress2;
-            BusinessAddress3 = org.BusinessAddress3;
-            BusinessCountry = org.BusinessCountry;
-            BusinessTaxNumber = org.BusinessTaxNumber;
             BillingEmail = org.BillingEmail;
             PlanType = org.PlanType;
             Plan = org.Plan;
@@ -56,16 +51,6 @@ namespace Bit.Admin.Models
         public string Name { get; set; }
         [Display(Name = "Business Name")]
         public string BusinessName { get; set; }
-        [Display(Name = "Business Address 1")]
-        public string BusinessAddress1 { get; set; }
-        [Display(Name = "Business Address 2")]
-        public string BusinessAddress2 { get; set; }
-        [Display(Name = "Business Address 3")]
-        public string BusinessAddress3 { get; set; }
-        [Display(Name = "Business Country")]
-        public string BusinessCountry { get; set; }
-        [Display(Name = "Business Tax Number")]
-        public string BusinessTaxNumber { get; set; }
         [Display(Name = "Billing Email")]
         public string BillingEmail { get; set; }
         [Required]
@@ -111,11 +96,6 @@ namespace Bit.Admin.Models
         {
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BusinessAddress1 = BusinessAddress1;
-            existingOrganization.BusinessAddress2 = BusinessAddress2;
-            existingOrganization.BusinessAddress3 = BusinessAddress3;
-            existingOrganization.BusinessCountry = BusinessCountry;
-            existingOrganization.BusinessTaxNumber = BusinessTaxNumber;
             existingOrganization.BillingEmail = BillingEmail;
             existingOrganization.PlanType = PlanType.Value;
             existingOrganization.Plan = Plan;
