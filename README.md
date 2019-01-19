@@ -2,8 +2,8 @@
   <img src="https://github.com/bitwarden/brand/blob/master/screenshots/apps-combo-logo.png" alt="Bitwarden" />
 </p>
 <p align="center">
-  <a href="https://ci.appveyor.com/project/bitwarden/core/branch/master" target="_blank">
-    <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/core?branch=master&svg=true" alt="appveyor build" />
+  <a href="https://ci.appveyor.com/project/bitwarden/server/branch/master" target="_blank">
+    <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/server?branch=master&svg=true" alt="appveyor build" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
     <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
@@ -15,9 +15,9 @@
 
 -------------------
 
-The Bitwarden Core project contains the APIs, database, and other infrastructure items needed for the "backend" of all bitwarden client applications.
+The Bitwarden Server project contains the APIs, database, and other core infrastructure items needed for the "backend" of all bitwarden client applications.
 
-The core infrastructure is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
+The server project is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
 ## Build/Run
 
@@ -80,7 +80,7 @@ Full documentation for deploying Bitwarden with Docker can be found in our help 
 
 ```
 curl -s -o bitwarden.sh \
-    https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.sh \
+    https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.sh \
     && chmod +x bitwarden.sh
 ./bitwarden.sh install
 ./bitwarden.sh start
@@ -91,7 +91,7 @@ curl -s -o bitwarden.sh \
 
 ```
 Invoke-RestMethod -OutFile bitwarden.ps1 `
-    -Uri https://raw.githubusercontent.com/bitwarden/core/master/scripts/bitwarden.ps1
+    -Uri https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.ps1
 .\bitwarden.ps1 -install
 .\bitwarden.ps1 -start
 .\bitwarden.ps1 -updatedb

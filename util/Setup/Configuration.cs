@@ -15,13 +15,13 @@ namespace Bit.Setup
         [Description("Auto-generate the `./docker/docker-compose.yml` config file.\n" +
             "WARNING: Disabling generated config files can break future updates. You will be\n" +
             "responsible for maintaining this config file.\n" +
-            "Template: https://github.com/bitwarden/core/blob/master/util/Setup/Templates/DockerCompose.hbs")]
+            "Template: https://github.com/bitwarden/server/blob/master/util/Setup/Templates/DockerCompose.hbs")]
         public bool GenerateComposeConfig { get; set; } = true;
 
         [Description("Auto-generate the `./nginx/default.conf` file.\n" +
             "WARNING: Disabling generated config files can break future updates. You will be\n" +
             "responsible for maintaining this config file.\n" +
-            "Template: https://github.com/bitwarden/core/blob/master/util/Setup/Templates/NginxConfig.hbs")]
+            "Template: https://github.com/bitwarden/server/blob/master/util/Setup/Templates/NginxConfig.hbs")]
         public bool GenerateNginxConfig { get; set; } = true;
 
         [Description("Docker compose file port mapping for HTTP. Leave empty to remove the port mapping.\n" +
