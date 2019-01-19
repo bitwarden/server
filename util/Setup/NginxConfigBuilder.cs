@@ -10,7 +10,7 @@ namespace Bit.Setup
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-            "connect-src 'self' wss://{0} https://haveibeenpwned.com https://api.pwnedpasswords.com " +
+            "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
             "https://twofactorauth.org; " +
             "object-src 'self' blob:;";
 
