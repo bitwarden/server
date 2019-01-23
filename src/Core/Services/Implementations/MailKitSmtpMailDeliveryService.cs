@@ -67,10 +67,12 @@ namespace Bit.Core.Services
                     client.ServerCertificateValidationCallback = (s, c, h, e) => true;
                 }
 
-                var useSsl = _globalSettings.Mail.Smtp.Port == 587 ? false : _globalSettings.Mail.Smtp.Ssl;
+                var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
+                    false : _globalSettings.Mail.Smtp.Ssl;
                 await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
 
-                if(!_globalSettings.Mail.Smtp.UseDefaultCredentials)
+                if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Username) &&
+                    !string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Password))
                 {
                     await client.AuthenticateAsync(_globalSettings.Mail.Smtp.Username,
                         _globalSettings.Mail.Smtp.Password);

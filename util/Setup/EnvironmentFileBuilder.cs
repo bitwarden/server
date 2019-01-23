@@ -104,11 +104,10 @@ namespace Bit.Setup
                 ["globalSettings__yubico__key"] = "REPLACE",
                 ["globalSettings__mail__replyToEmail"] = $"no-reply@{_context.Config.Domain}",
                 ["globalSettings__mail__smtp__host"] = "REPLACE",
+                ["globalSettings__mail__smtp__port"] = "587",
+                ["globalSettings__mail__smtp__ssl"] = "false",
                 ["globalSettings__mail__smtp__username"] = "REPLACE",
                 ["globalSettings__mail__smtp__password"] = "REPLACE",
-                ["globalSettings__mail__smtp__ssl"] = "true",
-                ["globalSettings__mail__smtp__port"] = "587",
-                ["globalSettings__mail__smtp__useDefaultCredentials"] = "false",
                 ["globalSettings__disableUserRegistration"] = "false",
                 ["adminSettings__admins"] = string.Empty,
             };
