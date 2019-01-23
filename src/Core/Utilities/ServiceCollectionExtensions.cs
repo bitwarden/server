@@ -87,7 +87,7 @@ namespace Bit.Core.Utilities
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
             {
-                services.AddSingleton<IMailDeliveryService, SmtpMailDeliveryService>();
+                services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
             }
             else
             {

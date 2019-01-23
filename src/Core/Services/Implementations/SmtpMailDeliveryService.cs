@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
+    [Obsolete]
     public class SmtpMailDeliveryService : IMailDeliveryService
     {
         private readonly GlobalSettings _globalSettings;

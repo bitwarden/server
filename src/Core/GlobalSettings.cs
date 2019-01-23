@@ -117,6 +117,7 @@ namespace Bit.Core
                 public string Password { get; set; }
                 public bool UseDefaultCredentials { get; set; } = false;
                 public string AuthType { get; set; }
+                public bool TrustServer { get; set; } = false;
             }
         }
 
