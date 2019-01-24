@@ -220,7 +220,7 @@ namespace Bit.Api.Controllers
         {
             if(!_globalSettings.SelfHosted &&
                 (model.Ciphers.Count() > 5000 || model.FolderRelationships.Count() > 5000 ||
-                    model.Folders.Count() > 200))
+                    model.Folders.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
@@ -237,7 +237,7 @@ namespace Bit.Api.Controllers
         {
             if(!_globalSettings.SelfHosted &&
                 (model.Ciphers.Count() > 5000 || model.CollectionRelationships.Count() > 5000 ||
-                    model.Collections.Count() > 200))
+                    model.Collections.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
