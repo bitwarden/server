@@ -22,7 +22,7 @@
             fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "api" })').then((response) => {
                 return response.json();
             }).then((version) => {
-                document.getElementById('core-latest').innerText = version;
+                document.getElementById('server-latest').innerText = version;
                 checkVersions('core', '@Model.CurrentVersion', version);
             });
 
@@ -60,17 +60,17 @@
 <div class="row">
     <div class="col-md">
         <dl class="row">
-            <dt class="col-sm-5">Core Installed</dt>
+            <dt class="col-sm-5">Server Installed</dt>
             <dd class="col-sm-7">
-                <span id="core-installed">@Model.CurrentVersion</span>
+                <span id="server-installed">@Model.CurrentVersion</span>
                 <i class="fa fa-check text-success d-none" id="core-success" title="You are up to date!"></i>
                 <i class="fa fa-warning text-warning d-none" id="core-warning"
                    title="This version is not the latest. You should update."></i>
             </dd>
 
-            <dt class="col-sm-5">Core Latest</dt>
+            <dt class="col-sm-5">Server Latest</dt>
             <dd class="col-sm-7">
-                <span id="core-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
+                <span id="server-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
             </dd>
 
             <dt class="col-sm-5">Web Installed</dt>
