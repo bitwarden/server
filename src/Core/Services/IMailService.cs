@@ -20,5 +20,6 @@ namespace Bit.Core.Services
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
         Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
         Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate, List<string> items, bool mentionInvoices);
+        Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     }
 }

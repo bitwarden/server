@@ -236,6 +236,24 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
+        {
+            var message = CreateDefaultMessage($"New Device Logged In From {deviceType}", email);
+            var model = new NewDeviceLoggedInModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                DeviceType = deviceType,
+                TheDate = timestamp.ToLongDateString(),
+                TheTime = timestamp.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip
+            };
+            await AddMessageContentAsync(message, "NewDeviceLoggedIn", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "NewDeviceLoggedIn" });
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });

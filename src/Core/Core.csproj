@@ -12,6 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="MailTemplates\Handlebars\NewDeviceLoggedIn.html.hbs" />
+    <None Remove="MailTemplates\Handlebars\NewDeviceLoggedIn.text.hbs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="1.9.5" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="2.6.0" />
     <PackageReference Include="MailKit" Version="2.1.2" />

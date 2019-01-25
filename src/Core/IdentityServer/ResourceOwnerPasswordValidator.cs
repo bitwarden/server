@@ -15,6 +15,8 @@ using Bit.Core.Models;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 
 namespace Bit.Core.IdentityServer
 {
@@ -29,6 +31,7 @@ namespace Bit.Core.IdentityServer
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IApplicationCacheService _applicationCacheService;
+        private readonly IMailService _mailService;
         private readonly CurrentContext _currentContext;
 
         public ResourceOwnerPasswordValidator(
@@ -41,6 +44,7 @@ namespace Bit.Core.IdentityServer
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IApplicationCacheService applicationCacheService,
+            IMailService mailService,
             CurrentContext currentContext)
         {
             _userManager = userManager;
@@ -52,6 +56,7 @@ namespace Bit.Core.IdentityServer
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _applicationCacheService = applicationCacheService;
+            _mailService = mailService;
             _currentContext = currentContext;
         }
 
@@ -373,6 +378,16 @@ namespace Bit.Core.IdentityServer
                 {
                     device.UserId = user.Id;
                     await _deviceService.SaveAsync(device);
+
+                    var now = DateTime.UtcNow;
+                    if(now - user.CreationDate > TimeSpan.FromMinutes(10))
+                    {
+                        var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
+                            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+                        await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
+                            _currentContext.IpAddress);
+                    }
+
                     return device;
                 }
 
