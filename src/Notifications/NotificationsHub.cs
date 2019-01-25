@@ -9,16 +9,18 @@ namespace Bit.Notifications
     public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
     {
         private readonly ConnectionCounter _connectionCounter;
+        private readonly GlobalSettings _globalSettings;
 
-        public NotificationsHub(ConnectionCounter connectionCounter)
+        public NotificationsHub(ConnectionCounter connectionCounter, GlobalSettings globalSettings)
         {
             _connectionCounter = connectionCounter;
+            _globalSettings = globalSettings;
         }
 
         public override async Task OnConnectedAsync()
         {
             var currentContext = new CurrentContext();
-            currentContext.Build(Context.User);
+            currentContext.Build(Context.User, _globalSettings);
             if(currentContext.Organizations != null)
             {
                 foreach(var org in currentContext.Organizations)
@@ -33,7 +35,7 @@ namespace Bit.Notifications
         public override async Task OnDisconnectedAsync(Exception exception)
         {
             var currentContext = new CurrentContext();
-            currentContext.Build(Context.User);
+            currentContext.Build(Context.User, _globalSettings);
             if(currentContext.Organizations != null)
             {
                 foreach(var org in currentContext.Organizations)

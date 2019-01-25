@@ -12,9 +12,9 @@ namespace Bit.Core.Utilities
             _next = next;
         }
 
-        public async Task Invoke(HttpContext httpContext, CurrentContext currentContext)
+        public async Task Invoke(HttpContext httpContext, CurrentContext currentContext, GlobalSettings globalSettings)
         {
-            currentContext.Build(httpContext);
+            currentContext.Build(httpContext, globalSettings);
             await _next.Invoke(httpContext);
         }
     }
