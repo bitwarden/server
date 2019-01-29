@@ -78,7 +78,7 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && organization.Gateway != null)
             {
-                var paymentService = new StripePaymentService();
+                var paymentService = new StripePaymentService(_globalSettings);
                 var billingInfo = await paymentService.GetBillingAsync(organization);
                 if(billingInfo == null)
                 {

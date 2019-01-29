@@ -5,6 +5,7 @@ using Bit.Core.Models.Table;
 using Braintree;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -214,7 +215,8 @@ namespace Bit.Core.Services
             return billingInfo;
         }
 
-        public async Task PurchasePremiumAsync(User user, string paymentToken, short additionalStorageGb)
+        public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken, 
+            short additionalStorageGb)
         {
             var customerResult = await _gateway.Customer.CreateAsync(new CustomerRequest
             {

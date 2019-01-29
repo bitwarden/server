@@ -144,7 +144,7 @@ namespace Bit.Core.Models.Table
             switch(Gateway)
             {
                 case GatewayType.Stripe:
-                    paymentService = new StripePaymentService();
+                    paymentService = new StripePaymentService(globalSettings);
                     break;
                 case GatewayType.Braintree:
                     paymentService = new BraintreePaymentService(globalSettings);

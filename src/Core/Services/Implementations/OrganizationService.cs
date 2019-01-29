@@ -66,7 +66,7 @@ namespace Bit.Core.Services
             _eventService = eventService;
             _installationRepository = installationRepository;
             _applicationCacheService = applicationCacheService;
-            _stripePaymentService = new StripePaymentService();
+            _stripePaymentService = new StripePaymentService(globalSettings);
             _globalSettings = globalSettings;
         }
 
@@ -1208,7 +1208,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid installation id");
             }
 
-            var paymentService = new StripePaymentService();
+            var paymentService = new StripePaymentService(_globalSettings);
             var billingInfo = await paymentService.GetBillingAsync(organization);
             return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
         }
