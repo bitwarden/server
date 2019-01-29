@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Business;
-using Braintree;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Services
@@ -15,12 +14,12 @@ namespace Bit.Core.Services
     {
         private const string PremiumPlanId = "premium-annually";
         private const string StoragePlanId = "storage-gb-annually";
-        private readonly BraintreeGateway _btGateway;
+        private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripePaymentService(
             GlobalSettings globalSettings)
         {
-            _btGateway = new BraintreeGateway
+            _btGateway = new Braintree.BraintreeGateway
             {
                 Environment = globalSettings.Braintree.Production ?
                     Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
@@ -33,16 +32,16 @@ namespace Bit.Core.Services
         public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb)
         {
-            Customer braintreeCustomer = null;
-            StripeBilling? stripeSubscriptionBilling = null;
+            Braintree.Customer braintreeCustomer = null;
+            Billing? stripeSubscriptionBilling = null;
             string stipeCustomerSourceToken = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
 
             if(paymentMethodType == PaymentMethodType.PayPal)
             {
-                stripeSubscriptionBilling = StripeBilling.SendInvoice;
+                stripeSubscriptionBilling = Billing.SendInvoice;
                 var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
-                var customerResult = await _btGateway.Customer.CreateAsync(new CustomerRequest
+                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
                 {
                     PaymentMethodNonce = paymentToken,
                     Email = user.Email,
@@ -62,8 +61,8 @@ namespace Bit.Core.Services
                 stipeCustomerSourceToken = paymentToken;
             }
 
-            var customerService = new StripeCustomerService();
-            var customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+            var customerService = new CustomerService();
+            var customer = await customerService.CreateAsync(new CustomerCreateOptions
             {
                 Description = user.Name,
                 Email = user.Email,
@@ -71,19 +70,19 @@ namespace Bit.Core.Services
                 Metadata = stripeCustomerMetadata
             });
 
-            var subCreateOptions = new StripeSubscriptionCreateOptions
+            var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
-                Items = new List<StripeSubscriptionItemOption>(),
+                Items = new List<SubscriptionItemOption>(),
                 Billing = stripeSubscriptionBilling,
-                DaysUntilDue = stripeSubscriptionBilling != null ? 1 : 0,
+                DaysUntilDue = stripeSubscriptionBilling != null ? 1 : (long?)null,
                 Metadata = new Dictionary<string, string>
                 {
                     ["userId"] = user.Id.ToString()
                 }
             };
 
-            subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+            subCreateOptions.Items.Add(new SubscriptionItemOption
             {
                 PlanId = PremiumPlanId,
                 Quantity = 1
@@ -91,23 +90,23 @@ namespace Bit.Core.Services
 
             if(additionalStorageGb > 0)
             {
-                subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOption
                 {
                     PlanId = StoragePlanId,
                     Quantity = additionalStorageGb
                 });
             }
 
-            StripeSubscription subscription = null;
+            Subscription subscription = null;
             try
             {
-                var subscriptionService = new StripeSubscriptionService();
+                var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
 
-                if(stripeSubscriptionBilling == StripeBilling.SendInvoice)
+                if(stripeSubscriptionBilling == Billing.SendInvoice)
                 {
-                    var invoiceService = new StripeInvoiceService();
-                    var invoices = await invoiceService.ListAsync(new StripeInvoiceListOptions
+                    var invoiceService = new InvoiceService();
+                    var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
                         SubscriptionId = subscription.Id
                     });
@@ -121,7 +120,7 @@ namespace Bit.Core.Services
                     if(braintreeCustomer != null)
                     {
                         var btInvoiceAmount = (invoice.AmountDue / 100M);
-                        var transactionResult = await _btGateway.Transaction.SaleAsync(new TransactionRequest
+                        var transactionResult = await _btGateway.Transaction.SaleAsync(new Braintree.TransactionRequest
                         {
                             Amount = btInvoiceAmount,
                             CustomerId = braintreeCustomer.Id
@@ -132,8 +131,8 @@ namespace Bit.Core.Services
                             throw new GatewayException("Failed to charge PayPal customer.");
                         }
 
-                        var invoiceItemService = new StripeInvoiceItemService();
-                        await invoiceItemService.CreateAsync(new StripeInvoiceItemCreateOptions
+                        var invoiceItemService = new InvoiceItemService();
+                        await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
                         {
                             Currency = "USD",
                             CustomerId = customer.Id,
@@ -153,7 +152,7 @@ namespace Bit.Core.Services
                         throw new GatewayException("No payment was able to be collected.");
                     }
 
-                    await invoiceService.PayAsync(invoice.Id, new StripeInvoicePayOptions { });
+                    await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { });
                 }
             }
             catch(Exception e)
@@ -176,8 +175,8 @@ namespace Bit.Core.Services
         public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
             string storagePlanId)
         {
-            var subscriptionItemService = new StripeSubscriptionItemService();
-            var subscriptionService = new StripeSubscriptionService();
+            var subscriptionItemService = new SubscriptionItemService();
+            var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(storableSubscriber.GatewaySubscriptionId);
             if(sub == null)
             {
@@ -187,7 +186,7 @@ namespace Bit.Core.Services
             var storageItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             if(additionalStorage > 0 && storageItem == null)
             {
-                await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
+                await subscriptionItemService.CreateAsync(new SubscriptionItemCreateOptions
                 {
                     PlanId = storagePlanId,
                     Quantity = additionalStorage,
@@ -197,7 +196,7 @@ namespace Bit.Core.Services
             }
             else if(additionalStorage > 0 && storageItem != null)
             {
-                await subscriptionItemService.UpdateAsync(storageItem.Id, new StripeSubscriptionItemUpdateOptions
+                await subscriptionItemService.UpdateAsync(storageItem.Id, new SubscriptionItemUpdateOptions
                 {
                     PlanId = storagePlanId,
                     Quantity = additionalStorage,
@@ -219,9 +218,9 @@ namespace Bit.Core.Services
         {
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
-                var subscriptionService = new StripeSubscriptionService();
+                var subscriptionService = new SubscriptionService();
                 await subscriptionService.CancelAsync(subscriber.GatewaySubscriptionId,
-                    new StripeSubscriptionCancelOptions());
+                    new SubscriptionCancelOptions());
             }
 
             if(string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -229,36 +228,36 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var chargeService = new StripeChargeService();
-            var charges = await chargeService.ListAsync(new StripeChargeListOptions
+            var chargeService = new ChargeService();
+            var charges = await chargeService.ListAsync(new ChargeListOptions
             {
                 CustomerId = subscriber.GatewayCustomerId
             });
 
             if(charges?.Data != null)
             {
-                var refundService = new StripeRefundService();
+                var refundService = new RefundService();
                 foreach(var charge in charges.Data.Where(c => !c.Refunded))
                 {
-                    await refundService.CreateAsync(charge.Id);
+                    await refundService.CreateAsync(new RefundCreateOptions { ChargeId = charge.Id });
                 }
             }
 
-            var customerService = new StripeCustomerService();
+            var customerService = new CustomerService();
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
         public async Task PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             int prorateThreshold = 500)
         {
-            var invoiceService = new StripeInvoiceService();
-            var upcomingPreview = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId,
-                new StripeUpcomingInvoiceOptions
-                {
-                    SubscriptionId = subscriber.GatewaySubscriptionId
-                });
+            var invoiceService = new InvoiceService();
+            var upcomingPreview = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
+            {
+                CustomerId = subscriber.GatewayCustomerId,
+                SubscriptionId = subscriber.GatewaySubscriptionId
+            });
 
-            var prorationAmount = upcomingPreview.StripeInvoiceLineItems?.Data?
+            var prorationAmount = upcomingPreview.Lines?.Data?
                 .TakeWhile(i => i.Plan.Id == planId && i.Proration).Sum(i => i.Amount);
             if(prorationAmount.GetValueOrDefault() >= prorateThreshold)
             {
@@ -266,37 +265,38 @@ namespace Bit.Core.Services
                 {
                     // Owes more than prorateThreshold on next invoice.
                     // Invoice them and pay now instead of waiting until next billing cycle.
-                    var invoice = await invoiceService.CreateAsync(subscriber.GatewayCustomerId,
-                        new StripeInvoiceCreateOptions
-                        {
-                            SubscriptionId = subscriber.GatewaySubscriptionId
-                        });
+                    var invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
+                    {
+                        CustomerId = subscriber.GatewayCustomerId,
+                        SubscriptionId = subscriber.GatewaySubscriptionId
+                    });
 
                     if(invoice.AmountDue > 0)
                     {
-                        var customerService = new StripeCustomerService();
+                        var customerService = new CustomerService();
                         var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
                         if(customer != null)
                         {
                             if(customer.Metadata.ContainsKey("btCustomerId"))
                             {
                                 var invoiceAmount = (invoice.AmountDue / 100M);
-                                var transactionResult = await _btGateway.Transaction.SaleAsync(new TransactionRequest
-                                {
-                                    Amount = invoiceAmount,
-                                    CustomerId = customer.Metadata["btCustomerId"]
-                                });
+                                var transactionResult = await _btGateway.Transaction.SaleAsync(
+                                    new Braintree.TransactionRequest
+                                    {
+                                        Amount = invoiceAmount,
+                                        CustomerId = customer.Metadata["btCustomerId"]
+                                    });
 
                                 if(!transactionResult.IsSuccess() || transactionResult.Target.Amount != invoiceAmount)
                                 {
-                                    await invoiceService.UpdateAsync(invoice.Id, new StripeInvoiceUpdateOptions
+                                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                                     {
                                         Closed = true
                                     });
                                     throw new GatewayException("Failed to charge PayPal customer.");
                                 }
 
-                                await customerService.UpdateAsync(customer.Id, new StripeCustomerUpdateOptions
+                                await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                                 {
                                     AccountBalance = customer.AccountBalance - invoice.AmountDue,
                                     Metadata = customer.Metadata
@@ -304,7 +304,7 @@ namespace Bit.Core.Services
                             }
                         }
 
-                        await invoiceService.PayAsync(invoice.Id, new StripeInvoicePayOptions());
+                        await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions());
                     }
                 }
                 catch(StripeException) { }
@@ -323,7 +323,7 @@ namespace Bit.Core.Services
                 throw new GatewayException("No subscription.");
             }
 
-            var subscriptionService = new StripeSubscriptionService();
+            var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
@@ -340,8 +340,8 @@ namespace Bit.Core.Services
             {
                 var canceledSub = endOfPeriod ?
                     await subscriptionService.UpdateAsync(sub.Id,
-                        new StripeSubscriptionUpdateOptions { CancelAtPeriodEnd = true }) :
-                    await subscriptionService.CancelAsync(sub.Id, new StripeSubscriptionCancelOptions());
+                        new SubscriptionUpdateOptions { CancelAtPeriodEnd = true }) :
+                    await subscriptionService.CancelAsync(sub.Id, new SubscriptionCancelOptions());
                 if(!canceledSub.CanceledAt.HasValue)
                 {
                     throw new GatewayException("Unable to cancel subscription.");
@@ -368,7 +368,7 @@ namespace Bit.Core.Services
                 throw new GatewayException("No subscription.");
             }
 
-            var subscriptionService = new StripeSubscriptionService();
+            var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
             {
@@ -381,7 +381,7 @@ namespace Bit.Core.Services
             }
 
             var updatedSub = await subscriptionService.UpdateAsync(sub.Id,
-                new StripeSubscriptionUpdateOptions { CancelAtPeriodEnd = false });
+                new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
             if(updatedSub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Unable to reinstate subscription.");
@@ -403,10 +403,10 @@ namespace Bit.Core.Services
 
             var updatedSubscriber = false;
 
-            var cardService = new StripeCardService();
+            var cardService = new CardService();
             var bankSerice = new BankAccountService();
-            var customerService = new StripeCustomerService();
-            StripeCustomer customer = null;
+            var customerService = new CustomerService();
+            Customer customer = null;
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
@@ -415,7 +415,7 @@ namespace Bit.Core.Services
 
             if(customer == null)
             {
-                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+                customer = await customerService.CreateAsync(new CustomerCreateOptions
                 {
                     Description = subscriber.BillingName(),
                     Email = subscriber.BillingEmailAddress(),
@@ -437,7 +437,7 @@ namespace Bit.Core.Services
                 }
                 else
                 {
-                    await cardService.CreateAsync(customer.Id, new StripeCardCreateOptions
+                    await cardService.CreateAsync(customer.Id, new CardCreateOptions
                     {
                         SourceToken = paymentToken
                     });
@@ -446,11 +446,11 @@ namespace Bit.Core.Services
                 if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
                 {
                     var source = customer.Sources.FirstOrDefault(s => s.Id == customer.DefaultSourceId);
-                    if(source.BankAccount != null)
+                    if(source is BankAccount)
                     {
                         await bankSerice.DeleteAsync(customer.Id, customer.DefaultSourceId);
                     }
-                    else if(source.Card != null)
+                    else if(source is Card)
                     {
                         await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
                     }
@@ -464,8 +464,8 @@ namespace Bit.Core.Services
         {
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
-                var subscriptionService = new StripeSubscriptionService();
-                var invoiceService = new StripeInvoiceService();
+                var subscriptionService = new SubscriptionService();
+                var invoiceService = new InvoiceService();
                 var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
                 if(sub != null)
                 {
@@ -473,7 +473,10 @@ namespace Bit.Core.Services
                     {
                         try
                         {
-                            var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId);
+                            var upcomingInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
+                            {
+                                CustomerId = subscriber.GatewayCustomerId
+                            });
                             if(upcomingInvoice != null)
                             {
                                 return new BillingInfo.BillingInvoice(upcomingInvoice);
@@ -489,10 +492,10 @@ namespace Bit.Core.Services
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();
-            var customerService = new StripeCustomerService();
-            var subscriptionService = new StripeSubscriptionService();
-            var chargeService = new StripeChargeService();
-            var invoiceService = new StripeInvoiceService();
+            var customerService = new CustomerService();
+            var subscriptionService = new SubscriptionService();
+            var chargeService = new ChargeService();
+            var invoiceService = new InvoiceService();
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
@@ -501,18 +504,10 @@ namespace Bit.Core.Services
                 {
                     if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
                     {
-                        if(customer.DefaultSourceId.StartsWith("card_"))
+                        if(customer.DefaultSourceId.StartsWith("card_") || customer.DefaultSourceId.StartsWith("ba_"))
                         {
-                            var source = customer.Sources.Data.FirstOrDefault(s => s.Card?.Id == customer.DefaultSourceId);
-                            if(source != null)
-                            {
-                                billingInfo.PaymentSource = new BillingInfo.BillingSource(source);
-                            }
-                        }
-                        else if(customer.DefaultSourceId.StartsWith("ba_"))
-                        {
-                            var source = customer.Sources.Data
-                                .FirstOrDefault(s => s.BankAccount?.Id == customer.DefaultSourceId);
+                            var source = customer.Sources.Data.FirstOrDefault(s =>
+                                (s is Card || s is BankAccount) && s.Id == customer.DefaultSourceId);
                             if(source != null)
                             {
                                 billingInfo.PaymentSource = new BillingInfo.BillingSource(source);
@@ -520,7 +515,7 @@ namespace Bit.Core.Services
                         }
                     }
 
-                    var charges = await chargeService.ListAsync(new StripeChargeListOptions
+                    var charges = await chargeService.ListAsync(new ChargeListOptions
                     {
                         CustomerId = customer.Id,
                         Limit = 20
@@ -542,7 +537,8 @@ namespace Bit.Core.Services
                 {
                     try
                     {
-                        var upcomingInvoice = await invoiceService.UpcomingAsync(subscriber.GatewayCustomerId);
+                        var upcomingInvoice = await invoiceService.UpcomingAsync(
+                            new UpcomingInvoiceOptions { CustomerId = subscriber.GatewayCustomerId });
                         if(upcomingInvoice != null)
                         {
                             billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoice(upcomingInvoice);

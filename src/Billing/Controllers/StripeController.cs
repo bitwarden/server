@@ -47,11 +47,11 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            StripeEvent parsedEvent;
+            Stripe.Event parsedEvent;
             using(var sr = new StreamReader(HttpContext.Request.Body))
             {
                 var json = await sr.ReadToEndAsync();
-                parsedEvent = StripeEventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
+                parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
                     _billingSettings.StripeWebhookSecret);
             }
 
@@ -60,7 +60,7 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            if(_hostingEnvironment.IsProduction() && !parsedEvent.LiveMode)
+            if(_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
             {
                 return new BadRequestResult();
             }
@@ -71,8 +71,7 @@ namespace Bit.Billing.Controllers
 
             if(subDeleted || subUpdated)
             {
-                StripeSubscription subscription = Mapper<StripeSubscription>.MapFromJson(
-                    parsedEvent.Data.Object.ToString());
+                var subscription = parsedEvent.Data.Object as Subscription;
                 if(subscription == null)
                 {
                     throw new Exception("Subscription is null.");
@@ -115,14 +114,13 @@ namespace Bit.Billing.Controllers
             }
             else if(invUpcoming)
             {
-                StripeInvoice invoice = Mapper<StripeInvoice>.MapFromJson(
-                    parsedEvent.Data.Object.ToString());
+                var invoice = parsedEvent.Data.Object as Invoice;
                 if(invoice == null)
                 {
                     throw new Exception("Invoice is null.");
                 }
 
-                var subscriptionService = new StripeSubscriptionService();
+                var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 if(subscription == null)
                 {
@@ -152,7 +150,7 @@ namespace Bit.Billing.Controllers
 
                 if(!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
                 {
-                    var items = invoice.StripeInvoiceLineItems.Select(i => i.Description).ToList();
+                    var items = invoice.Lines.Select(i => i.Description).ToList();
                     await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
                         invoice.NextPaymentAttempt.Value, items, ids.Item1.HasValue);
                 }

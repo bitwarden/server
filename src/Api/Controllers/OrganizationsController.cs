@@ -110,7 +110,7 @@ namespace Bit.Api.Controllers
 
             try
             {
-                var invoice = await new StripeInvoiceService().GetAsync(invoiceId);
+                var invoice = await new InvoiceService().GetAsync(invoiceId);
                 if(invoice != null && invoice.CustomerId == organization.GatewayCustomerId &&
                     !string.IsNullOrWhiteSpace(invoice.HostedInvoiceUrl))
                 {

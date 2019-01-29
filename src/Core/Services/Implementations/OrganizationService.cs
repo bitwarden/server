@@ -186,15 +186,15 @@ namespace Bit.Core.Services
 
             // TODO: Groups?
 
-            var subscriptionService = new StripeSubscriptionService();
+            var subscriptionService = new Stripe.SubscriptionService();
             if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 // They must have been on a free plan. Create new sub.
-                var subCreateOptions = new StripeSubscriptionCreateOptions
+                var subCreateOptions = new SubscriptionCreateOptions
                 {
                     CustomerId = organization.GatewayCustomerId,
                     TrialPeriodDays = newPlan.TrialPeriodDays,
-                    Items = new List<StripeSubscriptionItemOption>(),
+                    Items = new List<SubscriptionItemOption>(),
                     Metadata = new Dictionary<string, string> {
                         { "organizationId", organization.Id.ToString() }
                     }
@@ -202,7 +202,7 @@ namespace Bit.Core.Services
 
                 if(newPlan.StripePlanId != null)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = newPlan.StripePlanId,
                         Quantity = 1
@@ -211,7 +211,7 @@ namespace Bit.Core.Services
 
                 if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = newPlan.StripeSeatPlanId,
                         Quantity = additionalSeats
@@ -223,14 +223,14 @@ namespace Bit.Core.Services
             else
             {
                 // Update existing sub.
-                var subUpdateOptions = new StripeSubscriptionUpdateOptions
+                var subUpdateOptions = new SubscriptionUpdateOptions
                 {
-                    Items = new List<StripeSubscriptionItemUpdateOption>()
+                    Items = new List<SubscriptionItemUpdateOption>()
                 };
 
                 if(newPlan.StripePlanId != null)
                 {
-                    subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
+                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
                     {
                         PlanId = newPlan.StripePlanId,
                         Quantity = 1
@@ -239,7 +239,7 @@ namespace Bit.Core.Services
 
                 if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
                 {
-                    subUpdateOptions.Items.Add(new StripeSubscriptionItemUpdateOption
+                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
                     {
                         PlanId = newPlan.StripeSeatPlanId,
                         Quantity = additionalSeats
@@ -333,8 +333,8 @@ namespace Bit.Core.Services
                 }
             }
 
-            var subscriptionItemService = new StripeSubscriptionItemService();
-            var subscriptionService = new StripeSubscriptionService();
+            var subscriptionItemService = new SubscriptionItemService();
+            var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(organization.GatewaySubscriptionId);
             if(sub == null)
             {
@@ -344,7 +344,7 @@ namespace Bit.Core.Services
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             if(additionalSeats > 0 && seatItem == null)
             {
-                await subscriptionItemService.CreateAsync(new StripeSubscriptionItemCreateOptions
+                await subscriptionItemService.CreateAsync(new SubscriptionItemCreateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
@@ -354,7 +354,7 @@ namespace Bit.Core.Services
             }
             else if(additionalSeats > 0 && seatItem != null)
             {
-                await subscriptionItemService.UpdateAsync(seatItem.Id, new StripeSubscriptionItemUpdateOptions
+                await subscriptionItemService.UpdateAsync(seatItem.Id, new SubscriptionItemUpdateOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
@@ -389,7 +389,7 @@ namespace Bit.Core.Services
             }
 
             var bankService = new BankAccountService();
-            var customerService = new StripeCustomerService();
+            var customerService = new CustomerService();
             var customer = await customerService.GetAsync(organization.GatewayCustomerId);
             if(customer == null)
             {
@@ -397,7 +397,7 @@ namespace Bit.Core.Services
             }
 
             var bankAccount = customer.Sources
-                    .FirstOrDefault(s => s.BankAccount != null && s.BankAccount.Status != "verified")?.BankAccount;
+                    .FirstOrDefault(s => s is BankAccount && ((BankAccount)s).Status != "verified") as BankAccount;
             if(bankAccount == null)
             {
                 throw new GatewayException("Cannot find an unverified bank account.");
@@ -406,7 +406,7 @@ namespace Bit.Core.Services
             try
             {
                 var result = await bankService.VerifyAsync(organization.GatewayCustomerId, bankAccount.Id,
-                    new BankAccountVerifyOptions { AmountOne = amount1, AmountTwo = amount2 });
+                    new BankAccountVerifyOptions { Amounts = new List<long> { amount1, amount2 } });
                 if(result.Status != "verified")
                 {
                     throw new GatewayException("Unable to verify account.");
@@ -453,10 +453,10 @@ namespace Bit.Core.Services
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
-            var customerService = new StripeCustomerService();
-            var subscriptionService = new StripeSubscriptionService();
-            StripeCustomer customer = null;
-            StripeSubscription subscription = null;
+            var customerService = new CustomerService();
+            var subscriptionService = new SubscriptionService();
+            Customer customer = null;
+            Subscription subscription = null;
 
             // Pre-generate the org id so that we can save it with the Stripe subscription..
             var newOrgId = CoreHelpers.GenerateComb();
@@ -472,18 +472,18 @@ namespace Bit.Core.Services
             }
             else
             {
-                customer = await customerService.CreateAsync(new StripeCustomerCreateOptions
+                customer = await customerService.CreateAsync(new CustomerCreateOptions
                 {
                     Description = signup.BusinessName,
                     Email = signup.BillingEmail,
                     SourceToken = signup.PaymentToken
                 });
 
-                var subCreateOptions = new StripeSubscriptionCreateOptions
+                var subCreateOptions = new SubscriptionCreateOptions
                 {
                     CustomerId = customer.Id,
                     TrialPeriodDays = plan.TrialPeriodDays,
-                    Items = new List<StripeSubscriptionItemOption>(),
+                    Items = new List<SubscriptionItemOption>(),
                     Metadata = new Dictionary<string, string> {
                         { "organizationId", newOrgId.ToString() }
                     }
@@ -491,7 +491,7 @@ namespace Bit.Core.Services
 
                 if(plan.StripePlanId != null)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = plan.StripePlanId,
                         Quantity = 1
@@ -500,7 +500,7 @@ namespace Bit.Core.Services
 
                 if(signup.AdditionalSeats > 0 && plan.StripeSeatPlanId != null)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = plan.StripeSeatPlanId,
                         Quantity = signup.AdditionalSeats
@@ -509,7 +509,7 @@ namespace Bit.Core.Services
 
                 if(signup.AdditionalStorageGb > 0)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = plan.StripeStoragePlanId,
                         Quantity = signup.AdditionalStorageGb
@@ -518,7 +518,7 @@ namespace Bit.Core.Services
 
                 if(signup.PremiumAccessAddon && plan.StripePremiumAccessPlanId != null)
                 {
-                    subCreateOptions.Items.Add(new StripeSubscriptionItemOption
+                    subCreateOptions.Items.Add(new SubscriptionItemOption
                     {
                         PlanId = plan.StripePremiumAccessPlanId,
                         Quantity = 1
@@ -630,7 +630,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
+                JsonConvert.SerializeObject(license, Formatting.Indented));
             return result;
         }
 
@@ -756,7 +757,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            File.WriteAllText($"{dir}/{organization.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
+                JsonConvert.SerializeObject(license, Formatting.Indented));
 
             organization.Name = license.Name;
             organization.BusinessName = license.BusinessName;
@@ -842,8 +844,8 @@ namespace Bit.Core.Services
 
             if(updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
-                var customerService = new StripeCustomerService();
-                await customerService.UpdateAsync(organization.GatewayCustomerId, new StripeCustomerUpdateOptions
+                var customerService = new CustomerService();
+                await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
                 {
                     Email = organization.BillingEmail,
                     Description = organization.BusinessName
