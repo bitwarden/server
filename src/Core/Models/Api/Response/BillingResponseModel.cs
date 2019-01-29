@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Api
         public BillingResponseModel(User user, BillingInfo billing, UserLicense license)
             : base("billing")
         {
+            CreditAmount = billing.CreditAmount;
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
             Charges = billing.Charges.Select(c => new BillingCharge(c));
@@ -37,6 +38,7 @@ namespace Bit.Core.Models.Api
             }
         }
 
+        public decimal CreditAmount { get; set; }
         public string StorageName { get; set; }
         public double? StorageGb { get; set; }
         public short? MaxStorageGb { get; set; }

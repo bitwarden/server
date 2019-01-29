@@ -105,6 +105,7 @@ namespace Bit.Core.Services
 
                 if(stripeSubscriptionBilling == Billing.SendInvoice)
                 {
+                    var invoicePayOptions = new InvoicePayOptions();
                     var invoiceService = new InvoiceService();
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
@@ -119,40 +120,54 @@ namespace Bit.Core.Services
 
                     if(braintreeCustomer != null)
                     {
-                        var btInvoiceAmount = (invoice.AmountDue / 100M);
-                        var transactionResult = await _btGateway.Transaction.SaleAsync(new Braintree.TransactionRequest
+                        invoicePayOptions.PaidOutOfBand = true;
+                        Braintree.Transaction braintreeTransaction = null;
+                        try
                         {
-                            Amount = btInvoiceAmount,
-                            CustomerId = braintreeCustomer.Id
-                        });
+                            var btInvoiceAmount = (invoice.AmountDue / 100M);
+                            var transactionResult = await _btGateway.Transaction.SaleAsync(
+                                new Braintree.TransactionRequest
+                                {
+                                    Amount = btInvoiceAmount,
+                                    CustomerId = braintreeCustomer.Id,
+                                    Options = new Braintree.TransactionOptionsRequest { SubmitForSettlement = true }
+                                });
 
-                        if(!transactionResult.IsSuccess() || transactionResult.Target.Amount != btInvoiceAmount)
-                        {
-                            throw new GatewayException("Failed to charge PayPal customer.");
-                        }
-
-                        var invoiceItemService = new InvoiceItemService();
-                        await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
-                        {
-                            Currency = "USD",
-                            CustomerId = customer.Id,
-                            InvoiceId = invoice.Id,
-                            Amount = -1 * invoice.AmountDue,
-                            Description = $"PayPal Credit, Transaction ID " +
-                                transactionResult.Target.PayPalDetails.AuthorizationId,
-                            Metadata = new Dictionary<string, string>
+                            if(!transactionResult.IsSuccess())
                             {
-                                ["btTransactionId"] = transactionResult.Target.Id,
-                                ["btPayPalTransactionId"] = transactionResult.Target.PayPalDetails.AuthorizationId
+                                throw new GatewayException("Failed to charge PayPal customer.");
                             }
-                        });
+
+                            braintreeTransaction = transactionResult.Target;
+                            if(transactionResult.Target.Amount != btInvoiceAmount)
+                            {
+                                throw new GatewayException("PayPal charge mismatch.");
+                            }
+
+                            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                            {
+                                Metadata = new Dictionary<string, string>
+                                {
+                                    ["btTransactionId"] = braintreeTransaction.Id,
+                                    ["btPayPalTransactionId"] = braintreeTransaction.PayPalDetails.AuthorizationId
+                                }
+                            });
+                        }
+                        catch(Exception e)
+                        {
+                            if(braintreeTransaction != null)
+                            {
+                                await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                            }
+                            throw e;
+                        }
                     }
                     else
                     {
                         throw new GatewayException("No payment was able to be collected.");
                     }
 
-                    await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { });
+                    await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
                 }
             }
             catch(Exception e)
@@ -271,41 +286,65 @@ namespace Bit.Core.Services
                         SubscriptionId = subscriber.GatewaySubscriptionId
                     });
 
+                    var invoicePayOptions = new InvoicePayOptions();
                     if(invoice.AmountDue > 0)
                     {
                         var customerService = new CustomerService();
                         var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
                         if(customer != null)
                         {
+                            Braintree.Transaction braintreeTransaction = null;
                             if(customer.Metadata.ContainsKey("btCustomerId"))
                             {
-                                var invoiceAmount = (invoice.AmountDue / 100M);
-                                var transactionResult = await _btGateway.Transaction.SaleAsync(
-                                    new Braintree.TransactionRequest
-                                    {
-                                        Amount = invoiceAmount,
-                                        CustomerId = customer.Metadata["btCustomerId"]
-                                    });
-
-                                if(!transactionResult.IsSuccess() || transactionResult.Target.Amount != invoiceAmount)
+                                invoicePayOptions.PaidOutOfBand = true;
+                                try
                                 {
+                                    var btInvoiceAmount = (invoice.AmountDue / 100M);
+                                    var transactionResult = await _btGateway.Transaction.SaleAsync(
+                                        new Braintree.TransactionRequest
+                                        {
+                                            Amount = btInvoiceAmount,
+                                            CustomerId = customer.Metadata["btCustomerId"],
+                                            Options = new Braintree.TransactionOptionsRequest
+                                            {
+                                                SubmitForSettlement = true
+                                            }
+                                        });
+
+                                    if(!transactionResult.IsSuccess())
+                                    {
+                                        throw new GatewayException("Failed to charge PayPal customer.");
+                                    }
+
+                                    braintreeTransaction = transactionResult.Target;
+                                    if(transactionResult.Target.Amount != btInvoiceAmount)
+                                    {
+                                        throw new GatewayException("PayPal charge mismatch.");
+                                    }
+
                                     await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                                     {
-                                        Closed = true
+                                        Metadata = new Dictionary<string, string>
+                                        {
+                                            ["btTransactionId"] = braintreeTransaction.Id,
+                                            ["btPayPalTransactionId"] =
+                                                braintreeTransaction.PayPalDetails.AuthorizationId
+                                        }
                                     });
-                                    throw new GatewayException("Failed to charge PayPal customer.");
                                 }
-
-                                await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                                catch(Exception e)
                                 {
-                                    AccountBalance = customer.AccountBalance - invoice.AmountDue,
-                                    Metadata = customer.Metadata
-                                });
+                                    if(braintreeTransaction != null)
+                                    {
+                                        await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                                    }
+                                    throw e;
+                                }
                             }
                         }
-
-                        await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions());
                     }
+
+                    await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
                 }
                 catch(StripeException) { }
             }
@@ -502,7 +541,18 @@ namespace Bit.Core.Services
                 var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
                 if(customer != null)
                 {
-                    if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
+                    billingInfo.CreditAmount = customer.AccountBalance / 100M;
+
+                    if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
+                    {
+                        var braintreeCustomer = await _btGateway.Customer.FindAsync(customer.Metadata["btCustomerId"]);
+                        if(braintreeCustomer?.DefaultPaymentMethod != null)
+                        {
+                            billingInfo.PaymentSource = new BillingInfo.BillingSource(
+                                braintreeCustomer.DefaultPaymentMethod);
+                        }
+                    }
+                    else if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
                     {
                         if(customer.DefaultSourceId.StartsWith("card_") || customer.DefaultSourceId.StartsWith("ba_"))
                         {

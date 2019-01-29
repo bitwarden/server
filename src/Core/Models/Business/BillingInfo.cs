@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Business
 {
     public class BillingInfo
     {
+        public decimal CreditAmount { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
