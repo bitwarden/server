@@ -32,14 +32,22 @@ namespace Bit.Core.Services
         public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb)
         {
+            var invoiceService = new InvoiceService();
+            var customerService = new CustomerService();
+
+            Braintree.Transaction braintreeTransaction = null;
             Braintree.Customer braintreeCustomer = null;
-            Billing? stripeSubscriptionBilling = null;
             string stipeCustomerSourceToken = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
+            var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
+                paymentMethodType == PaymentMethodType.BankAccount;
 
-            if(paymentMethodType == PaymentMethodType.PayPal)
+            if(stripePaymentMethod)
             {
-                stripeSubscriptionBilling = Billing.SendInvoice;
+                stipeCustomerSourceToken = paymentToken;
+            }
+            else if(paymentMethodType == PaymentMethodType.PayPal)
+            {
                 var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
                 var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
                 {
@@ -56,12 +64,7 @@ namespace Bit.Core.Services
                 braintreeCustomer = customerResult.Target;
                 stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
             }
-            else if(paymentMethodType == PaymentMethodType.Card || paymentMethodType == PaymentMethodType.BankAccount)
-            {
-                stipeCustomerSourceToken = paymentToken;
-            }
 
-            var customerService = new CustomerService();
             var customer = await customerService.CreateAsync(new CustomerCreateOptions
             {
                 Description = user.Name,
@@ -69,13 +72,11 @@ namespace Bit.Core.Services
                 SourceToken = stipeCustomerSourceToken,
                 Metadata = stripeCustomerMetadata
             });
-
+            
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
                 Items = new List<SubscriptionItemOption>(),
-                Billing = stripeSubscriptionBilling,
-                DaysUntilDue = stripeSubscriptionBilling != null ? 1 : (long?)null,
                 Metadata = new Dictionary<string, string>
                 {
                     ["userId"] = user.Id.ToString()
@@ -85,7 +86,7 @@ namespace Bit.Core.Services
             subCreateOptions.Items.Add(new SubscriptionItemOption
             {
                 PlanId = PremiumPlanId,
-                Quantity = 1
+                Quantity = 1,
             });
 
             if(additionalStorageGb > 0)
@@ -97,82 +98,78 @@ namespace Bit.Core.Services
                 });
             }
 
+            var subInvoiceMetadata = new Dictionary<string, string>();
             Subscription subscription = null;
             try
             {
-                var subscriptionService = new SubscriptionService();
-                subscription = await subscriptionService.CreateAsync(subCreateOptions);
-
-                if(stripeSubscriptionBilling == Billing.SendInvoice)
+                if(!stripePaymentMethod)
                 {
-                    var invoicePayOptions = new InvoicePayOptions();
-                    var invoiceService = new InvoiceService();
-                    var invoices = await invoiceService.ListAsync(new InvoiceListOptions
+                    var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
-                        SubscriptionId = subscription.Id
+                        CustomerId = customer.Id,
+                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                     });
 
-                    var invoice = invoices?.FirstOrDefault(i => i.AmountDue > 0);
-                    if(invoice == null)
+                    await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                     {
-                        throw new GatewayException("Invoice not found.");
-                    }
+                        AccountBalance = -1 * previewInvoice.AmountDue
+                    });
 
                     if(braintreeCustomer != null)
                     {
-                        invoicePayOptions.PaidOutOfBand = true;
-                        Braintree.Transaction braintreeTransaction = null;
-                        try
-                        {
-                            var btInvoiceAmount = (invoice.AmountDue / 100M);
-                            var transactionResult = await _btGateway.Transaction.SaleAsync(
-                                new Braintree.TransactionRequest
-                                {
-                                    Amount = btInvoiceAmount,
-                                    CustomerId = braintreeCustomer.Id,
-                                    Options = new Braintree.TransactionOptionsRequest { SubmitForSettlement = true }
-                                });
-
-                            if(!transactionResult.IsSuccess())
+                        var btInvoiceAmount = (previewInvoice.AmountDue / 100M);
+                        var transactionResult = await _btGateway.Transaction.SaleAsync(
+                            new Braintree.TransactionRequest
                             {
-                                throw new GatewayException("Failed to charge PayPal customer.");
-                            }
-
-                            braintreeTransaction = transactionResult.Target;
-                            if(transactionResult.Target.Amount != btInvoiceAmount)
-                            {
-                                throw new GatewayException("PayPal charge mismatch.");
-                            }
-
-                            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
-                            {
-                                Metadata = new Dictionary<string, string>
-                                {
-                                    ["btTransactionId"] = braintreeTransaction.Id,
-                                    ["btPayPalTransactionId"] = braintreeTransaction.PayPalDetails.AuthorizationId
-                                }
+                                Amount = btInvoiceAmount,
+                                CustomerId = braintreeCustomer.Id,
+                                Options = new Braintree.TransactionOptionsRequest { SubmitForSettlement = true }
                             });
-                        }
-                        catch(Exception e)
+
+                        if(!transactionResult.IsSuccess())
                         {
-                            if(braintreeTransaction != null)
-                            {
-                                await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
-                            }
-                            throw e;
+                            throw new GatewayException("Failed to charge PayPal customer.");
                         }
+
+                        subInvoiceMetadata.Add("btTransactionId", braintreeTransaction.Id);
+                        subInvoiceMetadata.Add("btPayPalTransactionId",
+                            braintreeTransaction.PayPalDetails.AuthorizationId);
                     }
                     else
                     {
                         throw new GatewayException("No payment was able to be collected.");
                     }
+                }
 
-                    await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
+                var subscriptionService = new SubscriptionService();
+                subscription = await subscriptionService.CreateAsync(subCreateOptions);
+
+                if(!stripePaymentMethod && subInvoiceMetadata.Any())
+                {
+                    var invoices = await invoiceService.ListAsync(new InvoiceListOptions
+                    {
+                        SubscriptionId = subscription.Id
+                    });
+
+                    var invoice = invoices?.FirstOrDefault();
+                    if(invoice == null)
+                    {
+                        throw new GatewayException("Invoice not found.");
+                    }
+
+                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                    {
+                        Metadata = subInvoiceMetadata
+                    });
                 }
             }
             catch(Exception e)
             {
                 await customerService.DeleteAsync(customer.Id);
+                if(braintreeTransaction != null)
+                {
+                    await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                }
                 if(braintreeCustomer != null)
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
@@ -185,6 +182,16 @@ namespace Bit.Core.Services
             user.GatewaySubscriptionId = subscription.Id;
             user.Premium = true;
             user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+        }
+
+        private List<InvoiceSubscriptionItemOptions> ToInvoiceSubscriptionItemOptions(
+            List<SubscriptionItemOption> subItemOptions)
+        {
+            return subItemOptions.Select(si => new InvoiceSubscriptionItemOptions
+            {
+                PlanId = si.PlanId,
+                Quantity = si.Quantity
+            }).ToList();
         }
 
         public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
