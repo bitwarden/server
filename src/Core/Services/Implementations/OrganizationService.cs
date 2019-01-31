@@ -340,37 +340,67 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Subscription not found.");
             }
-
+            
+            Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
+            var subItemOptions = sub.Items.Where(i => i.Plan.Id != plan.StripeSeatPlanId)
+                .Select(i => new InvoiceSubscriptionItemOptions
+                {
+                    Id = i.Id,
+                    PlanId = i.Plan.Id,
+                    Quantity = i.Quantity,
+                }).ToList();
+
             if(additionalSeats > 0 && seatItem == null)
             {
-                await subscriptionItemService.CreateAsync(new SubscriptionItemCreateOptions
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = true,
-                    SubscriptionId = sub.Id
                 });
+                subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
+                    new SubscriptionItemCreateOptions
+                    {
+                        PlanId = plan.StripeSeatPlanId,
+                        Quantity = additionalSeats,
+                        Prorate = prorate,
+                        SubscriptionId = sub.Id
+                    });
             }
             else if(additionalSeats > 0 && seatItem != null)
             {
-                await subscriptionItemService.UpdateAsync(seatItem.Id, new SubscriptionItemUpdateOptions
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
+                    Id = seatItem.Id,
                     PlanId = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
-                    Prorate = true
                 });
+                subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(seatItem.Id,
+                    new SubscriptionItemUpdateOptions
+                    {
+                        PlanId = plan.StripeSeatPlanId,
+                        Quantity = additionalSeats,
+                        Prorate = prorate
+                    });
             }
             else if(seatItem != null && additionalSeats == 0)
             {
-                await subscriptionItemService.DeleteAsync(seatItem.Id);
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
+                {
+                    Id = seatItem.Id,
+                    Deleted = true
+                });
+                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id);
             }
 
+            var invoicedNow = false;
             if(additionalSeats > 0)
             {
-                await _stripePaymentService.PreviewUpcomingInvoiceAndPayAsync(organization, plan.StripeSeatPlanId, 500);
+                invoicedNow = await _stripePaymentService.PreviewUpcomingInvoiceAndPayAsync(
+                    organization, plan.StripeSeatPlanId, subItemOptions, 500);
             }
 
+            await subUpdateAction(!invoicedNow);
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
         }

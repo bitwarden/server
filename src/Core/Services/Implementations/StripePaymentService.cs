@@ -72,7 +72,7 @@ namespace Bit.Core.Services
                 SourceToken = stipeCustomerSourceToken,
                 Metadata = stripeCustomerMetadata
             });
-            
+
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
@@ -205,35 +205,66 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription not found.");
             }
 
-            var storageItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
+            Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
+            var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
+            var subItemOptions = sub.Items.Where(i => i.Plan.Id != storagePlanId)
+                .Select(i => new InvoiceSubscriptionItemOptions
+                {
+                    Id = i.Id,
+                    PlanId = i.Plan.Id,
+                    Quantity = i.Quantity,
+                }).ToList();
+
             if(additionalStorage > 0 && storageItem == null)
             {
-                await subscriptionItemService.CreateAsync(new SubscriptionItemCreateOptions
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
                     PlanId = storagePlanId,
                     Quantity = additionalStorage,
-                    Prorate = true,
-                    SubscriptionId = sub.Id
                 });
+                subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
+                    new SubscriptionItemCreateOptions
+                    {
+                        PlanId = storagePlanId,
+                        Quantity = additionalStorage,
+                        SubscriptionId = sub.Id,
+                        Prorate = prorate
+                    });
             }
             else if(additionalStorage > 0 && storageItem != null)
             {
-                await subscriptionItemService.UpdateAsync(storageItem.Id, new SubscriptionItemUpdateOptions
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
+                    Id = storageItem.Id,
                     PlanId = storagePlanId,
                     Quantity = additionalStorage,
-                    Prorate = true
                 });
+                subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(storageItem.Id,
+                    new SubscriptionItemUpdateOptions
+                    {
+                        PlanId = storagePlanId,
+                        Quantity = additionalStorage,
+                        Prorate = prorate
+                    });
             }
             else if(additionalStorage == 0 && storageItem != null)
             {
-                await subscriptionItemService.DeleteAsync(storageItem.Id);
+                subItemOptions.Add(new InvoiceSubscriptionItemOptions
+                {
+                    Id = storageItem.Id,
+                    Deleted = true
+                });
+                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(storageItem.Id);
             }
 
+            var invoicedNow = false;
             if(additionalStorage > 0)
             {
-                await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, storagePlanId, 400);
+                invoicedNow = await PreviewUpcomingInvoiceAndPayAsync(
+                    storableSubscriber, storagePlanId, subItemOptions, 400);
             }
+
+            await subUpdateAction(!invoicedNow);
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -269,92 +300,142 @@ namespace Bit.Core.Services
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
-        public async Task PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
-            int prorateThreshold = 500)
+        public async Task<bool> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
+            List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
         {
             var invoiceService = new InvoiceService();
+            var invoiceItemService = new InvoiceItemService();
+
+            var pendingInvoiceItems = invoiceItemService.ListAutoPaging(new InvoiceItemListOptions
+            {
+                CustomerId = subscriber.GatewayCustomerId
+            }).ToList().Where(i => i.InvoiceId == null);
+            var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
+
             var upcomingPreview = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
             {
                 CustomerId = subscriber.GatewayCustomerId,
-                SubscriptionId = subscriber.GatewaySubscriptionId
+                SubscriptionId = subscriber.GatewaySubscriptionId,
+                SubscriptionItems = subItemOptions
             });
 
-            var prorationAmount = upcomingPreview.Lines?.Data?
-                .TakeWhile(i => i.Plan.Id == planId && i.Proration).Sum(i => i.Amount);
-            if(prorationAmount.GetValueOrDefault() >= prorateThreshold)
+            var itemsForInvoice = upcomingPreview.Lines?.Data?
+                .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == planId && i.Proration));
+            var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
+            var invoiceNow = invoiceAmount >= prorateThreshold;
+            if(invoiceNow)
             {
+                // Owes more than prorateThreshold on next invoice.
+                // Invoice them and pay now instead of waiting until next billing cycle.
+
+                Invoice invoice = null;
+                var createdInvoiceItems = new List<InvoiceItem>();
+                Braintree.Transaction braintreeTransaction = null;
                 try
                 {
-                    // Owes more than prorateThreshold on next invoice.
-                    // Invoice them and pay now instead of waiting until next billing cycle.
-                    var invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
+                    foreach(var ii in itemsForInvoice)
                     {
-                        CustomerId = subscriber.GatewayCustomerId,
-                        SubscriptionId = subscriber.GatewaySubscriptionId
+                        if(pendingInvoiceItemsDict.ContainsKey(ii.Id))
+                        {
+                            continue;
+                        }
+                        var invoiceItem = await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
+                        {
+                            Currency = ii.Currency,
+                            Description = ii.Description,
+                            CustomerId = subscriber.GatewayCustomerId,
+                            SubscriptionId = ii.SubscriptionId,
+                            Discountable = ii.Discountable,
+                            Amount = ii.Amount
+                        });
+                        createdInvoiceItems.Add(invoiceItem);
+                    }
+
+                    invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
+                    {
+                        Billing = Billing.SendInvoice,
+                        DaysUntilDue = 1,
+                        CustomerId = subscriber.GatewayCustomerId
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
-                    if(invoice.AmountDue > 0)
+                    var customerService = new CustomerService();
+                    var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                    if(customer != null)
                     {
-                        var customerService = new CustomerService();
-                        var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
-                        if(customer != null)
+                        if(customer.Metadata.ContainsKey("btCustomerId"))
                         {
-                            Braintree.Transaction braintreeTransaction = null;
-                            if(customer.Metadata.ContainsKey("btCustomerId"))
+                            invoicePayOptions.PaidOutOfBand = true;
+                            var btInvoiceAmount = (invoiceAmount / 100M);
+                            var transactionResult = await _btGateway.Transaction.SaleAsync(
+                                new Braintree.TransactionRequest
+                                {
+                                    Amount = btInvoiceAmount,
+                                    CustomerId = customer.Metadata["btCustomerId"],
+                                    Options = new Braintree.TransactionOptionsRequest
+                                    {
+                                        SubmitForSettlement = true
+                                    }
+                                });
+
+                            if(!transactionResult.IsSuccess())
                             {
-                                invoicePayOptions.PaidOutOfBand = true;
-                                try
-                                {
-                                    var btInvoiceAmount = (invoice.AmountDue / 100M);
-                                    var transactionResult = await _btGateway.Transaction.SaleAsync(
-                                        new Braintree.TransactionRequest
-                                        {
-                                            Amount = btInvoiceAmount,
-                                            CustomerId = customer.Metadata["btCustomerId"],
-                                            Options = new Braintree.TransactionOptionsRequest
-                                            {
-                                                SubmitForSettlement = true
-                                            }
-                                        });
-
-                                    if(!transactionResult.IsSuccess())
-                                    {
-                                        throw new GatewayException("Failed to charge PayPal customer.");
-                                    }
-
-                                    braintreeTransaction = transactionResult.Target;
-                                    if(transactionResult.Target.Amount != btInvoiceAmount)
-                                    {
-                                        throw new GatewayException("PayPal charge mismatch.");
-                                    }
-
-                                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
-                                    {
-                                        Metadata = new Dictionary<string, string>
-                                        {
-                                            ["btTransactionId"] = braintreeTransaction.Id,
-                                            ["btPayPalTransactionId"] =
-                                                braintreeTransaction.PayPalDetails.AuthorizationId
-                                        }
-                                    });
-                                }
-                                catch(Exception e)
-                                {
-                                    if(braintreeTransaction != null)
-                                    {
-                                        await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
-                                    }
-                                    throw e;
-                                }
+                                throw new GatewayException("Failed to charge PayPal customer.");
                             }
+
+                            braintreeTransaction = transactionResult.Target;
+                            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                            {
+                                Metadata = new Dictionary<string, string>
+                                {
+                                    ["btTransactionId"] = braintreeTransaction.Id,
+                                    ["btPayPalTransactionId"] =
+                                        braintreeTransaction.PayPalDetails.AuthorizationId
+                                }
+                            });
                         }
                     }
 
                     await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
                 }
-                catch(StripeException) { }
+                catch(Exception e)
+                {
+                    if(braintreeTransaction != null)
+                    {
+                        await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                    }
+                    if(invoice != null)
+                    {
+                        await invoiceService.DeleteAsync(invoice.Id);
+
+                        // Restore invoice items that were brought in
+                        foreach(var item in pendingInvoiceItems)
+                        {
+                            var i = new InvoiceItemCreateOptions
+                            {
+                                Currency = item.Currency,
+                                Description = item.Description,
+                                CustomerId = item.CustomerId,
+                                SubscriptionId = item.SubscriptionId,
+                                Discountable = item.Discountable,
+                                Metadata = item.Metadata,
+                                Quantity = item.Quantity,
+                                UnitAmount = item.UnitAmount
+                            };
+                            await invoiceItemService.CreateAsync(i);
+                        }
+                    }
+                    else
+                    {
+                        foreach(var ii in createdInvoiceItems)
+                        {
+                            await invoiceItemService.DeleteAsync(ii.Id);
+                        }
+                    }
+                    throw e;
+                }
             }
+            return invoiceNow;
         }
 
         public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
