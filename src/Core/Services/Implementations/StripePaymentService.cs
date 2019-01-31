@@ -14,6 +14,7 @@ namespace Bit.Core.Services
     {
         private const string PremiumPlanId = "premium-annually";
         private const string StoragePlanId = "storage-gb-annually";
+
         private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripePaymentService(
@@ -281,22 +282,48 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var chargeService = new ChargeService();
-            var charges = await chargeService.ListAsync(new ChargeListOptions
+            var customerService = new CustomerService();
+            var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+            if(customer == null)
             {
-                CustomerId = subscriber.GatewayCustomerId
-            });
+                return;
+            }
 
-            if(charges?.Data != null)
+            if(customer.Metadata.ContainsKey("btCustomerId"))
             {
-                var refundService = new RefundService();
-                foreach(var charge in charges.Data.Where(c => !c.Refunded))
+                var transactionRequest = new Braintree.TransactionSearchRequest()
+                    .CustomerId.Is(customer.Metadata["btCustomerId"]);
+                var transactions = _btGateway.Transaction.Search(transactionRequest);
+
+                if((transactions?.MaximumCount ?? 0) > 0)
                 {
-                    await refundService.CreateAsync(new RefundCreateOptions { ChargeId = charge.Id });
+                    var txs = transactions.Cast<Braintree.Transaction>().Where(c => c.RefundedTransactionId == null);
+                    foreach(var transaction in txs)
+                    {
+                        await _btGateway.Transaction.RefundAsync(transaction.Id);
+                    }
+                }
+
+                await _btGateway.Customer.DeleteAsync(customer.Metadata["btCustomerId"]);
+            }
+            else
+            {
+                var chargeService = new ChargeService();
+                var charges = await chargeService.ListAsync(new ChargeListOptions
+                {
+                    CustomerId = subscriber.GatewayCustomerId
+                });
+
+                if(charges?.Data != null)
+                {
+                    var refundService = new RefundService();
+                    foreach(var charge in charges.Data.Where(c => !c.Refunded))
+                    {
+                        await refundService.CreateAsync(new RefundCreateOptions { ChargeId = charge.Id });
+                    }
                 }
             }
 
-            var customerService = new CustomerService();
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
