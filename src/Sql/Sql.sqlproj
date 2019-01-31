@@ -249,7 +249,4 @@
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Stored Procedures\Transaction_ReadByUserId.sql" />
   </ItemGroup>
-  <ItemGroup>
-    <RefactorLog Include="Sql.refactorlog" />
-  </ItemGroup>
 </Project>
