@@ -240,5 +240,16 @@
     <Build Include="dbo\Stored Procedures\Cipher_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_CreateWithCollections.sql" />
+    <Build Include="dbo\Tables\Transaction.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_Update.sql" />
+    <Build Include="dbo\Views\TransactionView.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadByUserId.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="Sql.refactorlog" />
   </ItemGroup>
 </Project>
