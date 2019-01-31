@@ -100,7 +100,8 @@ namespace Bit.Core.Services
 
             if((transactions?.MaximumCount ?? 0) > 0)
             {
-                foreach(var transaction in transactions.Cast<Transaction>().Where(c => c.RefundedTransactionId == null))
+                var txs = transactions.Cast<Braintree.Transaction>().Where(c => c.RefundedTransactionId == null);
+                foreach(var transaction in txs)
                 {
                     await _gateway.Transaction.RefundAsync(transaction.Id);
                 }
@@ -190,8 +191,8 @@ namespace Bit.Core.Services
 
                     var transactionRequest = new TransactionSearchRequest().CustomerId.Is(customer.Id);
                     var transactions = _gateway.Transaction.Search(transactionRequest);
-                    billingInfo.Charges = transactions?.Cast<Transaction>().OrderByDescending(t => t.CreatedAt)
-                        .Select(t => new BillingInfo.BillingCharge(t));
+                    billingInfo.Charges = transactions?.Cast<Braintree.Transaction>()
+                        .OrderByDescending(t => t.CreatedAt).Select(t => new BillingInfo.BillingCharge(t));
                 }
             }
 
