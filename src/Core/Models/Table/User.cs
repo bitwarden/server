@@ -58,6 +58,11 @@ namespace Bit.Core.Models.Table
             return Name;
         }
 
+        public string BraintreeCustomerIdPrefix()
+        {
+            return "u";
+        }
+
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {
             if(string.IsNullOrWhiteSpace(TwoFactorProviders))

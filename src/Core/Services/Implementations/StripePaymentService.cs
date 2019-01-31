@@ -65,6 +65,10 @@ namespace Bit.Core.Services
                 braintreeCustomer = customerResult.Target;
                 stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
             }
+            else
+            {
+                throw new GatewayException("Payment method is not supported at this time.");
+            }
 
             var customer = await customerService.CreateAsync(new CustomerCreateOptions
             {
@@ -542,20 +546,26 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, string paymentToken)
+        public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
+            string paymentToken)
         {
             if(subscriber == null)
             {
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != Enums.GatewayType.Stripe)
+            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != GatewayType.Stripe)
             {
                 throw new GatewayException("Switching from one payment type to another is not supported. " +
                     "Contact us for assistance.");
             }
 
-            var updatedSubscriber = false;
+            var createdCustomer = false;
+            Braintree.Customer braintreeCustomer = null;
+            string stipeCustomerSourceToken = null;
+            var stripeCustomerMetadata = new Dictionary<string, string>();
+            var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
+                paymentMethodType == PaymentMethodType.BankAccount;
 
             var cardService = new CardService();
             var bankSerice = new BankAccountService();
@@ -565,53 +575,122 @@ namespace Bit.Core.Services
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
                 customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                if(customer.Metadata?.Any() ?? false)
+                {
+                    stripeCustomerMetadata = customer.Metadata;
+                }
             }
 
-            if(customer == null)
+            if(stripeCustomerMetadata.ContainsKey("btCustomerId"))
             {
-                customer = await customerService.CreateAsync(new CustomerCreateOptions
+                var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
+                stripeCustomerMetadata.Add($"btCustomerId_{nowSec}", stripeCustomerMetadata["btCustomerId"]);
+                stripeCustomerMetadata["btCustomerId"] = null;
+            }
+
+            if(stripePaymentMethod)
+            {
+                stipeCustomerSourceToken = paymentToken;
+            }
+            else if(paymentMethodType == PaymentMethodType.PayPal)
+            {
+                var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
+                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
                 {
-                    Description = subscriber.BillingName(),
+                    PaymentMethodNonce = paymentToken,
                     Email = subscriber.BillingEmailAddress(),
-                    SourceToken = paymentToken
+                    Id = subscriber.BraintreeCustomerIdPrefix() + subscriber.Id.ToString("N").ToLower() + randomSuffix
                 });
 
-                subscriber.Gateway = Enums.GatewayType.Stripe;
-                subscriber.GatewayCustomerId = customer.Id;
-                updatedSubscriber = true;
-            }
-            else
-            {
-                if(paymentToken.StartsWith("btok_"))
+                if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
                 {
-                    await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
-                    {
-                        SourceToken = paymentToken
-                    });
+                    throw new GatewayException("Failed to create PayPal customer record.");
+                }
+
+                braintreeCustomer = customerResult.Target;
+                if(stripeCustomerMetadata.ContainsKey("btCustomerId"))
+                {
+                    stripeCustomerMetadata["btCustomerId"] = braintreeCustomer.Id;
                 }
                 else
                 {
-                    await cardService.CreateAsync(customer.Id, new CardCreateOptions
-                    {
-                        SourceToken = paymentToken
-                    });
-                }
-
-                if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId))
-                {
-                    var source = customer.Sources.FirstOrDefault(s => s.Id == customer.DefaultSourceId);
-                    if(source is BankAccount)
-                    {
-                        await bankSerice.DeleteAsync(customer.Id, customer.DefaultSourceId);
-                    }
-                    else if(source is Card)
-                    {
-                        await cardService.DeleteAsync(customer.Id, customer.DefaultSourceId);
-                    }
+                    stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
                 }
             }
+            else
+            {
+                throw new GatewayException("Payment method is not supported at this time.");
+            }
 
-            return updatedSubscriber;
+            try
+            {
+                if(customer == null)
+                {
+                    customer = await customerService.CreateAsync(new CustomerCreateOptions
+                    {
+                        Description = subscriber.BillingName(),
+                        Email = subscriber.BillingEmailAddress(),
+                        SourceToken = stipeCustomerSourceToken,
+                        Metadata = stripeCustomerMetadata
+                    });
+
+                    subscriber.Gateway = GatewayType.Stripe;
+                    subscriber.GatewayCustomerId = customer.Id;
+                    createdCustomer = true;
+                }
+
+                if(!createdCustomer)
+                {
+                    string defaultSourceId = null;
+                    if(stripePaymentMethod)
+                    {
+                        if(paymentToken.StartsWith("btok_"))
+                        {
+                            var bankAccount = await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
+                            {
+                                SourceToken = paymentToken
+                            });
+                            defaultSourceId = bankAccount.Id;
+                        }
+                        else
+                        {
+                            var card = await cardService.CreateAsync(customer.Id, new CardCreateOptions
+                            {
+                                SourceToken = paymentToken,
+                            });
+                            defaultSourceId = card.Id;
+                        }
+                    }
+
+                    foreach(var source in customer.Sources.Where(s => s.Id != defaultSourceId))
+                    {
+                        if(source is BankAccount)
+                        {
+                            await bankSerice.DeleteAsync(customer.Id, source.Id);
+                        }
+                        else if(source is Card)
+                        {
+                            await cardService.DeleteAsync(customer.Id, source.Id);
+                        }
+                    }
+
+                    customer = await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                    {
+                        Metadata = stripeCustomerMetadata,
+                        DefaultSource = defaultSourceId
+                    });
+                }
+            }
+            catch(Exception e)
+            {
+                if(braintreeCustomer != null)
+                {
+                    await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
+                }
+                throw e;
+            }
+
+            return createdCustomer;
         }
 
         public async Task<BillingInfo.BillingInvoice> GetUpcomingInvoiceAsync(ISubscriber subscriber)
@@ -660,12 +739,17 @@ namespace Bit.Core.Services
 
                     if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
-                        var braintreeCustomer = await _btGateway.Customer.FindAsync(customer.Metadata["btCustomerId"]);
-                        if(braintreeCustomer?.DefaultPaymentMethod != null)
+                        try
                         {
-                            billingInfo.PaymentSource = new BillingInfo.BillingSource(
-                                braintreeCustomer.DefaultPaymentMethod);
+                            var braintreeCustomer = await _btGateway.Customer.FindAsync(
+                                customer.Metadata["btCustomerId"]);
+                            if(braintreeCustomer?.DefaultPaymentMethod != null)
+                            {
+                                billingInfo.PaymentSource = new BillingInfo.BillingSource(
+                                    braintreeCustomer.DefaultPaymentMethod);
+                            }
                         }
+                        catch(Braintree.Exceptions.NotFoundException) { }
                     }
                     else if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
                     {

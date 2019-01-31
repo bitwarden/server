@@ -63,6 +63,11 @@ namespace Bit.Core.Models.Table
             return BusinessName;
         }
 
+        public string BraintreeCustomerIdPrefix()
+        {
+            return "o";
+        }
+
         public long StorageBytesRemaining()
         {
             if(!MaxStorageGb.HasValue)

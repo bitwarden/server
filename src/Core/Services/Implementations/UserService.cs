@@ -800,17 +800,18 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
-            IPaymentService paymentService = null;
+            PaymentMethodType paymentMethodType;
+            var paymentService = new StripePaymentService(_globalSettings);
             if(paymentToken.StartsWith("tok_"))
             {
-                paymentService = new StripePaymentService(_globalSettings);
+                paymentMethodType = PaymentMethodType.Card;
             }
             else
             {
-                paymentService = new BraintreePaymentService(_globalSettings);
+                paymentMethodType = PaymentMethodType.PayPal;
             }
 
-            var updated = await paymentService.UpdatePaymentMethodAsync(user, paymentToken);
+            var updated = await paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
             if(updated)
             {
                 await SaveUserAsync(user);

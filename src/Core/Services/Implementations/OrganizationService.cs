@@ -78,7 +78,22 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var updated = await _stripePaymentService.UpdatePaymentMethodAsync(organization, paymentToken);
+            PaymentMethodType paymentMethodType;
+            if(paymentToken.StartsWith("btok_"))
+            {
+                paymentMethodType = PaymentMethodType.BankAccount;
+            }
+            else if(paymentToken.StartsWith("tok_"))
+            {
+                paymentMethodType = PaymentMethodType.Card;
+            }
+            else
+            {
+                paymentMethodType = PaymentMethodType.PayPal;
+            }
+
+            var updated = await _stripePaymentService.UpdatePaymentMethodAsync(organization,
+                paymentMethodType, paymentToken);
             if(updated)
             {
                 await ReplaceAndUpdateCache(organization);
@@ -340,7 +355,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Subscription not found.");
             }
-            
+
             Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             var subItemOptions = sub.Items.Where(i => i.Plan.Id != plan.StripeSeatPlanId)

@@ -215,7 +215,7 @@ namespace Bit.Core.Services
             return billingInfo;
         }
 
-        public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken, 
+        public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb)
         {
             var customerResult = await _gateway.Customer.CreateAsync(new CustomerRequest
@@ -303,14 +303,20 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, string paymentToken)
+        public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
+            string paymentToken)
         {
             if(subscriber == null)
             {
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != Enums.GatewayType.Braintree)
+            if(paymentMethodType != PaymentMethodType.PayPal)
+            {
+                throw new GatewayException("Payment method not allowed");
+            }
+
+            if(subscriber.Gateway.HasValue && subscriber.Gateway.Value != GatewayType.Braintree)
             {
                 throw new GatewayException("Switching from one payment type to another is not supported. " +
                     "Contact us for assistance.");
