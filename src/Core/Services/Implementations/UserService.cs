@@ -682,6 +682,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already a premium user.");
             }
 
+            if(additionalStorageGb < 0)
+            {
+                throw new BadRequestException("You can't subtract storage!");
+            }
+
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {

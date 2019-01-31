@@ -30,6 +30,126 @@ namespace Bit.Core.Services
             };
         }
 
+        public async Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
+            short additionalSeats, bool premiumAccessAddon)
+        {
+            var invoiceService = new InvoiceService();
+            var customerService = new CustomerService();
+
+            Braintree.Customer braintreeCustomer = null;
+            string stipeCustomerSourceToken = null;
+            var stripeCustomerMetadata = new Dictionary<string, string>();
+            var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
+                paymentMethodType == PaymentMethodType.BankAccount;
+
+            if(stripePaymentMethod)
+            {
+                stipeCustomerSourceToken = paymentToken;
+            }
+            else if(paymentMethodType == PaymentMethodType.PayPal)
+            {
+                var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
+                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
+                {
+                    PaymentMethodNonce = paymentToken,
+                    Email = org.BillingEmail,
+                    Id = "o" + org.Id.ToString("N").ToLower() + randomSuffix
+                });
+
+                if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
+                {
+                    throw new GatewayException("Failed to create PayPal customer record.");
+                }
+
+                braintreeCustomer = customerResult.Target;
+                stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+            }
+            else
+            {
+                throw new GatewayException("Payment method is not supported at this time.");
+            }
+
+            var subCreateOptions = new SubscriptionCreateOptions
+            {
+                TrialPeriodDays = plan.TrialPeriodDays,
+                Items = new List<SubscriptionItemOption>(),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["organizationId"] = org.Id.ToString()
+                }
+            };
+
+            if(plan.StripePlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripePlanId,
+                    Quantity = 1
+                });
+            }
+
+            if(additionalSeats > 0 && plan.StripeSeatPlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats
+                });
+            }
+
+            if(additionalStorageGb > 0)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripeStoragePlanId,
+                    Quantity = additionalStorageGb
+                });
+            }
+
+            if(premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripePremiumAccessPlanId,
+                    Quantity = 1
+                });
+            }
+
+            Customer customer = null;
+            Subscription subscription = null;
+            try
+            {
+                customer = await customerService.CreateAsync(new CustomerCreateOptions
+                {
+                    Description = org.BusinessName,
+                    Email = org.BillingEmail,
+                    SourceToken = stipeCustomerSourceToken,
+                    Metadata = stripeCustomerMetadata
+                });
+                subCreateOptions.CustomerId = customer.Id;
+                var subscriptionService = new SubscriptionService();
+                subscription = await subscriptionService.CreateAsync(subCreateOptions);
+            }
+            catch(Exception e)
+            {
+                if(customer != null)
+                {
+                    await customerService.DeleteAsync(customer.Id);
+                }
+                if(braintreeCustomer != null)
+                {
+                    await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
+                }
+                throw e;
+            }
+
+            org.Gateway = GatewayType.Stripe;
+            org.GatewayCustomerId = customer.Id;
+            org.GatewaySubscriptionId = subscription.Id;
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
+        }
+
         public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb)
         {

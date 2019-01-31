@@ -476,6 +476,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
+            if(signup.AdditionalStorageGb < 0)
+            {
+                throw new BadRequestException("You can't subtract storage!");
+            }
+
             if(!plan.CanBuyPremiumAccessAddon && signup.PremiumAccessAddon)
             {
                 throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
@@ -484,6 +489,11 @@ namespace Bit.Core.Services
             if(plan.BaseSeats + signup.AdditionalSeats <= 0)
             {
                 throw new BadRequestException("You do not have any seats!");
+            }
+
+            if(signup.AdditionalSeats < 0)
+            {
+                throw new BadRequestException("You can't subtract seats!");
             }
 
             if(!plan.CanBuyAdditionalSeats && signup.AdditionalSeats > 0)
@@ -498,96 +508,10 @@ namespace Bit.Core.Services
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
-            var customerService = new CustomerService();
-            var subscriptionService = new SubscriptionService();
-            Customer customer = null;
-            Subscription subscription = null;
-
-            // Pre-generate the org id so that we can save it with the Stripe subscription..
-            var newOrgId = CoreHelpers.GenerateComb();
-
-            if(plan.Type == PlanType.Free)
-            {
-                var adminCount =
-                    await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
-                if(adminCount > 0)
-                {
-                    throw new BadRequestException("You can only be an admin of one free organization.");
-                }
-            }
-            else
-            {
-                customer = await customerService.CreateAsync(new CustomerCreateOptions
-                {
-                    Description = signup.BusinessName,
-                    Email = signup.BillingEmail,
-                    SourceToken = signup.PaymentToken
-                });
-
-                var subCreateOptions = new SubscriptionCreateOptions
-                {
-                    CustomerId = customer.Id,
-                    TrialPeriodDays = plan.TrialPeriodDays,
-                    Items = new List<SubscriptionItemOption>(),
-                    Metadata = new Dictionary<string, string> {
-                        { "organizationId", newOrgId.ToString() }
-                    }
-                };
-
-                if(plan.StripePlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = plan.StripePlanId,
-                        Quantity = 1
-                    });
-                }
-
-                if(signup.AdditionalSeats > 0 && plan.StripeSeatPlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = plan.StripeSeatPlanId,
-                        Quantity = signup.AdditionalSeats
-                    });
-                }
-
-                if(signup.AdditionalStorageGb > 0)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = plan.StripeStoragePlanId,
-                        Quantity = signup.AdditionalStorageGb
-                    });
-                }
-
-                if(signup.PremiumAccessAddon && plan.StripePremiumAccessPlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = plan.StripePremiumAccessPlanId,
-                        Quantity = 1
-                    });
-                }
-
-                try
-                {
-                    subscription = await subscriptionService.CreateAsync(subCreateOptions);
-                }
-                catch(StripeException)
-                {
-                    if(customer != null)
-                    {
-                        await customerService.DeleteAsync(customer.Id);
-                    }
-
-                    throw;
-                }
-            }
-
             var organization = new Organization
             {
-                Id = newOrgId,
+                // Pre-generate the org id so that we can save it with the Stripe subscription..
+                Id = CoreHelpers.GenerateComb(),
                 Name = signup.Name,
                 BillingEmail = signup.BillingEmail,
                 BusinessName = signup.BusinessName,
@@ -605,15 +529,42 @@ namespace Bit.Core.Services
                 SelfHost = plan.SelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
-                Gateway = plan.Type == PlanType.Free ? null : (GatewayType?)GatewayType.Stripe,
-                GatewayCustomerId = customer?.Id,
-                GatewaySubscriptionId = subscription?.Id,
+                Gateway = null,
                 Enabled = true,
-                ExpirationDate = subscription?.CurrentPeriodEnd,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
+
+            if(plan.Type == PlanType.Free)
+            {
+                var adminCount =
+                    await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
+                if(adminCount > 0)
+                {
+                    throw new BadRequestException("You can only be an admin of one free organization.");
+                }
+            }
+            else
+            {
+                PaymentMethodType paymentMethodType;
+                if(signup.PaymentToken.StartsWith("btok_"))
+                {
+                    paymentMethodType = PaymentMethodType.BankAccount;
+                }
+                else if(signup.PaymentToken.StartsWith("tok_"))
+                {
+                    paymentMethodType = PaymentMethodType.Card;
+                }
+                else
+                {
+                    paymentMethodType = PaymentMethodType.PayPal;
+                }
+
+                await _stripePaymentService.PurchaseOrganizationAsync(organization, paymentMethodType,
+                    signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                    signup.PremiumAccessAddon);
+            }
 
             return await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
         }
