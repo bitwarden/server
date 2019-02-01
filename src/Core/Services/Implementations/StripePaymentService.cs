@@ -54,7 +54,7 @@ namespace Bit.Core.Services
                 {
                     PaymentMethodNonce = paymentToken,
                     Email = org.BillingEmail,
-                    Id = "o" + org.Id.ToString("N").ToLower() + randomSuffix
+                    Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix
                 });
 
                 if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
@@ -76,7 +76,7 @@ namespace Bit.Core.Services
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
-                    ["organizationId"] = org.Id.ToString()
+                    [org.GatewayIdField()] = org.Id.ToString()
                 }
             };
 
@@ -174,7 +174,7 @@ namespace Bit.Core.Services
                 {
                     PaymentMethodNonce = paymentToken,
                     Email = user.Email,
-                    Id = "u" + user.Id.ToString("N").ToLower() + randomSuffix
+                    Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix
                 });
 
                 if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
@@ -204,7 +204,7 @@ namespace Bit.Core.Services
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
-                    ["userId"] = user.Id.ToString()
+                    [user.GatewayIdField()] = user.Id.ToString()
                 }
             };
 
@@ -248,7 +248,18 @@ namespace Bit.Core.Services
                             {
                                 Amount = btInvoiceAmount,
                                 CustomerId = braintreeCustomer.Id,
-                                Options = new Braintree.TransactionOptionsRequest { SubmitForSettlement = true }
+                                Options = new Braintree.TransactionOptionsRequest
+                                {
+                                    SubmitForSettlement = true,
+                                    PayPal = new Braintree.TransactionOptionsPayPalRequest
+                                    {
+                                        CustomField = $"{user.BraintreeIdField()}:{user.Id}"
+                                    }
+                                },
+                                CustomFields = new Dictionary<string, string>
+                                {
+                                    [user.BraintreeIdField()] = user.Id.ToString()
+                                }
                             });
 
                         if(!transactionResult.IsSuccess())
@@ -256,6 +267,7 @@ namespace Bit.Core.Services
                             throw new GatewayException("Failed to charge PayPal customer.");
                         }
 
+                        braintreeTransaction = transactionResult.Target;
                         subInvoiceMetadata.Add("btTransactionId", braintreeTransaction.Id);
                         subInvoiceMetadata.Add("btPayPalTransactionId",
                             braintreeTransaction.PayPalDetails.AuthorizationId);
@@ -525,7 +537,15 @@ namespace Bit.Core.Services
                                     CustomerId = customer.Metadata["btCustomerId"],
                                     Options = new Braintree.TransactionOptionsRequest
                                     {
-                                        SubmitForSettlement = true
+                                        SubmitForSettlement = true,
+                                        PayPal = new Braintree.TransactionOptionsPayPalRequest
+                                        {
+                                            CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                        }
+                                    },
+                                    CustomFields = new Dictionary<string, string>
+                                    {
+                                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
                                     }
                                 });
 

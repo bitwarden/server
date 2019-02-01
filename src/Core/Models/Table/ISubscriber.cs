@@ -13,6 +13,8 @@ namespace Bit.Core.Models.Table
         string BillingEmailAddress();
         string BillingName();
         string BraintreeCustomerIdPrefix();
+        string BraintreeIdField();
+        string GatewayIdField();
         IPaymentService GetPaymentService(GlobalSettings globalSettings);
     }
 }

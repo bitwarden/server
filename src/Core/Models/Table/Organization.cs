@@ -68,6 +68,16 @@ namespace Bit.Core.Models.Table
             return "o";
         }
 
+        public string BraintreeIdField()
+        {
+            return "organization_id";
+        }
+
+        public string GatewayIdField()
+        {
+            return "organizationId";
+        }
+
         public long StorageBytesRemaining()
         {
             if(!MaxStorageGb.HasValue)

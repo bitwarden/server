@@ -63,6 +63,16 @@ namespace Bit.Core.Models.Table
             return "u";
         }
 
+        public string BraintreeIdField()
+        {
+            return "user_id";
+        }
+
+        public string GatewayIdField()
+        {
+            return "userId";
+        }
+
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {
             if(string.IsNullOrWhiteSpace(TwoFactorProviders))

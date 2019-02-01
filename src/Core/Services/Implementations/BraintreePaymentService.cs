@@ -230,7 +230,7 @@ namespace Bit.Core.Services
                 throw new GatewayException("Failed to create customer.");
             }
 
-            var subId = "u" + user.Id.ToString("N").ToLower() +
+            var subId = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() +
                     Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
 
             var subRequest = new SubscriptionRequest
