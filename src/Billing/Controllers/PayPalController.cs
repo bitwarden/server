@@ -70,7 +70,7 @@ namespace Bit.Billing.Controllers
                             CreationDate = sale.CreateTime,
                             OrganizationId = ids.Item1,
                             UserId = ids.Item2,
-                            Type = sale.GetCreditFromCustom() ? TransactionType.Credit : TransactionType.Charge,
+                            Type = TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = sale.Id,
                             PaymentMethodType = PaymentMethodType.PayPal,

@@ -218,11 +218,6 @@ namespace Bit.Billing.Utilities
 
                 return new Tuple<Guid?, Guid?>(orgId, userId);
             }
-
-            public bool GetCreditFromCustom()
-            {
-                return Custom.Contains("credit:true");
-            }
         }
 
         public class AmountInfo
