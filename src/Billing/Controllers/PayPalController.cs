@@ -94,28 +94,32 @@ namespace Bit.Billing.Controllers
                         return new BadRequestResult();
                     }
 
-                    saleTransaction.RefundedAmount = refund.TotalRefundedAmount.ValueAmount;
-                    if(saleTransaction.RefundedAmount == saleTransaction.Amount)
+                    if(!saleTransaction.Refunded.GetValueOrDefault() &&
+                        saleTransaction.RefundedAmount.GetValueOrDefault() < refund.TotalRefundedAmount.ValueAmount)
                     {
-                        saleTransaction.Refunded = true;
-                    }
-                    await _transactionRepository.ReplaceAsync(saleTransaction);
-
-                    var ids = refund.GetIdsFromCustom();
-                    if(ids.Item1.HasValue || ids.Item2.HasValue)
-                    {
-                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        saleTransaction.RefundedAmount = refund.TotalRefundedAmount.ValueAmount;
+                        if(saleTransaction.RefundedAmount == saleTransaction.Amount)
                         {
-                            Amount = refund.Amount.TotalAmount,
-                            CreationDate = refund.CreateTime,
-                            OrganizationId = ids.Item1,
-                            UserId = ids.Item2,
-                            Type = TransactionType.Refund,
-                            Gateway = GatewayType.PayPal,
-                            GatewayId = refund.Id,
-                            PaymentMethodType = PaymentMethodType.PayPal,
-                            Details = refund.Id
-                        });
+                            saleTransaction.Refunded = true;
+                        }
+                        await _transactionRepository.ReplaceAsync(saleTransaction);
+
+                        var ids = refund.GetIdsFromCustom();
+                        if(ids.Item1.HasValue || ids.Item2.HasValue)
+                        {
+                            await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                            {
+                                Amount = refund.Amount.TotalAmount,
+                                CreationDate = refund.CreateTime,
+                                OrganizationId = ids.Item1,
+                                UserId = ids.Item2,
+                                Type = TransactionType.Refund,
+                                Gateway = GatewayType.PayPal,
+                                GatewayId = refund.Id,
+                                PaymentMethodType = PaymentMethodType.PayPal,
+                                Details = refund.Id
+                            });
+                        }
                     }
                 }
             }

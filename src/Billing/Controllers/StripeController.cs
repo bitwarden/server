@@ -237,34 +237,40 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Cannot find refunded charge.");
                 }
 
-                chargeTransaction.RefundedAmount = charge.AmountRefunded / 100M;
-                if(charge.Refunded)
-                {
-                    chargeTransaction.Refunded = true;
-                }
-                await _transactionRepository.ReplaceAsync(chargeTransaction);
+                var amountRefunded = charge.AmountRefunded / 100M;
 
-                foreach(var refund in charge.Refunds)
+                if(!chargeTransaction.Refunded.GetValueOrDefault() &&
+                    chargeTransaction.RefundedAmount.GetValueOrDefault() < amountRefunded)
                 {
-                    var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                        GatewayType.Stripe, refund.Id);
-                    if(refundTransaction != null)
+                    chargeTransaction.RefundedAmount = amountRefunded;
+                    if(charge.Refunded)
                     {
-                        continue;
+                        chargeTransaction.Refunded = true;
                     }
+                    await _transactionRepository.ReplaceAsync(chargeTransaction);
 
-                    await _transactionRepository.CreateAsync(new Transaction
+                    foreach(var refund in charge.Refunds)
                     {
-                        Amount = refund.Amount / 100M,
-                        CreationDate = refund.Created,
-                        OrganizationId = chargeTransaction.OrganizationId,
-                        UserId = chargeTransaction.UserId,
-                        Type = TransactionType.Refund,
-                        Gateway = GatewayType.Stripe,
-                        GatewayId = refund.Id,
-                        PaymentMethodType = chargeTransaction.PaymentMethodType,
-                        Details = chargeTransaction.Details
-                    });
+                        var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                            GatewayType.Stripe, refund.Id);
+                        if(refundTransaction != null)
+                        {
+                            continue;
+                        }
+
+                        await _transactionRepository.CreateAsync(new Transaction
+                        {
+                            Amount = refund.Amount / 100M,
+                            CreationDate = refund.Created,
+                            OrganizationId = chargeTransaction.OrganizationId,
+                            UserId = chargeTransaction.UserId,
+                            Type = TransactionType.Refund,
+                            Gateway = GatewayType.Stripe,
+                            GatewayId = refund.Id,
+                            PaymentMethodType = chargeTransaction.PaymentMethodType,
+                            Details = chargeTransaction.Details
+                        });
+                    }
                 }
             }
 
