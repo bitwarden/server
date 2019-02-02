@@ -6,9 +6,9 @@
         public virtual string StripeWebhookKey { get; set; }
         public virtual string StripeWebhookSecret { get; set; }
         public virtual string BraintreeWebhookKey { get; set; }
-        public virtual PaypalSettings Paypal { get; set; } = new PaypalSettings();
+        public virtual PayPalSettings PayPal { get; set; } = new PayPalSettings();
 
-        public class PaypalSettings
+        public class PayPalSettings
         {
             public virtual bool Production { get; set; }
             public virtual string ClientId { get; set; }

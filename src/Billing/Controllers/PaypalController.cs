@@ -11,15 +11,15 @@ using System.Threading.Tasks;
 namespace Bit.Billing.Controllers
 {
     [Route("paypal")]
-    public class PaypalController : Controller
+    public class PayPalController : Controller
     {
         private readonly BillingSettings _billingSettings;
-        private readonly PaypalClient _paypalClient;
+        private readonly PayPalClient _paypalClient;
         private readonly ITransactionRepository _transactionRepository;
 
-        public PaypalController(
+        public PayPalController(
             IOptions<BillingSettings> billingSettings,
-            PaypalClient paypalClient,
+            PayPalClient paypalClient,
             ITransactionRepository transactionRepository)
         {
             _billingSettings = billingSettings?.Value;
@@ -47,7 +47,7 @@ namespace Bit.Billing.Controllers
             }
 
             var verified = await _paypalClient.VerifyWebhookAsync(body, HttpContext.Request.Headers,
-                _billingSettings.Paypal.WebhookId);
+                _billingSettings.PayPal.WebhookId);
             if(!verified)
             {
                 return new BadRequestResult();
@@ -55,7 +55,7 @@ namespace Bit.Billing.Controllers
 
             if(body.Contains("\"PAYMENT.SALE.COMPLETED\""))
             {
-                var ev = JsonConvert.DeserializeObject<PaypalClient.Event<PaypalClient.Sale>>(body);
+                var ev = JsonConvert.DeserializeObject<PayPalClient.Event<PayPalClient.Sale>>(body);
                 var sale = ev.Resource;
                 var saleTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, sale.Id);
@@ -80,7 +80,7 @@ namespace Bit.Billing.Controllers
             }
             else if(body.Contains("\"PAYMENT.SALE.REFUNDED\""))
             {
-                var ev = JsonConvert.DeserializeObject<PaypalClient.Event<PaypalClient.Refund>>(body);
+                var ev = JsonConvert.DeserializeObject<PayPalClient.Event<PayPalClient.Refund>>(body);
                 var refund = ev.Resource;
                 var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, refund.Id);

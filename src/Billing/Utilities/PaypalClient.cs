@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Billing.Utilities
 {
-    public class PaypalClient
+    public class PayPalClient
     {
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _baseApiUrl;
@@ -18,12 +18,12 @@ namespace Bit.Billing.Utilities
 
         private AuthResponse _authResponse;
 
-        public PaypalClient(BillingSettings billingSettings)
+        public PayPalClient(BillingSettings billingSettings)
         {
-            _baseApiUrl = _baseApiUrl = !billingSettings.Paypal.Production ? "https://api.sandbox.paypal.com/{0}" :
+            _baseApiUrl = _baseApiUrl = !billingSettings.PayPal.Production ? "https://api.sandbox.paypal.com/{0}" :
                 "https://api.paypal.com/{0}";
-            _clientId = billingSettings.Paypal.ClientId;
-            _clientSecret = billingSettings.Paypal.ClientSecret;
+            _clientId = billingSettings.PayPal.ClientId;
+            _clientSecret = billingSettings.PayPal.ClientSecret;
         }
 
         public async Task<bool> VerifyWebhookAsync(string webhookJson, IHeaderDictionary headers, string webhookId)
