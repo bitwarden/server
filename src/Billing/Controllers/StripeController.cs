@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -20,6 +21,7 @@ namespace Bit.Billing.Controllers
         private readonly IHostingEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
         private readonly IMailService _mailService;
 
@@ -28,6 +30,7 @@ namespace Bit.Billing.Controllers
             IHostingEnvironment hostingEnvironment,
             IOrganizationService organizationService,
             IOrganizationRepository organizationRepository,
+            ITransactionRepository transactionRepository,
             IUserService userService,
             IMailService mailService)
         {
@@ -35,6 +38,7 @@ namespace Bit.Billing.Controllers
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
             _organizationRepository = organizationRepository;
+            _transactionRepository = transactionRepository;
             _userService = userService;
             _mailService = mailService;
         }
@@ -65,7 +69,6 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var invUpcoming = parsedEvent.Type.Equals("invoice.upcoming");
             var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
             var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");
 
@@ -112,7 +115,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if(invUpcoming)
+            else if(parsedEvent.Type.Equals("invoice.upcoming"))
             {
                 var invoice = parsedEvent.Data.Object as Invoice;
                 if(invoice == null)
@@ -153,6 +156,115 @@ namespace Bit.Billing.Controllers
                     var items = invoice.Lines.Select(i => i.Description).ToList();
                     await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
                         invoice.NextPaymentAttempt.Value, items, ids.Item1.HasValue);
+                }
+            }
+            else if(parsedEvent.Type.Equals("charge.succeeded"))
+            {
+                var charge = parsedEvent.Data.Object as Charge;
+                if(charge == null)
+                {
+                    throw new Exception("Charge is null.");
+                }
+
+                if(charge.InvoiceId == null)
+                {
+                    return new OkResult();
+                }
+
+                var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.Stripe, charge.Id);
+                if(chargeTransaction == null)
+                {
+                    var invoiceService = new InvoiceService();
+                    var invoice = await invoiceService.GetAsync(charge.InvoiceId);
+                    if(invoice == null)
+                    {
+                        return new OkResult();
+                    }
+
+                    var subscriptionService = new SubscriptionService();
+                    var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                    if(subscription == null)
+                    {
+                        return new OkResult();
+                    }
+
+                    var ids = GetIdsFromMetaData(subscription.Metadata);
+                    if(ids.Item1.HasValue || ids.Item2.HasValue)
+                    {
+                        var tx = new Transaction
+                        {
+                            Amount = charge.Amount / 100M,
+                            CreationDate = charge.Created,
+                            OrganizationId = ids.Item1,
+                            UserId = ids.Item2,
+                            Type = TransactionType.Charge,
+                            Gateway = GatewayType.Stripe,
+                            GatewayId = charge.Id
+                        };
+
+                        if(charge.Source is Card card)
+                        {
+                            tx.PaymentMethodType = PaymentMethodType.Card;
+                            tx.Details = $"{card.Brand}, *{card.Last4}";
+                        }
+                        else if(charge.Source is BankAccount bankAccount)
+                        {
+                            tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                            tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                        }
+                        else
+                        {
+                            return new OkResult();
+                        }
+
+                        await _transactionRepository.CreateAsync(tx);
+                    }
+                }
+            }
+            else if(parsedEvent.Type.Equals("charge.refunded"))
+            {
+                var charge = parsedEvent.Data.Object as Charge;
+                if(charge == null)
+                {
+                    throw new Exception("Charge is null.");
+                }
+
+                var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.Stripe, charge.Id);
+                if(chargeTransaction == null)
+                {
+                    throw new Exception("Cannot find refunded charge.");
+                }
+
+                chargeTransaction.RefundedAmount = charge.AmountRefunded / 100M;
+                if(charge.Refunded)
+                {
+                    chargeTransaction.Refunded = true;
+                }
+                await _transactionRepository.ReplaceAsync(chargeTransaction);
+
+                foreach(var refund in charge.Refunds)
+                {
+                    var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.Stripe, refund.Id);
+                    if(refundTransaction != null)
+                    {
+                        continue;
+                    }
+
+                    await _transactionRepository.CreateAsync(new Transaction
+                    {
+                        Amount = refund.Amount / 100M,
+                        CreationDate = refund.Created,
+                        OrganizationId = chargeTransaction.OrganizationId,
+                        UserId = chargeTransaction.UserId,
+                        Type = TransactionType.Refund,
+                        Gateway = GatewayType.Stripe,
+                        GatewayId = refund.Id,
+                        PaymentMethodType = chargeTransaction.PaymentMethodType,
+                        Details = chargeTransaction.Details
+                    });
                 }
             }
 

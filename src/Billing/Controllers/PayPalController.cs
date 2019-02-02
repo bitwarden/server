@@ -73,7 +73,8 @@ namespace Bit.Billing.Controllers
                             Type = sale.GetCreditFromCustom() ? TransactionType.Credit : TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = sale.Id,
-                            PaymentMethodType = PaymentMethodType.PayPal
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = sale.Id
                         });
                     }
                 }
@@ -86,6 +87,20 @@ namespace Bit.Billing.Controllers
                     GatewayType.PayPal, refund.Id);
                 if(refundTransaction == null)
                 {
+                    var saleTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal, refund.SaleId);
+                    if(saleTransaction == null)
+                    {
+                        return new BadRequestResult();
+                    }
+
+                    saleTransaction.RefundedAmount = refund.TotalRefundedAmount.ValueAmount;
+                    if(saleTransaction.RefundedAmount == saleTransaction.Amount)
+                    {
+                        saleTransaction.Refunded = true;
+                    }
+                    await _transactionRepository.ReplaceAsync(saleTransaction);
+
                     var ids = refund.GetIdsFromCustom();
                     if(ids.Item1.HasValue || ids.Item2.HasValue)
                     {
@@ -98,17 +113,9 @@ namespace Bit.Billing.Controllers
                             Type = TransactionType.Refund,
                             Gateway = GatewayType.PayPal,
                             GatewayId = refund.Id,
-                            PaymentMethodType = PaymentMethodType.PayPal
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = refund.Id
                         });
-                    }
-
-                    var saleTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                        GatewayType.PayPal, refund.SaleId);
-                    if(saleTransaction != null)
-                    {
-                        saleTransaction.Refunded = true;
-                        saleTransaction.RefundedAmount = refund.TotalRefundedAmount.ValueAmount;
-                        await _transactionRepository.ReplaceAsync(saleTransaction);
                     }
                 }
             }
