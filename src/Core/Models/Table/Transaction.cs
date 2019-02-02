@@ -17,7 +17,7 @@ namespace Bit.Core.Models.Table
         public PaymentMethodType? PaymentMethodType { get; set; }
         public GatewayType? Gateway { get; set; }
         public string GatewayId { get; set; }
-        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
         public void SetNewId()
         {

@@ -18,7 +18,7 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Transaction_Gateway_GatewayId]
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Transaction_Gateway_GatewayId]
     ON [dbo].[Transaction]([Gateway] ASC, [GatewayId] ASC);
 
 

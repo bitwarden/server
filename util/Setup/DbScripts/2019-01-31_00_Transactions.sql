@@ -18,7 +18,7 @@ BEGIN
         CONSTRAINT [FK_Transaction_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
     );
 
-    CREATE NONCLUSTERED INDEX [IX_Transaction_Gateway_GatewayId]
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Transaction_Gateway_GatewayId]
         ON [dbo].[Transaction]([Gateway] ASC, [GatewayId] ASC);
 
 
@@ -220,5 +220,28 @@ BEGIN
         [CreationDate] = @CreationDate
     WHERE
         [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[Transaction_ReadByGatewayId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Transaction_ReadByGatewayId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Transaction_ReadByGatewayId]
+    @Gateway TINYINT,
+    @GatewayId VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[TransactionView]
+    WHERE
+        [Gateway] = @Gateway
+        AND [GatewayId] = @GatewayId
 END
 GO

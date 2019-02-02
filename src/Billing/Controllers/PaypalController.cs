@@ -1,4 +1,6 @@
 ﻿using Bit.Billing.Utilities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -13,13 +15,16 @@ namespace Bit.Billing.Controllers
     {
         private readonly BillingSettings _billingSettings;
         private readonly PaypalClient _paypalClient;
+        private readonly ITransactionRepository _transactionRepository;
 
         public PaypalController(
             IOptions<BillingSettings> billingSettings,
-            PaypalClient paypalClient)
+            PaypalClient paypalClient,
+            ITransactionRepository transactionRepository)
         {
             _billingSettings = billingSettings?.Value;
             _paypalClient = paypalClient;
+            _transactionRepository = transactionRepository;
         }
 
         [HttpPost("webhook")]
@@ -48,8 +53,66 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var webhook = JsonConvert.DeserializeObject(body);
-            // TODO: process webhook
+            if(body.Contains("\"PAYMENT.SALE.COMPLETED\""))
+            {
+                var ev = JsonConvert.DeserializeObject<PaypalClient.Event<PaypalClient.Sale>>(body);
+                var sale = ev.Resource;
+                var saleTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.PayPal, sale.Id);
+                if(saleTransaction == null)
+                {
+                    var ids = sale.GetIdsFromCustom();
+                    if(ids.Item1.HasValue || ids.Item2.HasValue)
+                    {
+                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        {
+                            Amount = sale.Amount.TotalAmount,
+                            CreationDate = sale.CreateTime,
+                            OrganizationId = ids.Item1,
+                            UserId = ids.Item2,
+                            Type = sale.GetCreditFromCustom() ? TransactionType.Credit : TransactionType.Charge,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = sale.Id,
+                            PaymentMethodType = PaymentMethodType.PayPal
+                        });
+                    }
+                }
+            }
+            else if(body.Contains("\"PAYMENT.SALE.REFUNDED\""))
+            {
+                var ev = JsonConvert.DeserializeObject<PaypalClient.Event<PaypalClient.Refund>>(body);
+                var refund = ev.Resource;
+                var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.PayPal, refund.Id);
+                if(refundTransaction == null)
+                {
+                    var ids = refund.GetIdsFromCustom();
+                    if(ids.Item1.HasValue || ids.Item2.HasValue)
+                    {
+                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        {
+                            Amount = refund.Amount.TotalAmount,
+                            CreationDate = refund.CreateTime,
+                            OrganizationId = ids.Item1,
+                            UserId = ids.Item2,
+                            Type = TransactionType.Refund,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = refund.Id,
+                            PaymentMethodType = PaymentMethodType.PayPal
+                        });
+                    }
+
+                    var saleTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal, refund.SaleId);
+                    if(saleTransaction != null)
+                    {
+                        saleTransaction.Refunded = true;
+                        saleTransaction.RefundedAmount = refund.TotalRefundedAmount.ValueAmount;
+                        await _transactionRepository.ReplaceAsync(saleTransaction);
+                    }
+                }
+            }
+
             return new OkResult();
         }
     }

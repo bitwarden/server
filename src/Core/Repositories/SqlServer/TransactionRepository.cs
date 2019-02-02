@@ -6,6 +6,7 @@ using Dapper;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -42,6 +43,19 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
+            }
+        }
+
+        public async Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Transaction>(
+                    $"[{Schema}].[Transaction_ReadByGatewayId]",
+                    new { Gateway = gatewayType, GatewayId = gatewayId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
             }
         }
     }

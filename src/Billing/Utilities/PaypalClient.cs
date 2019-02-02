@@ -156,5 +156,87 @@ namespace Bit.Billing.Utilities
             public long ExpiresIn { get; set; }
             public bool Expired => DateTime.UtcNow > _created.AddSeconds(ExpiresIn - 30);
         }
+
+        public class Event<T>
+        {
+            [JsonProperty("id")]
+            public string Id { get; set; }
+            [JsonProperty("event_type")]
+            public string EventType { get; set; }
+            [JsonProperty("resource_type")]
+            public string ResourceType { get; set; }
+            [JsonProperty("create_time")]
+            public DateTime CreateTime { get; set; }
+            public T Resource { get; set; }
+        }
+
+        public class Refund : Sale
+        {
+            [JsonProperty("total_refunded_amount")]
+            public ValueInfo TotalRefundedAmount { get; set; }
+            [JsonProperty("sale_id")]
+            public string SaleId { get; set; }
+        }
+
+        public class Sale
+        {
+            [JsonProperty("id")]
+            public string Id { get; set; }
+            [JsonProperty("state")]
+            public string State { get; set; }
+            [JsonProperty("amount")]
+            public AmountInfo Amount { get; set; }
+            [JsonProperty("parent_payment")]
+            public string ParentPayment { get; set; }
+            [JsonProperty("custom")]
+            public string Custom { get; set; }
+            [JsonProperty("create_time")]
+            public DateTime CreateTime { get; set; }
+            [JsonProperty("update_time")]
+            public DateTime UpdateTime { get; set; }
+
+            public Tuple<Guid?, Guid?> GetIdsFromCustom()
+            {
+                Guid? orgId = null;
+                Guid? userId = null;
+
+                if(!string.IsNullOrWhiteSpace(Custom) && Custom.Contains(":"))
+                {
+                    var parts = Custom.Split(':');
+                    if(parts.Length > 1 && Guid.TryParse(parts[1], out var id))
+                    {
+                        if(parts[0] == "user_id")
+                        {
+                            userId = id;
+                        }
+                        else if(parts[0] == "organization_id")
+                        {
+                            orgId = id;
+                        }
+                    }
+                }
+
+                return new Tuple<Guid?, Guid?>(orgId, userId);
+            }
+
+            public bool GetCreditFromCustom()
+            {
+                return Custom.Contains("credit:true");
+            }
+        }
+
+        public class AmountInfo
+        {
+            [JsonProperty("total")]
+            public string Total { get; set; }
+            public decimal TotalAmount => Convert.ToDecimal(Total);
+        }
+
+        public class ValueInfo
+        {
+            [JsonProperty("value")]
+            public string Value { get; set; }
+            public decimal ValueAmount => Convert.ToDecimal(Value);
+        }
     }
 }

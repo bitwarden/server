@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories
 {
@@ -9,5 +10,6 @@ namespace Bit.Core.Repositories
     {
         Task<ICollection<Transaction>> GetManyByUserIdAsync(Guid userId);
         Task<ICollection<Transaction>> GetManyByOrganizationIdAsync(Guid organizationId);
+        Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId);
     }
 }
