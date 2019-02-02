@@ -721,45 +721,80 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(stripeCustomerMetadata.ContainsKey("btCustomerId"))
-            {
-                var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
-                stripeCustomerMetadata.Add($"btCustomerId_{nowSec}", stripeCustomerMetadata["btCustomerId"]);
-                stripeCustomerMetadata["btCustomerId"] = null;
-            }
-
+            var hadBtCustomer = stripeCustomerMetadata.ContainsKey("btCustomerId");
             if(stripePaymentMethod)
             {
                 stipeCustomerSourceToken = paymentToken;
             }
             else if(paymentMethodType == PaymentMethodType.PayPal)
             {
-                var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
-                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
+                if(hadBtCustomer)
                 {
-                    PaymentMethodNonce = paymentToken,
-                    Email = subscriber.BillingEmailAddress(),
-                    Id = subscriber.BraintreeCustomerIdPrefix() + subscriber.Id.ToString("N").ToLower() + randomSuffix
-                });
+                    var pmResult = await _btGateway.PaymentMethod.CreateAsync(new Braintree.PaymentMethodRequest
+                    {
+                        CustomerId = stripeCustomerMetadata["btCustomerId"],
+                        PaymentMethodNonce = paymentToken
+                    });
 
-                if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
-                {
-                    throw new GatewayException("Failed to create PayPal customer record.");
+                    if(pmResult.IsSuccess())
+                    {
+                        var customerResult = await _btGateway.Customer.UpdateAsync(
+                            stripeCustomerMetadata["btCustomerId"], new Braintree.CustomerRequest
+                            {
+                                DefaultPaymentMethodToken = pmResult.Target.Token
+                            });
+
+                        if(customerResult.IsSuccess() && customerResult.Target.PaymentMethods.Length > 0)
+                        {
+                            braintreeCustomer = customerResult.Target;
+                        }
+                        else
+                        {
+                            await _btGateway.PaymentMethod.DeleteAsync(pmResult.Target.Token);
+                            hadBtCustomer = false;
+                        }
+                    }
+                    else
+                    {
+                        hadBtCustomer = false;
+                    }
                 }
 
-                braintreeCustomer = customerResult.Target;
-                if(stripeCustomerMetadata.ContainsKey("btCustomerId"))
+                if(!hadBtCustomer)
                 {
-                    stripeCustomerMetadata["btCustomerId"] = braintreeCustomer.Id;
-                }
-                else
-                {
-                    stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+                    var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
+                    {
+                        PaymentMethodNonce = paymentToken,
+                        Email = subscriber.BillingEmailAddress(),
+                        Id = subscriber.BraintreeCustomerIdPrefix() + subscriber.Id.ToString("N").ToLower() +
+                            Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false)
+                    });
+
+                    if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
+                    {
+                        throw new GatewayException("Failed to create PayPal customer record.");
+                    }
+
+                    braintreeCustomer = customerResult.Target;
                 }
             }
             else
             {
                 throw new GatewayException("Payment method is not supported at this time.");
+            }
+
+            if(stripeCustomerMetadata.ContainsKey("btCustomerId"))
+            {
+                if(braintreeCustomer?.Id != stripeCustomerMetadata["btCustomerId"])
+                {
+                    var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
+                    stripeCustomerMetadata.Add($"btCustomerId_{nowSec}", stripeCustomerMetadata["btCustomerId"]);
+                }
+                stripeCustomerMetadata["btCustomerId"] = braintreeCustomer?.Id;
+            }
+            else if(!string.IsNullOrWhiteSpace(braintreeCustomer?.Id))
+            {
+                stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
             }
 
             try
@@ -823,7 +858,7 @@ namespace Bit.Core.Services
             }
             catch(Exception e)
             {
-                if(braintreeCustomer != null)
+                if(braintreeCustomer != null && !hadBtCustomer)
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
