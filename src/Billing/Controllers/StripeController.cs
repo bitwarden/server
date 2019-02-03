@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,8 +25,10 @@ namespace Bit.Billing.Controllers
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
         private readonly IMailService _mailService;
+        private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripeController(
+            GlobalSettings globalSettings,
             IOptions<BillingSettings> billingSettings,
             IHostingEnvironment hostingEnvironment,
             IOrganizationService organizationService,
@@ -41,6 +44,15 @@ namespace Bit.Billing.Controllers
             _transactionRepository = transactionRepository;
             _userService = userService;
             _mailService = mailService;
+
+            _btGateway = new Braintree.BraintreeGateway
+            {
+                Environment = globalSettings.Braintree.Production ?
+                    Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
+                MerchantId = globalSettings.Braintree.MerchantId,
+                PublicKey = globalSettings.Braintree.PublicKey,
+                PrivateKey = globalSettings.Braintree.PrivateKey
+            };
         }
 
         [HttpPost("webhook")]
@@ -74,8 +86,7 @@ namespace Bit.Billing.Controllers
 
             if(subDeleted || subUpdated)
             {
-                var subscription = parsedEvent.Data.Object as Subscription;
-                if(subscription == null)
+                if(!(parsedEvent.Data.Object is Subscription subscription))
                 {
                     throw new Exception("Subscription is null.");
                 }
@@ -117,8 +128,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.upcoming"))
             {
-                var invoice = parsedEvent.Data.Object as Invoice;
-                if(invoice == null)
+                if(!(parsedEvent.Data.Object is Invoice invoice))
                 {
                     throw new Exception("Invoice is null.");
                 }
@@ -160,8 +170,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.succeeded"))
             {
-                var charge = parsedEvent.Data.Object as Charge;
-                if(charge == null)
+                if(!(parsedEvent.Data.Object is Charge charge))
                 {
                     throw new Exception("Charge is null.");
                 }
@@ -224,8 +233,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.refunded"))
             {
-                var charge = parsedEvent.Data.Object as Charge;
-                if(charge == null)
+                if(!(parsedEvent.Data.Object is Charge charge))
                 {
                     throw new Exception("Charge is null.");
                 }
@@ -271,6 +279,30 @@ namespace Bit.Billing.Controllers
                             Details = chargeTransaction.Details
                         });
                     }
+                }
+            }
+            else if(parsedEvent.Type.Equals("invoice.payment_failed"))
+            {
+                if(!(parsedEvent.Data.Object is Invoice invoice))
+                {
+                    throw new Exception("Invoice is null.");
+                }
+
+                if(invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                {
+                    await AttemptToPayInvoiceWithBraintreeAsync(invoice);
+                }
+            }
+            else if(parsedEvent.Type.Equals("invoice.created"))
+            {
+                if(!(parsedEvent.Data.Object is Invoice invoice))
+                {
+                    throw new Exception("Invoice is null.");
+                }
+
+                if(UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                {
+                    await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
             }
 
@@ -327,6 +359,71 @@ namespace Bit.Billing.Controllers
                 default:
                     return false;
             }
+        }
+
+        private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice)
+        {
+            var customerService = new CustomerService();
+            var customer = await customerService.GetAsync(invoice.CustomerId);
+            if(!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
+            {
+                return false;
+            }
+
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+            var ids = GetIdsFromMetaData(subscription?.Metadata);
+            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            {
+                return false;
+            }
+
+            var btObjIdField = ids.Item1.HasValue ? "organization_id" : "user_id";
+            var btObjId = ids.Item1 ?? ids.Item2.Value;
+            var btInvoiceAmount = (invoice.AmountDue / 100M);
+
+            var transactionResult = await _btGateway.Transaction.SaleAsync(
+                new Braintree.TransactionRequest
+                {
+                    Amount = btInvoiceAmount,
+                    CustomerId = customer.Metadata["btCustomerId"],
+                    Options = new Braintree.TransactionOptionsRequest
+                    {
+                        SubmitForSettlement = true,
+                        PayPal = new Braintree.TransactionOptionsPayPalRequest
+                        {
+                            CustomField = $"{btObjIdField}:{btObjId}"
+                        }
+                    },
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [btObjIdField] = btObjId.ToString()
+                    }
+                });
+
+            if(!transactionResult.IsSuccess())
+            {
+                return false;
+            }
+
+            var invoiceService = new InvoiceService();
+            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    ["btTransactionId"] = transactionResult.Target.Id,
+                    ["btPayPalTransactionId"] =
+                        transactionResult.Target.PayPalDetails?.AuthorizationId
+                }
+            });
+            await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+            return true;
+        }
+
+        private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
+        {
+            return invoice.AmountDue > 0 && !invoice.Paid && invoice.Billing == Stripe.Billing.ChargeAutomatically &&
+                invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
         }
     }
 }
