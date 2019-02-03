@@ -320,9 +320,9 @@ namespace Bit.Billing.Controllers
         {
             switch(org.PlanType)
             {
-                case Core.Enums.PlanType.FamiliesAnnually:
-                case Core.Enums.PlanType.TeamsAnnually:
-                case Core.Enums.PlanType.EnterpriseAnnually:
+                case PlanType.FamiliesAnnually:
+                case PlanType.TeamsAnnually:
+                case PlanType.EnterpriseAnnually:
                     return true;
                 default:
                     return false;
