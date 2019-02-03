@@ -406,17 +406,26 @@ namespace Bit.Billing.Controllers
                 return false;
             }
 
-            var invoiceService = new InvoiceService();
-            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+            try
             {
-                Metadata = new Dictionary<string, string>
+                var invoiceService = new InvoiceService();
+                await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                 {
-                    ["btTransactionId"] = transactionResult.Target.Id,
-                    ["btPayPalTransactionId"] =
-                        transactionResult.Target.PayPalDetails?.AuthorizationId
-                }
-            });
-            await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["btTransactionId"] = transactionResult.Target.Id,
+                        ["btPayPalTransactionId"] =
+                            transactionResult.Target.PayPalDetails?.AuthorizationId
+                    }
+                });
+                await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+            }
+            catch(Exception e)
+            {
+                await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
+                throw e;
+            }
+
             return true;
         }
 
