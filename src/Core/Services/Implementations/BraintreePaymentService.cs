@@ -6,6 +6,7 @@ using Braintree;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
@@ -222,7 +223,11 @@ namespace Bit.Core.Services
             var customerResult = await _gateway.Customer.CreateAsync(new CustomerRequest
             {
                 PaymentMethodNonce = paymentToken,
-                Email = user.Email
+                Email = user.Email,
+                CustomFields = new Dictionary<string, string>
+                {
+                    [user.BraintreeIdField()] = user.Id.ToString()
+                }
             });
 
             if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
@@ -336,7 +341,11 @@ namespace Bit.Core.Services
                 var result = await _gateway.Customer.CreateAsync(new CustomerRequest
                 {
                     Email = subscriber.BillingEmailAddress(),
-                    PaymentMethodNonce = paymentToken
+                    PaymentMethodNonce = paymentToken,
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                    }
                 });
 
                 if(!result.IsSuccess())

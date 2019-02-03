@@ -54,7 +54,11 @@ namespace Bit.Core.Services
                 {
                     PaymentMethodNonce = paymentToken,
                     Email = org.BillingEmail,
-                    Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix
+                    Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [org.BraintreeIdField()] = org.Id.ToString()
+                    }
                 });
 
                 if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
@@ -174,7 +178,11 @@ namespace Bit.Core.Services
                 {
                     PaymentMethodNonce = paymentToken,
                     Email = user.Email,
-                    Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix
+                    Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [user.BraintreeIdField()] = user.Id.ToString()
+                    }
                 });
 
                 if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
@@ -767,7 +775,11 @@ namespace Bit.Core.Services
                         PaymentMethodNonce = paymentToken,
                         Email = subscriber.BillingEmailAddress(),
                         Id = subscriber.BraintreeCustomerIdPrefix() + subscriber.Id.ToString("N").ToLower() +
-                            Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false)
+                            Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false),
+                        CustomFields = new Dictionary<string, string>
+                        {
+                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                        }
                     });
 
                     if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
