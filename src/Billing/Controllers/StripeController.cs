@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -227,7 +228,12 @@ namespace Bit.Billing.Controllers
                             return new OkResult();
                         }
 
-                        await _transactionRepository.CreateAsync(tx);
+                        try
+                        {
+                            await _transactionRepository.CreateAsync(tx);
+                        }
+                        // Catch foreign key violations because user/org could have been deleted.
+                        catch(SqlException e) when(e.Number == 547) { }
                     }
                 }
             }

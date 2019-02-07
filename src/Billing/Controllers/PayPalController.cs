@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -64,18 +65,23 @@ namespace Bit.Billing.Controllers
                     var ids = sale.GetIdsFromCustom();
                     if(ids.Item1.HasValue || ids.Item2.HasValue)
                     {
-                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        try
                         {
-                            Amount = sale.Amount.TotalAmount,
-                            CreationDate = sale.CreateTime,
-                            OrganizationId = ids.Item1,
-                            UserId = ids.Item2,
-                            Type = TransactionType.Charge,
-                            Gateway = GatewayType.PayPal,
-                            GatewayId = sale.Id,
-                            PaymentMethodType = PaymentMethodType.PayPal,
-                            Details = sale.Id
-                        });
+                            await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                            {
+                                Amount = sale.Amount.TotalAmount,
+                                CreationDate = sale.CreateTime,
+                                OrganizationId = ids.Item1,
+                                UserId = ids.Item2,
+                                Type = TransactionType.Charge,
+                                Gateway = GatewayType.PayPal,
+                                GatewayId = sale.Id,
+                                PaymentMethodType = PaymentMethodType.PayPal,
+                                Details = sale.Id
+                            });
+                        }
+                        // Catch foreign key violations because user/org could have been deleted.
+                        catch(SqlException e) when(e.Number == 547) { }
                     }
                 }
             }
