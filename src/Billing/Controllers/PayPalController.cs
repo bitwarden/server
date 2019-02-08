@@ -31,6 +31,11 @@ namespace Bit.Billing.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PostWebhook([FromQuery] string key)
         {
+            if(key != _billingSettings.PayPal.WebhookKey)
+            {
+                return new BadRequestResult();
+            }
+
             if(HttpContext?.Request == null)
             {
                 return new BadRequestResult();

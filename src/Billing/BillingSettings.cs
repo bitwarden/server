@@ -14,6 +14,7 @@
             public virtual string ClientId { get; set; }
             public virtual string ClientSecret { get; set; }
             public virtual string WebhookId { get; set; }
+            public virtual string WebhookKey { get; set; }
         }
     }
 }
