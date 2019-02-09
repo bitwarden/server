@@ -409,6 +409,7 @@ namespace Bit.Billing.Controllers
 
             if(!transactionResult.IsSuccess())
             {
+                // TODO: Send payment failure email?
                 return false;
             }
 
