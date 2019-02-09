@@ -28,6 +28,7 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licenseService;
+        private readonly IPaymentService _paymentService;
         private readonly GlobalSettings _globalSettings;
 
         public AccountsController(
@@ -38,6 +39,7 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licenseService,
+            IPaymentService paymentService,
             GlobalSettings globalSettings)
         {
             _userService = userService;
@@ -47,6 +49,7 @@ namespace Bit.Api.Controllers
             _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
             _licenseService = licenseService;
+            _paymentService = paymentService;
             _globalSettings = globalSettings;
         }
 
@@ -476,8 +479,7 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && user.Gateway != null)
             {
-                var paymentService = user.GetPaymentService(_globalSettings);
-                var billingInfo = await paymentService.GetBillingAsync(user);
+                var billingInfo = await _paymentService.GetBillingAsync(user);
                 var license = await _userService.GenerateLicenseAsync(user, billingInfo);
                 return new BillingResponseModel(user, billingInfo, license);
             }

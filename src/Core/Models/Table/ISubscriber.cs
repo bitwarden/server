@@ -15,6 +15,5 @@ namespace Bit.Core.Models.Table
         string BraintreeCustomerIdPrefix();
         string BraintreeIdField();
         string GatewayIdField();
-        IPaymentService GetPaymentService(GlobalSettings globalSettings);
     }
 }

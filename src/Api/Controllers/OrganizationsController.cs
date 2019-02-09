@@ -24,6 +24,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
+        private readonly IPaymentService _paymentService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -32,6 +33,7 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IUserService userService,
+            IPaymentService paymentService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -39,6 +41,7 @@ namespace Bit.Api.Controllers
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _userService = userService;
+            _paymentService = paymentService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -78,8 +81,7 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && organization.Gateway != null)
             {
-                var paymentService = new StripePaymentService(_globalSettings);
-                var billingInfo = await paymentService.GetBillingAsync(organization);
+                var billingInfo = await _paymentService.GetBillingAsync(organization);
                 if(billingInfo == null)
                 {
                     throw new NotFoundException();

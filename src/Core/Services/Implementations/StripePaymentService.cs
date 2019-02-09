@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
@@ -15,9 +16,11 @@ namespace Bit.Core.Services
         private const string PremiumPlanId = "premium-annually";
         private const string StoragePlanId = "storage-gb-annually";
 
+        private readonly ITransactionRepository _transactionRepository;
         private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripePaymentService(
+            ITransactionRepository transactionRepository,
             GlobalSettings globalSettings)
         {
             _btGateway = new Braintree.BraintreeGateway
@@ -28,6 +31,7 @@ namespace Bit.Core.Services
                 PublicKey = globalSettings.Braintree.PublicKey,
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
+            _transactionRepository = transactionRepository;
         }
 
         public async Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -912,6 +916,22 @@ namespace Bit.Core.Services
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();
+
+            ICollection<Transaction> transactions = null;
+            if(subscriber is User)
+            {
+                transactions = await _transactionRepository.GetManyByUserIdAsync(subscriber.Id);
+            }
+            else if(subscriber is Organization)
+            {
+                transactions = await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id);
+            }
+            if(transactions != null)
+            {
+                billingInfo.Transactions = transactions?.OrderByDescending(i => i.CreationDate)
+                    .Select(t => new BillingInfo.BillingTransaction(t));
+            }
+
             var customerService = new CustomerService();
             var subscriptionService = new SubscriptionService();
             var chargeService = new ChargeService();

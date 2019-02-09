@@ -99,29 +99,6 @@ namespace Bit.Core.Models.Table
             return maxStorageBytes - Storage.Value;
         }
 
-        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
-        {
-            if(Gateway == null)
-            {
-                throw new BadRequestException("No gateway.");
-            }
-
-            IPaymentService paymentService = null;
-            switch(Gateway)
-            {
-                case GatewayType.Stripe:
-                    paymentService = new StripePaymentService(globalSettings);
-                    break;
-                case GatewayType.Braintree:
-                    paymentService = new BraintreePaymentService(globalSettings);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported gateway.");
-            }
-
-            return paymentService;
-        }
-
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {
             if(string.IsNullOrWhiteSpace(TwoFactorProviders))

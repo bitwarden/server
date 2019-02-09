@@ -17,12 +17,14 @@ namespace Bit.Billing.Jobs
         private readonly GlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
+        private readonly IPaymentService _paymentService;
 
         public PremiumRenewalRemindersJob(
             IOptions<BillingSettings> billingSettings,
             GlobalSettings globalSettings,
             IUserRepository userRepository,
             IMailService mailService,
+            IPaymentService paymentService,
             ILogger<PremiumRenewalRemindersJob> logger)
             : base(logger)
         {
@@ -30,6 +32,7 @@ namespace Bit.Billing.Jobs
             _globalSettings = globalSettings;
             _userRepository = userRepository;
             _mailService = mailService;
+            _paymentService = paymentService;
         }
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
@@ -37,8 +40,7 @@ namespace Bit.Billing.Jobs
             var users = await _userRepository.GetManyByPremiumRenewalAsync();
             foreach(var user in users)
             {
-                var paymentService = user.GetPaymentService(_globalSettings);
-                var upcomingInvoice = await paymentService.GetUpcomingInvoiceAsync(user);
+                var upcomingInvoice = await _paymentService.GetUpcomingInvoiceAsync(user);
                 if(upcomingInvoice?.Date != null)
                 {
                     var items = new List<string> { "1 × Premium Membership (Annually)" };

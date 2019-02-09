@@ -32,7 +32,7 @@ namespace Bit.Core.Services
         private readonly IEventService _eventService;
         private readonly IInstallationRepository _installationRepository;
         private readonly IApplicationCacheService _applicationCacheService;
-        private readonly StripePaymentService _stripePaymentService;
+        private readonly IPaymentService _paymentService;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationService(
@@ -50,6 +50,7 @@ namespace Bit.Core.Services
             IEventService eventService,
             IInstallationRepository installationRepository,
             IApplicationCacheService applicationCacheService,
+            IPaymentService paymentService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -66,7 +67,7 @@ namespace Bit.Core.Services
             _eventService = eventService;
             _installationRepository = installationRepository;
             _applicationCacheService = applicationCacheService;
-            _stripePaymentService = new StripePaymentService(globalSettings);
+            _paymentService = paymentService;
             _globalSettings = globalSettings;
         }
 
@@ -92,7 +93,7 @@ namespace Bit.Core.Services
                 paymentMethodType = PaymentMethodType.PayPal;
             }
 
-            var updated = await _stripePaymentService.UpdatePaymentMethodAsync(organization,
+            var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
                 paymentMethodType, paymentToken);
             if(updated)
             {
@@ -115,7 +116,7 @@ namespace Bit.Core.Services
                 eop = false;
             }
 
-            await _stripePaymentService.CancelSubscriptionAsync(organization, eop);
+            await _paymentService.CancelSubscriptionAsync(organization, eop);
         }
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -126,7 +127,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await _stripePaymentService.ReinstateSubscriptionAsync(organization);
+            await _paymentService.ReinstateSubscriptionAsync(organization);
         }
 
         public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
@@ -286,7 +287,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(_stripePaymentService, organization, storageAdjustmentGb,
+            await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
                 plan.StripeStoragePlanId);
             await ReplaceAndUpdateCache(organization);
         }
@@ -411,7 +412,7 @@ namespace Bit.Core.Services
             var invoicedNow = false;
             if(additionalSeats > 0)
             {
-                invoicedNow = await _stripePaymentService.PreviewUpcomingInvoiceAndPayAsync(
+                invoicedNow = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
                     organization, plan.StripeSeatPlanId, subItemOptions, 500);
             }
 
@@ -561,7 +562,7 @@ namespace Bit.Core.Services
                     paymentMethodType = PaymentMethodType.PayPal;
                 }
 
-                await _stripePaymentService.PurchaseOrganizationAsync(organization, paymentMethodType,
+                await _paymentService.PurchaseOrganizationAsync(organization, paymentMethodType,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                     signup.PremiumAccessAddon);
             }
@@ -676,7 +677,7 @@ namespace Bit.Core.Services
             {
                 if(withPayment)
                 {
-                    await _stripePaymentService.CancelAndRecoverChargesAsync(organization);
+                    await _paymentService.CancelAndRecoverChargesAsync(organization);
                 }
 
                 if(organization.Id != default(Guid))
@@ -785,7 +786,7 @@ namespace Bit.Core.Services
                 {
                     var eop = !organization.ExpirationDate.HasValue ||
                         organization.ExpirationDate.Value >= DateTime.UtcNow;
-                    await _stripePaymentService.CancelSubscriptionAsync(organization, eop);
+                    await _paymentService.CancelSubscriptionAsync(organization, eop);
                 }
                 catch(GatewayException) { }
             }
@@ -1205,9 +1206,8 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Invalid installation id");
             }
-
-            var paymentService = new StripePaymentService(_globalSettings);
-            var billingInfo = await paymentService.GetBillingAsync(organization);
+            
+            var billingInfo = await _paymentService.GetBillingAsync(organization);
             return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
         }
 
