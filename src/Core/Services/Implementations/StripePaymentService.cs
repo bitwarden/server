@@ -958,6 +958,14 @@ namespace Bit.Core.Services
                     });
                     billingInfo.Charges = charges?.Data?.OrderByDescending(c => c.Created)
                         .Select(c => new BillingInfo.BillingCharge(c));
+
+                    var invoices = await invoiceService.ListAsync(new InvoiceListOptions
+                    {
+                        CustomerId = customer.Id,
+                        Limit = 20
+                    });
+                    billingInfo.Invoices = invoices?.Data?.OrderByDescending(i => i.Date)
+                        .Select(i => new BillingInfo.BillingInvoice2(i));
                 }
             }
 

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Stripe;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,8 @@ namespace Bit.Core.Models.Business
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; } = new List<BillingCharge>();
+        public IEnumerable<BillingInvoice2> Invoices { get; set; } = new List<BillingInvoice2>();
+        public IEnumerable<BillingTransaction> Transactions { get; set; } = new List<BillingTransaction>();
 
         public class BillingSource
         {
@@ -193,6 +196,8 @@ namespace Bit.Core.Models.Business
 
         public class BillingInvoice
         {
+            public BillingInvoice() { }
+
             public BillingInvoice(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
@@ -262,6 +267,64 @@ namespace Bit.Core.Models.Business
             public bool PartiallyRefunded => !Refunded && RefundedAmount > 0;
             public decimal RefundedAmount { get; set; }
             public string InvoiceId { get; set; }
+        }
+
+        public class BillingTransaction
+        {
+            public BillingTransaction(Transaction transaction)
+            {
+                CreatedDate = transaction.CreationDate;
+                Refunded = transaction.Refunded;
+                Type = transaction.Type;
+                PaymentMethodType = transaction.PaymentMethodType;
+                Details = transaction.Details;
+
+                if(transaction.RefundedAmount.HasValue)
+                {
+                    RefundedAmount = Math.Abs(transaction.RefundedAmount.Value);
+                }
+                switch(transaction.Type)
+                {
+                    case TransactionType.Charge:
+                    case TransactionType.Credit:
+                    case TransactionType.PromotionalCredit:
+                    case TransactionType.ReferralCredit:
+                        Amount = -1 * Math.Abs(transaction.Amount);
+                        break;
+                    case TransactionType.Refund:
+                        Amount = Math.Abs(transaction.Amount);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            public DateTime CreatedDate { get; set; }
+            public decimal Amount { get; set; }
+            public bool? Refunded { get; set; }
+            public bool? PartiallyRefunded => !Refunded.GetValueOrDefault() && RefundedAmount.GetValueOrDefault() > 0;
+            public decimal? RefundedAmount { get; set; }
+            public TransactionType Type { get; set; }
+            public PaymentMethodType? PaymentMethodType { get; set; }
+            public string Details { get; set; }
+        }
+
+        public class BillingInvoice2 : BillingInvoice
+        {
+            public BillingInvoice2(Invoice inv)
+            {
+                Url = inv.HostedInvoiceUrl;
+                PdfUrl = inv.InvoicePdf;
+                Number = inv.Number;
+                Paid = inv.Paid;
+                Amount = inv.Total / 100M;
+                Date = inv.Date.Value;
+            }
+
+            public string Url { get; set; }
+            public string PdfUrl { get; set; }
+            public string Number { get; set; }
+            public bool Paid { get; set; }
         }
     }
 }

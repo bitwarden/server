@@ -15,6 +15,6 @@ namespace Bit.Core.Enums
         [Display(Name = "Coinbase")]
         Coinbase = 4,
         [Display(Name = "PayPal")]
-        PayPal = 1,
+        PayPal = 5,
     }
 }
