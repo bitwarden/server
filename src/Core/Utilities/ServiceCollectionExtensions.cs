@@ -52,6 +52,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
                 services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
+                services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
             }
 
             if(globalSettings.SelfHosted)
@@ -77,6 +78,7 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
+            services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
             services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();

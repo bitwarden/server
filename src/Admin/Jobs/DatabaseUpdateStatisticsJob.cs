@@ -22,6 +22,7 @@ namespace Bit.Admin.Jobs
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
             await _maintenanceRepository.UpdateStatisticsAsync();
+            await _maintenanceRepository.DisableCipherAutoStatsAsync();
         }
     }
 }

@@ -27,6 +27,17 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DisableCipherAutoStatsAsync()
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "sp_autostats",
+                    new { tblname = "[dbo].[Cipher]", flagc = "OFF" },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         public async Task RebuildIndexesAsync()
         {
             using(var connection = new SqlConnection(ConnectionString))

@@ -63,6 +63,21 @@ namespace Bit.Core.Models.Table
             return BusinessName;
         }
 
+        public string BraintreeCustomerIdPrefix()
+        {
+            return "o";
+        }
+
+        public string BraintreeIdField()
+        {
+            return "organization_id";
+        }
+
+        public string GatewayIdField()
+        {
+            return "organizationId";
+        }
+
         public long StorageBytesRemaining()
         {
             if(!MaxStorageGb.HasValue)
@@ -82,29 +97,6 @@ namespace Bit.Core.Models.Table
             }
 
             return maxStorageBytes - Storage.Value;
-        }
-
-        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
-        {
-            if(Gateway == null)
-            {
-                throw new BadRequestException("No gateway.");
-            }
-
-            IPaymentService paymentService = null;
-            switch(Gateway)
-            {
-                case GatewayType.Stripe:
-                    paymentService = new StripePaymentService();
-                    break;
-                case GatewayType.Braintree:
-                    paymentService = new BraintreePaymentService(globalSettings);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported gateway.");
-            }
-
-            return paymentService;
         }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()

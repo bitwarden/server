@@ -16,7 +16,7 @@
         United = 11,
         Yahoo = 12,
         Zonelabs = 13,
-        Paypal = 14,
+        PayPal = 14,
         Avon = 15,
         Diapers = 16,
         Contacts = 17,

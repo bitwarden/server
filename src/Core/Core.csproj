@@ -38,7 +38,7 @@
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.6.0" />
     <PackageReference Include="Sendgrid" Version="9.10.0" />
-    <PackageReference Include="Stripe.net" Version="19.10.0" />
+    <PackageReference Include="Stripe.net" Version="22.8.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />

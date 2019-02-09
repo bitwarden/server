@@ -39,6 +39,9 @@ namespace Bit.Billing
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
 
+            // PayPal Client
+            services.AddSingleton<Utilities.PayPalClient>();
+
             // Context
             services.AddScoped<CurrentContext>();
 

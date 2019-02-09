@@ -12,10 +12,12 @@ namespace Bit.Core.Models.Api
         public BillingResponseModel(User user, BillingInfo billing, UserLicense license)
             : base("billing")
         {
+            CreditAmount = billing.CreditAmount;
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
-            Charges = billing.Charges.Select(c => new BillingCharge(c));
-            UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
+            Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
+            Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
+            UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoiceInfo(billing.UpcomingInvoice) : null;
             StorageName = user.Storage.HasValue ? Utilities.CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
             StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
             MaxStorageGb = user.MaxStorageGb;
@@ -37,13 +39,15 @@ namespace Bit.Core.Models.Api
             }
         }
 
+        public decimal CreditAmount { get; set; }
         public string StorageName { get; set; }
         public double? StorageGb { get; set; }
         public short? MaxStorageGb { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
-        public BillingInvoice UpcomingInvoice { get; set; }
-        public IEnumerable<BillingCharge> Charges { get; set; }
+        public BillingInvoiceInfo UpcomingInvoice { get; set; }
+        public IEnumerable<BillingInvoice> Invoices { get; set; }
+        public IEnumerable<BillingTransaction> Transactions { get; set; }
         public UserLicense License { get; set; }
         public DateTime? Expiration { get; set; }
     }
@@ -109,9 +113,9 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class BillingInvoice
+    public class BillingInvoiceInfo
     {
-        public BillingInvoice(BillingInfo.BillingInvoice inv)
+        public BillingInvoiceInfo(BillingInfo.BillingInvoice inv)
         {
             Amount = inv.Amount;
             Date = inv.Date;
@@ -121,28 +125,44 @@ namespace Bit.Core.Models.Api
         public DateTime? Date { get; set; }
     }
 
-    public class BillingCharge
+    public class BillingInvoice : BillingInvoiceInfo
     {
-        public BillingCharge(BillingInfo.BillingCharge charge)
+        public BillingInvoice(BillingInfo.BillingInvoice2 inv)
+            : base(inv)
         {
-            Amount = charge.Amount;
-            RefundedAmount = charge.RefundedAmount;
-            PaymentSource = charge.PaymentSource != null ? new BillingSource(charge.PaymentSource) : null;
-            CreatedDate = charge.CreatedDate;
-            FailureMessage = charge.FailureMessage;
-            Refunded = charge.Refunded;
-            Status = charge.Status;
-            InvoiceId = charge.InvoiceId;
+            Url = inv.Url;
+            PdfUrl = inv.PdfUrl;
+            Number = inv.Number;
+            Paid = inv.Paid;
+        }
+
+        public string Url { get; set; }
+        public string PdfUrl { get; set; }
+        public string Number { get; set; }
+        public bool Paid { get; set; }
+    }
+
+    public class BillingTransaction
+    {
+        public BillingTransaction(BillingInfo.BillingTransaction transaction)
+        {
+            CreatedDate = transaction.CreatedDate;
+            Amount = transaction.Amount;
+            Refunded = transaction.Refunded;
+            RefundedAmount = transaction.RefundedAmount;
+            PartiallyRefunded = transaction.PartiallyRefunded;
+            Type = transaction.Type;
+            PaymentMethodType = transaction.PaymentMethodType;
+            Details = transaction.Details;
         }
 
         public DateTime CreatedDate { get; set; }
         public decimal Amount { get; set; }
-        public BillingSource PaymentSource { get; set; }
-        public string Status { get; set; }
-        public string FailureMessage { get; set; }
-        public bool Refunded { get; set; }
-        public bool PartiallyRefunded => !Refunded && RefundedAmount > 0;
-        public decimal RefundedAmount { get; set; }
-        public string InvoiceId { get; set; }
+        public bool? Refunded { get; set; }
+        public bool? PartiallyRefunded { get; set; }
+        public decimal? RefundedAmount { get; set; }
+        public TransactionType Type { get; set; }
+        public PaymentMethodType? PaymentMethodType { get; set; }
+        public string Details { get; set; }
     }
 }

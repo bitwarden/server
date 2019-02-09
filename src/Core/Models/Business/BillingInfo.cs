@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Enums;
-using Braintree;
+using Bit.Core.Models.Table;
 using Stripe;
 using System;
 using System.Collections.Generic;
@@ -9,47 +9,47 @@ namespace Bit.Core.Models.Business
 {
     public class BillingInfo
     {
+        public decimal CreditAmount { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
         public BillingInvoice UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; } = new List<BillingCharge>();
+        public IEnumerable<BillingInvoice2> Invoices { get; set; } = new List<BillingInvoice2>();
+        public IEnumerable<BillingTransaction> Transactions { get; set; } = new List<BillingTransaction>();
 
         public class BillingSource
         {
-            public BillingSource(Source source)
+            public BillingSource(IPaymentSource source)
             {
-                switch(source.Type)
+                if(source is BankAccount bankAccount)
                 {
-                    case SourceType.Card:
-                        Type = PaymentMethodType.Card;
-                        Description = $"{source.Card.Brand}, *{source.Card.Last4}, " +
-                            string.Format("{0}/{1}",
-                                string.Concat(source.Card.ExpirationMonth < 10 ?
-                                    "0" : string.Empty, source.Card.ExpirationMonth),
-                                source.Card.ExpirationYear);
-                        CardBrand = source.Card.Brand;
-                        break;
-                    case SourceType.BankAccount:
-                        Type = PaymentMethodType.BankAccount;
-                        Description = $"{source.BankAccount.BankName}, *{source.BankAccount.Last4} - " +
-                            (source.BankAccount.Status == "verified" ? "verified" :
-                            source.BankAccount.Status == "errored" ? "invalid" :
-                            source.BankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
-                        NeedsVerification = source.BankAccount.Status == "new" || source.BankAccount.Status == "validated";
-                        break;
-                    default:
-                        break;
+                    Type = PaymentMethodType.BankAccount;
+                    Description = $"{bankAccount.BankName}, *{bankAccount.Last4} - " +
+                        (bankAccount.Status == "verified" ? "verified" :
+                        bankAccount.Status == "errored" ? "invalid" :
+                        bankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
+                    NeedsVerification = bankAccount.Status == "new" || bankAccount.Status == "validated";
+                }
+                else if(source is Card card)
+                {
+                    Type = PaymentMethodType.Card;
+                    Description = $"{card.Brand}, *{card.Last4}, " +
+                        string.Format("{0}/{1}",
+                            string.Concat(card.ExpMonth < 10 ?
+                                "0" : string.Empty, card.ExpMonth),
+                            card.ExpYear);
+                    CardBrand = card.Brand;
                 }
             }
 
-            public BillingSource(PaymentMethod method)
+            public BillingSource(Braintree.PaymentMethod method)
             {
-                if(method is PayPalAccount paypal)
+                if(method is Braintree.PayPalAccount paypal)
                 {
                     Type = PaymentMethodType.PayPal;
                     Description = paypal.Email;
                 }
-                else if(method is CreditCard card)
+                else if(method is Braintree.CreditCard card)
                 {
                     Type = PaymentMethodType.Card;
                     Description = $"{card.CardType.ToString()}, *{card.LastFour}, " +
@@ -59,7 +59,7 @@ namespace Bit.Core.Models.Business
                             card.ExpirationYear);
                     CardBrand = card.CardType.ToString();
                 }
-                else if(method is UsBankAccount bank)
+                else if(method is Braintree.UsBankAccount bank)
                 {
                     Type = PaymentMethodType.BankAccount;
                     Description = $"{bank.BankName}, *{bank.Last4}";
@@ -70,13 +70,13 @@ namespace Bit.Core.Models.Business
                 }
             }
 
-            public BillingSource(UsBankAccountDetails bank)
+            public BillingSource(Braintree.UsBankAccountDetails bank)
             {
                 Type = PaymentMethodType.BankAccount;
                 Description = $"{bank.BankName}, *{bank.Last4}";
             }
 
-            public BillingSource(PayPalDetails paypal)
+            public BillingSource(Braintree.PayPalDetails paypal)
             {
                 Type = PaymentMethodType.PayPal;
                 Description = paypal.PayerEmail;
@@ -90,7 +90,7 @@ namespace Bit.Core.Models.Business
 
         public class BillingSubscription
         {
-            public BillingSubscription(StripeSubscription sub)
+            public BillingSubscription(Subscription sub)
             {
                 Status = sub.Status;
                 TrialStartDate = sub.TrialStart;
@@ -106,14 +106,14 @@ namespace Bit.Core.Models.Business
                 }
             }
 
-            public BillingSubscription(Subscription sub, Plan plan)
+            public BillingSubscription(Braintree.Subscription sub, Braintree.Plan plan)
             {
                 Status = sub.Status.ToString();
 
                 if(sub.HasTrialPeriod.GetValueOrDefault() && sub.CreatedAt.HasValue && sub.TrialDuration.HasValue)
                 {
                     TrialStartDate = sub.CreatedAt.Value;
-                    if(sub.TrialDurationUnit == SubscriptionDurationUnit.DAY)
+                    if(sub.TrialDurationUnit == Braintree.SubscriptionDurationUnit.DAY)
                     {
                         TrialEndDate = TrialStartDate.Value.AddDays(sub.TrialDuration.Value);
                     }
@@ -127,7 +127,7 @@ namespace Bit.Core.Models.Business
                 PeriodEndDate = sub.BillingPeriodEndDate;
 
                 CancelAtEndDate = !sub.NeverExpires.GetValueOrDefault();
-                Cancelled = sub.Status == SubscriptionStatus.CANCELED;
+                Cancelled = sub.Status == Braintree.SubscriptionStatus.CANCELED;
                 if(Cancelled)
                 {
                     CancelledDate = sub.UpdatedAt.Value;
@@ -159,7 +159,7 @@ namespace Bit.Core.Models.Business
 
             public class BillingSubscriptionItem
             {
-                public BillingSubscriptionItem(StripeSubscriptionItem item)
+                public BillingSubscriptionItem(SubscriptionItem item)
                 {
                     if(item.Plan != null)
                     {
@@ -168,10 +168,10 @@ namespace Bit.Core.Models.Business
                         Interval = item.Plan.Interval;
                     }
 
-                    Quantity = item.Quantity;
+                    Quantity = (int)item.Quantity;
                 }
 
-                public BillingSubscriptionItem(Plan plan)
+                public BillingSubscriptionItem(Braintree.Plan plan)
                 {
                     Name = plan.Name;
                     Amount = plan.Price.GetValueOrDefault();
@@ -179,7 +179,7 @@ namespace Bit.Core.Models.Business
                     Quantity = 1;
                 }
 
-                public BillingSubscriptionItem(Plan plan, AddOn addon)
+                public BillingSubscriptionItem(Braintree.Plan plan, Braintree.AddOn addon)
                 {
                     Name = addon.Name;
                     Amount = addon.Amount.GetValueOrDefault();
@@ -196,13 +196,15 @@ namespace Bit.Core.Models.Business
 
         public class BillingInvoice
         {
-            public BillingInvoice(StripeInvoice inv)
+            public BillingInvoice() { }
+
+            public BillingInvoice(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
                 Date = inv.Date.Value;
             }
 
-            public BillingInvoice(Subscription sub)
+            public BillingInvoice(Braintree.Subscription sub)
             {
                 Amount = sub.NextBillAmount.GetValueOrDefault() + sub.Balance.GetValueOrDefault();
                 if(Amount < 0)
@@ -218,7 +220,7 @@ namespace Bit.Core.Models.Business
 
         public class BillingCharge
         {
-            public BillingCharge(StripeCharge charge)
+            public BillingCharge(Charge charge)
             {
                 Amount = charge.Amount / 100M;
                 RefundedAmount = charge.AmountRefunded / 100M;
@@ -230,7 +232,7 @@ namespace Bit.Core.Models.Business
                 InvoiceId = charge.InvoiceId;
             }
 
-            public BillingCharge(Transaction transaction)
+            public BillingCharge(Braintree.Transaction transaction)
             {
                 Amount = transaction.Amount.GetValueOrDefault();
                 RefundedAmount = 0; // TODO?
@@ -239,7 +241,8 @@ namespace Bit.Core.Models.Business
                 {
                     PaymentSource = new BillingSource(transaction.PayPalDetails);
                 }
-                else if(transaction.CreditCard != null && transaction.CreditCard.CardType != CreditCardCardType.UNRECOGNIZED)
+                else if(transaction.CreditCard != null &&
+                    transaction.CreditCard.CardType != Braintree.CreditCardCardType.UNRECOGNIZED)
                 {
                     PaymentSource = new BillingSource(transaction.CreditCard);
                 }
@@ -264,6 +267,64 @@ namespace Bit.Core.Models.Business
             public bool PartiallyRefunded => !Refunded && RefundedAmount > 0;
             public decimal RefundedAmount { get; set; }
             public string InvoiceId { get; set; }
+        }
+
+        public class BillingTransaction
+        {
+            public BillingTransaction(Transaction transaction)
+            {
+                CreatedDate = transaction.CreationDate;
+                Refunded = transaction.Refunded;
+                Type = transaction.Type;
+                PaymentMethodType = transaction.PaymentMethodType;
+                Details = transaction.Details;
+
+                if(transaction.RefundedAmount.HasValue)
+                {
+                    RefundedAmount = Math.Abs(transaction.RefundedAmount.Value);
+                }
+                switch(transaction.Type)
+                {
+                    case TransactionType.Charge:
+                    case TransactionType.Credit:
+                    case TransactionType.PromotionalCredit:
+                    case TransactionType.ReferralCredit:
+                        Amount = -1 * Math.Abs(transaction.Amount);
+                        break;
+                    case TransactionType.Refund:
+                        Amount = Math.Abs(transaction.Amount);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            public DateTime CreatedDate { get; set; }
+            public decimal Amount { get; set; }
+            public bool? Refunded { get; set; }
+            public bool? PartiallyRefunded => !Refunded.GetValueOrDefault() && RefundedAmount.GetValueOrDefault() > 0;
+            public decimal? RefundedAmount { get; set; }
+            public TransactionType Type { get; set; }
+            public PaymentMethodType? PaymentMethodType { get; set; }
+            public string Details { get; set; }
+        }
+
+        public class BillingInvoice2 : BillingInvoice
+        {
+            public BillingInvoice2(Invoice inv)
+            {
+                Url = inv.HostedInvoiceUrl;
+                PdfUrl = inv.InvoicePdf;
+                Number = inv.Number;
+                Paid = inv.Paid;
+                Amount = inv.Total / 100M;
+                Date = inv.Date.Value;
+            }
+
+            public string Url { get; set; }
+            public string PdfUrl { get; set; }
+            public string Number { get; set; }
+            public bool Paid { get; set; }
         }
     }
 }

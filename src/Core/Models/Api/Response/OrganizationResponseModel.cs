@@ -67,8 +67,9 @@ namespace Bit.Core.Models.Api
         {
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Subscription = billing.Subscription != null ? new BillingSubscription(billing.Subscription) : null;
-            Charges = billing.Charges.Select(c => new BillingCharge(c));
-            UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoice(billing.UpcomingInvoice) : null;
+            Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
+            Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
+            UpcomingInvoice = billing.UpcomingInvoice != null ? new BillingInvoiceInfo(billing.UpcomingInvoice) : null;
             StorageName = organization.Storage.HasValue ?
                 Utilities.CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
             StorageGb = organization.Storage.HasValue ? Math.Round(organization.Storage.Value / 1073741824D) : 0; // 1 GB
@@ -88,8 +89,9 @@ namespace Bit.Core.Models.Api
         public double? StorageGb { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
-        public BillingInvoice UpcomingInvoice { get; set; }
-        public IEnumerable<BillingCharge> Charges { get; set; }
+        public BillingInvoiceInfo UpcomingInvoice { get; set; }
+        public IEnumerable<BillingInvoice> Invoices { get; set; }
+        public IEnumerable<BillingTransaction> Transactions { get; set; }
         public DateTime? Expiration { get; set; }
     }
 }

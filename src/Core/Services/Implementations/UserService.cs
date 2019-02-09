@@ -42,6 +42,7 @@ namespace Bit.Core.Services
         private readonly ILicensingService _licenseService;
         private readonly IEventService _eventService;
         private readonly IApplicationCacheService _applicationCacheService;
+        private readonly IPaymentService _paymentService;
         private readonly IDataProtector _organizationServiceDataProtector;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
@@ -67,6 +68,7 @@ namespace Bit.Core.Services
             IEventService eventService,
             IApplicationCacheService applicationCacheService,
             IDataProtectionProvider dataProtectionProvider,
+            IPaymentService paymentService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -94,6 +96,7 @@ namespace Bit.Core.Services
             _licenseService = licenseService;
             _eventService = eventService;
             _applicationCacheService = applicationCacheService;
+            _paymentService = paymentService;
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
             _currentContext = currentContext;
@@ -682,6 +685,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already a premium user.");
             }
 
+            if(additionalStorageGb < 0)
+            {
+                throw new BadRequestException("You can't subtract storage!");
+            }
+
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {
@@ -706,16 +714,14 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Invalid token.");
                 }
 
-                if(paymentToken.StartsWith("tok_"))
+                var paymentMethodType = PaymentMethodType.Card;
+                if(!paymentToken.StartsWith("tok_"))
                 {
-                    paymentService = new StripePaymentService();
-                }
-                else
-                {
-                    paymentService = new BraintreePaymentService(_globalSettings);
+                    paymentMethodType = PaymentMethodType.PayPal;
                 }
 
-                await paymentService.PurchasePremiumAsync(user, paymentToken, additionalStorageGb);
+                await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
+                    paymentToken, additionalStorageGb);
             }
             else
             {
@@ -789,9 +795,8 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Not a premium user.");
             }
-
-            var paymentService = user.GetPaymentService(_globalSettings);
-            await BillingHelpers.AdjustStorageAsync(paymentService, user, storageAdjustmentGb, StoragePlanId);
+            
+            await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, StoragePlanId);
             await SaveUserAsync(user);
         }
 
@@ -802,17 +807,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
-            IPaymentService paymentService = null;
+            PaymentMethodType paymentMethodType;
             if(paymentToken.StartsWith("tok_"))
             {
-                paymentService = new StripePaymentService();
+                paymentMethodType = PaymentMethodType.Card;
             }
             else
             {
-                paymentService = new BraintreePaymentService(_globalSettings);
+                paymentMethodType = PaymentMethodType.PayPal;
             }
 
-            var updated = await paymentService.UpdatePaymentMethodAsync(user, paymentToken);
+            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
             if(updated)
             {
                 await SaveUserAsync(user);
@@ -821,20 +826,18 @@ namespace Bit.Core.Services
 
         public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
         {
-            var paymentService = user.GetPaymentService(_globalSettings);
             var eop = endOfPeriod.GetValueOrDefault(true);
             if(!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
                 user.PremiumExpirationDate.Value < DateTime.UtcNow)
             {
                 eop = false;
             }
-            await paymentService.CancelSubscriptionAsync(user, eop);
+            await _paymentService.CancelSubscriptionAsync(user, eop);
         }
 
         public async Task ReinstatePremiumAsync(User user)
         {
-            var paymentService = user.GetPaymentService(_globalSettings);
-            await paymentService.ReinstateSubscriptionAsync(user);
+            await _paymentService.ReinstateSubscriptionAsync(user);
         }
 
         public async Task DisablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -874,8 +877,7 @@ namespace Bit.Core.Services
 
             if(billingInfo == null && user.Gateway != null)
             {
-                var paymentService = user.GetPaymentService(_globalSettings);
-                billingInfo = await paymentService.GetBillingAsync(user);
+                billingInfo = await _paymentService.GetBillingAsync(user);
             }
 
             return billingInfo == null ? new UserLicense(user, _licenseService) :
