@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using Bit.Core.Repositories;
@@ -12,12 +10,12 @@ namespace Bit.Core.Test.Services
 {
     public class CollectionServiceTest
     {
-        readonly IEventService _eventService;
-        readonly IOrganizationRepository _organizationRepository;
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly ICollectionRepository _collectionRepository;
-        readonly IUserRepository _userRepository;
-        readonly IMailService _mailService;
+        private readonly IEventService _eventService;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IMailService _mailService;
 
         public CollectionServiceTest()
         {
@@ -32,7 +30,8 @@ namespace Bit.Core.Test.Services
         [Fact]
         public async Task SaveAsync_CollectionNotFound()
         {
-            var collectionService = new CollectionService(_eventService,
+            var collectionService = new CollectionService(
+                _eventService,
                 _organizationRepository,
                 _organizationUserRepository,
                 _collectionRepository,
@@ -54,17 +53,18 @@ namespace Bit.Core.Test.Services
         }
 
         [Fact]
-        public async Task SaveAsync_DefaultCollectionId_createsCollectionInTheRepository()
+        public async Task SaveAsync_DefaultCollectionId_CreatesCollectionInTheRepository()
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization()
+            var testOrganization = new Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
-            _organizationRepository.GetByIdAsync(testOrganizationId).Returns<Models.Table.Organization>(testOrganization);
+            _organizationRepository.GetByIdAsync(testOrganizationId).Returns(testOrganization);
 
-            var collectionService = new CollectionService(_eventService,
+            var collectionService = new CollectionService(
+                _eventService,
                 _organizationRepository,
                 _organizationUserRepository,
                 _collectionRepository,
@@ -83,11 +83,11 @@ namespace Bit.Core.Test.Services
         }
 
         [Fact]
-        public async Task SaveAsync_respectsMaxNumberOfCollectionsPerOrganization()
+        public async Task SaveAsync_RespectsMaxNumberOfCollectionsPerOrganization()
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization()
+            var testOrganization = new Models.Table.Organization
             {
                 Id = testOrganizationId,
                 MaxCollections = 2,
@@ -96,7 +96,8 @@ namespace Bit.Core.Test.Services
             _collectionRepository.GetCountByOrganizationIdAsync(testOrganizationId).Returns(2);
 
             // execute
-            var collectionService = new CollectionService(_eventService,
+            var collectionService = new CollectionService(
+                _eventService,
                 _organizationRepository,
                 _organizationUserRepository,
                 _collectionRepository,
@@ -115,11 +116,11 @@ namespace Bit.Core.Test.Services
         }
 
         [Fact]
-        public async Task DeleteUserAsync_deletesValidUserWhoBelongsToCollection()
+        public async Task DeleteUserAsync_DeletesValidUserWhoBelongsToCollection()
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization()
+            var testOrganization = new Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
@@ -132,7 +133,8 @@ namespace Bit.Core.Test.Services
             _organizationUserRepository.GetByIdAsync(testUserId).Returns(organizationUser);
 
             // execute
-            var collectionService = new CollectionService(_eventService,
+            var collectionService = new CollectionService(
+                _eventService,
                 _organizationRepository,
                 _organizationUserRepository,
                 _collectionRepository,
@@ -147,11 +149,11 @@ namespace Bit.Core.Test.Services
         }
 
         [Fact]
-        public async Task DeleteUserAsync_throwsIfUserIsInvalid()
+        public async Task DeleteUserAsync_ThrowsIfUserIsInvalid()
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization()
+            var testOrganization = new Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
@@ -164,7 +166,8 @@ namespace Bit.Core.Test.Services
             _organizationUserRepository.GetByIdAsync(testUserId).Returns(nonOrganizationUser);
 
             // execute
-            var collectionService = new CollectionService(_eventService,
+            var collectionService = new CollectionService(
+                _eventService,
                 _organizationRepository,
                 _organizationUserRepository,
                 _collectionRepository,
@@ -175,9 +178,11 @@ namespace Bit.Core.Test.Services
 
             // verify
             // invalid user
-            await Assert.ThrowsAsync<NotFoundException>(() => collectionService.DeleteUserAsync(testCollection, Guid.NewGuid()));
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                collectionService.DeleteUserAsync(testCollection, Guid.NewGuid()));
             // user from other organization
-            await Assert.ThrowsAsync<NotFoundException>(() => collectionService.DeleteUserAsync(testCollection, testUserId));
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                collectionService.DeleteUserAsync(testCollection, testUserId));
         }
     }
 }
