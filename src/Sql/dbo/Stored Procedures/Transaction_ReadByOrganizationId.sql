@@ -9,6 +9,6 @@ BEGIN
     FROM
         [dbo].[TransactionView]
     WHERE
-        [UserId] = NULL
+        [UserId] IS NULL
         AND [OrganizationId] = @OrganizationId
 END
