@@ -115,7 +115,7 @@ namespace Bit.Core.Models.Api
 
     public class BillingInvoiceInfo
     {
-        public BillingInvoiceInfo(BillingInfo.BillingInvoice inv)
+        public BillingInvoiceInfo(BillingInfo.BillingInvoiceInfo inv)
         {
             Amount = inv.Amount;
             Date = inv.Date;
@@ -127,7 +127,7 @@ namespace Bit.Core.Models.Api
 
     public class BillingInvoice : BillingInvoiceInfo
     {
-        public BillingInvoice(BillingInfo.BillingInvoice2 inv)
+        public BillingInvoice(BillingInfo.BillingInvoice inv)
             : base(inv)
         {
             Url = inv.Url;

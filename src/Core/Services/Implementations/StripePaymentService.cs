@@ -884,7 +884,7 @@ namespace Bit.Core.Services
             return createdCustomer;
         }
 
-        public async Task<BillingInfo.BillingInvoice> GetUpcomingInvoiceAsync(ISubscriber subscriber)
+        public async Task<BillingInfo.BillingInvoiceInfo> GetUpcomingInvoiceAsync(ISubscriber subscriber)
         {
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
@@ -903,7 +903,7 @@ namespace Bit.Core.Services
                             });
                             if(upcomingInvoice != null)
                             {
-                                return new BillingInfo.BillingInvoice(upcomingInvoice);
+                                return new BillingInfo.BillingInvoiceInfo(upcomingInvoice);
                             }
                         }
                         catch(StripeException) { }
@@ -985,7 +985,7 @@ namespace Bit.Core.Services
                         Limit = 20
                     });
                     billingInfo.Invoices = invoices?.Data?.OrderByDescending(i => i.Date)
-                        .Select(i => new BillingInfo.BillingInvoice2(i));
+                        .Select(i => new BillingInfo.BillingInvoice(i));
                 }
             }
 
@@ -1005,7 +1005,7 @@ namespace Bit.Core.Services
                             new UpcomingInvoiceOptions { CustomerId = subscriber.GatewayCustomerId });
                         if(upcomingInvoice != null)
                         {
-                            billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoice(upcomingInvoice);
+                            billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoiceInfo(upcomingInvoice);
                         }
                     }
                     catch(StripeException) { }

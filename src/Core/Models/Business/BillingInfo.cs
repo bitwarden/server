@@ -12,9 +12,9 @@ namespace Bit.Core.Models.Business
         public decimal CreditAmount { get; set; }
         public BillingSource PaymentSource { get; set; }
         public BillingSubscription Subscription { get; set; }
-        public BillingInvoice UpcomingInvoice { get; set; }
+        public BillingInvoiceInfo UpcomingInvoice { get; set; }
         public IEnumerable<BillingCharge> Charges { get; set; } = new List<BillingCharge>();
-        public IEnumerable<BillingInvoice2> Invoices { get; set; } = new List<BillingInvoice2>();
+        public IEnumerable<BillingInvoice> Invoices { get; set; } = new List<BillingInvoice>();
         public IEnumerable<BillingTransaction> Transactions { get; set; } = new List<BillingTransaction>();
 
         public class BillingSource
@@ -194,17 +194,17 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        public class BillingInvoice
+        public class BillingInvoiceInfo
         {
-            public BillingInvoice() { }
+            public BillingInvoiceInfo() { }
 
-            public BillingInvoice(Invoice inv)
+            public BillingInvoiceInfo(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
                 Date = inv.Date.Value;
             }
 
-            public BillingInvoice(Braintree.Subscription sub)
+            public BillingInvoiceInfo(Braintree.Subscription sub)
             {
                 Amount = sub.NextBillAmount.GetValueOrDefault() + sub.Balance.GetValueOrDefault();
                 if(Amount < 0)
@@ -309,9 +309,9 @@ namespace Bit.Core.Models.Business
             public string Details { get; set; }
         }
 
-        public class BillingInvoice2 : BillingInvoice
+        public class BillingInvoice : BillingInvoiceInfo
         {
-            public BillingInvoice2(Invoice inv)
+            public BillingInvoice(Invoice inv)
             {
                 Url = inv.HostedInvoiceUrl;
                 PdfUrl = inv.InvoicePdf;
