@@ -477,7 +477,7 @@ namespace Bit.Api.Controllers
             await Request.GetFileAsync(async (stream, fileName, key) =>
             {
                 await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                        Request.ContentLength.GetValueOrDefault(0), userId);
+                        Request.ContentLength.GetValueOrDefault(0), userId, true);
             });
 
             return new CipherResponseModel(cipher, _globalSettings);
@@ -532,7 +532,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
         }
 
         private void ValidateAttachment()
