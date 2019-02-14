@@ -22,9 +22,9 @@
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="1.9.5" />
     <PackageReference Include="System.Data.SqlClient" Version="4.5.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="dbup" Version="3.3.5" />
-    <PackageReference Include="YamlDotNet" Version="5.2.1" />
+    <PackageReference Include="YamlDotNet" Version="5.4.0" />
   </ItemGroup>
 
 </Project>
