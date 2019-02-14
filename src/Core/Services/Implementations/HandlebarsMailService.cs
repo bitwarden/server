@@ -236,6 +236,21 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
+        {
+            var message = CreateDefaultMessage("Payment Failed", email);
+            var model = new PaymentFailedViewModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                Amount = amount,
+                MentionInvoices = mentionInvoices
+            };
+            await AddMessageContentAsync(message, "PaymentFailed", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "PaymentFailed" });
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {
             var message = CreateDefaultMessage($"New Device Logged In From {deviceType}", email);

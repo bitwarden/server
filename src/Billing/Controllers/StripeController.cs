@@ -166,7 +166,7 @@ namespace Bit.Billing.Controllers
                 {
                     var items = invoice.Lines.Select(i => i.Description).ToList();
                     await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
-                        invoice.NextPaymentAttempt.Value, items, ids.Item1.HasValue);
+                        invoice.NextPaymentAttempt.Value, items, true);
                 }
             }
             else if(parsedEvent.Type.Equals("charge.succeeded"))
@@ -409,7 +409,10 @@ namespace Bit.Billing.Controllers
 
             if(!transactionResult.IsSuccess())
             {
-                // TODO: Send payment failure email?
+                if(invoice.AttemptCount < 4)
+                {
+                    await _mailService.SendPaymentFailedAsync(customer.Email, btInvoiceAmount, true);
+                }
                 return false;
             }
 

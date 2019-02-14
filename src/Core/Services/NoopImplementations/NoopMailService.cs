@@ -73,6 +73,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {
             return Task.FromResult(0);
