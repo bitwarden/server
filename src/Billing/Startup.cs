@@ -62,9 +62,9 @@ namespace Bit.Billing
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
-            // Jobs service
-            Jobs.JobsHostedService.AddJobsServices(services);
-            services.AddHostedService<Jobs.JobsHostedService>();
+            // Jobs service, uncomment when we have some jobs to run
+            // Jobs.JobsHostedService.AddJobsServices(services);
+            // services.AddHostedService<Jobs.JobsHostedService>();
         }
 
         public void Configure(

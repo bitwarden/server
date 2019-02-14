@@ -245,3 +245,9 @@ BEGIN
         AND [GatewayId] = @GatewayId
 END
 GO
+
+IF OBJECT_ID('[dbo].[User_ReadByPremiumRenewal]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_ReadByPremiumRenewal]
+END
+GO

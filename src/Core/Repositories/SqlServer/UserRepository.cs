@@ -78,18 +78,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<User>> GetManyByPremiumRenewalAsync()
-        {
-            using(var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<User>(
-                    "[dbo].[User_ReadByPremiumRenewal]",
-                    commandType: CommandType.StoredProcedure);
-
-                return results.ToList();
-            }
-        }
-
         public async Task<string> GetPublicKeyAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
