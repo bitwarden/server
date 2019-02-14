@@ -80,16 +80,19 @@ namespace Bit.Core.Services
                 if(totalLicensedOrgs > 1)
                 {
                     await DisableOrganizationAsync(org, license, "Multiple organizations.");
+                    continue;
                 }
 
                 if(!license.VerifyData(org, _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
+                    continue;
                 }
 
                 if(!license.VerifySignature(_certificate))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
+                    continue;
                 }
             }
         }
