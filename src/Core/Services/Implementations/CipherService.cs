@@ -614,7 +614,7 @@ namespace Bit.Core.Services
                 if(org != null && org.MaxCollections.HasValue)
                 {
                     var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if(org.MaxCollections.Value <= (collectionCount + collections.Count))
+                    if(org.MaxCollections.Value < (collectionCount + collections.Count))
                     {
                         throw new BadRequestException("This organization can only have a maximum of " +
                             $"{org.MaxCollections.Value} collections.");
