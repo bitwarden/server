@@ -29,7 +29,7 @@ namespace Bit.Core.Services
 
             if(!permanentBlock)
             {
-                await _unblockIpQueue.AddMessageAsync(message, null, new TimeSpan(0, 30, 0), null, null);
+                await _unblockIpQueue.AddMessageAsync(message, null, new TimeSpan(0, 15, 0), null, null);
             }
         }
 
