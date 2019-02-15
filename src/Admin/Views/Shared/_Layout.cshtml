@@ -40,6 +40,17 @@
                         </li>
                         @if(!GlobalSettings.SelfHosted)
                         {
+                            <li class="nav-item dropdown" active-controller="tools">
+                                <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Tools
+                                </a>
+                                <div class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                    <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
+                                        Charge Braintree Customer
+                                    </a>
+                                </div>
+                            </li>
                             <li class="nav-item" active-controller="Logs">
                                 <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
                             </li>
