@@ -176,65 +176,79 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Charge is null.");
                 }
 
-                if(charge.InvoiceId == null)
+                var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.Stripe, charge.Id);
+                if(chargeTransaction != null)
                 {
                     return new OkResult();
                 }
 
-                var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.Stripe, charge.Id);
-                if(chargeTransaction == null)
+                Tuple<Guid?, Guid?> ids = null;
+                Subscription subscription = null;
+                var subscriptionService = new SubscriptionService();
+
+                if(charge.InvoiceId != null)
                 {
                     var invoiceService = new InvoiceService();
                     var invoice = await invoiceService.GetAsync(charge.InvoiceId);
-                    if(invoice == null)
+                    if(invoice?.SubscriptionId != null)
+                    {
+                        subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                        ids = GetIdsFromMetaData(subscription?.Metadata);
+                    }
+                }
+
+                if(subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
+                {
+                    var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
+                    {
+                        CustomerId = charge.CustomerId
+                    });
+                    foreach(var sub in subscriptions)
+                    {
+                        ids = GetIdsFromMetaData(sub.Metadata);
+                        if(ids.Item1.HasValue || ids.Item2.HasValue)
+                        {
+                            subscription = sub;
+                            break;
+                        }
+                    }
+                }
+
+                if(ids.Item1.HasValue || ids.Item2.HasValue)
+                {
+                    var tx = new Transaction
+                    {
+                        Amount = charge.Amount / 100M,
+                        CreationDate = charge.Created,
+                        OrganizationId = ids.Item1,
+                        UserId = ids.Item2,
+                        Type = TransactionType.Charge,
+                        Gateway = GatewayType.Stripe,
+                        GatewayId = charge.Id
+                    };
+
+                    if(charge.Source is Card card)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.Card;
+                        tx.Details = $"{card.Brand}, *{card.Last4}";
+                    }
+                    else if(charge.Source is BankAccount bankAccount)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                    }
+                    else
                     {
                         return new OkResult();
                     }
 
-                    var subscriptionService = new SubscriptionService();
-                    var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                    if(subscription == null)
+                    try
                     {
-                        return new OkResult();
+                        await _transactionRepository.CreateAsync(tx);
                     }
-
-                    var ids = GetIdsFromMetaData(subscription.Metadata);
-                    if(ids.Item1.HasValue || ids.Item2.HasValue)
-                    {
-                        var tx = new Transaction
-                        {
-                            Amount = charge.Amount / 100M,
-                            CreationDate = charge.Created,
-                            OrganizationId = ids.Item1,
-                            UserId = ids.Item2,
-                            Type = TransactionType.Charge,
-                            Gateway = GatewayType.Stripe,
-                            GatewayId = charge.Id
-                        };
-
-                        if(charge.Source is Card card)
-                        {
-                            tx.PaymentMethodType = PaymentMethodType.Card;
-                            tx.Details = $"{card.Brand}, *{card.Last4}";
-                        }
-                        else if(charge.Source is BankAccount bankAccount)
-                        {
-                            tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                            tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-                        }
-                        else
-                        {
-                            return new OkResult();
-                        }
-
-                        try
-                        {
-                            await _transactionRepository.CreateAsync(tx);
-                        }
-                        // Catch foreign key violations because user/org could have been deleted.
-                        catch(SqlException e) when(e.Number == 547) { }
-                    }
+                    // Catch foreign key violations because user/org could have been deleted.
+                    catch(SqlException e) when(e.Number == 547) { }
                 }
             }
             else if(parsedEvent.Type.Equals("charge.refunded"))
@@ -317,7 +331,7 @@ namespace Bit.Billing.Controllers
 
         private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
         {
-            if(metaData == null)
+            if(metaData == null || !metaData.Any())
             {
                 return new Tuple<Guid?, Guid?>(null, null);
             }

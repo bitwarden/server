@@ -47,7 +47,7 @@ namespace Bit.Billing.Controllers
                 body = await reader.ReadToEndAsync();
             }
 
-            if(body == null)
+            if(string.IsNullOrWhiteSpace(body))
             {
                 return new BadRequestResult();
             }
