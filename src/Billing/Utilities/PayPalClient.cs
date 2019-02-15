@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
 namespace Bit.Billing.Utilities
@@ -18,12 +19,13 @@ namespace Bit.Billing.Utilities
 
         private AuthResponse _authResponse;
 
-        public PayPalClient(BillingSettings billingSettings)
+        public PayPalClient(IOptions<BillingSettings> billingSettings)
         {
-            _baseApiUrl = _baseApiUrl = !billingSettings.PayPal.Production ? "https://api.sandbox.paypal.com/{0}" :
+            var bSettings = billingSettings?.Value;
+            _baseApiUrl = _baseApiUrl = !bSettings.PayPal.Production ? "https://api.sandbox.paypal.com/{0}" :
                 "https://api.paypal.com/{0}";
-            _clientId = billingSettings.PayPal.ClientId;
-            _clientSecret = billingSettings.PayPal.ClientSecret;
+            _clientId = bSettings.PayPal.ClientId;
+            _clientSecret = bSettings.PayPal.ClientSecret;
         }
 
         public async Task<bool> VerifyWebhookAsync(string webhookJson, IHeaderDictionary headers, string webhookId)
