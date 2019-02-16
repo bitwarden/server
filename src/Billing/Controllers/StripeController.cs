@@ -206,11 +206,14 @@ namespace Bit.Billing.Controllers
                     });
                     foreach(var sub in subscriptions)
                     {
-                        ids = GetIdsFromMetaData(sub.Metadata);
-                        if(ids.Item1.HasValue || ids.Item2.HasValue)
+                        if(sub.Status != "canceled")
                         {
-                            subscription = sub;
-                            break;
+                            ids = GetIdsFromMetaData(sub.Metadata);
+                            if(ids.Item1.HasValue || ids.Item2.HasValue)
+                            {
+                                subscription = sub;
+                                break;
+                            }
                         }
                     }
                 }
