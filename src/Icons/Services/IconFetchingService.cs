@@ -17,6 +17,8 @@ namespace Bit.Icons.Services
     {
         private readonly HashSet<string> _iconRels =
             new HashSet<string> { "icon", "apple-touch-icon", "shortcut icon" };
+        private readonly HashSet<string> _blacklistedRels =
+            new HashSet<string> { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
         private readonly HashSet<string> _iconExtensions =
             new HashSet<string> { ".ico", ".png", ".jpg", ".jpeg" };
 
@@ -155,7 +157,7 @@ namespace Bit.Icons.Services
                         {
                             icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
                         }
-                        else
+                        else if(relAttr == null || !_blacklistedRels.Contains(relAttr.Value.ToLower()))
                         {
                             try
                             {
