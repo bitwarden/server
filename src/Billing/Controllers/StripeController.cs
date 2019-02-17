@@ -218,41 +218,43 @@ namespace Bit.Billing.Controllers
                     }
                 }
 
-                if(ids.Item1.HasValue || ids.Item2.HasValue)
+                if(!ids.Item1.HasValue && !ids.Item2.HasValue)
                 {
-                    var tx = new Transaction
-                    {
-                        Amount = charge.Amount / 100M,
-                        CreationDate = charge.Created,
-                        OrganizationId = ids.Item1,
-                        UserId = ids.Item2,
-                        Type = TransactionType.Charge,
-                        Gateway = GatewayType.Stripe,
-                        GatewayId = charge.Id
-                    };
-
-                    if(charge.Source is Card card)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.Card;
-                        tx.Details = $"{card.Brand}, *{card.Last4}";
-                    }
-                    else if(charge.Source is BankAccount bankAccount)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                        tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-                    }
-                    else
-                    {
-                        return new OkResult();
-                    }
-
-                    try
-                    {
-                        await _transactionRepository.CreateAsync(tx);
-                    }
-                    // Catch foreign key violations because user/org could have been deleted.
-                    catch(SqlException e) when(e.Number == 547) { }
+                    return new BadRequestResult();
                 }
+
+                var tx = new Transaction
+                {
+                    Amount = charge.Amount / 100M,
+                    CreationDate = charge.Created,
+                    OrganizationId = ids.Item1,
+                    UserId = ids.Item2,
+                    Type = TransactionType.Charge,
+                    Gateway = GatewayType.Stripe,
+                    GatewayId = charge.Id
+                };
+
+                if(charge.Source is Card card)
+                {
+                    tx.PaymentMethodType = PaymentMethodType.Card;
+                    tx.Details = $"{card.Brand}, *{card.Last4}";
+                }
+                else if(charge.Source is BankAccount bankAccount)
+                {
+                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                    tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                }
+                else
+                {
+                    return new OkResult();
+                }
+
+                try
+                {
+                    await _transactionRepository.CreateAsync(tx);
+                }
+                // Catch foreign key violations because user/org could have been deleted.
+                catch(SqlException e) when(e.Number == 547) { }
             }
             else if(parsedEvent.Type.Equals("charge.refunded"))
             {
