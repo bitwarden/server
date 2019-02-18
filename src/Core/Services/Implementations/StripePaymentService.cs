@@ -164,55 +164,77 @@ namespace Bit.Core.Services
             var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
 
+            var createdStripeCustomer = false;
+            string stripeCustomerId = null;
             Braintree.Transaction braintreeTransaction = null;
             Braintree.Customer braintreeCustomer = null;
-            string stipeCustomerSourceToken = null;
-            var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
 
-            if(stripePaymentMethod)
+            if(user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
-                stipeCustomerSourceToken = paymentToken;
+                try
+                {
+                    await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
+                    stripeCustomerId = user.GatewayCustomerId;
+                    createdStripeCustomer = false;
+                }
+                catch(Exception)
+                {
+                    stripeCustomerId = null;
+                }
             }
-            else if(paymentMethodType == PaymentMethodType.PayPal)
-            {
-                var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
-                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
-                {
-                    PaymentMethodNonce = paymentToken,
-                    Email = user.Email,
-                    Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
-                    CustomFields = new Dictionary<string, string>
-                    {
-                        [user.BraintreeIdField()] = user.Id.ToString()
-                    }
-                });
 
-                if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
+            if(string.IsNullOrWhiteSpace(stripeCustomerId))
+            {
+                string stipeCustomerSourceToken = null;
+                var stripeCustomerMetadata = new Dictionary<string, string>();
+
+                if(stripePaymentMethod)
                 {
-                    throw new GatewayException("Failed to create PayPal customer record.");
+                    stipeCustomerSourceToken = paymentToken;
+                }
+                else if(paymentMethodType == PaymentMethodType.PayPal)
+                {
+                    var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
+                    var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
+                    {
+                        PaymentMethodNonce = paymentToken,
+                        Email = user.Email,
+                        Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
+                        CustomFields = new Dictionary<string, string>
+                        {
+                            [user.BraintreeIdField()] = user.Id.ToString()
+                        }
+                    });
+
+                    if(!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
+                    {
+                        throw new GatewayException("Failed to create PayPal customer record.");
+                    }
+
+                    braintreeCustomer = customerResult.Target;
+                    stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+                }
+                else
+                {
+                    throw new GatewayException("Payment method is not supported at this time.");
                 }
 
-                braintreeCustomer = customerResult.Target;
-                stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+                var customer = await customerService.CreateAsync(new CustomerCreateOptions
+                {
+                    Description = user.Name,
+                    Email = user.Email,
+                    SourceToken = stipeCustomerSourceToken,
+                    Metadata = stripeCustomerMetadata
+                });
+                stripeCustomerId = customer.Id;
+                createdStripeCustomer = true;
             }
-            else
-            {
-                throw new GatewayException("Payment method is not supported at this time.");
-            }
-
-            var customer = await customerService.CreateAsync(new CustomerCreateOptions
-            {
-                Description = user.Name,
-                Email = user.Email,
-                SourceToken = stipeCustomerSourceToken,
-                Metadata = stripeCustomerMetadata
-            });
 
             var subCreateOptions = new SubscriptionCreateOptions
             {
-                CustomerId = customer.Id,
+                CustomerId = stripeCustomerId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -243,11 +265,11 @@ namespace Bit.Core.Services
                 {
                     var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
-                        CustomerId = customer.Id,
+                        CustomerId = stripeCustomerId,
                         SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                     });
 
-                    await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await customerService.UpdateAsync(stripeCustomerId, new CustomerUpdateOptions
                     {
                         AccountBalance = -1 * previewInvoice.AmountDue
                     });
@@ -314,7 +336,10 @@ namespace Bit.Core.Services
             }
             catch(Exception e)
             {
-                await customerService.DeleteAsync(customer.Id);
+                if(createdStripeCustomer && !string.IsNullOrWhiteSpace(stripeCustomerId))
+                {
+                    await customerService.DeleteAsync(stripeCustomerId);
+                }
                 if(braintreeTransaction != null)
                 {
                     await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
@@ -327,7 +352,7 @@ namespace Bit.Core.Services
             }
 
             user.Gateway = GatewayType.Stripe;
-            user.GatewayCustomerId = customer.Id;
+            user.GatewayCustomerId = stripeCustomerId;
             user.GatewaySubscriptionId = subscription.Id;
             user.Premium = true;
             user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
