@@ -939,7 +939,7 @@ namespace Bit.Core.Services
                 var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
                 if(customer != null)
                 {
-                    billingInfo.CreditAmount = customer.AccountBalance / 100M;
+                    billingInfo.Balance = customer.AccountBalance / 100M;
 
                     if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
@@ -967,14 +967,6 @@ namespace Bit.Core.Services
                             }
                         }
                     }
-
-                    var charges = await chargeService.ListAsync(new ChargeListOptions
-                    {
-                        CustomerId = customer.Id,
-                        Limit = 20
-                    });
-                    billingInfo.Charges = charges?.Data?.OrderByDescending(c => c.Created)
-                        .Select(c => new BillingInfo.BillingCharge(c));
 
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {

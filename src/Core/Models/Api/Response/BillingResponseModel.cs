@@ -11,13 +11,13 @@ namespace Bit.Core.Models.Api
         public BillingResponseModel(BillingInfo billing)
             : base("billing")
         {
-            CreditAmount = billing.CreditAmount;
+            Balance = billing.Balance;
             PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
             Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
             Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
         }
 
-        public decimal CreditAmount { get; set; }
+        public decimal Balance { get; set; }
         public BillingSource PaymentSource { get; set; }
         public IEnumerable<BillingInvoice> Invoices { get; set; }
         public IEnumerable<BillingTransaction> Transactions { get; set; }

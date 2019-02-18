@@ -8,9 +8,8 @@ namespace Bit.Core.Models.Business
 {
     public class BillingInfo
     {
-        public decimal CreditAmount { get; set; }
+        public decimal Balance { get; set; }
         public BillingSource PaymentSource { get; set; }
-        public IEnumerable<BillingCharge> Charges { get; set; } = new List<BillingCharge>();
         public IEnumerable<BillingInvoice> Invoices { get; set; } = new List<BillingInvoice>();
         public IEnumerable<BillingTransaction> Transactions { get; set; } = new List<BillingTransaction>();
 
@@ -83,57 +82,6 @@ namespace Bit.Core.Models.Business
             public string CardBrand { get; set; }
             public string Description { get; set; }
             public bool NeedsVerification { get; set; }
-        }
-
-        public class BillingCharge
-        {
-            public BillingCharge(Charge charge)
-            {
-                Amount = charge.Amount / 100M;
-                RefundedAmount = charge.AmountRefunded / 100M;
-                PaymentSource = charge.Source != null ? new BillingSource(charge.Source) : null;
-                CreatedDate = charge.Created;
-                FailureMessage = charge.FailureMessage;
-                Refunded = charge.Refunded;
-                Status = charge.Status;
-                InvoiceId = charge.InvoiceId;
-            }
-
-            public BillingCharge(Braintree.Transaction transaction)
-            {
-                Amount = transaction.Amount.GetValueOrDefault();
-                RefundedAmount = 0; // TODO?
-
-                if(transaction.PayPalDetails != null)
-                {
-                    PaymentSource = new BillingSource(transaction.PayPalDetails);
-                }
-                else if(transaction.CreditCard != null &&
-                    transaction.CreditCard.CardType != Braintree.CreditCardCardType.UNRECOGNIZED)
-                {
-                    PaymentSource = new BillingSource(transaction.CreditCard);
-                }
-                else if(transaction.UsBankAccountDetails != null)
-                {
-                    PaymentSource = new BillingSource(transaction.UsBankAccountDetails);
-                }
-
-                CreatedDate = transaction.CreatedAt.GetValueOrDefault();
-                FailureMessage = null;
-                Refunded = transaction.RefundedTransactionId != null;
-                Status = transaction.Status.ToString();
-                InvoiceId = null;
-            }
-
-            public DateTime CreatedDate { get; set; }
-            public decimal Amount { get; set; }
-            public BillingSource PaymentSource { get; set; }
-            public string Status { get; set; }
-            public string FailureMessage { get; set; }
-            public bool Refunded { get; set; }
-            public bool PartiallyRefunded => !Refunded && RefundedAmount > 0;
-            public decimal RefundedAmount { get; set; }
-            public string InvoiceId { get; set; }
         }
 
         public class BillingTransaction
