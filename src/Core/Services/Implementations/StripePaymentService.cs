@@ -530,7 +530,8 @@ namespace Bit.Core.Services
                     {
                         Billing = Billing.SendInvoice,
                         DaysUntilDue = 1,
-                        CustomerId = subscriber.GatewayCustomerId
+                        CustomerId = subscriber.GatewayCustomerId,
+                        SubscriptionId = subscriber.GatewaySubscriptionId
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
