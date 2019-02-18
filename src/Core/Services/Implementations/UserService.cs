@@ -868,20 +868,20 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<UserLicense> GenerateLicenseAsync(User user, BillingInfo billingInfo = null)
+        public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null)
         {
             if(user == null)
             {
                 throw new NotFoundException();
             }
 
-            if(billingInfo == null && user.Gateway != null)
+            if(subscriptionInfo == null && user.Gateway != null)
             {
-                billingInfo = await _paymentService.GetBillingAsync(user);
+                subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
             }
 
-            return billingInfo == null ? new UserLicense(user, _licenseService) :
-                new UserLicense(user, billingInfo, _licenseService);
+            return subscriptionInfo == null ? new UserLicense(user, _licenseService) :
+                new UserLicense(user, subscriptionInfo, _licenseService);
         }
 
         public override async Task<bool> CheckPasswordAsync(User user, string password)

@@ -10,8 +10,6 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
-using Stripe;
-using Microsoft.Extensions.Options;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
@@ -65,7 +63,27 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/billing")]
-        public async Task<OrganizationBillingResponseModel> GetBilling(string id)
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<BillingResponseModel> GetBilling(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var billingInfo = await _paymentService.GetBillingAsync(organization);
+            return new BillingResponseModel(billingInfo);
+        }
+
+        [HttpGet("{id}/subscription")]
+        public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -81,47 +99,17 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && organization.Gateway != null)
             {
-                var billingInfo = await _paymentService.GetBillingAsync(organization);
-                if(billingInfo == null)
+                var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
+                if(subscriptionInfo == null)
                 {
                     throw new NotFoundException();
                 }
-                return new OrganizationBillingResponseModel(organization, billingInfo);
+                return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
             }
             else
             {
-                return new OrganizationBillingResponseModel(organization);
+                return new OrganizationSubscriptionResponseModel(organization);
             }
-        }
-
-        [HttpGet("{id}/billing-invoice/{invoiceId}")]
-        [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<IActionResult> GetBillingInvoice(string id, string invoiceId)
-        {
-            var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
-
-            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
-            {
-                throw new NotFoundException();
-            }
-
-            try
-            {
-                var invoice = await new InvoiceService().GetAsync(invoiceId);
-                if(invoice != null && invoice.CustomerId == organization.GatewayCustomerId &&
-                    !string.IsNullOrWhiteSpace(invoice.HostedInvoiceUrl))
-                {
-                    return new RedirectResult(invoice.HostedInvoiceUrl);
-                }
-            }
-            catch(StripeException) { }
-
-            throw new NotFoundException();
         }
 
         [HttpGet("{id}/license")]

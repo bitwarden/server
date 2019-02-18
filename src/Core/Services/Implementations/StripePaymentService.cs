@@ -885,35 +885,6 @@ namespace Bit.Core.Services
             return createdCustomer;
         }
 
-        public async Task<BillingInfo.BillingInvoiceInfo> GetUpcomingInvoiceAsync(ISubscriber subscriber)
-        {
-            if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-            {
-                var subscriptionService = new SubscriptionService();
-                var invoiceService = new InvoiceService();
-                var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
-                if(sub != null)
-                {
-                    if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
-                    {
-                        try
-                        {
-                            var upcomingInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
-                            {
-                                CustomerId = subscriber.GatewayCustomerId
-                            });
-                            if(upcomingInvoice != null)
-                            {
-                                return new BillingInfo.BillingInvoiceInfo(upcomingInvoice);
-                            }
-                        }
-                        catch(StripeException) { }
-                    }
-                }
-            }
-            return null;
-        }
-
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();
@@ -990,12 +961,21 @@ namespace Bit.Core.Services
                 }
             }
 
+            return billingInfo;
+        }
+
+        public async Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber)
+        {
+            var subscriptionInfo = new SubscriptionInfo();
+            var subscriptionService = new SubscriptionService();
+            var invoiceService = new InvoiceService();
+
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
                 var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
                 if(sub != null)
                 {
-                    billingInfo.Subscription = new BillingInfo.BillingSubscription(sub);
+                    subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
                 }
 
                 if(!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -1006,14 +986,15 @@ namespace Bit.Core.Services
                             new UpcomingInvoiceOptions { CustomerId = subscriber.GatewayCustomerId });
                         if(upcomingInvoice != null)
                         {
-                            billingInfo.UpcomingInvoice = new BillingInfo.BillingInvoiceInfo(upcomingInvoice);
+                            subscriptionInfo.UpcomingInvoice =
+                                new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
                         }
                     }
                     catch(StripeException) { }
                 }
             }
 
-            return billingInfo;
+            return subscriptionInfo;
         }
     }
 }

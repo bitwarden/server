@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense()
         { }
 
-        public OrganizationLicense(Organization org, BillingInfo billingInfo, Guid installationId,
+        public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
             ILicensingService licenseService)
         {
             Version = 4;
@@ -41,7 +41,7 @@ namespace Bit.Core.Models.Business
             UsersGetPremium = org.UsersGetPremium;
             Issued = DateTime.UtcNow;
 
-            if(billingInfo?.Subscription == null)
+            if(subscriptionInfo?.Subscription == null)
             {
                 if(org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
                 {
@@ -54,10 +54,10 @@ namespace Bit.Core.Models.Business
                     Trial = true;
                 }
             }
-            else if(billingInfo.Subscription.TrialEndDate.HasValue &&
-                billingInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
+            else if(subscriptionInfo.Subscription.TrialEndDate.HasValue &&
+                subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
             {
-                Expires = Refresh = billingInfo.Subscription.TrialEndDate.Value;
+                Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
                 Trial = true;
             }
             else
@@ -67,11 +67,11 @@ namespace Bit.Core.Models.Business
                     // expired
                     Expires = Refresh = org.ExpirationDate.Value;
                 }
-                else if(billingInfo?.Subscription?.PeriodDuration != null &&
-                    billingInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+                else if(subscriptionInfo?.Subscription?.PeriodDuration != null &&
+                    subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
                 {
                     Refresh = DateTime.UtcNow.AddDays(30);
-                    Expires = billingInfo?.Subscription.PeriodEndDate.Value.AddDays(60);
+                    Expires = subscriptionInfo?.Subscription.PeriodEndDate.Value.AddDays(60);
                 }
                 else
                 {

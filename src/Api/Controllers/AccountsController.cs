@@ -469,7 +469,21 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("billing")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<BillingResponseModel> GetBilling()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var billingInfo = await _paymentService.GetBillingAsync(user);
+            return new BillingResponseModel(billingInfo);
+        }
+
+        [HttpGet("subscription")]
+        public async Task<SubscriptionResponseModel> GetSubscription()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -479,18 +493,18 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && user.Gateway != null)
             {
-                var billingInfo = await _paymentService.GetBillingAsync(user);
-                var license = await _userService.GenerateLicenseAsync(user, billingInfo);
-                return new BillingResponseModel(user, billingInfo, license);
+                var subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
+                var license = await _userService.GenerateLicenseAsync(user, subscriptionInfo);
+                return new SubscriptionResponseModel(user, subscriptionInfo, license);
             }
             else if(!_globalSettings.SelfHosted)
             {
                 var license = await _userService.GenerateLicenseAsync(user);
-                return new BillingResponseModel(user, license);
+                return new SubscriptionResponseModel(user, license);
             }
             else
             {
-                return new BillingResponseModel(user);
+                return new SubscriptionResponseModel(user);
             }
         }
 

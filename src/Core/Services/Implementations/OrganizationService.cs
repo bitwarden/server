@@ -1207,8 +1207,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid installation id");
             }
             
-            var billingInfo = await _paymentService.GetBillingAsync(organization);
-            return new OrganizationLicense(organization, billingInfo, installationId, _licensingService);
+            var subInfo = await _paymentService.GetSubscriptionAsync(organization);
+            return new OrganizationLicense(organization, subInfo, installationId, _licensingService);
         }
 
         public async Task ImportAsync(Guid organizationId,
