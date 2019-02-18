@@ -71,7 +71,7 @@ namespace Bit.Core.Models.Api
                     new BillingSubscription(subscription.Subscription) : null;
                 UpcomingInvoice = subscription.UpcomingInvoice != null ?
                     new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-                Expiration = DateTime.UtcNow.AddYears(1); // TODO?
+                Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
             }
             else
             {
