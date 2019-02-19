@@ -30,7 +30,6 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
-        public string Country { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -46,7 +45,6 @@ namespace Bit.Core.Models.Api
                 PremiumAccessAddon = PremiumAccessAddon,
                 BillingEmail = BillingEmail,
                 BusinessName = BusinessName,
-                BusinessCountry = Country,
                 CollectionName = CollectionName
             };
         }
