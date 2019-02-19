@@ -209,7 +209,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
+            await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken,
+                model.PaymentMethodType);
         }
 
         [HttpPost("{id}/upgrade")]

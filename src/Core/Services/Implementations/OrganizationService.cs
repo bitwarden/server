@@ -71,7 +71,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken)
+        public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
+            PaymentMethodType? paymentMethodType)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -79,22 +80,24 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            PaymentMethodType paymentMethodType;
-            if(paymentToken.StartsWith("btok_"))
+            if(!paymentMethodType.HasValue)
             {
-                paymentMethodType = PaymentMethodType.BankAccount;
-            }
-            else if(paymentToken.StartsWith("tok_"))
-            {
-                paymentMethodType = PaymentMethodType.Card;
-            }
-            else
-            {
-                paymentMethodType = PaymentMethodType.PayPal;
+                if(paymentToken.StartsWith("tok_"))
+                {
+                    paymentMethodType = PaymentMethodType.Card;
+                }
+                else if(paymentToken.StartsWith("btok_"))
+                {
+                    paymentMethodType = PaymentMethodType.BankAccount;
+                }
+                else
+                {
+                    paymentMethodType = PaymentMethodType.PayPal;
+                }
             }
 
             var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-                paymentMethodType, paymentToken);
+                paymentMethodType.Value, paymentToken);
             if(updated)
             {
                 await ReplaceAndUpdateCache(organization);
@@ -547,21 +550,23 @@ namespace Bit.Core.Services
             }
             else
             {
-                PaymentMethodType paymentMethodType;
-                if(signup.PaymentToken.StartsWith("btok_"))
+                if(!signup.PaymentMethodType.HasValue)
                 {
-                    paymentMethodType = PaymentMethodType.BankAccount;
-                }
-                else if(signup.PaymentToken.StartsWith("tok_"))
-                {
-                    paymentMethodType = PaymentMethodType.Card;
-                }
-                else
-                {
-                    paymentMethodType = PaymentMethodType.PayPal;
+                    if(signup.PaymentToken.StartsWith("btok_"))
+                    {
+                        signup.PaymentMethodType = PaymentMethodType.BankAccount;
+                    }
+                    else if(signup.PaymentToken.StartsWith("tok_"))
+                    {
+                        signup.PaymentMethodType = PaymentMethodType.Card;
+                    }
+                    else
+                    {
+                        signup.PaymentMethodType = PaymentMethodType.PayPal;
+                    }
                 }
 
-                await _paymentService.PurchaseOrganizationAsync(organization, paymentMethodType,
+                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                     signup.PremiumAccessAddon);
             }
@@ -1205,7 +1210,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Invalid installation id");
             }
-            
+
             var subInfo = await _paymentService.GetSubscriptionAsync(organization);
             return new OrganizationLicense(organization, subInfo, installationId, _licensingService);
         }

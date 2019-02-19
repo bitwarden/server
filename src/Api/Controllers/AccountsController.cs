@@ -463,7 +463,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid license.");
             }
 
-            await _userService.SignUpPremiumAsync(user, model.PaymentToken,
+            await _userService.SignUpPremiumAsync(user, model.PaymentToken, model.PaymentMethodType,
                 model.AdditionalStorageGb.GetValueOrDefault(0), license);
             return new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
         }
@@ -518,7 +518,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken);
+            await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType);
         }
 
         [HttpPost("storage")]

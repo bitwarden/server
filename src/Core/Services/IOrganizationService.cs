@@ -10,7 +10,7 @@ namespace Bit.Core.Services
 {
     public interface IOrganizationService
     {
-        Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken);
+        Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType? paymentMethodType);
         Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
         Task ReinstateSubscriptionAsync(Guid organizationId);
         Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats);

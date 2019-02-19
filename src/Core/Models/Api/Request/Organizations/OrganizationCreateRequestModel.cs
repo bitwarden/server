@@ -21,6 +21,8 @@ namespace Bit.Core.Models.Api
         public PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
+        // TODO: Required in future if not free plan
+        public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
         public short AdditionalSeats { get; set; }
@@ -39,6 +41,7 @@ namespace Bit.Core.Models.Api
                 OwnerKey = Key,
                 Name = Name,
                 Plan = PlanType,
+                PaymentMethodType = PaymentMethodType,
                 PaymentToken = PaymentToken,
                 AdditionalSeats = AdditionalSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),

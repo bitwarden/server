@@ -678,7 +678,8 @@ namespace Bit.Core.Services
             return true;
         }
 
-        public async Task SignUpPremiumAsync(User user, string paymentToken, short additionalStorageGb, UserLicense license)
+        public async Task SignUpPremiumAsync(User user, string paymentToken, PaymentMethodType? paymentMethodType,
+            short additionalStorageGb, UserLicense license)
         {
             if(user.Premium)
             {
@@ -709,18 +710,23 @@ namespace Bit.Core.Services
             }
             else if(!string.IsNullOrWhiteSpace(paymentToken))
             {
-                if(paymentToken.StartsWith("btok_"))
+                if(!paymentMethodType.HasValue)
                 {
-                    throw new BadRequestException("Invalid token.");
+                    if(paymentToken.StartsWith("tok_"))
+                    {
+                        paymentMethodType = PaymentMethodType.Card;
+                    }
+                    else if(paymentToken.StartsWith("btok_"))
+                    {
+                        paymentMethodType = PaymentMethodType.BankAccount;
+                    }
+                    else
+                    {
+                        paymentMethodType = PaymentMethodType.PayPal;
+                    }
                 }
 
-                var paymentMethodType = PaymentMethodType.Card;
-                if(!paymentToken.StartsWith("tok_"))
-                {
-                    paymentMethodType = PaymentMethodType.PayPal;
-                }
-
-                await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
+                await _paymentService.PurchasePremiumAsync(user, paymentMethodType.Value,
                     paymentToken, additionalStorageGb);
             }
             else
@@ -795,29 +801,36 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Not a premium user.");
             }
-            
+
             await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, StoragePlanId);
             await SaveUserAsync(user);
         }
 
-        public async Task ReplacePaymentMethodAsync(User user, string paymentToken)
+        public async Task ReplacePaymentMethodAsync(User user, string paymentToken,
+            PaymentMethodType? paymentMethodType)
         {
             if(paymentToken.StartsWith("btok_"))
             {
                 throw new BadRequestException("Invalid token.");
             }
 
-            PaymentMethodType paymentMethodType;
-            if(paymentToken.StartsWith("tok_"))
+            if(!paymentMethodType.HasValue)
             {
-                paymentMethodType = PaymentMethodType.Card;
-            }
-            else
-            {
-                paymentMethodType = PaymentMethodType.PayPal;
+                if(paymentToken.StartsWith("tok_"))
+                {
+                    paymentMethodType = PaymentMethodType.Card;
+                }
+                else if(paymentToken.StartsWith("btok_"))
+                {
+                    paymentMethodType = PaymentMethodType.BankAccount;
+                }
+                else
+                {
+                    paymentMethodType = PaymentMethodType.PayPal;
+                }
             }
 
-            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
+            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType.Value, paymentToken);
             if(updated)
             {
                 await SaveUserAsync(user);

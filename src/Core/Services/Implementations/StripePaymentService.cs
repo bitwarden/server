@@ -171,6 +171,11 @@ namespace Bit.Core.Services
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
 
+            if(paymentMethodType == PaymentMethodType.BankAccount)
+            {
+                throw new GatewayException("Bank account payment method is not supported at this time.");
+            }
+
             if(user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
                 try
