@@ -66,7 +66,8 @@ namespace Bit.Admin.Controllers
 
             if(!transactionResult.IsSuccess())
             {
-                ModelState.AddModelError(string.Empty, "Charge failed.");
+                ModelState.AddModelError(string.Empty, "Charge failed. " +
+                    "Refer to Braintree admin portal for more information.");
             }
             else
             {
