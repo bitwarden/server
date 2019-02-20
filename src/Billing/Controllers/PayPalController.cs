@@ -1,6 +1,8 @@
 ﻿using Bit.Billing.Utilities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -18,17 +20,29 @@ namespace Bit.Billing.Controllers
         private readonly PayPalClient _paypalClient;
         private readonly PayPalIpnClient _paypalIpnClient;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IMailService _mailService;
+        private readonly IPaymentService _paymentService;
 
         public PayPalController(
             IOptions<BillingSettings> billingSettings,
             PayPalClient paypalClient,
             PayPalIpnClient paypalIpnClient,
-            ITransactionRepository transactionRepository)
+            ITransactionRepository transactionRepository,
+            IOrganizationRepository organizationRepository,
+            IUserRepository userRepository,
+            IMailService mailService,
+            IPaymentService paymentService)
         {
             _billingSettings = billingSettings?.Value;
             _paypalClient = paypalClient;
             _paypalIpnClient = paypalIpnClient;
             _transactionRepository = transactionRepository;
+            _organizationRepository = organizationRepository;
+            _userRepository = userRepository;
+            _mailService = mailService;
+            _paymentService = paymentService;
         }
 
         [HttpPost("webhook")]
@@ -197,7 +211,7 @@ namespace Bit.Billing.Controllers
                 {
                     try
                     {
-                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        var tx = new Transaction
                         {
                             Amount = ipnTransaction.McGross,
                             CreationDate = ipnTransaction.PaymentDate,
@@ -208,11 +222,35 @@ namespace Bit.Billing.Controllers
                             GatewayId = ipnTransaction.TxnId,
                             PaymentMethodType = PaymentMethodType.PayPal,
                             Details = ipnTransaction.TxnId
-                        });
+                        };
+                        await _transactionRepository.CreateAsync(tx);
 
                         if(ipnTransaction.IsAccountCredit())
                         {
-                            // TODO: Issue Stripe credit to user/org account
+                            if(tx.OrganizationId.HasValue)
+                            {
+                                var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
+                                if(org != null)
+                                {
+                                    if(await _paymentService.CreditAccountAsync(org, tx.Amount))
+                                    {
+                                        await _organizationRepository.ReplaceAsync(org);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
+                                if(user != null)
+                                {
+                                    if(await _paymentService.CreditAccountAsync(user, tx.Amount))
+                                    {
+                                        await _userRepository.ReplaceAsync(user);
+                                    }
+                                }
+                            }
+
+                            // TODO: Send email about credit added?
                         }
                     }
                     // Catch foreign key violations because user/org could have been deleted.
@@ -246,7 +284,7 @@ namespace Bit.Billing.Controllers
                         }
 
                         await _transactionRepository.ReplaceAsync(parentTransaction);
-                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        await _transactionRepository.CreateAsync(new Transaction
                         {
                             Amount = ipnTransaction.McGross,
                             CreationDate = ipnTransaction.PaymentDate,

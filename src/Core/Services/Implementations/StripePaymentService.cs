@@ -915,6 +915,33 @@ namespace Bit.Core.Services
             return createdCustomer;
         }
 
+        public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
+        {
+            var customerService = new CustomerService();
+            Customer customer = null;
+            var customerExists = subscriber.Gateway == GatewayType.Stripe &&
+                !string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId);
+            if(customerExists)
+            {
+                customer = await customerService.GetAsync(subscriber.GatewaySubscriptionId);
+            }
+            else
+            {
+                customer = await customerService.CreateAsync(new CustomerCreateOptions
+                {
+                    Email = subscriber.BillingEmailAddress(),
+                    Description = subscriber.BillingName(),
+                });
+                subscriber.Gateway = GatewayType.Stripe;
+                subscriber.GatewayCustomerId = customer.Id;
+            }
+            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+            {
+                AccountBalance = customer.AccountBalance - (long)(creditAmount * 100)
+            });
+            return !customerExists;
+        }
+
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
             var billingInfo = new BillingInfo();
