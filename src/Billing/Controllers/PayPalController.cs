@@ -16,15 +16,18 @@ namespace Bit.Billing.Controllers
     {
         private readonly BillingSettings _billingSettings;
         private readonly PayPalClient _paypalClient;
+        private readonly PayPalIpnClient _paypalIpnClient;
         private readonly ITransactionRepository _transactionRepository;
 
         public PayPalController(
             IOptions<BillingSettings> billingSettings,
             PayPalClient paypalClient,
+            PayPalIpnClient paypalIpnClient,
             ITransactionRepository transactionRepository)
         {
             _billingSettings = billingSettings?.Value;
             _paypalClient = paypalClient;
+            _paypalIpnClient = paypalIpnClient;
             _transactionRepository = transactionRepository;
         }
 
@@ -131,6 +134,130 @@ namespace Bit.Billing.Controllers
                                 Details = refund.Id
                             });
                         }
+                    }
+                }
+            }
+
+            return new OkResult();
+        }
+
+        [HttpPost("ipn")]
+        public async Task<IActionResult> PostIpn([FromQuery] string key)
+        {
+            if(key != _billingSettings.PayPal.WebhookKey)
+            {
+                return new BadRequestResult();
+            }
+
+            if(HttpContext?.Request == null)
+            {
+                return new BadRequestResult();
+            }
+
+            string body = null;
+            using(var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+
+            if(string.IsNullOrWhiteSpace(body))
+            {
+                return new BadRequestResult();
+            }
+
+            var verified = await _paypalIpnClient.VerifyIpnAsync(body);
+            if(!verified)
+            {
+                return new BadRequestResult();
+            }
+
+            var ipnTransaction = new PayPalIpnClient.IpnTransaction(body);
+            if(ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId || ipnTransaction.McCurrency != "USD")
+            {
+                return new BadRequestResult();
+            }
+
+            var ids = ipnTransaction.GetIdsFromCustom();
+            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            {
+                return new OkResult();
+            }
+
+            // Only processing credits via IPN for now
+            if(!ipnTransaction.IsAccountCredit())
+            {
+                return new OkResult();
+            }
+
+            if(ipnTransaction.PaymentStatus == "Completed")
+            {
+                var transaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.PayPal, ipnTransaction.TxnId);
+                if(transaction == null)
+                {
+                    try
+                    {
+                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        {
+                            Amount = ipnTransaction.McGross,
+                            CreationDate = ipnTransaction.PaymentDate,
+                            OrganizationId = ids.Item1,
+                            UserId = ids.Item2,
+                            Type = TransactionType.Charge,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = ipnTransaction.TxnId,
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = ipnTransaction.TxnId
+                        });
+
+                        if(ipnTransaction.IsAccountCredit())
+                        {
+                            // TODO: Issue Stripe credit to user/org account
+                        }
+                    }
+                    // Catch foreign key violations because user/org could have been deleted.
+                    catch(SqlException e) when(e.Number == 547) { }
+                }
+            }
+            else if(ipnTransaction.PaymentStatus == "Refunded")
+            {
+                var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.PayPal, ipnTransaction.TxnId);
+                if(refundTransaction == null)
+                {
+                    var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal, ipnTransaction.ParentTxnId);
+                    if(parentTransaction == null)
+                    {
+                        return new BadRequestResult();
+                    }
+
+                    var refundAmount = System.Math.Abs(ipnTransaction.McGross);
+                    var remainingAmount = parentTransaction.Amount -
+                        parentTransaction.RefundedAmount.GetValueOrDefault();
+                    if(refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
+                        remainingAmount >= refundAmount)
+                    {
+                        parentTransaction.RefundedAmount =
+                            parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
+                        if(parentTransaction.RefundedAmount == parentTransaction.Amount)
+                        {
+                            parentTransaction.Refunded = true;
+                        }
+
+                        await _transactionRepository.ReplaceAsync(parentTransaction);
+                        await _transactionRepository.CreateAsync(new Core.Models.Table.Transaction
+                        {
+                            Amount = ipnTransaction.McGross,
+                            CreationDate = ipnTransaction.PaymentDate,
+                            OrganizationId = ids.Item1,
+                            UserId = ids.Item2,
+                            Type = TransactionType.Refund,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = ipnTransaction.TxnId,
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = ipnTransaction.TxnId
+                        });
                     }
                 }
             }

@@ -10,6 +10,7 @@
         public class PayPalSettings
         {
             public virtual bool Production { get; set; }
+            public virtual string BusinessId { get; set; }
             public virtual string ClientId { get; set; }
             public virtual string ClientSecret { get; set; }
             public virtual string WebhookId { get; set; }
