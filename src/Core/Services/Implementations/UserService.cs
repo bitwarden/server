@@ -708,7 +708,7 @@ namespace Bit.Core.Services
                 Directory.CreateDirectory(dir);
                 File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
             }
-            else if(!string.IsNullOrWhiteSpace(paymentToken))
+            else
             {
                 if(!paymentMethodType.HasValue)
                 {
@@ -728,10 +728,6 @@ namespace Bit.Core.Services
 
                 await _paymentService.PurchasePremiumAsync(user, paymentMethodType.Value,
                     paymentToken, additionalStorageGb);
-            }
-            else
-            {
-                throw new InvalidOperationException("License or payment token is required.");
             }
 
             user.Premium = true;

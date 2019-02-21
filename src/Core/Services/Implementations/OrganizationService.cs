@@ -550,7 +550,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(!signup.PaymentMethodType.HasValue)
+                if(!signup.PaymentMethodType.HasValue && !string.IsNullOrWhiteSpace(signup.PaymentToken))
                 {
                     if(signup.PaymentToken.StartsWith("btok_"))
                     {

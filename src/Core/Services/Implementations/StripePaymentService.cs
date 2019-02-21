@@ -161,6 +161,20 @@ namespace Bit.Core.Services
         public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb)
         {
+            if(paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
+            {
+                throw new BadRequestException("Payment token is required.");
+            }
+            if(paymentMethodType == PaymentMethodType.Credit &&
+                (user.Gateway != GatewayType.Stripe || string.IsNullOrWhiteSpace(user.GatewayCustomerId)))
+            {
+                throw new BadRequestException("Your account does not have any credit available.");
+            }
+            if(paymentMethodType == PaymentMethodType.BankAccount)
+            {
+                throw new GatewayException("Bank account payment method is not supported at this time.");
+            }
+
             var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
 
@@ -169,28 +183,26 @@ namespace Bit.Core.Services
             Braintree.Transaction braintreeTransaction = null;
             Braintree.Customer braintreeCustomer = null;
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-                paymentMethodType == PaymentMethodType.BankAccount;
-
-            if(paymentMethodType == PaymentMethodType.BankAccount)
-            {
-                throw new GatewayException("Bank account payment method is not supported at this time.");
-            }
+                paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.Credit;
 
             if(user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
-                try
+                if(!string.IsNullOrWhiteSpace(paymentToken))
                 {
-                    await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
-                    stripeCustomerId = user.GatewayCustomerId;
-                    createdStripeCustomer = false;
+                    try
+                    {
+                        await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
+                    }
+                    catch
+                    {
+                        stripeCustomerId = null;
+                    }
                 }
-                catch(Exception)
-                {
-                    stripeCustomerId = null;
-                }
+                stripeCustomerId = user.GatewayCustomerId;
+                createdStripeCustomer = false;
             }
 
-            if(string.IsNullOrWhiteSpace(stripeCustomerId))
+            if(string.IsNullOrWhiteSpace(stripeCustomerId) && !string.IsNullOrWhiteSpace(paymentToken))
             {
                 string stipeCustomerSourceToken = null;
                 var stripeCustomerMetadata = new Dictionary<string, string>();
@@ -314,6 +326,18 @@ namespace Bit.Core.Services
                     else
                     {
                         throw new GatewayException("No payment was able to be collected.");
+                    }
+                }
+                else if(paymentMethodType == PaymentMethodType.Credit)
+                {
+                    var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
+                    {
+                        CustomerId = stripeCustomerId,
+                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
+                    });
+                    if(previewInvoice.AmountDue > 0)
+                    {
+                        throw new GatewayException("Your account does not have enough credit available.");
                     }
                 }
 
@@ -533,6 +557,20 @@ namespace Bit.Core.Services
                 // Owes more than prorateThreshold on next invoice.
                 // Invoice them and pay now instead of waiting until next billing cycle.
 
+                var customerService = new CustomerService();
+                customerService.ExpandDefaultSource = true;
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+
+                var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
+                if(invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
+                {
+                    if(customer.DefaultSource == null ||
+                        (!(customer.DefaultSource is Card) && !(customer.DefaultSource is BankAccount)))
+                    {
+                        // throw new BadRequestException("No payment method is available.");
+                    }
+                }
+
                 Invoice invoice = null;
                 var createdInvoiceItems = new List<InvoiceItem>();
                 Braintree.Transaction braintreeTransaction = null;
@@ -565,14 +603,12 @@ namespace Bit.Core.Services
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
-                    var customerService = new CustomerService();
-                    var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
-                    if(customer != null)
+                    if(invoice.AmountDue > 0)
                     {
-                        if(customer.Metadata.ContainsKey("btCustomerId"))
+                        if(customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
                         {
                             invoicePayOptions.PaidOutOfBand = true;
-                            var btInvoiceAmount = (invoiceAmount / 100M);
+                            var btInvoiceAmount = (invoice.AmountDue / 100M);
                             var transactionResult = await _btGateway.Transaction.SaleAsync(
                                 new Braintree.TransactionRequest
                                 {
@@ -610,7 +646,14 @@ namespace Bit.Core.Services
                         }
                     }
 
-                    await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
+                    try
+                    {
+                        await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
+                    }
+                    catch(StripeException)
+                    {
+                        throw new GatewayException("Unable to pay invoice.");
+                    }
                 }
                 catch(Exception e)
                 {
@@ -620,7 +663,14 @@ namespace Bit.Core.Services
                     }
                     if(invoice != null)
                     {
-                        await invoiceService.DeleteAsync(invoice.Id);
+                        await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
+                        if(invoice.StartingBalance != 0)
+                        {
+                            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                            {
+                                AccountBalance = customer.AccountBalance
+                            });
+                        }
 
                         // Restore invoice items that were brought in
                         foreach(var item in pendingInvoiceItems)

@@ -22,7 +22,8 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(string.IsNullOrWhiteSpace(PaymentToken) && License == null)
+            var creditType = PaymentMethodType.HasValue && PaymentMethodType.Value == Enums.PaymentMethodType.Credit;
+            if(string.IsNullOrWhiteSpace(PaymentToken) && !creditType && License == null)
             {
                 yield return new ValidationResult("Payment token or license is required.");
             }
