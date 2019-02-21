@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to your Bitwarden server
+  https://bitwarden.com
+
+Self-hosted documentation:
+  https://help.bitwarden.com/article/install-on-premise/
+  https://help.bitwarden.com/hosting/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
