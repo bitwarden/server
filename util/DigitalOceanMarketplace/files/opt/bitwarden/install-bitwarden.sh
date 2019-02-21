@@ -11,7 +11,7 @@
 
 echo -e 'Waiting for Bitwarden database container to come online...'
 
-sleep 60s
+sleep 30s
 
 /root/bitwarden.sh updatedb
 
