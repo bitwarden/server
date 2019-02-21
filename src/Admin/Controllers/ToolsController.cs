@@ -20,7 +20,7 @@ namespace Bit.Admin.Controllers
             _globalSettings = globalSettings;
         }
 
-        public async Task<IActionResult> ChargeBraintree()
+        public IActionResult ChargeBraintree()
         {
             return View(new ChargeBraintreeModel());
         }
