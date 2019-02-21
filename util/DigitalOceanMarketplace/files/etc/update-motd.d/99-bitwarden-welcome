@@ -13,8 +13,8 @@ Complete documentation:
   https://help.bitwarden.com/hosting/
 
 Configuration:
-  Configuration changes can be made in `/root/bwdata/config.yml` and
-  `/root/bwdata/env/global.override.env`.
+  Configuration changes can be made in /root/bwdata/config.yml and
+  /root/bwdata/env/global.override.env
 
 Common commands:
   /root/bitwarden.sh stop
