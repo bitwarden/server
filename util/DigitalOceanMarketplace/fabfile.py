@@ -14,6 +14,8 @@ def clean_up():
     """
     Clean up remote machine before taking snapshot.
     """
+    run("apt-get -y update")
+    run("apt-get -y upgrade")
     run("rm -rf /tmp/* /var/tmp/*")
     run("history -c")
     run("cat /dev/null > /root/.bash_history")
