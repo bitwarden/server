@@ -1053,10 +1053,10 @@ namespace Bit.Core.Services
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
                         CustomerId = customer.Id,
-                        Limit = 20
+                        Limit = 50
                     });
-                    billingInfo.Invoices = invoices?.Data?.OrderByDescending(i => i.Date)
-                        .Select(i => new BillingInfo.BillingInvoice(i));
+                    billingInfo.Invoices = invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
+                        .OrderByDescending(i => i.Date).Select(i => new BillingInfo.BillingInvoice(i));
                 }
             }
 
