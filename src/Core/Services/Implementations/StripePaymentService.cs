@@ -567,7 +567,7 @@ namespace Bit.Core.Services
                     if(customer.DefaultSource == null ||
                         (!(customer.DefaultSource is Card) && !(customer.DefaultSource is BankAccount)))
                     {
-                        // throw new BadRequestException("No payment method is available.");
+                        throw new BadRequestException("No payment method is available.");
                     }
                 }
 
