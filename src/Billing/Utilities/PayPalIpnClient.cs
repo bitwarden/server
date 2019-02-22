@@ -78,6 +78,7 @@ namespace Bit.Billing.Utilities
                 TxnType = GetDictValue(dataDict, "txn_type");
                 ParentTxnId = GetDictValue(dataDict, "parent_txn_id");
                 PaymentStatus = GetDictValue(dataDict, "payment_status");
+                PaymentType = GetDictValue(dataDict, "payment_type");
                 McCurrency = GetDictValue(dataDict, "mc_currency");
                 Custom = GetDictValue(dataDict, "custom");
                 ItemName = GetDictValue(dataDict, "item_name");
@@ -105,6 +106,7 @@ namespace Bit.Billing.Utilities
             public string TxnType { get; set; }
             public string ParentTxnId { get; set; }
             public string PaymentStatus { get; set; }
+            public string PaymentType { get; set; }
             public decimal McGross { get; set; }
             public decimal McFee { get; set; }
             public string McCurrency { get; set; }

@@ -186,7 +186,25 @@ namespace Bit.Billing.Controllers
             }
 
             var ipnTransaction = new PayPalIpnClient.IpnTransaction(body);
-            if(ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId || ipnTransaction.McCurrency != "USD")
+            if(ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId)
+            {
+                return new BadRequestResult();
+            }
+
+            if(ipnTransaction.TxnType != "web_accept" && ipnTransaction.TxnType != "merch_pmt" &&
+                ipnTransaction.PaymentStatus != "Refunded")
+            {
+                // Only processing billing agreement payments, buy now button payments, and refunds for now.
+                return new OkResult();
+            }
+
+            if(ipnTransaction.PaymentType == "echeck")
+            {
+                // Not accepting eChecks
+                return new OkResult();
+            }
+
+            if(ipnTransaction.McCurrency != "USD")
             {
                 return new BadRequestResult();
             }
@@ -197,9 +215,9 @@ namespace Bit.Billing.Controllers
                 return new OkResult();
             }
 
-            // Only processing credits via IPN for now
             if(!ipnTransaction.IsAccountCredit())
             {
+                // Only processing credits via IPN for now
                 return new OkResult();
             }
 
