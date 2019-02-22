@@ -25,6 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="2.1.3" />
+    <PackageReference Include="NBitpayClient" Version="1.0.0.31" />
     <PackageReference Include="Npgsql" Version="4.0.4" />
     <PackageReference Include="Quartz" Version="3.0.7" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />

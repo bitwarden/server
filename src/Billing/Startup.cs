@@ -43,6 +43,9 @@ namespace Bit.Billing
             services.AddSingleton<Utilities.PayPalClient>();
             services.AddSingleton<Utilities.PayPalIpnClient>();
 
+            // BitPay Client
+            services.AddSingleton<BitPayClient>();
+
             // Context
             services.AddScoped<CurrentContext>();
 

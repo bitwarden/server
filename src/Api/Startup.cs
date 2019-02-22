@@ -63,6 +63,8 @@ namespace Bit.Api
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                // BitPay
+                services.AddSingleton<BitPayClient>();
             }
 
             // Identity

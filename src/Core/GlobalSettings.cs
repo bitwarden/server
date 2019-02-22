@@ -31,6 +31,7 @@ namespace Bit.Core
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+        public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
 
         public class BaseServiceUriSettings
         {
@@ -184,6 +185,12 @@ namespace Bit.Core
             public string MerchantId { get; set; }
             public string PublicKey { get; set; }
             public string PrivateKey { get; set; }
+        }
+
+        public class BitPaySettings
+        {
+            public bool Production { get; set; }
+            public string Base58Secret { get; set; }
         }
 
         public class InstallationSettings
