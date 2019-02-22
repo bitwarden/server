@@ -5,6 +5,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
 using System;
@@ -26,6 +27,7 @@ namespace Bit.Billing.Controllers
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
         private readonly IMailService _mailService;
+        private readonly ILogger<StripeController> _logger;
         private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripeController(
@@ -36,7 +38,8 @@ namespace Bit.Billing.Controllers
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
-            IMailService mailService)
+            IMailService mailService,
+            ILogger<StripeController> logger)
         {
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
@@ -45,7 +48,7 @@ namespace Bit.Billing.Controllers
             _transactionRepository = transactionRepository;
             _userService = userService;
             _mailService = mailService;
-
+            _logger = logger;
             _btGateway = new Braintree.BraintreeGateway
             {
                 Environment = globalSettings.Braintree.Production ?
@@ -74,11 +77,13 @@ namespace Bit.Billing.Controllers
 
             if(string.IsNullOrWhiteSpace(parsedEvent?.Id))
             {
+                _logger.LogWarning("No event id.");
                 return new BadRequestResult();
             }
 
             if(_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
             {
+                _logger.LogWarning("Getting test events in production.");
                 return new BadRequestResult();
             }
 
@@ -180,6 +185,7 @@ namespace Bit.Billing.Controllers
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction != null)
                 {
+                    _logger.LogWarning("Charge success already processed. " + charge.Id);
                     return new OkResult();
                 }
 
@@ -220,6 +226,7 @@ namespace Bit.Billing.Controllers
 
                 if(!ids.Item1.HasValue && !ids.Item2.HasValue)
                 {
+                    _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
                     return new BadRequestResult();
                 }
 
@@ -246,6 +253,7 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
+                    _logger.LogWarning("Charge success from unsupported source. " + charge.Id);
                     return new OkResult();
                 }
 
@@ -305,6 +313,10 @@ namespace Bit.Billing.Controllers
                         });
                     }
                 }
+                else
+                {
+                    _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
+                }
             }
             else if(parsedEvent.Type.Equals("invoice.payment_failed"))
             {
@@ -329,6 +341,10 @@ namespace Bit.Billing.Controllers
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
+            }
+            else
+            {
+                _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
             }
 
             return new OkResult();
