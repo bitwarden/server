@@ -191,6 +191,7 @@ namespace Bit.Core
         {
             public bool Production { get; set; }
             public string Base58Secret { get; set; }
+            public string NotificationUrl { get; set; }
         }
 
         public class InstallationSettings

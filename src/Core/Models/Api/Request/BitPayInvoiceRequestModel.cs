@@ -15,7 +15,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public string Email { get; set; }
 
-        public NBitpayClient.Invoice ToBitpayClientInvoice()
+        public NBitpayClient.Invoice ToBitpayClientInvoice(GlobalSettings globalSettings)
         {
             var inv = new NBitpayClient.Invoice
             {
@@ -27,7 +27,10 @@ namespace Bit.Core.Models.Api
                 {
                     email = Email,
                     Name = Name
-                }
+                },
+                NotificationURL = globalSettings.BitPay.NotificationUrl,
+                FullNotifications = true,
+                ExtendedNotifications = true
             };
 
             var posData = string.Empty;
