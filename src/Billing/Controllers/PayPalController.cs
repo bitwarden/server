@@ -225,96 +225,100 @@ namespace Bit.Billing.Controllers
             {
                 var transaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.TxnId);
-                if(transaction == null)
+                if(transaction != null)
                 {
-                    try
-                    {
-                        var tx = new Transaction
-                        {
-                            Amount = ipnTransaction.McGross,
-                            CreationDate = ipnTransaction.PaymentDate,
-                            OrganizationId = ids.Item1,
-                            UserId = ids.Item2,
-                            Type = TransactionType.Charge,
-                            Gateway = GatewayType.PayPal,
-                            GatewayId = ipnTransaction.TxnId,
-                            PaymentMethodType = PaymentMethodType.PayPal,
-                            Details = ipnTransaction.TxnId
-                        };
-                        await _transactionRepository.CreateAsync(tx);
-
-                        if(ipnTransaction.IsAccountCredit())
-                        {
-                            if(tx.OrganizationId.HasValue)
-                            {
-                                var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                                if(org != null)
-                                {
-                                    if(await _paymentService.CreditAccountAsync(org, tx.Amount))
-                                    {
-                                        await _organizationRepository.ReplaceAsync(org);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
-                                if(user != null)
-                                {
-                                    if(await _paymentService.CreditAccountAsync(user, tx.Amount))
-                                    {
-                                        await _userRepository.ReplaceAsync(user);
-                                    }
-                                }
-                            }
-
-                            // TODO: Send email about credit added?
-                        }
-                    }
-                    // Catch foreign key violations because user/org could have been deleted.
-                    catch(SqlException e) when(e.Number == 547) { }
+                    return new OkResult();
                 }
+
+                try
+                {
+                    var tx = new Transaction
+                    {
+                        Amount = ipnTransaction.McGross,
+                        CreationDate = ipnTransaction.PaymentDate,
+                        OrganizationId = ids.Item1,
+                        UserId = ids.Item2,
+                        Type = TransactionType.Charge,
+                        Gateway = GatewayType.PayPal,
+                        GatewayId = ipnTransaction.TxnId,
+                        PaymentMethodType = PaymentMethodType.PayPal,
+                        Details = ipnTransaction.TxnId
+                    };
+                    await _transactionRepository.CreateAsync(tx);
+
+                    if(ipnTransaction.IsAccountCredit())
+                    {
+                        if(tx.OrganizationId.HasValue)
+                        {
+                            var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
+                            if(org != null)
+                            {
+                                if(await _paymentService.CreditAccountAsync(org, tx.Amount))
+                                {
+                                    await _organizationRepository.ReplaceAsync(org);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
+                            if(user != null)
+                            {
+                                if(await _paymentService.CreditAccountAsync(user, tx.Amount))
+                                {
+                                    await _userRepository.ReplaceAsync(user);
+                                }
+                            }
+                        }
+
+                        // TODO: Send email about credit added?
+                    }
+                }
+                // Catch foreign key violations because user/org could have been deleted.
+                catch(SqlException e) when(e.Number == 547) { }
             }
             else if(ipnTransaction.PaymentStatus == "Refunded")
             {
                 var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.TxnId);
-                if(refundTransaction == null)
+                if(refundTransaction != null)
                 {
-                    var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                        GatewayType.PayPal, ipnTransaction.ParentTxnId);
-                    if(parentTransaction == null)
+                    return new OkResult();
+                }
+
+                var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.PayPal, ipnTransaction.ParentTxnId);
+                if(parentTransaction == null)
+                {
+                    return new BadRequestResult();
+                }
+
+                var refundAmount = System.Math.Abs(ipnTransaction.McGross);
+                var remainingAmount = parentTransaction.Amount -
+                    parentTransaction.RefundedAmount.GetValueOrDefault();
+                if(refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
+                    remainingAmount >= refundAmount)
+                {
+                    parentTransaction.RefundedAmount =
+                        parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
+                    if(parentTransaction.RefundedAmount == parentTransaction.Amount)
                     {
-                        return new BadRequestResult();
+                        parentTransaction.Refunded = true;
                     }
 
-                    var refundAmount = System.Math.Abs(ipnTransaction.McGross);
-                    var remainingAmount = parentTransaction.Amount -
-                        parentTransaction.RefundedAmount.GetValueOrDefault();
-                    if(refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
-                        remainingAmount >= refundAmount)
+                    await _transactionRepository.ReplaceAsync(parentTransaction);
+                    await _transactionRepository.CreateAsync(new Transaction
                     {
-                        parentTransaction.RefundedAmount =
-                            parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
-                        if(parentTransaction.RefundedAmount == parentTransaction.Amount)
-                        {
-                            parentTransaction.Refunded = true;
-                        }
-
-                        await _transactionRepository.ReplaceAsync(parentTransaction);
-                        await _transactionRepository.CreateAsync(new Transaction
-                        {
-                            Amount = ipnTransaction.McGross,
-                            CreationDate = ipnTransaction.PaymentDate,
-                            OrganizationId = ids.Item1,
-                            UserId = ids.Item2,
-                            Type = TransactionType.Refund,
-                            Gateway = GatewayType.PayPal,
-                            GatewayId = ipnTransaction.TxnId,
-                            PaymentMethodType = PaymentMethodType.PayPal,
-                            Details = ipnTransaction.TxnId
-                        });
-                    }
+                        Amount = ipnTransaction.McGross,
+                        CreationDate = ipnTransaction.PaymentDate,
+                        OrganizationId = ids.Item1,
+                        UserId = ids.Item2,
+                        Type = TransactionType.Refund,
+                        Gateway = GatewayType.PayPal,
+                        GatewayId = ipnTransaction.TxnId,
+                        PaymentMethodType = PaymentMethodType.PayPal,
+                        Details = ipnTransaction.TxnId
+                    });
                 }
             }
 
