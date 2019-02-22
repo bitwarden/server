@@ -206,7 +206,8 @@ namespace Bit.Billing.Controllers
 
             if(ipnTransaction.McCurrency != "USD")
             {
-                return new BadRequestResult();
+                // Only process USD payments
+                return new OkResult();
             }
 
             var ids = ipnTransaction.GetIdsFromCustom();

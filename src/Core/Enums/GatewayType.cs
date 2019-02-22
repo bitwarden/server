@@ -12,8 +12,8 @@ namespace Bit.Core.Enums
         AppStore = 2,
         [Display(Name = "Google Play Store")]
         PlayStore = 3,
-        [Display(Name = "Coinbase")]
-        Coinbase = 4,
+        [Display(Name = "BitPay")]
+        BitPay = 4,
         [Display(Name = "PayPal")]
         PayPal = 5,
     }

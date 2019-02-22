@@ -1,11 +1,16 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Billing.Models;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System;
+using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Bit.Billing.Controllers
 {
@@ -39,30 +44,137 @@ namespace Bit.Billing.Controllers
         }
 
         [HttpPost("ipn")]
-        public async Task<IActionResult> PostIpn([FromQuery] string key)
+        public async Task<IActionResult> PostIpn([FromBody] BitPayEventModel model, [FromQuery] string key)
         {
             if(key != _billingSettings.BitPayWebhookKey)
             {
                 return new BadRequestResult();
             }
-
-            if(HttpContext?.Request == null)
+            if(model == null || string.IsNullOrWhiteSpace(model.Data?.Id) ||
+                string.IsNullOrWhiteSpace(model.Event?.Name))
             {
                 return new BadRequestResult();
             }
 
-            string body = null;
-            using(var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            if(model.Event.Name != "invoice_confirmed")
             {
-                body = await reader.ReadToEndAsync();
+                // Only processing confirmed invoice events for now.
+                return new OkResult();
             }
 
-            if(string.IsNullOrWhiteSpace(body))
+            var invoice = await _bitPayClient.GetInvoiceAsync(model.Data.Id);
+            if(invoice == null || invoice.Status != "confirmed")
             {
+                // Request forged...?
                 return new BadRequestResult();
             }
+
+            if(invoice.Currency != "USD")
+            {
+                // Only process USD payments
+                return new OkResult();
+            }
+
+            var ids = GetIdsFromPosData(invoice);
+            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            {
+                return new OkResult();
+            }
+
+            var isAccountCredit = IsAccountCredit(invoice);
+            if(!isAccountCredit)
+            {
+                // Only processing credits
+                return new OkResult();
+            }
+
+            var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
+            if(transaction != null)
+            {
+                return new OkResult();
+            }
+
+            try
+            {
+                var tx = new Core.Models.Table.Transaction
+                {
+                    Amount = invoice.Price,
+                    CreationDate = invoice.CurrentTime.Date,
+                    OrganizationId = ids.Item1,
+                    UserId = ids.Item2,
+                    Type = TransactionType.Charge,
+                    Gateway = GatewayType.BitPay,
+                    GatewayId = invoice.Id,
+                    PaymentMethodType = PaymentMethodType.BitPay,
+                    Details = invoice.Id
+                };
+                await _transactionRepository.CreateAsync(tx);
+
+                if(isAccountCredit)
+                {
+                    if(tx.OrganizationId.HasValue)
+                    {
+                        var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
+                        if(org != null)
+                        {
+                            if(await _paymentService.CreditAccountAsync(org, tx.Amount))
+                            {
+                                await _organizationRepository.ReplaceAsync(org);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
+                        if(user != null)
+                        {
+                            if(await _paymentService.CreditAccountAsync(user, tx.Amount))
+                            {
+                                await _userRepository.ReplaceAsync(user);
+                            }
+                        }
+                    }
+
+                    // TODO: Send email about credit added?
+                }
+            }
+            // Catch foreign key violations because user/org could have been deleted.
+            catch(SqlException e) when(e.Number == 547) { }
 
             return new OkResult();
+        }
+
+        private bool IsAccountCredit(NBitpayClient.Invoice invoice)
+        {
+            return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
+        }
+
+        public Tuple<Guid?, Guid?> GetIdsFromPosData(NBitpayClient.Invoice invoice)
+        {
+            Guid? orgId = null;
+            Guid? userId = null;
+
+            if(invoice != null && !string.IsNullOrWhiteSpace(invoice.PosData) && invoice.PosData.Contains(":"))
+            {
+                var mainParts = invoice.PosData.Split(',');
+                foreach(var mainPart in mainParts)
+                {
+                    var parts = mainPart.Split(':');
+                    if(parts.Length > 1 && Guid.TryParse(parts[1], out var id))
+                    {
+                        if(parts[0] == "userId")
+                        {
+                            userId = id;
+                        }
+                        else if(parts[0] == "organizationId")
+                        {
+                            orgId = id;
+                        }
+                    }
+                }
+            }
+
+            return new Tuple<Guid?, Guid?>(orgId, userId);
         }
     }
 }
