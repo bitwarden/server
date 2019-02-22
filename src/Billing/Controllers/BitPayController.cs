@@ -8,10 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data.SqlClient;
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using System.Transactions;
 
 namespace Bit.Billing.Controllers
 {
