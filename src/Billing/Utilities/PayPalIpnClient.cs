@@ -149,7 +149,7 @@ namespace Bit.Billing.Utilities
 
             public bool IsAccountCredit()
             {
-                return !string.IsNullOrWhiteSpace(Custom) && Custom.Contains("account_credit:true");
+                return !string.IsNullOrWhiteSpace(Custom) && Custom.Contains("account_credit:1");
             }
 
             private string GetDictValue(IDictionary<string, string> dict, string key)
