@@ -4,6 +4,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Data.SqlClient;
@@ -24,6 +25,7 @@ namespace Bit.Billing.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
         private readonly IPaymentService _paymentService;
+        private readonly ILogger<PayPalController> _logger;
 
         public PayPalController(
             IOptions<BillingSettings> billingSettings,
@@ -33,7 +35,8 @@ namespace Bit.Billing.Controllers
             IOrganizationRepository organizationRepository,
             IUserRepository userRepository,
             IMailService mailService,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            ILogger<PayPalController> logger)
         {
             _billingSettings = billingSettings?.Value;
             _paypalClient = paypalClient;
@@ -43,6 +46,7 @@ namespace Bit.Billing.Controllers
             _userRepository = userRepository;
             _mailService = mailService;
             _paymentService = paymentService;
+            _logger = logger;
         }
 
         [HttpPost("webhook")]
@@ -182,12 +186,14 @@ namespace Bit.Billing.Controllers
             var verified = await _paypalIpnClient.VerifyIpnAsync(body);
             if(!verified)
             {
+                _logger.LogWarning("Unverified IPN received.");
                 return new BadRequestResult();
             }
 
             var ipnTransaction = new PayPalIpnClient.IpnTransaction(body);
             if(ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId)
             {
+                _logger.LogWarning("Receiver was not proper business id. " + ipnTransaction.ReceiverId);
                 return new BadRequestResult();
             }
 
@@ -201,12 +207,14 @@ namespace Bit.Billing.Controllers
             if(ipnTransaction.PaymentType == "echeck")
             {
                 // Not accepting eChecks
+                _logger.LogWarning("Got an eCheck payment. " + ipnTransaction.TxnId);
                 return new OkResult();
             }
 
             if(ipnTransaction.McCurrency != "USD")
             {
                 // Only process USD payments
+                _logger.LogWarning("Received a payment not in USD. " + ipnTransaction.TxnId);
                 return new OkResult();
             }
 
@@ -228,6 +236,7 @@ namespace Bit.Billing.Controllers
                     GatewayType.PayPal, ipnTransaction.TxnId);
                 if(transaction != null)
                 {
+                    _logger.LogWarning("Already processed this completed transaction. #" + ipnTransaction.TxnId);
                     return new OkResult();
                 }
 
@@ -284,6 +293,7 @@ namespace Bit.Billing.Controllers
                     GatewayType.PayPal, ipnTransaction.TxnId);
                 if(refundTransaction != null)
                 {
+                    _logger.LogWarning("Already processed this refunded transaction. #" + ipnTransaction.TxnId);
                     return new OkResult();
                 }
 
@@ -291,6 +301,7 @@ namespace Bit.Billing.Controllers
                     GatewayType.PayPal, ipnTransaction.ParentTxnId);
                 if(parentTransaction == null)
                 {
+                    _logger.LogWarning("Parent transaction was not found. " + ipnTransaction.TxnId);
                     return new BadRequestResult();
                 }
 

@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data.SqlClient;
@@ -24,6 +25,7 @@ namespace Bit.Billing.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
         private readonly IPaymentService _paymentService;
+        private readonly ILogger<BitPayController> _logger;
 
         public BitPayController(
             IOptions<BillingSettings> billingSettings,
@@ -32,7 +34,8 @@ namespace Bit.Billing.Controllers
             IOrganizationRepository organizationRepository,
             IUserRepository userRepository,
             IMailService mailService,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            ILogger<BitPayController> logger)
         {
             _billingSettings = billingSettings?.Value;
             _bitPayClient = bitPayClient;
@@ -41,6 +44,7 @@ namespace Bit.Billing.Controllers
             _userRepository = userRepository;
             _mailService = mailService;
             _paymentService = paymentService;
+            _logger = logger;
         }
 
         [HttpPost("ipn")]
@@ -66,12 +70,14 @@ namespace Bit.Billing.Controllers
             if(invoice == null || invoice.Status != "confirmed")
             {
                 // Request forged...?
+                _logger.LogWarning("Forged invoice detected. #" + model.Data.Id);
                 return new BadRequestResult();
             }
 
             if(invoice.Currency != "USD")
             {
                 // Only process USD payments
+                _logger.LogWarning("Non USD payment received. #" + invoice.Id);
                 return new OkResult();
             }
 
@@ -85,12 +91,14 @@ namespace Bit.Billing.Controllers
             if(!isAccountCredit)
             {
                 // Only processing credits
+                _logger.LogWarning("Non-credit payment received. #" + invoice.Id);
                 return new OkResult();
             }
 
             var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
             if(transaction != null)
             {
+                _logger.LogWarning("Already processed this confirmed invoice. #" + invoice.Id);
                 return new OkResult();
             }
 
