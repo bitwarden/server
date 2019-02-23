@@ -111,7 +111,7 @@ namespace Bit.Billing.Controllers
                     Gateway = GatewayType.BitPay,
                     GatewayId = invoice.Id,
                     PaymentMethodType = PaymentMethodType.BitPay,
-                    Details =  $"BitPay #{invoice.Id}"
+                    Details =  $"BitPay {invoice.Id}"
                 };
                 await _transactionRepository.CreateAsync(tx);
 
