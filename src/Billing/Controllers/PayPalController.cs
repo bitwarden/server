@@ -160,14 +160,16 @@ namespace Bit.Billing.Controllers
         }
 
         [HttpPost("ipn")]
-        public async Task<IActionResult> PostIpn([FromQuery] string key)
+        public async Task<IActionResult> PostIpn()
         {
-            if(key != _billingSettings.PayPal.WebhookKey)
+            if(HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
             }
 
-            if(HttpContext?.Request == null)
+            var key = HttpContext.Request.Query.ContainsKey("key") ?
+                HttpContext.Request.Query["key"].ToString() : null;
+            if(key != _billingSettings.PayPal.WebhookKey)
             {
                 return new BadRequestResult();
             }
@@ -327,7 +329,7 @@ namespace Bit.Billing.Controllers
                     await _transactionRepository.ReplaceAsync(parentTransaction);
                     await _transactionRepository.CreateAsync(new Transaction
                     {
-                        Amount = ipnTransaction.McGross,
+                        Amount = refundAmount,
                         CreationDate = ipnTransaction.PaymentDate,
                         OrganizationId = ids.Item1,
                         UserId = ids.Item2,
