@@ -104,7 +104,7 @@ namespace Bit.Billing.Controllers
                 var tx = new Core.Models.Table.Transaction
                 {
                     Amount = invoice.Price,
-                    CreationDate = invoice.CurrentTime.Date,
+                    CreationDate = invoice.CurrentTime.DateTime,
                     OrganizationId = ids.Item1,
                     UserId = ids.Item2,
                     Type = TransactionType.Charge,
