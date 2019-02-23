@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
@@ -104,14 +105,14 @@ namespace Bit.Billing.Controllers
                 var tx = new Core.Models.Table.Transaction
                 {
                     Amount = invoice.Price,
-                    CreationDate = invoice.CurrentTime.DateTime,
+                    CreationDate = GetTransactionDate(invoice),
                     OrganizationId = ids.Item1,
                     UserId = ids.Item2,
                     Type = TransactionType.Charge,
                     Gateway = GatewayType.BitPay,
                     GatewayId = invoice.Id,
                     PaymentMethodType = PaymentMethodType.BitPay,
-                    Details =  $"{invoice.TransactionCurrency}, BitPay {invoice.Id}"
+                    Details = $"{invoice.TransactionCurrency}, BitPay {invoice.Id}"
                 };
                 await _transactionRepository.CreateAsync(tx);
 
@@ -158,6 +159,17 @@ namespace Bit.Billing.Controllers
         private bool IsAccountCredit(NBitpayClient.Invoice invoice)
         {
             return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
+        }
+
+        private DateTime GetTransactionDate(NBitpayClient.Invoice invoice)
+        {
+            var transactions = invoice.Transactions?.Where(t => t.Type == null &&
+                !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0");
+            if(transactions != null && transactions.Count() == 1)
+            {
+                return transactions.First().ReceivedTime.DateTime;
+            }
+            return invoice.CurrentTime.DateTime;
         }
 
         public Tuple<Guid?, Guid?> GetIdsFromPosData(NBitpayClient.Invoice invoice)
