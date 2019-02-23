@@ -8,6 +8,7 @@ using System.Linq;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -17,11 +18,13 @@ namespace Bit.Core.Services
         private const string StoragePlanId = "storage-gb-annually";
 
         private readonly ITransactionRepository _transactionRepository;
+        private readonly ILogger<StripePaymentService> _logger;
         private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripePaymentService(
             ITransactionRepository transactionRepository,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<StripePaymentService> logger)
         {
             _btGateway = new Braintree.BraintreeGateway
             {
@@ -32,6 +35,7 @@ namespace Bit.Core.Services
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
             _transactionRepository = transactionRepository;
+            _logger = logger;
         }
 
         public async Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -970,10 +974,10 @@ namespace Bit.Core.Services
             var customerService = new CustomerService();
             Customer customer = null;
             var customerExists = subscriber.Gateway == GatewayType.Stripe &&
-                !string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId);
+                !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId);
             if(customerExists)
             {
-                customer = await customerService.GetAsync(subscriber.GatewaySubscriptionId);
+                customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
             }
             else
             {

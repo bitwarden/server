@@ -87,7 +87,7 @@ namespace Bit.Billing
                     return true;
                 }
 
-                return e.Level >= LogEventLevel.Error;
+                return e.Level >= LogEventLevel.Warning;
             });
 
             if(env.IsDevelopment())
