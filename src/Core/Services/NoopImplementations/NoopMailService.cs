@@ -78,6 +78,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendAddedCreditAsync(string email, decimal amount)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {
             return Task.FromResult(0);

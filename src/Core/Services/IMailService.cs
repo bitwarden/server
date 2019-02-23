@@ -23,6 +23,7 @@ namespace Bit.Core.Services
         Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate, List<string> items,
             bool mentionInvoices);
         Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
+        Task SendAddedCreditAsync(string email, decimal amount);
         Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     }
 }

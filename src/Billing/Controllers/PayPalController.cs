@@ -258,11 +258,13 @@ namespace Bit.Billing.Controllers
 
                     if(ipnTransaction.IsAccountCredit())
                     {
+                        string billingEmail = null;
                         if(tx.OrganizationId.HasValue)
                         {
                             var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
                             if(org != null)
                             {
+                                billingEmail = org.BillingEmailAddress();
                                 if(await _paymentService.CreditAccountAsync(org, tx.Amount))
                                 {
                                     await _organizationRepository.ReplaceAsync(org);
@@ -274,6 +276,7 @@ namespace Bit.Billing.Controllers
                             var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
                             if(user != null)
                             {
+                                billingEmail = user.BillingEmailAddress();
                                 if(await _paymentService.CreditAccountAsync(user, tx.Amount))
                                 {
                                     await _userRepository.ReplaceAsync(user);
@@ -281,7 +284,10 @@ namespace Bit.Billing.Controllers
                             }
                         }
 
-                        // TODO: Send email about credit added?
+                        if(!string.IsNullOrWhiteSpace(billingEmail))
+                        {
+                            await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
+                        }
                     }
                 }
                 // Catch foreign key violations because user/org could have been deleted.

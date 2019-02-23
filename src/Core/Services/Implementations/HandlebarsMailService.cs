@@ -251,6 +251,20 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendAddedCreditAsync(string email, decimal amount)
+        {
+            var message = CreateDefaultMessage("Account Credit Payment Processed", email);
+            var model = new AddedCreditViewModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                Amount = amount
+            };
+            await AddMessageContentAsync(message, "AddedCredit", model);
+            message.MetaData.Add("SendGridCategories", new List<string> { "AddedCredit" });
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {
             var message = CreateDefaultMessage($"New Device Logged In From {deviceType}", email);
