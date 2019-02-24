@@ -108,7 +108,7 @@ namespace Bit.Billing.Controllers
                     CreationDate = GetTransactionDate(invoice),
                     OrganizationId = ids.Item1,
                     UserId = ids.Item2,
-                    Type = TransactionType.Charge,
+                    Type = TransactionType.Credit,
                     Gateway = GatewayType.BitPay,
                     GatewayId = invoice.Id,
                     PaymentMethodType = PaymentMethodType.BitPay,

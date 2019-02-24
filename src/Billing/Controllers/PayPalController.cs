@@ -226,7 +226,8 @@ namespace Bit.Billing.Controllers
                 return new OkResult();
             }
 
-            if(!ipnTransaction.IsAccountCredit())
+            var isAccountCredit = ipnTransaction.IsAccountCredit();
+            if(!isAccountCredit)
             {
                 // Only processing credits via IPN for now
                 return new OkResult();
@@ -250,7 +251,7 @@ namespace Bit.Billing.Controllers
                         CreationDate = ipnTransaction.PaymentDate,
                         OrganizationId = ids.Item1,
                         UserId = ids.Item2,
-                        Type = TransactionType.Charge,
+                        Type = isAccountCredit ? TransactionType.Credit : TransactionType.Charge,
                         Gateway = GatewayType.PayPal,
                         GatewayId = ipnTransaction.TxnId,
                         PaymentMethodType = PaymentMethodType.PayPal,
