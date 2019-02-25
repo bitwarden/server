@@ -74,8 +74,10 @@
 
 <h1>Organization <small>@Model.Organization.Name</small></h1>
 
-<h2>Information</h2>
+<h2>Organization Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+<h2>Billing Information</h2>
+@await Html.PartialAsync("_BillingInformation", Model.BillingInfo)
 <form method="post" id="edit-form">
     <h2>General</h2>
     <div class="row">

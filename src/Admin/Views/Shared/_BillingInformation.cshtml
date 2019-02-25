@@ -1,0 +1,54 @@
+﻿@model Bit.Core.Models.Business.BillingInfo
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Account @(Model.Balance <= 0 ? "Credit" : "Balance")</dt>
+    <dd class="col-sm-8 col-lg-9">@Math.Abs(Model.Balance).ToString("C")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Invoices</dt>
+    <dd class="col-sm-8 col-lg-9">
+        @if(Model.Invoices?.Any() ?? false)
+        {
+            <table class="table">
+                <tbody>
+                    @foreach(var invoice in Model.Invoices)
+                    {
+                        <tr>
+                            <td>@invoice.Date</td>
+                            <td><a target="_blank" href="@invoice.Url" title="View Invoice">@invoice.Number</a></td>
+                            <td>@invoice.Amount.ToString("C")</td>
+                            <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            @: No invoices.
+        }
+    </dd>
+
+    <dt class="col-sm-4 col-lg-3">Transactions</dt>
+    <dd class="col-sm-8 col-lg-9">
+        @if(Model.Transactions?.Any() ?? false)
+        {
+            <table class="table">
+                <tbody>
+                    @foreach(var transaction in Model.Transactions)
+                    {
+                        <tr>
+                            <td>@transaction.CreatedDate</td>
+                            <td>@transaction.Type.ToString()</td>
+                            <td>@transaction.PaymentMethodType.ToString()</td>
+                            <td>@transaction.Details</td>
+                            <td>@transaction.Amount.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            @: No transactions.
+        }
+    </dd>
+</dl>

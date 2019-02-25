@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core;
 using Bit.Core.Utilities;
+using Bit.Core.Services;
 
 namespace Bit.Admin.Controllers
 {
@@ -16,15 +17,18 @@ namespace Bit.Admin.Controllers
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPaymentService _paymentService;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IPaymentService paymentService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _paymentService = paymentService;
             _globalSettings = globalSettings;
         }
 
@@ -78,7 +82,8 @@ namespace Bit.Admin.Controllers
             }
 
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-            return View(new OrganizationEditModel(organization, users, _globalSettings));
+            var billingInfo = await _paymentService.GetBillingAsync(organization);
+            return View(new OrganizationEditModel(organization, users, billingInfo, _globalSettings));
         }
 
         [HttpPost]
