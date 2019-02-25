@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,14 @@ namespace Bit.Admin.Controllers
     public class ToolsController : Controller
     {
         private readonly GlobalSettings _globalSettings;
+        private readonly ITransactionRepository _transactionRepository;
 
-        public ToolsController(GlobalSettings globalSettings)
+        public ToolsController(
+            GlobalSettings globalSettings,
+            ITransactionRepository transactionRepository)
         {
             _globalSettings = globalSettings;
+            _transactionRepository = transactionRepository;
         }
 
         public IActionResult ChargeBraintree()
@@ -75,6 +80,62 @@ namespace Bit.Admin.Controllers
                 model.PayPalTransactionId = transactionResult.Target?.PayPalDetails?.CaptureId;
             }
             return View(model);
+        }
+
+        public IActionResult CreateTransaction(Guid? organizationId = null, Guid? userId = null)
+        {
+            return View("CreateUpdateTransaction", new CreateUpdateTransactionModel
+            {
+                OrganizationId = organizationId,
+                UserId = userId
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateTransaction(CreateUpdateTransactionModel model)
+        {
+            if(!ModelState.IsValid)
+            {
+                return View("CreateUpdateTransaction", model);
+            }
+
+            await _transactionRepository.CreateAsync(model.ToTransaction());
+            if(model.UserId.HasValue)
+            {
+                return RedirectToAction("Edit", "Users", new { id = model.UserId });
+            }
+            else
+            {
+                return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId });
+            }
+        }
+
+        public async Task<IActionResult> EditTransaction(Guid id)
+        {
+            var transaction = await _transactionRepository.GetByIdAsync(id);
+            if(transaction == null)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            return View("CreateUpdateTransaction", new CreateUpdateTransactionModel(transaction));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditTransaction(Guid id, CreateUpdateTransactionModel model)
+        {
+            if(!ModelState.IsValid)
+            {
+                return View("CreateUpdateTransaction", model);
+            }
+            await _transactionRepository.ReplaceAsync(model.ToTransaction(id));
+            if(model.UserId.HasValue)
+            {
+                return RedirectToAction("Edit", "Users", new { id = model.UserId });
+            }
+            else
+            {
+                return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId });
+            }
         }
     }
 }

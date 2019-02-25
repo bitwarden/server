@@ -88,6 +88,7 @@ namespace Bit.Core.Models.Business
         {
             public BillingTransaction(Transaction transaction)
             {
+                Id = transaction.Id;
                 CreatedDate = transaction.CreationDate;
                 Refunded = transaction.Refunded;
                 Type = transaction.Type;
@@ -97,6 +98,7 @@ namespace Bit.Core.Models.Business
                 RefundedAmount = transaction.RefundedAmount;
             }
 
+            public Guid Id { get; set; }
             public DateTime CreatedDate { get; set; }
             public decimal Amount { get; set; }
             public bool? Refunded { get; set; }

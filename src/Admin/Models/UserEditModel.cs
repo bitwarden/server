@@ -30,7 +30,7 @@ namespace Bit.Admin.Models
             LicenseKey = user.LicenseKey;
             PremiumExpirationDate = user.PremiumExpirationDate;
         }
-
+        
         public BillingInfo BillingInfo { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
