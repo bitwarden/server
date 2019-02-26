@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -15,22 +15,22 @@ namespace Bit.EventsProcessor
 {
     public class Functions
     {
-        private static IEventWriteService _eventWriteService;
+        private readonly IEventWriteService _eventWriteService;
 
-        static Functions()
+        public Functions(IConfiguration config)
         {
-            var storageConnectionString = ConfigurationManager.ConnectionStrings["AzureWebJobsStorage"];
-            if(storageConnectionString == null || string.IsNullOrWhiteSpace(storageConnectionString.ConnectionString))
+            var storageConnectionString = config["AzureWebJobsStorage"];
+            if(string.IsNullOrWhiteSpace(storageConnectionString))
             {
                 return;
             }
 
-            var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString.ConnectionString);
+            var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
             _eventWriteService = new RepositoryEventWriteService(repo);
         }
 
-        public async static Task ProcessQueueMessageAsync([QueueTrigger("event")] string message,
-            TextWriter logger, CancellationToken cancellationToken)
+        public async Task ProcessQueueMessageAsync([QueueTrigger("event")] string message,
+            CancellationToken cancellationToken, ILogger logger)
         {
             if(_eventWriteService == null || message == null || message.Length == 0)
             {
@@ -39,6 +39,7 @@ namespace Bit.EventsProcessor
 
             try
             {
+                logger.LogInformation("Processing message.");
                 var events = new List<IEvent>();
 
                 var token = JToken.Parse(message);
@@ -55,14 +56,20 @@ namespace Bit.EventsProcessor
                 }
 
                 await _eventWriteService.CreateManyAsync(events);
+                logger.LogInformation("Processed message.");
             }
             catch(JsonReaderException)
             {
-                await logger.WriteLineAsync("JsonReaderException: Unable to parse message.");
+                logger.LogError("JsonReaderException: Unable to parse message.");
             }
             catch(JsonSerializationException)
             {
-                await logger.WriteLineAsync("JsonSerializationException: Unable to serialize token.");
+                logger.LogError("JsonSerializationException: Unable to serialize token.");
+            }
+            catch(Exception e)
+            {
+                logger.LogError(e, "Exception occurred. " + e.Message);
+                throw e;
             }
         }
     }
