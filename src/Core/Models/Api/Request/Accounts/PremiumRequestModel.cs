@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api
 {
     public class PremiumRequestModel : IValidatableObject
     {
-        // TODO: Required in future
+        [Required]
         public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, 99)]

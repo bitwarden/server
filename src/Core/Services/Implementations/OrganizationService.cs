@@ -72,7 +72,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-            PaymentMethodType? paymentMethodType)
+            PaymentMethodType paymentMethodType)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -80,24 +80,8 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if(!paymentMethodType.HasValue)
-            {
-                if(paymentToken.StartsWith("tok_"))
-                {
-                    paymentMethodType = PaymentMethodType.Card;
-                }
-                else if(paymentToken.StartsWith("btok_"))
-                {
-                    paymentMethodType = PaymentMethodType.BankAccount;
-                }
-                else
-                {
-                    paymentMethodType = PaymentMethodType.PayPal;
-                }
-            }
-
             var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-                paymentMethodType.Value, paymentToken);
+                paymentMethodType, paymentToken);
             if(updated)
             {
                 await ReplaceAndUpdateCache(organization);
@@ -550,22 +534,6 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(!signup.PaymentMethodType.HasValue && !string.IsNullOrWhiteSpace(signup.PaymentToken))
-                {
-                    if(signup.PaymentToken.StartsWith("btok_"))
-                    {
-                        signup.PaymentMethodType = PaymentMethodType.BankAccount;
-                    }
-                    else if(signup.PaymentToken.StartsWith("tok_"))
-                    {
-                        signup.PaymentMethodType = PaymentMethodType.Card;
-                    }
-                    else
-                    {
-                        signup.PaymentMethodType = PaymentMethodType.PayPal;
-                    }
-                }
-
                 await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                     signup.PremiumAccessAddon);

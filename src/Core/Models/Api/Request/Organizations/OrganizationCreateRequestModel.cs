@@ -21,7 +21,6 @@ namespace Bit.Core.Models.Api
         public PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
-        // TODO: Required in future if not free plan
         public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
@@ -57,6 +56,11 @@ namespace Bit.Core.Models.Api
             if(PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
             {
                 yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
+            }
+            if(PlanType != PlanType.Free && !PaymentMethodType.HasValue)
+            {
+                yield return new ValidationResult("Payment method type required.",
+                    new string[] { nameof(PaymentMethodType) });
             }
         }
     }

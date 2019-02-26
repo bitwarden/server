@@ -678,7 +678,7 @@ namespace Bit.Core.Services
             return true;
         }
 
-        public async Task SignUpPremiumAsync(User user, string paymentToken, PaymentMethodType? paymentMethodType,
+        public async Task SignUpPremiumAsync(User user, string paymentToken, PaymentMethodType paymentMethodType,
             short additionalStorageGb, UserLicense license)
         {
             if(user.Premium)
@@ -710,24 +710,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(!paymentMethodType.HasValue)
-                {
-                    if(paymentToken.StartsWith("tok_"))
-                    {
-                        paymentMethodType = PaymentMethodType.Card;
-                    }
-                    else if(paymentToken.StartsWith("btok_"))
-                    {
-                        paymentMethodType = PaymentMethodType.BankAccount;
-                    }
-                    else
-                    {
-                        paymentMethodType = PaymentMethodType.PayPal;
-                    }
-                }
-
-                await _paymentService.PurchasePremiumAsync(user, paymentMethodType.Value,
-                    paymentToken, additionalStorageGb);
+                await _paymentService.PurchasePremiumAsync(user, paymentMethodType, paymentToken, additionalStorageGb);
             }
 
             user.Premium = true;
@@ -802,31 +785,14 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
         }
 
-        public async Task ReplacePaymentMethodAsync(User user, string paymentToken,
-            PaymentMethodType? paymentMethodType)
+        public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType)
         {
             if(paymentToken.StartsWith("btok_"))
             {
                 throw new BadRequestException("Invalid token.");
             }
 
-            if(!paymentMethodType.HasValue)
-            {
-                if(paymentToken.StartsWith("tok_"))
-                {
-                    paymentMethodType = PaymentMethodType.Card;
-                }
-                else if(paymentToken.StartsWith("btok_"))
-                {
-                    paymentMethodType = PaymentMethodType.BankAccount;
-                }
-                else
-                {
-                    paymentMethodType = PaymentMethodType.PayPal;
-                }
-            }
-
-            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType.Value, paymentToken);
+            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
             if(updated)
             {
                 await SaveUserAsync(user);
