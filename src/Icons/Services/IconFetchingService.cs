@@ -6,10 +6,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
-using AngleSharp.Parser.Html;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 using System.Text;
+using AngleSharp.Html.Parser;
 
 namespace Bit.Icons.Services
 {
@@ -116,7 +116,7 @@ namespace Bit.Icons.Services
             var parser = new HtmlParser();
             using(response)
             using(var htmlStream = await response.Content.ReadAsStreamAsync())
-            using(var document = await parser.ParseAsync(htmlStream))
+            using(var document = await parser.ParseDocumentAsync(htmlStream))
             {
                 uri = response.RequestMessage.RequestUri;
                 if(document.DocumentElement == null)

@@ -12,12 +12,14 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         
         private NotificationHubClient _client = null;
-        private DateTime? _clientExpires = null;
 
         public NotificationHubPushRegistrationService(
             GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
+            _client = NotificationHubClient.CreateClientFromConnectionString(
+                _globalSettings.NotificationHub.ConnectionString,
+                _globalSettings.NotificationHub.HubName);
         }
 
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -53,7 +55,7 @@ namespace Bit.Core.Services
                     messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                         "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
 
-                    installation.Platform = NotificationPlatform.Gcm;
+                    installation.Platform = NotificationPlatform.Fcm;
                     break;
                 case DeviceType.iOS:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
@@ -80,8 +82,7 @@ namespace Bit.Core.Services
             BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
                 userId, identifier);
 
-            await RenewClientAndExecuteAsync(async client =>
-                await client.CreateOrUpdateInstallationAsync(installation));
+            await _client.CreateOrUpdateInstallationAsync(installation);
         }
 
         private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
@@ -116,7 +117,7 @@ namespace Bit.Core.Services
         {
             try
             {
-                await RenewClientAndExecuteAsync(async client => await client.DeleteInstallationAsync(deviceId));
+                await _client.DeleteInstallationAsync(deviceId);
             }
             catch(Exception e)
             {
@@ -165,8 +166,7 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    await RenewClientAndExecuteAsync(async client =>
-                        await client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation }));
+                    await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
                 }
                 catch(Exception e)
                 {
@@ -176,19 +176,6 @@ namespace Bit.Core.Services
                     }
                 }
             }
-        }
-
-        private async Task RenewClientAndExecuteAsync(Func<NotificationHubClient, Task> task)
-        {
-            var now = DateTime.UtcNow;
-            if(_client == null || !_clientExpires.HasValue || _clientExpires.Value < now)
-            {
-                _clientExpires = now.Add(TimeSpan.FromMinutes(30));
-                _client = NotificationHubClient.CreateClientFromConnectionString(
-                    _globalSettings.NotificationHub.ConnectionString,
-                    _globalSettings.NotificationHub.HubName);
-            }
-            await task(_client);
         }
     }
 }

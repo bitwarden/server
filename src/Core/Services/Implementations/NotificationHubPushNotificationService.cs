@@ -16,7 +16,6 @@ namespace Bit.Core.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         private NotificationHubClient _client = null;
-        private DateTime? _clientExpires = null;
 
         public NotificationHubPushNotificationService(
             GlobalSettings globalSettings,
@@ -24,6 +23,9 @@ namespace Bit.Core.Services
         {
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
+            _client = NotificationHubClient.CreateClientFromConnectionString(
+                _globalSettings.NotificationHub.ConnectionString,
+                _globalSettings.NotificationHub.HubName);
         }
 
         public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -175,25 +177,12 @@ namespace Bit.Core.Services
 
         private async Task SendPayloadAsync(string tag, PushType type, object payload)
         {
-            await RenewClientAndExecuteAsync(async client => await client.SendTemplateNotificationAsync(
+            await _client.SendTemplateNotificationAsync(
                 new Dictionary<string, string>
                 {
                     { "type",  ((byte)type).ToString() },
                     { "payload", JsonConvert.SerializeObject(payload) }
-                }, tag));
-        }
-
-        private async Task RenewClientAndExecuteAsync(Func<NotificationHubClient, Task> task)
-        {
-            var now = DateTime.UtcNow;
-            if(_client == null || !_clientExpires.HasValue || _clientExpires.Value < now)
-            {
-                _clientExpires = now.Add(TimeSpan.FromMinutes(30));
-                _client = NotificationHubClient.CreateClientFromConnectionString(
-                    _globalSettings.NotificationHub.ConnectionString,
-                    _globalSettings.NotificationHub.HubName);
-            }
-            await task(_client);
+                }, tag);
         }
     }
 }
