@@ -94,6 +94,11 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
                 });
+                config.AddPolicy("Organization", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
+                });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
