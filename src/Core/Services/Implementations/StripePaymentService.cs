@@ -1043,7 +1043,12 @@ namespace Bit.Core.Services
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                Customer customer = null;
+                try
+                {
+                    customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                }
+                catch(StripeException) { }
                 if(customer != null)
                 {
                     billingInfo.Balance = customer.AccountBalance / 100M;
