@@ -39,8 +39,7 @@ namespace Bit.Billing
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
 
-            // PayPal Clients
-            services.AddSingleton<Utilities.PayPalClient>();
+            // PayPal Client
             services.AddSingleton<Utilities.PayPalIpnClient>();
 
             // BitPay Client
