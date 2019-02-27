@@ -36,6 +36,16 @@ namespace Bit.Core.Models.Business
                             card.ExpYear);
                     CardBrand = card.Brand;
                 }
+                else if(source is Source src && src.Card != null)
+                {
+                    Type = PaymentMethodType.Card;
+                    Description = $"{src.Card.Brand}, *{src.Card.Last4}, " +
+                        string.Format("{0}/{1}",
+                            string.Concat(src.Card.ExpMonth < 10 ?
+                                "0" : string.Empty, src.Card.ExpMonth),
+                            src.Card.ExpYear);
+                    CardBrand = src.Card.Brand;
+                }
             }
 
             public BillingSource(Braintree.PaymentMethod method)
