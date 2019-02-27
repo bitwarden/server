@@ -251,7 +251,27 @@ namespace Bit.Billing.Controllers
                     tx.PaymentMethodType = PaymentMethodType.BankAccount;
                     tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
                 }
-                else
+                else if(charge.Source is Source source)
+                {
+                    if(source.Card != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.Card;
+                        tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
+                    }
+                    else if(source.AchDebit != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
+                    }
+                    else if(source.AchCreditTransfer != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
+                            $"{source.AchCreditTransfer.AccountNumber}";
+                    }
+                }
+
+                if(!tx.PaymentMethodType.HasValue)
                 {
                     _logger.LogWarning("Charge success from unsupported source. " + charge.Id);
                     return new OkResult();
