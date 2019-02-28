@@ -187,7 +187,7 @@ namespace Bit.Api
             // Add MVC to the request pipeline.
             app.UseMvc();
 
-            if(globalSettings.SelfHosted)
+            if(true || globalSettings.SelfHosted)
             {
                 app.UseSwagger(config =>
                 {
@@ -195,6 +195,7 @@ namespace Bit.Api
                 });
                 app.UseSwaggerUI(config =>
                 {
+                    config.DocumentTitle = "Bitwarden API Documentation";
                     config.RoutePrefix = "docs";
                     config.SwaggerEndpoint("/specs/public/swagger.json", "Bitwarden Public API");
                     config.OAuthClientId("accountType.id");
