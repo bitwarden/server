@@ -344,9 +344,11 @@ namespace Bit.Core.Utilities
                     .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
-            if(!globalSettings.SelfHosted)
+            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
             {
-                var dataProtectionCert = CoreHelpers.GetCertificate(globalSettings.DataProtection.CertificateThumbprint);
+                var dataProtectionCert = CoreHelpers.GetCertificate(
+                    globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
