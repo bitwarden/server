@@ -87,7 +87,7 @@ namespace Bit.Core.IdentityServer
                         {
                             ClientId = $"organization.{org.Id}",
                             RequireClientSecret = true,
-                            ClientSecrets = { new Secret(org.Id.ToString().Sha256()) }, // TODO: org.ApiKey
+                            ClientSecrets = { new Secret("secret".Sha256()) }, // TODO: org.ApiKey
                             AllowedScopes = new string[] { "api.organization" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
