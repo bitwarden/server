@@ -14,6 +14,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="Swashbuckle.AspNetCore.Cli" Version="4.0.1" />
   </ItemGroup>
 
 </Project>

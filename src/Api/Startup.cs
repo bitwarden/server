@@ -14,6 +14,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.HttpOverrides;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace Bit.Api
 {
@@ -110,9 +111,12 @@ namespace Bit.Api
             // MVC
             services.AddMvc(config =>
             {
+                config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
             }).AddJsonOptions(o => o.SerializerSettings.ContractResolver = new DefaultContractResolver());
+
+            services.AddSwagger(globalSettings);
 
             if(globalSettings.SelfHosted)
             {
@@ -182,6 +186,21 @@ namespace Bit.Api
 
             // Add MVC to the request pipeline.
             app.UseMvc();
+
+            if(globalSettings.SelfHosted)
+            {
+                app.UseSwagger(config =>
+                {
+                    config.RouteTemplate = "specs/{documentName}/swagger.json";
+                });
+                app.UseSwaggerUI(config =>
+                {
+                    config.RoutePrefix = "docs";
+                    config.SwaggerEndpoint("/specs/public/swagger.json", "Bitwarden Public API");
+                    config.OAuthClientId("accountType.id");
+                    config.OAuthClientSecret("secretKey");
+                });
+            }
         }
     }
 }
