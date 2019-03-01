@@ -1,12 +1,15 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Public
 {
-    public class GroupResponseModel : ResponseModel
+    /// <summary>
+    /// A user group.
+    /// </summary>
+    public class GroupResponseModel : GroupBaseModel, IResponseModel
     {
-        public GroupResponseModel(Group group, string obj = "group")
-            : base(obj)
+        public GroupResponseModel(Group group)
         {
             if(group == null)
             {
@@ -14,16 +17,22 @@ namespace Bit.Core.Models.Api.Public
             }
 
             Id = group.Id;
-            OrganizationId = group.OrganizationId;
             Name = group.Name;
             AccessAll = group.AccessAll;
             ExternalId = group.ExternalId;
         }
 
+        /// <summary>
+        /// String representing the object's type. Objects of the same type share the same properties.
+        /// </summary>
+        /// <example>group</example>
+        [Required]
+        public string Object => "group";
+        /// <summary>
+        /// The group's unique identifier.
+        /// </summary>
+        /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
+        [Required]
         public Guid Id { get; set; }
-        public Guid OrganizationId { get; set; }
-        public string Name { get; set; }
-        public bool AccessAll { get; set; }
-        public string ExternalId { get; set; }
     }
 }
