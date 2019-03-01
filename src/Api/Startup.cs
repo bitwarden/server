@@ -114,7 +114,7 @@ namespace Bit.Api
                 config.Conventions.Add(new PublicApiControllersModelConvention());
             }).AddJsonOptions(options =>
             {
-                if(Configuration["swaggerGen"] != "true")
+                if(Environment.IsProduction() && Configuration["swaggerGen"] != "true")
                 {
                     options.SerializerSettings.ContractResolver = new DefaultContractResolver();
                 }
@@ -191,7 +191,7 @@ namespace Bit.Api
             // Add MVC to the request pipeline.
             app.UseMvc();
             
-            if(globalSettings.SelfHosted)
+            if(Environment.IsDevelopment() || globalSettings.SelfHosted)
             {
                 app.UseSwagger(config =>
                 {
