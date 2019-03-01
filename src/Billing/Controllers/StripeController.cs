@@ -94,7 +94,7 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Subscription subscription))
                 {
-                    throw new Exception("Subscription is null.");
+                    throw new Exception("Subscription is null. " + parsedEvent.Id);
                 }
 
                 var ids = GetIdsFromMetaData(subscription.Metadata);
@@ -136,14 +136,14 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Invoice invoice))
                 {
-                    throw new Exception("Invoice is null.");
+                    throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 if(subscription == null)
                 {
-                    throw new Exception("Invoice subscription is null.");
+                    throw new Exception("Invoice subscription is null. " + invoice.Id);
                 }
 
                 string email = null;
@@ -178,7 +178,7 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Charge charge))
                 {
-                    throw new Exception("Charge is null.");
+                    throw new Exception("Charge is null. " + parsedEvent.Id);
                 }
 
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -288,14 +288,14 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Charge charge))
                 {
-                    throw new Exception("Charge is null.");
+                    throw new Exception("Charge is null. " + parsedEvent.Id);
                 }
 
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction == null)
                 {
-                    throw new Exception("Cannot find refunded charge.");
+                    throw new Exception("Cannot find refunded charge. " + charge.Id);
                 }
 
                 var amountRefunded = charge.AmountRefunded / 100M;
@@ -342,7 +342,7 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Invoice invoice))
                 {
-                    throw new Exception("Invoice is null.");
+                    throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
                 if(invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
@@ -354,7 +354,7 @@ namespace Bit.Billing.Controllers
             {
                 if(!(parsedEvent.Data.Object is Invoice invoice))
                 {
-                    throw new Exception("Invoice is null.");
+                    throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
                 if(UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
