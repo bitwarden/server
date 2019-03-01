@@ -5,7 +5,9 @@ namespace Bit.Core.Exceptions
 {
     public class BadRequestException : Exception
     {
-        public BadRequestException(string message) : this(string.Empty, message) { }
+        public BadRequestException(string message)
+            : base(message)
+        { }
 
         public BadRequestException(string key, string errorMessage)
             : base("The model state is invalid.")

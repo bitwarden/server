@@ -112,8 +112,6 @@ namespace Bit.Api
             {
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
-                config.Filters.Add(new ExceptionHandlerFilterAttribute());
-                config.Filters.Add(new ModelStateValidationFilterAttribute());
             }).AddJsonOptions(options =>
             {
                 if(Configuration["swaggerGen"] != "true")
