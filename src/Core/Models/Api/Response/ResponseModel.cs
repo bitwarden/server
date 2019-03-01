@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
@@ -14,6 +15,7 @@ namespace Bit.Core.Models.Api
             Object = obj;
         }
 
+        [JsonProperty(Order = -200)] // Always the first property
         public string Object { get; private set; }
     }
 }
