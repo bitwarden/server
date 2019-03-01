@@ -25,6 +25,7 @@ namespace Bit.Core
         public virtual string IpAddress { get; set; }
         public virtual List<CurrentContentOrganization> Organizations { get; set; }
         public virtual Guid? InstallationId { get; set; }
+        public virtual Guid? OrganizationId { get; set; }
 
         public void Build(HttpContext httpContext, GlobalSettings globalSettings)
         {
@@ -73,11 +74,21 @@ namespace Bit.Core
 
             var clientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
-            if((clientId?.StartsWith("installation.") ?? false) && clientSubject != null)
+            if(clientSubject != null)
             {
-                if(Guid.TryParse(clientSubject, out var idGuid))
+                if(clientId?.StartsWith("installation.") ?? false)
                 {
-                    InstallationId = idGuid;
+                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    {
+                        InstallationId = idGuid;
+                    }
+                }
+                else if(clientId?.StartsWith("organization.") ?? false)
+                {
+                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    {
+                        OrganizationId = idGuid;
+                    }
                 }
             }
 
