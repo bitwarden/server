@@ -36,6 +36,7 @@ namespace Bit.Core.Models.Api
             UseTotp = organization.UseTotp;
             Use2fa = organization.Use2fa;
             UsersGetPremium = organization.UsersGetPremium;
+            SelfHost = organization.SelfHost;
         }
 
         public string Id { get; set; }
@@ -58,6 +59,7 @@ namespace Bit.Core.Models.Api
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UsersGetPremium { get; set; }
+        public bool SelfHost { get; set; }
     }
 
     public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

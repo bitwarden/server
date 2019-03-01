@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Api
             UseTotp = organization.UseTotp;
             Use2fa = organization.Use2fa;
             UsersGetPremium = organization.UsersGetPremium;
+            SelfHost = organization.SelfHost;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
             MaxStorageGb = organization.MaxStorageGb;
@@ -33,6 +34,7 @@ namespace Bit.Core.Models.Api
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UsersGetPremium { get; set; }
+        public bool SelfHost { get; set; }
         public int Seats { get; set; }
         public int MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
