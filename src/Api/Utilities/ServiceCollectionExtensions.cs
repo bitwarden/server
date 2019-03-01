@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using Bit.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Swagger;
@@ -32,6 +33,11 @@ namespace Bit.Api.Utilities
 
                 config.DescribeAllParametersInCamelCase();
                 // config.UseReferencedDefinitionsForEnums();
+
+                var apiFilePath = Path.Combine(System.AppContext.BaseDirectory, "Api.xml");
+                config.IncludeXmlComments(apiFilePath, true);
+                var coreFilePath = Path.Combine(System.AppContext.BaseDirectory, "Core.xml");
+                config.IncludeXmlComments(coreFilePath);
             });
         }
     }
