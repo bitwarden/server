@@ -14,7 +14,6 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.HttpOverrides;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace Bit.Api
 {
@@ -112,9 +111,16 @@ namespace Bit.Api
             services.AddMvc(config =>
             {
                 config.Conventions.Add(new ApiExplorerGroupConvention());
+                config.Conventions.Add(new PublicApiControllersModelConvention());
                 config.Filters.Add(new ExceptionHandlerFilterAttribute());
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
-            }).AddJsonOptions(o => o.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            }).AddJsonOptions(options =>
+            {
+                if(Configuration["swaggerGen"] != "true")
+                {
+                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                }
+            });
 
             services.AddSwagger(globalSettings);
 
@@ -186,8 +192,8 @@ namespace Bit.Api
 
             // Add MVC to the request pipeline.
             app.UseMvc();
-
-            if(true || globalSettings.SelfHosted)
+            
+            if(globalSettings.SelfHosted)
             {
                 app.UseSwagger(config =>
                 {

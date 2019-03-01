@@ -29,6 +29,9 @@ namespace Bit.Api.Utilities
                 {
                     { "OAuth2 Client Credentials", new[] { "api.organization" } }
                 });
+
+                config.DescribeAllParametersInCamelCase();
+                // config.UseReferencedDefinitionsForEnums();
             });
         }
     }
