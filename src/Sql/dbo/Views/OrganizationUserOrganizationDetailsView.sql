@@ -10,6 +10,7 @@ SELECT
     O.[UseEvents],
     O.[UseTotp],
     O.[Use2fa],
+    O.[UseApi],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[Seats],

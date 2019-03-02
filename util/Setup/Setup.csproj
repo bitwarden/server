@@ -13,13 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="DbScripts\2018-09-25_00_OrgPurge.sql" />
-    <None Remove="DbScripts\2018-10-17_00_ManagerRole.sql" />
-    <None Remove="DbScripts\2018-12-19_00_OrgUserTwoFactorEnabled.sql" />
-    <None Remove="DbScripts\2019-01-31_00_Transactions.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="1.9.5" />
     <PackageReference Include="System.Data.SqlClient" Version="4.5.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
