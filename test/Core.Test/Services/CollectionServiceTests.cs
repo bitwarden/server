@@ -47,9 +47,7 @@ namespace Bit.Core.Test.Services
 
             var ex = await Assert.ThrowsAsync<BadRequestException>(() => collectionService.SaveAsync(collection));
 
-            Assert.Equal("The model state is invalid.", ex.Message);
-            Assert.Equal(1, ex.ModelState.ErrorCount);
-            Assert.Equal("Organization not found", ex.ModelState.Root.Errors[0].ErrorMessage);
+            Assert.Equal("Organization not found", ex.Message);
         }
 
         [Fact]
@@ -109,10 +107,8 @@ namespace Bit.Core.Test.Services
             // verify & expect exception to be thrown
             var ex = await Assert.ThrowsAsync<BadRequestException>(() => collectionService.SaveAsync(testCollection));
 
-            Assert.Equal("The model state is invalid.", ex.Message);
-            Assert.Equal(1, ex.ModelState.ErrorCount);
             Assert.Equal("You have reached the maximum number of collections (2) for this organization.",
-                ex.ModelState.Root.Errors[0].ErrorMessage);
+                ex.Message);
         }
 
         [Fact]
