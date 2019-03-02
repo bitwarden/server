@@ -33,6 +33,7 @@ namespace Bit.Admin.Models
             UseEvents = org.UseEvents;
             UseTotp = org.UseTotp;
             Use2fa = org.Use2fa;
+            UseApi = org.UseApi;
             SelfHost = org.SelfHost;
             UsersGetPremium = org.UsersGetPremium;
             MaxStorageGb = org.MaxStorageGb;
@@ -76,6 +77,8 @@ namespace Bit.Admin.Models
         public bool UseTotp { get; set; }
         [Display(Name = "2FA")]
         public bool Use2fa { get; set; }
+        [Display(Name = "API")]
+        public bool UseApi{ get; set; }
         [Display(Name = "Self Host")]
         public bool SelfHost { get; set; }
         [Display(Name = "Users Get Premium")]
@@ -109,6 +112,7 @@ namespace Bit.Admin.Models
             existingOrganization.UseEvents = UseEvents;
             existingOrganization.UseTotp = UseTotp;
             existingOrganization.Use2fa = Use2fa;
+            existingOrganization.UseApi = UseApi;
             existingOrganization.SelfHost = SelfHost;
             existingOrganization.UsersGetPremium = UsersGetPremium;
             existingOrganization.MaxStorageGb = MaxStorageGb;

@@ -513,12 +513,14 @@ namespace Bit.Core.Services
                 UseDirectory = plan.UseDirectory,
                 UseTotp = plan.UseTotp,
                 Use2fa = plan.Use2fa,
+                UseApi = plan.UseApi,
                 SelfHost = plan.SelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
                 Gateway = null,
                 Enabled = true,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
+                ApiKey = CoreHelpers.SecureRandomString(30),
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -582,6 +584,7 @@ namespace Bit.Core.Services
                 UseEvents = license.UseEvents,
                 UseTotp = license.UseTotp,
                 Use2fa = license.Use2fa,
+                UseApi = license.UseApi,
                 Plan = license.Plan,
                 SelfHost = license.SelfHost,
                 UsersGetPremium = license.UsersGetPremium,
@@ -591,6 +594,7 @@ namespace Bit.Core.Services
                 Enabled = license.Enabled,
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
+                ApiKey = CoreHelpers.SecureRandomString(30),
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -740,6 +744,7 @@ namespace Bit.Core.Services
             organization.UseEvents = license.UseEvents;
             organization.UseTotp = license.UseTotp;
             organization.Use2fa = license.Use2fa;
+            organization.UseApi = license.UseApi;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;

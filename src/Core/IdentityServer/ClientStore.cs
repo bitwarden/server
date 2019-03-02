@@ -87,11 +87,11 @@ namespace Bit.Core.IdentityServer
                         {
                             ClientId = $"organization.{org.Id}",
                             RequireClientSecret = true,
-                            ClientSecrets = { new Secret("secret".Sha256()) }, // TODO: org.ApiKey
+                            ClientSecrets = { new Secret(org.ApiKey.Sha256()) },
                             AllowedScopes = new string[] { "api.organization" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
-                            Enabled = org.Enabled, // TODO: && org.UseApi
+                            Enabled = org.Enabled && org.UseApi,
                             Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, org.Id.ToString()) }
                         };
                     }

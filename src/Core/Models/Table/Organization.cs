@@ -1,8 +1,6 @@
 ﻿using System;
 using Bit.Core.Utilities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
@@ -31,6 +29,7 @@ namespace Bit.Core.Models.Table
         public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
+        public bool UseApi { get; set; }
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public long? Storage { get; set; }
@@ -40,6 +39,7 @@ namespace Bit.Core.Models.Table
         public string GatewaySubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
         public string LicenseKey { get; set; }
+        public string ApiKey { get; set; }
         public string TwoFactorProviders { get; set; }
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
