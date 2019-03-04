@@ -378,5 +378,72 @@ namespace Bit.Api.Controllers
                 model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
                 model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
         }
+
+        [HttpPost("{id}/api-key")]
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var response = new ApiKeyResponseModel(organization);
+                return response;
+            }
+        }
+
+        [HttpPost("{id}/rotate-api-key")]
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                await _organizationService.RotateApiKeyAsync(organization);
+                var response = new ApiKeyResponseModel(organization);
+                return response;
+            }
+        }
     }
 }

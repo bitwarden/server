@@ -1341,6 +1341,13 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task RotateApiKeyAsync(Organization organization)
+        {
+            organization.ApiKey = CoreHelpers.SecureRandomString(30);
+            organization.RevisionDate = DateTime.UtcNow;
+            await ReplaceAndUpdateCache(organization);
+        }
+
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
             Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
         {
