@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Public
@@ -9,7 +12,7 @@ namespace Bit.Core.Models.Api.Public
     /// </summary>
     public class GroupResponseModel : GroupBaseModel, IResponseModel
     {
-        public GroupResponseModel(Group group)
+        public GroupResponseModel(Group group, IEnumerable<SelectionReadOnly> collections)
         {
             if(group == null)
             {
@@ -20,6 +23,7 @@ namespace Bit.Core.Models.Api.Public
             Name = group.Name;
             AccessAll = group.AccessAll;
             ExternalId = group.ExternalId;
+            Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
         }
 
         /// <summary>
@@ -34,5 +38,9 @@ namespace Bit.Core.Models.Api.Public
         /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
         [Required]
         public Guid Id { get; set; }
+        /// <summary>
+        /// The associated collections that this group can access.
+        /// </summary>
+        public IEnumerable<AssociationWithPermissionsResponseModel> Collections { get; set; }
     }
 }

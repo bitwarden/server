@@ -42,12 +42,13 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Get(Guid id)
         {
-            var group = await _groupRepository.GetByIdAsync(id);
+            var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
+            var group = groupDetails?.Item1;
             if(group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
-            var response = new GroupResponseModel(group);
+            var response = new GroupResponseModel(group, groupDetails.Item2);
             return new JsonResult(response);
         }
 
@@ -56,13 +57,15 @@ namespace Bit.Api.Public.Controllers
         /// </summary>
         /// <remarks>
         /// Returns a list of your organization's groups.
+        /// Group objects listed in this call do not include information about their associated collections.
         /// </remarks>
         [HttpGet]
         [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> List()
         {
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-            var groupResponses = groups.Select(g => new GroupResponseModel(g));
+            // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
+            var groupResponses = groups.Select(g => new GroupResponseModel(g, null));
             var response = new ListResponseModel<GroupResponseModel>(groupResponses);
             return new JsonResult(response);
         }
@@ -82,7 +85,7 @@ namespace Bit.Api.Public.Controllers
             var group = model.ToGroup(_currentContext.OrganizationId.Value);
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
             await _groupService.SaveAsync(group, associations);
-            var response = new GroupResponseModel(group);
+            var response = new GroupResponseModel(group, associations);
             return new JsonResult(response);
         }
 
@@ -109,7 +112,7 @@ namespace Bit.Api.Public.Controllers
             var updatedGroup = model.ToGroup(existingGroup);
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
             await _groupService.SaveAsync(updatedGroup, associations);
-            var response = new GroupResponseModel(updatedGroup);
+            var response = new GroupResponseModel(updatedGroup, associations);
             return new JsonResult(response);
         }
 
