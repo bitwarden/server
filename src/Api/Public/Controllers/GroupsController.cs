@@ -73,6 +73,7 @@ namespace Bit.Api.Public.Controllers
         /// <remarks>
         /// Creates a new group object.
         /// </remarks>
+        /// <param name="model">The request model.</param>
         [HttpPost]
         [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -93,6 +94,7 @@ namespace Bit.Api.Public.Controllers
         /// the value of the existing property will be reset.
         /// </remarks>
         /// <param name="id">The identifier of the group to be updated.</param>
+        /// <param name="model">The request model.</param>
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
