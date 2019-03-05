@@ -75,6 +75,10 @@ namespace Bit.Admin
             // Jobs service
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
+            if(!globalSettings.SelfHosted)
+            {
+                services.AddHostedService<HostedServices.BlockIpHostedService>();
+            }
         }
 
         public void Configure(
