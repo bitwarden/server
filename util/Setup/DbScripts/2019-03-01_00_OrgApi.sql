@@ -337,3 +337,50 @@ FROM
 INNER JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUserUserDetails_ReadById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationUserUserDetailsView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [OrganizationUserUserDetails_ReadById] @Id
+
+    SELECT
+        CU.[CollectionId] Id,
+        CU.[ReadOnly]
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OrganizationUserId] = @Id
+END
+GO

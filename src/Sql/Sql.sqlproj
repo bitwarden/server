@@ -248,5 +248,7 @@
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Stored Procedures\Transaction_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Transaction_ReadByGatewayId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadWithCollectionsById.sql" />
   </ItemGroup>
 </Project>
