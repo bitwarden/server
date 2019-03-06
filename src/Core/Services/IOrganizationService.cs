@@ -35,7 +35,7 @@ namespace Bit.Core.Services
         Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
-        Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SelectionReadOnly> collections);
+        Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
         Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds);

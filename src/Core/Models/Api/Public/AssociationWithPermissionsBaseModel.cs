@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api.Public
 {
-    public abstract class BaseAssociationWithPermissionsModel
+    public abstract class AssociationWithPermissionsBaseModel
     {
         /// <summary>
         /// The associated object's unique identifier.

@@ -3,7 +3,7 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Api.Public
 {
-    public class AssociationWithPermissionsResponseModel : BaseAssociationWithPermissionsModel
+    public class AssociationWithPermissionsResponseModel : AssociationWithPermissionsBaseModel
     {
         public AssociationWithPermissionsResponseModel(SelectionReadOnly selection)
         {

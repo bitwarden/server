@@ -871,9 +871,14 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {
-            var result = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email }, type, accessAll,
+            var results = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email }, type, accessAll,
                 externalId, collections);
-            return result.FirstOrDefault();
+            var result = results.FirstOrDefault();
+            if(result == null)
+            {
+                throw new BadRequestException("This user has already been invited.");
+            }
+            return result;
         }
 
         public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
@@ -1062,16 +1067,17 @@ namespace Bit.Core.Services
             return orgUser;
         }
 
-        public async Task SaveUserAsync(OrganizationUser user, Guid savingUserId, IEnumerable<SelectionReadOnly> collections)
+        public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
+            IEnumerable<SelectionReadOnly> collections)
         {
             if(user.Id.Equals(default(Guid)))
             {
                 throw new BadRequestException("Invite the user first.");
             }
 
-            if(user.Type == OrganizationUserType.Owner)
+            if(savingUserId.HasValue && user.Type == OrganizationUserType.Owner)
             {
-                var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId);
+                var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId.Value);
                 if(!savingUserOrgs.Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner))
                 {
                     throw new BadRequestException("Only owners can update other owners.");

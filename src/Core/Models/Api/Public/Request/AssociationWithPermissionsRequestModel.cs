@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Api.Public
 {
-    public class AssociationWithPermissionsRequestModel : BaseAssociationWithPermissionsModel
+    public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
     {
         public SelectionReadOnly ToSelectionReadOnly()
         {
