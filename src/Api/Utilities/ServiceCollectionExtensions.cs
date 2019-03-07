@@ -12,7 +12,23 @@ namespace Bit.Api.Utilities
         {
             services.AddSwaggerGen(config =>
             {
-                config.SwaggerDoc("public", new Info { Title = "Bitwarden Public API", Version = "latest" });
+                config.SwaggerDoc("public", new Info
+                {
+                    Title = "Bitwarden Public API",
+                    Version = "latest",
+                    Contact = new Contact
+                    {
+                        Name = "Bitwarden Support",
+                        Url = "https://bitwarden.com",
+                        Email = "support@bitwarden.com"
+                    },
+                    Description = "The Bitwarden public APIs.",
+                    License = new License
+                    {
+                        Name = "GNU Affero General Public License v3.0",
+                        Url = "https://github.com/bitwarden/server/blob/master/LICENSE.txt"
+                    }
+                });
                 // config.SwaggerDoc("internal", new Info { Title = "Bitwarden Internal API", Version = "latest" });
 
                 config.AddSecurityDefinition("OAuth2 Client Credentials", new OAuth2Scheme
