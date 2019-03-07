@@ -384,3 +384,199 @@ BEGIN
         [OrganizationUserId] = @Id
 END
 GO
+
+IF COL_LENGTH('[dbo].[Collection]', 'ExternalId') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[Collection]
+    ADD
+        [ExternalId] NVARCHAR(300) NULL
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_Create]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Collection]
+    (
+        [Id],
+        [OrganizationId],
+        [Name],
+        [ExternalId],
+        [CreationDate],
+        [RevisionDate]
+    )
+    VALUES
+    (
+        @Id,
+        @OrganizationId,
+        @Name,
+        @ExternalId,
+        @CreationDate,
+        @RevisionDate
+    )
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_Update]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[Collection]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [Name] = @Name,
+        [ExternalId] = @ExternalId,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate
+    WHERE
+        [Id] = @Id
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_CreateWithGroups]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_CreateWithGroups]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_CreateWithGroups]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Groups AS [dbo].[SelectionReadOnlyArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
+
+    ;WITH [AvailableGroupsCTE] AS(
+        SELECT
+            [Id]
+        FROM
+            [dbo].[Group]
+        WHERE
+            [OrganizationId] = @OrganizationId
+    )
+    INSERT INTO [dbo].[CollectionGroup]
+    (
+        [CollectionId],
+        [GroupId],
+        [ReadOnly]
+    )
+    SELECT
+        @Id,
+        [Id],
+        [ReadOnly]
+    FROM
+        @Groups
+    WHERE
+        [Id] IN (SELECT [Id] FROM [AvailableGroupsCTE])
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_UpdateWithGroups]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_UpdateWithGroups]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_UpdateWithGroups]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Groups AS [dbo].[SelectionReadOnlyArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
+
+    ;WITH [AvailableGroupsCTE] AS(
+        SELECT
+            Id
+        FROM
+            [dbo].[Group]
+        WHERE
+            OrganizationId = @OrganizationId
+    )
+    MERGE
+        [dbo].[CollectionGroup] AS [Target]
+    USING 
+        @Groups AS [Source]
+    ON
+        [Target].[CollectionId] = @Id
+        AND [Target].[GroupId] = [Source].[Id]
+    WHEN NOT MATCHED BY TARGET
+    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
+        INSERT VALUES
+        (
+            @Id,
+            [Source].[Id],
+            [Source].[ReadOnly]
+        )
+    WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
+        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
+    WHEN NOT MATCHED BY SOURCE
+    AND [Target].[CollectionId] = @Id THEN
+        DELETE
+    ;
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'CollectionView')
+BEGIN
+    DROP VIEW [dbo].[CollectionView]
+END
+GO
+
+CREATE VIEW [dbo].[CollectionView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Collection]
+GO

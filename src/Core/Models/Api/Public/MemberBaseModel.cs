@@ -46,7 +46,7 @@ namespace Bit.Core.Models.Api.Public
         [Required]
         public bool? AccessAll { get; set; }
         /// <summary>
-        /// External identifier linking this member to another system, such as a user directory.
+        /// External identifier for reference or linking this member to another system, such as a user directory.
         /// </summary>
         /// <example>external_id_123456</example>
         [StringLength(300)]

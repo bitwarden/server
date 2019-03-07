@@ -19,11 +19,13 @@ namespace Bit.Core.Models.Api
             Id = collection.Id.ToString();
             OrganizationId = collection.OrganizationId.ToString();
             Name = collection.Name;
+            ExternalId = collection.ExternalId;
         }
 
         public string Id { get; set; }
         public string OrganizationId { get; set; }
         public string Name { get; set; }
+        public string ExternalId { get; set; }
     }
 
     public class CollectionDetailsResponseModel : CollectionResponseModel

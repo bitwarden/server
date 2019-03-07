@@ -3,7 +3,7 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Public
 {
-    public class CollectionUpdateRequestModel
+    public class CollectionUpdateRequestModel : CollectionBaseModel
     {
         /// <summary>
         /// The associated groups that this collection is assigned to.
@@ -12,8 +12,7 @@ namespace Bit.Core.Models.Api.Public
 
         public Collection ToCollection(Collection existingCollection)
         {
-            // TODO
-            // existingCollection.ExternalId = ExternalId;
+            existingCollection.ExternalId = ExternalId;
             return existingCollection;
         }
     }

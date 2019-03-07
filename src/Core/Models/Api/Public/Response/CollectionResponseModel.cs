@@ -10,7 +10,7 @@ namespace Bit.Core.Models.Api.Public
     /// <summary>
     /// A collection.
     /// </summary>
-    public class CollectionResponseModel : IResponseModel
+    public class CollectionResponseModel : CollectionBaseModel, IResponseModel
     {
         public CollectionResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
         {
@@ -20,7 +20,7 @@ namespace Bit.Core.Models.Api.Public
             }
 
             Id = collection.Id;
-            // ExternalId = group.ExternalId; TODO: Add external is for referencing purposes
+            ExternalId = collection.ExternalId;
             Groups = groups?.Select(c => new AssociationWithPermissionsResponseModel(c));
         }
 
