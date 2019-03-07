@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Public
 {
-    public class CollectionCreateUpdateRequestModel : GroupBaseModel
+    public class CollectionUpdateRequestModel
     {
         /// <summary>
         /// The associated groups that this collection is assigned to.
