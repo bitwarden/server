@@ -11,6 +11,10 @@
     <NoWarn>1701;1702;1591;1573</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;1591;1573</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
