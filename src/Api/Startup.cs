@@ -191,11 +191,14 @@ namespace Bit.Api
             // Add MVC to the request pipeline.
             app.UseMvc();
 
+            // Add Swagger
             if(Environment.IsDevelopment() || globalSettings.SelfHosted)
             {
                 app.UseSwagger(config =>
                 {
                     config.RouteTemplate = "specs/{documentName}/swagger.json";
+                    config.PreSerializeFilters.Add(
+                        (swaggerDoc, httpReq) => swaggerDoc.Host = globalSettings.BaseServiceUri.Api);
                 });
                 app.UseSwaggerUI(config =>
                 {
