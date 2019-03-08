@@ -19,7 +19,8 @@
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Transaction_Gateway_GatewayId]
-    ON [dbo].[Transaction]([Gateway] ASC, [GatewayId] ASC);
+    ON [dbo].[Transaction]([Gateway] ASC, [GatewayId] ASC)
+    WHERE [Gateway] IS NOT NULL AND [GatewayId] IS NOT NULL;
 
 
 GO
