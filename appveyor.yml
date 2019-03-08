@@ -19,3 +19,4 @@ build_script:
 - sh: ./build.sh tag dev
 - sh: docker images
 # - sh: ./build.sh push dev
+- cmd: msbuild bitwarden-server.sln /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
