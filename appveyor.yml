@@ -1,33 +1,33 @@
 image:
-- Visual Studio 2017
+#- Visual Studio 2017
 - Ubuntu1804
+
 environment:
   APPVEYOR_YML_DISABLE_PS_LINUX: true
+
 services:
 - docker
+
 stack: node 10
+
 install:
 - sh: npm i -g gulp
 - sh: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - cmd: choco install cloc --no-progress
 - cmd: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
+
 before_build:
 #- sh: dotnet restore
 - cmd: msbuild /t:restore
+
 build_script:
-#- dotnet build --configuration Debug
-- sh: chmod +x ./build.sh
-- sh: ./build.sh
-- sh: ./build.sh tag dev
-- sh: '[[ "${APPVEYOR_REPO_TAG_NAME}" != "" ]] && echo "TAG IS SET"'
-- sh: '[[ $APPVEYOR_FORCED_BUILD ]] && echo "FORCED BUILD"'
-#- sh: '[[ "${APPVEYOR_REPO_TAG_NAME}" != "" && $APPVEYOR_FORCED_BUILD ]] && ./build.sh tag ${APPVEYOR_REPO_TAG_NAME#"v"}'
-- sh: docker images
-- sh: ./build.sh push dev
-#- sh: '[[ "${APPVEYOR_REPO_TAG_NAME}" != "" && $APPVEYOR_FORCED_BUILD ]] && ./build.sh push latest && ./build.sh push ${APPVEYOR_REPO_TAG_NAME#"v"}'
+- sh: chmod +x ./build-ci.sh
+- sh: ./build-ci.sh
 - cmd: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
 after_build:
 - sh: docker logout
+
 test_script:
 #- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
 - cmd: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
