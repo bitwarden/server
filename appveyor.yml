@@ -11,8 +11,10 @@ install:
 - cmd: choco install cloc --no-progress
 - cmd: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
 before_build:
+#- sh: dotnet restore
 - cmd: msbuild /t:restore
 build_script:
+#- dotnet build --configuration Debug
 - sh: chmod +x ./build.sh
 - sh: ./build.sh
 - sh: ./build.sh tag dev
@@ -20,4 +22,5 @@ build_script:
 # - sh: ./build.sh push dev
 - cmd: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 test_script:
+#- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
 - cmd: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
