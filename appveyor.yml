@@ -5,6 +5,7 @@ environment:
   APPVEYOR_YML_DISABLE_PS_LINUX: true
 services:
 - docker
+stack: node 10
 install:
 - sh: npm i -g gulp
 build_script:
