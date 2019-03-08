@@ -1,0 +1,9 @@
+image:
+- Visual Studio 2017
+- Ubuntu1804
+environment:
+  APPVEYOR_YML_DISABLE_PS_LINUX: true
+services:
+- docker
+build_script:
+- sh: ./build.sh
