@@ -197,8 +197,9 @@ namespace Bit.Api
                 app.UseSwagger(config =>
                 {
                     config.RouteTemplate = "specs/{documentName}/swagger.json";
-                    config.PreSerializeFilters.Add(
-                        (swaggerDoc, httpReq) => swaggerDoc.Host = globalSettings.BaseServiceUri.Api);
+                    var host = globalSettings.BaseServiceUri.Api.Replace("https://", string.Empty)
+                        .Replace("http://", string.Empty);
+                    config.PreSerializeFilters.Add((swaggerDoc, httpReq) => swaggerDoc.Host = host);
                 });
                 app.UseSwaggerUI(config =>
                 {
