@@ -12,7 +12,6 @@ stack: node 10
 
 install:
 - sh: npm i -g gulp
-- sh: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - cmd: choco install cloc --no-progress
 - cmd: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
 
