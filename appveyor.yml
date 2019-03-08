@@ -5,5 +5,11 @@ environment:
   APPVEYOR_YML_DISABLE_PS_LINUX: true
 services:
 - docker
+install:
+- sh: npm i -g gulp
 build_script:
-- sh: chmod +x ./build.sh && ./build.sh
+- sh: chmod +x ./build.sh
+- sh: ./build.sh
+- sh: ./build.sh tag dev
+- sh: docker images
+# - sh: ./build.sh push dev
