@@ -8,6 +8,10 @@ services:
 stack: node 10
 install:
 - sh: npm i -g gulp
+- cmd: REM choco install cloc --no-progress
+- cmd: "REM cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
+before_build:
+- cmd: msbuild /t:restore
 build_script:
 - sh: chmod +x ./build.sh
 - sh: ./build.sh
