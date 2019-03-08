@@ -8,6 +8,7 @@ services:
 stack: node 10
 install:
 - sh: npm i -g gulp
+- sh: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 - cmd: choco install cloc --no-progress
 - cmd: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
 before_build:
@@ -19,8 +20,10 @@ build_script:
 - sh: ./build.sh
 - sh: ./build.sh tag dev
 - sh: docker images
-# - sh: ./build.sh push dev
+- sh: ./build.sh push dev
 - cmd: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+after_build:
+- sh: docker logout
 test_script:
 #- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
 - cmd: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
