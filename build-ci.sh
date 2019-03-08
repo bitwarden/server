@@ -6,11 +6,14 @@ echo "Rebuild: ${APPVEYOR_RE_BUILD}"
 
 PROD_DEPLOY=false
 TAG_NAME=""
-if [ "${APPVEYOR_REPO_TAG_NAME}" != "" -a "${APPVEYOR_RE_BUILD}" == "true" ]
+if [ "${APPVEYOR_REPO_TAG_NAME}" != "" -a "${APPVEYOR_RE_BUILD}" == "True" ]
 then
     PROD_DEPLOY=true
     TAG_NAME=${APPVEYOR_REPO_TAG_NAME#"v"}
 fi
+
+echo "Prod deploy: ${PROD_DEPLOY}"
+echo "Tag name: ${TAG_NAME}"
 
 chmod +x ./build.sh
 
