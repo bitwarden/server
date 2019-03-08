@@ -19,7 +19,7 @@ chmod +x ./build.sh
 ./build.sh
 ./build.sh tag dev
 
-if [ $PROD_DEPLOY ]
+if [ "${PROD_DEPLOY}" == "true" ]
 then
     ./build.sh tag beta
     ./build.sh tag $TAG_NAME
@@ -28,7 +28,7 @@ fi
 docker images
 ./build.sh push dev
 
-if [ $PROD_DEPLOY ]
+if [ "${PROD_DEPLOY}" == "true" ]
 then
     ./build.sh push beta
     ./build.sh push latest
