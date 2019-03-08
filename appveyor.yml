@@ -8,7 +8,7 @@ services:
 stack: node 10
 install:
 - sh: npm i -g gulp
-- sh: npm i -g natives@1.1.6
+- sh: npm i natives@1.1.6
 build_script:
 - sh: chmod +x ./build.sh
 - sh: ./build.sh
