@@ -6,4 +6,4 @@ environment:
 services:
 - docker
 build_script:
-- sh: pwd && ls && ./build.sh
+- sh: chmod +x ./build.sh && ./build.sh
