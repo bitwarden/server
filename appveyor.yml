@@ -6,7 +6,6 @@ environment:
 services:
 - docker
 stack: node 10
-configuration: Release
 install:
 - sh: npm i -g gulp
 - cmd: choco install cloc --no-progress
@@ -19,6 +18,6 @@ build_script:
 - sh: ./build.sh tag dev
 - sh: docker images
 # - sh: ./build.sh push dev
-- cmd: msbuild bitwarden-server.sln /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+- cmd: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 test_script:
 - cmd: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
