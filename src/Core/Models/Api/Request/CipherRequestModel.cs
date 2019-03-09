@@ -20,6 +20,8 @@ namespace Bit.Core.Models.Api
         public string OrganizationId { get; set; }
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
+        public bool Pwned { get; set; }
+        public DateTime PwnedCheckDate { get; set; }
         [Required]
         [EncryptedString]
         [EncryptedStringLength(1000)]
@@ -57,6 +59,8 @@ namespace Bit.Core.Models.Api
         {
             existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingCipher.Favorite = Favorite;
+            existingCipher.Pwned = Pwned;
+            existingCipher.PwnedCheckDate = PwnedCheckDate;
             ToCipher(existingCipher);
             return existingCipher;
         }

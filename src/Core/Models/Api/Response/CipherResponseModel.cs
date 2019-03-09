@@ -60,6 +60,8 @@ namespace Bit.Core.Models.Api
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
             OrganizationUseTotp = orgUseTotp;
+            PwnedCheckDate = cipher.PwnedCheckDate;
+            Pwned = cipher.Pwned;
         }
 
         public string Id { get; set; }
@@ -77,6 +79,8 @@ namespace Bit.Core.Models.Api
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }
+        public DateTime PwnedCheckDate { get; set; }
+        public bool Pwned { get; set; }
     }
 
     public class CipherResponseModel : CipherMiniResponseModel

@@ -20,6 +20,8 @@ namespace Bit.Core.Models.Table
         public string Attachments { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime PwnedCheckDate { get; internal set; }
+        public bool Pwned { get; internal set; }
 
         public void SetNewId()
         {
