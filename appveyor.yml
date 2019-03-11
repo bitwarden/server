@@ -12,18 +12,18 @@ stack: node 10
 
 install:
 - sh: npm i -g gulp
-- cmd: choco install cloc --no-progress
-- cmd: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
+- ps: choco install cloc --no-progress
+- ps: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
 
 before_build:
 #- sh: dotnet restore
-- cmd: msbuild /t:restore
+- ps: msbuild /t:restore
 
 build_script:
 - sh: chmod +x ./build-ci.sh
 - sh: ./build-ci.sh
-- cmd: >-
-    msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal^
+- ps: >-
+    msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 - ps: >-
     $env:swaggerGen="true"
@@ -39,4 +39,4 @@ after_build:
 
 test_script:
 #- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
-- cmd: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+- ps: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
