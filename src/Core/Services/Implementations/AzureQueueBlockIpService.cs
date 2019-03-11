@@ -24,12 +24,13 @@ namespace Bit.Core.Services
         public async Task BlockIpAsync(string ipAddress, bool permanentBlock)
         {
             await InitAsync();
-            var message = new CloudQueueMessage(ipAddress);
-            await _blockIpQueue.AddMessageAsync(message);
+            var blockMessage = new CloudQueueMessage(ipAddress);
+            await _blockIpQueue.AddMessageAsync(blockMessage);
 
             if(!permanentBlock)
             {
-                await _unblockIpQueue.AddMessageAsync(message, null, new TimeSpan(0, 15, 0), null, null);
+                var unblockMessage = new CloudQueueMessage(ipAddress);
+                await _unblockIpQueue.AddMessageAsync(unblockMessage, null, new TimeSpan(0, 15, 0), null, null);
             }
         }
 
