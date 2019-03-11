@@ -40,3 +40,6 @@ after_build:
 test_script:
 #- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
 - ps: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+
+artifacts:
+- path: swagger.json
