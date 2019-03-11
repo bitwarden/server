@@ -23,7 +23,7 @@ build_script:
 - sh: chmod +x ./build-ci.sh
 - sh: ./build-ci.sh
 - ps: >-
-    msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+    msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
         /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 - ps: >-
     $env:swaggerGen="true"
