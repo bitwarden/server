@@ -22,10 +22,10 @@ before_build:
 build_script:
 - sh: chmod +x ./build-ci.sh
 - sh: ./build-ci.sh
-- ps: >-
+- ps: |
     msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
         /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-- ps: >-
+- ps: |
     $env:swaggerGen="true"
     $env:ASPNETCORE_ENVIRONMENT="Production"
     cd .\src\Api; dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
