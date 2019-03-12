@@ -10,6 +10,9 @@ services:
 
 stack: node 10
 
+init:
+- ps: Install-Product node 10
+
 install:
 - sh: npm i -g gulp
 - ps: choco install cloc --no-progress
