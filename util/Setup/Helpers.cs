@@ -165,8 +165,12 @@ namespace Bit.Setup
             return input == "y" || input == "yes";
         }
 
-        public static void ShowBanner(string title, string message, ConsoleColor? color = null)
+        public static void ShowBanner(Context context, string title, string message, ConsoleColor? color = null)
         {
+            if(!context.PrintToScreen())
+            {
+                return;
+            }
             if(color != null)
             {
                 Console.ForegroundColor = color.Value;
@@ -190,6 +194,35 @@ namespace Bit.Setup
             {
                 var templateText = sr.ReadToEnd();
                 return HandlebarsDotNet.Handlebars.Compile(templateText);
+            }
+        }
+
+        public static void WriteLine(Context context, string format = null, object arg0 = null, object arg1 = null,
+            object arg2 = null)
+        {
+            if(!context.PrintToScreen())
+            {
+                return;
+            }
+            if(format != null && arg0 != null && arg1 != null && arg2 != null)
+            {
+                Console.WriteLine(format, arg0, arg1, arg2);
+            }
+            else if(format != null && arg0 != null && arg1 != null)
+            {
+                Console.WriteLine(format, arg0, arg1);
+            }
+            else if(format != null && arg0 != null)
+            {
+                Console.WriteLine(format, arg0);
+            }
+            else if(format != null)
+            {
+                Console.WriteLine(format);
+            }
+            else
+            {
+                Console.WriteLine();
             }
         }
     }

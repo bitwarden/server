@@ -167,7 +167,7 @@ namespace Bit.Setup
         {
             var template = Helpers.ReadTemplate("EnvironmentFile");
 
-            Console.WriteLine("Building docker environment files.");
+            Helpers.WriteLine(_context, "Building docker environment files.");
             Directory.CreateDirectory("/bitwarden/docker/");
             using(var sw = File.CreateText("/bitwarden/docker/global.env"))
             {
@@ -181,7 +181,7 @@ namespace Bit.Setup
             }
             Helpers.Exec("chmod 600 /bitwarden/docker/mssql.env");
 
-            Console.WriteLine("Building docker environment override files.");
+            Helpers.WriteLine(_context, "Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/env/");
             using(var sw = File.CreateText("/bitwarden/env/global.override.env"))
             {

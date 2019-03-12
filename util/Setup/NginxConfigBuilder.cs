@@ -55,10 +55,10 @@ namespace Bit.Setup
         private void Build(TemplateModel model)
         {
             Directory.CreateDirectory("/bitwarden/nginx/");
-            Console.WriteLine("Building nginx config.");
+            Helpers.WriteLine(_context, "Building nginx config.");
             if(!_context.Config.GenerateNginxConfig)
             {
-                Console.WriteLine("...skipped");
+                Helpers.WriteLine(_context, "...skipped");
                 return;
             }
 

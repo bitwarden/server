@@ -19,7 +19,7 @@ namespace Bit.Setup
                 Url = _context.Config.Url
             };
 
-            Console.WriteLine("Building FIDO U2F app id.");
+            Helpers.WriteLine(_context, "Building FIDO U2F app id.");
             Directory.CreateDirectory("/bitwarden/web/");
             var template = Helpers.ReadTemplate("AppId");
             using(var sw = File.CreateText("/bitwarden/web/app-id.json"))
