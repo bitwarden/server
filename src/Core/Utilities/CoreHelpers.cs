@@ -317,6 +317,26 @@ namespace Bit.Core.Utilities
                 !normalizedSetting.Equals("replace");
         }
 
+        public static string Base64EncodeString(string input)
+        {
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(input));
+        }
+
+        public static string Base64DecodeString(string input)
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(input));
+        }
+
+        public static string Base64UrlEncodeString(string input)
+        {
+            return Base64UrlEncode(Encoding.UTF8.GetBytes(input));
+        }
+
+        public static string Base64UrlDecodeString(string input)
+        {
+            return Encoding.UTF8.GetString(Base64UrlDecode(input));
+        }
+
         public static string Base64UrlEncode(byte[] input)
         {
             var output = Convert.ToBase64String(input)
