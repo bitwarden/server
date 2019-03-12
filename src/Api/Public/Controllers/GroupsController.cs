@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -50,6 +51,28 @@ namespace Bit.Api.Public.Controllers
             }
             var response = new GroupResponseModel(group, groupDetails.Item2);
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Retrieve a groups's member ids
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the unique identifiers for all members that are associated with this group. You need only
+        /// supply the unique group identifier that was returned upon group creation.
+        /// </remarks>
+        /// <param name="id">The identifier of the group to be retrieved.</param>
+        [HttpGet("{id}/member-ids")]
+        [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetMemberIds(Guid id)
+        {
+            var group = await _groupRepository.GetByIdAsync(id);
+            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            var orgUserIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
+            return new JsonResult(orgUserIds);
         }
 
         /// <summary>

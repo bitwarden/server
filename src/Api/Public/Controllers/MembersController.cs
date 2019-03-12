@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,17 +17,20 @@ namespace Bit.Api.Public.Controllers
     public class MembersController : Controller
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public MembersController(
             IOrganizationUserRepository organizationUserRepository,
+            IGroupRepository groupRepository,
             IOrganizationService organizationService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
+            _groupRepository = groupRepository;
             _organizationService = organizationService;
             _userService = userService;
             _currentContext = currentContext;
@@ -54,6 +58,28 @@ namespace Bit.Api.Public.Controllers
             var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
                 userDetails.Item2);
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Retrieve a member's group ids
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the unique identifiers for all groups that are associated with this member. You need only
+        /// supply the unique member identifier that was returned upon member creation.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to be retrieved.</param>
+        [HttpGet("{id}/group-ids")]
+        [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetGroupIds(Guid id)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if(orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(id);
+            return new JsonResult(groupIds);
         }
 
         /// <summary>
