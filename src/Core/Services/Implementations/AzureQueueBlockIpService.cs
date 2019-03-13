@@ -35,7 +35,7 @@ namespace Bit.Core.Services
             }
 
             _lastBlock = new Tuple<string, bool, DateTime>(ipAddress, permanentBlock, now);
-            var message = new CloudQueueMessage(CoreHelpers.Base64UrlEncodeString(ipAddress));
+            var message = new CloudQueueMessage(ipAddress);
             await _blockIpQueue.AddMessageAsync(message);
             if(!permanentBlock)
             {
