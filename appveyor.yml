@@ -67,13 +67,14 @@ build_script:
       msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
         /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
       
-      $env:swaggerGen="true"
-      $env:ASPNETCORE_ENVIRONMENT="Production"
-      cd .\src\Api; dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
+      $env:swaggerGen = "true"
+      $env:ASPNETCORE_ENVIRONMENT = "Production"
+      cd .\src\Api
+      dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
         .\bin\Debug\netcoreapp2.1\Api.dll public
       cd ..\..
-      $env:ASPNETCORE_ENVIRONMENT=""
-      $env:swaggerGen=""
+      $env:ASPNETCORE_ENVIRONMENT = ""
+      $env:swaggerGen = ""
       Push-AppveyorArtifact .\swagger.json
     }
 
