@@ -108,6 +108,7 @@ namespace Bit.Core
         {
             public string ReplyToEmail { get; set; }
             public string SendGridApiKey { get; set; }
+            public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
 
             public class SmtpSettings

@@ -19,6 +19,7 @@ namespace Bit.Core.Services
         private readonly AmazonSimpleEmailServiceClient _client;
         private readonly string _source;
         private readonly string _senderTag;
+        private readonly string _configSetName;
 
         public AmazonSesMailDeliveryService(
             GlobalSettings globalSettings,
@@ -44,7 +45,11 @@ namespace Bit.Core.Services
             _client = new AmazonSimpleEmailServiceClient(globalSettings.Amazon.AccessKeyId,
                 globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region));
             _source = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
-            _senderTag = $"Server: {globalSettings.ProjectName}";
+            _senderTag = $"Server_{globalSettings.ProjectName}";
+            if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
+            {
+                _configSetName = _globalSettings.Mail.AmazonConfigSetName;
+            }
         }
 
         public void Dispose()
@@ -56,7 +61,7 @@ namespace Bit.Core.Services
         {
             var request = new SendEmailRequest
             {
-                ConfigurationSetName = "Email",
+                ConfigurationSetName = _configSetName,
                 Source = _source,
                 Destination = new Destination
                 {
@@ -91,11 +96,9 @@ namespace Bit.Core.Services
                 request.Destination.BccAddresses = message.BccEmails.ToList();
             }
 
-            if(message.MetaData?.ContainsKey("SendGridCategories") ?? false)
+            if(!string.IsNullOrWhiteSpace(message.Category))
             {
-                var cats = (message.MetaData["SendGridCategories"] as List<string>)
-                    .Select(c => new MessageTag { Name = "Category", Value = c });
-                request.Tags.AddRange(cats);
+                request.Tags.Add(new MessageTag { Name = "Category", Value = message.Category });
             }
 
             try
@@ -104,7 +107,7 @@ namespace Bit.Core.Services
             }
             catch(Exception e)
             {
-                _logger.LogWarning(e, "Failed to send email.");
+                _logger.LogWarning(e, "Failed to send email. Re-retying...");
                 await SendAsync(request, true);
                 throw e;
             }
@@ -117,7 +120,6 @@ namespace Bit.Core.Services
                 // wait and try again
                 await Task.Delay(2000);
             }
-
             await _client.SendEmailAsync(request);
         }
     }

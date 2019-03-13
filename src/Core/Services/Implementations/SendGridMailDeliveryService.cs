@@ -58,9 +58,9 @@ namespace Bit.Core.Services
             }
 
             var cats = new List<string> { "Bitwarden Server" };
-            if(message.MetaData?.ContainsKey("SendGridCategories") ?? false)
+            if(!string.IsNullOrWhiteSpace(message.Category))
             {
-                cats.AddRange(message.MetaData["SendGridCategories"] as List<string>);
+                cats.Add(message.Category);
             }
             sendGridMessage.AddCategories(cats);
 

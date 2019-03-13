@@ -87,6 +87,10 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
             }
+            else if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            {
+                services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
+            }
             else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
             {
                 services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
