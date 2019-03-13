@@ -32,6 +32,7 @@ namespace Bit.Core
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
+        public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
 
         public class BaseServiceUriSettings
         {
@@ -199,6 +200,13 @@ namespace Bit.Core
             public Guid Id { get; set; }
             public string Key { get; set; }
             public string IdentityUri { get; set; }
+        }
+
+        public class AmazonSettings
+        {
+            public string AccessKeyId { get; set; }
+            public string AccessKeySecret { get; set; }
+            public string Region { get; set; }
         }
     }
 }
