@@ -52,7 +52,7 @@ build_script:
 
       if($env:PROD_DEPLOY -eq "true") {
         ./build.sh tag beta
-        ./build.sh tag ${TAG_NAME}
+        ./build.sh tag $env:TAG_NAME
       }
 
       docker images
@@ -61,7 +61,7 @@ build_script:
       if($env:PROD_DEPLOY -eq "true") {
         ./build.sh push beta
         ./build.sh push latest
-        ./build.sh push ${TAG_NAME}
+        ./build.sh push $env:TAG_NAME
       }
     } else {
       msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
