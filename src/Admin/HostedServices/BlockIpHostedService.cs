@@ -179,11 +179,6 @@ namespace Bit.Admin.HostedServices
 
                 foreach(var rule in listResponse.Result)
                 {
-                    if(rule.Configuration?.Value != message)
-                    {
-                        continue;
-                    }
-
                     await DeleteAccessRuleAsync(rule.Id);
                 }
             }
