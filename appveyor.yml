@@ -1,9 +1,6 @@
 image:
-- Visual Studio 2017
+#- Visual Studio 2017
 - Ubuntu1804
-
-environment:
-  APPVEYOR_YML_DISABLE_PS_LINUX: true
 
 services:
 - docker
@@ -11,36 +8,80 @@ services:
 stack: node 10
 
 init:
-- ps: Install-Product node 10
+- ps: |
+    if($isWindows) {
+      Install-Product node 10
+    }
 
 install:
-- sh: npm i -g gulp
-- ps: choco install cloc --no-progress
-- ps: "cloc --include-lang C#,SQL,Razor,\"Bourne Shell\",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git"
+- ps: |
+    $env:PROD_DEPLOY = "false"
+    $env:TAG_NAME = ""
+    if($env:APPVEYOR_REPO_TAG -eq "true" -and $env:APPVEYOR_RE_BUILD -eq "True") {
+      $env:PROD_DEPLOY = "true"
+      $env:TAG_NAME = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
+      echo "This is a production deployment for ${env:TAG_NAME}."
+    }
+    if($isLinux) {
+      npm i -g gulp
+    } else {
+      choco install cloc --no-progress
+      cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
+    }
 
 before_build:
-#- sh: dotnet restore
-- ps: msbuild /t:restore
+- sh: |
+    if [ "${DOCKER_USERNAME}" != "" -a "${DOCKER_PASSWORD}" != "" ]
+    then
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    fi
+- ps: |
+    if($isLinux) {
+      #dotnet restore
+    } else {
+      msbuild /t:restore
+    }
 
 build_script:
-- sh: chmod +x ./build-ci.sh
-- sh: ./build-ci.sh
+- sh: chmod +x ./build.sh
 - ps: |
-    msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
+    if($isLinux) {
+      #dotnet build --configuration Debug
+      ./build.sh
+      ./build.sh tag dev
+
+      if($env:PROD_DEPLOY -eq "true") {
+        ./build.sh tag beta
+        ./build.sh tag ${TAG_NAME}
+      }
+
+      docker images
+      ./build.sh push dev
+
+      if($env:PROD_DEPLOY -eq "true") {
+        ./build.sh push beta
+        ./build.sh push latest
+        ./build.sh push ${TAG_NAME}
+      }
+    } else {
+      msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
         /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-- ps: |
-    $env:swaggerGen="true"
-    $env:ASPNETCORE_ENVIRONMENT="Production"
-    cd .\src\Api; dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
+      
+      $env:swaggerGen="true"
+      $env:ASPNETCORE_ENVIRONMENT="Production"
+      cd .\src\Api; dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
         .\bin\Debug\netcoreapp2.1\Api.dll public
-    cd ..\..
-    $env:ASPNETCORE_ENVIRONMENT=""
-    $env:swaggerGen=""
-    Push-AppveyorArtifact .\swagger.json
+      cd ..\..
+      $env:ASPNETCORE_ENVIRONMENT=""
+      $env:swaggerGen=""
+      Push-AppveyorArtifact .\swagger.json
+    }
 
 after_build:
 - sh: docker logout
 
 test_script:
-#- sh: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
-- ps: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+- ps: |
+    if($isWindows) {
+      dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+    }
