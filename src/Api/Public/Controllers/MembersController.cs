@@ -160,6 +160,29 @@ namespace Bit.Api.Public.Controllers
         }
 
         /// <summary>
+        /// Update a member's groups.
+        /// </summary>
+        /// <remarks>
+        /// Updates the specified member's group associations.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to be updated.</param>
+        /// <param name="model">The request model.</param>
+        [HttpPut("{id}/group-ids")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> PutGroupIds(Guid id, [FromBody]UpdateGroupIdsRequestModel model)
+        {
+            var existingUser = await _organizationUserRepository.GetByIdAsync(id);
+            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds);
+            return new OkResult();
+        }
+
+        /// <summary>
         /// Delete a member.
         /// </summary>
         /// <remarks>
