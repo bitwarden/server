@@ -12,6 +12,7 @@ namespace Bit.Setup
 
         public string[] Args { get; set; }
         public bool Quiet { get; set; }
+        public bool Stub { get; set; }
         public IDictionary<string, string> Parameters { get; set; }
         public string OutputDir { get; set; } = "/etc/bitwarden";
         public string HostOS { get; set; } = "win";

@@ -36,6 +36,11 @@ namespace Bit.Setup
             {
                 _context.WebVersion = _context.Parameters["webv"];
             }
+            if(_context.Parameters.ContainsKey("stub"))
+            {
+                _context.Stub = _context.Parameters["stub"] == "true" ||
+                    _context.Parameters["stub"] == "1";
+            }
 
             Helpers.WriteLine(_context);
 
@@ -69,7 +74,12 @@ namespace Bit.Setup
                 _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
             }
 
-            if(!ValidateInstallation())
+            if(_context.Stub)
+            {
+                _context.Install.InstallationId = Guid.Empty;
+                _context.Install.InstallationKey = "SECRET_INSTALLATION_KEY";
+            }
+            else if(!ValidateInstallation())
             {
                 return;
             }

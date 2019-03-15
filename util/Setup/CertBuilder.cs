@@ -14,6 +14,15 @@ namespace Bit.Setup
 
         public void BuildForInstall()
         {
+            if(_context.Stub)
+            {
+                _context.Config.Ssl = true;
+                _context.Install.Trusted = true;
+                _context.Install.SelfSignedCert = false;
+                _context.Install.DiffieHellman = false;
+                return;
+            }
+
             _context.Config.Ssl = _context.Config.SslManagedLetsEncrypt;
 
             if(!_context.Config.Ssl)
