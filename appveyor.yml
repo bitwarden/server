@@ -92,7 +92,7 @@ build_script:
     rm $STUB_OUTPUT/env/uid.env
     cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 - ps: |
-    ls
+    ls -lS
     Push-AppveyorArtifact .\docker-stub.zip
 
 
