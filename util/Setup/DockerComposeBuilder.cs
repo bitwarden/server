@@ -62,7 +62,7 @@ namespace Bit.Setup
                 }
             }
 
-            public string ComposeVersion { get; set; } = "3";
+            public string ComposeVersion { get; set; } = "3.4";
             public bool MssqlDataDockerVolume { get; set; }
             public string HttpPort { get; set; }
             public string HttpsPort { get; set; }
