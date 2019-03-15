@@ -9,6 +9,11 @@ stack: node 10
 
 init:
 - ps: |
+    if($isWindows -and $env:DEBUG_RDP -eq "true") {
+      iex ((new-object net.webclient).DownloadString(`
+        'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    }
+- ps: |
     if($isWindows) {
       Install-Product node 10
     }
@@ -86,3 +91,11 @@ test_script:
     if($isWindows) {
       dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
     }
+
+on_finish:
+  - ps: |
+      if($isWindows -and $env:DEBUG_RDP -eq "true") {
+        $blockRdp = $true
+        iex ((new-object net.webclient).DownloadString(`
+          'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      }
