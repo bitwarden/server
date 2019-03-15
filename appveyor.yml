@@ -91,7 +91,9 @@ build_script:
     rm -rf $STUB_OUTPUT/ca-certificates $STUB_OUTPUT/identity $STUB_OUTPUT/letsencrypt $STUB_OUTPUT/ssl
     rm $STUB_OUTPUT/env/uid.env
     cd docker-stub; zip -r ../docker-stub.zip *; cd ..
-- ps: Push-AppveyorArtifact .\docker-stub.zip
+- ps: |
+    ls
+    Push-AppveyorArtifact .\docker-stub.zip
 
 
 after_build:
