@@ -93,7 +93,7 @@ build_script:
     cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 - ps: |
     ls -lS
-    Push-AppveyorArtifact .\docker-stub.zip
+    Push-AppveyorArtifact ./docker-stub.zip
 
 
 after_build:
