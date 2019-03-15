@@ -1,5 +1,5 @@
 image:
-#- Visual Studio 2017
+- Visual Studio 2017
 - Ubuntu1804
 
 services:
@@ -19,7 +19,6 @@ init:
     }
 
 install:
-- sh: ls -lS
 - ps: |
     $env:PROD_DEPLOY = "false"
     $env:TAG_NAME = ""
@@ -89,14 +88,9 @@ build_script:
     docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
       dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.company.com -os lin
     sudo chown -R appveyor:appveyor $STUB_OUTPUT
-    rm -rf $STUB_OUTPUT/ca-certificates
-    rm -rf $STUB_OUTPUT/identity
-    rm -rf $STUB_OUTPUT/letsencrypt
-    rm -rf $STUB_OUTPUT/ssl
+    rm -rf $STUB_OUTPUT/ca-certificates $STUB_OUTPUT/identity $STUB_OUTPUT/letsencrypt $STUB_OUTPUT/ssl
     rm $STUB_OUTPUT/env/uid.env
-    cd docker-stub
-    zip -r ../docker-stub.zip *
-    cd ..
+    cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 - ps: Push-AppveyorArtifact .\docker-stub.zip
 
 
