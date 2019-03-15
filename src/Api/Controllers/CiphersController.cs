@@ -219,7 +219,7 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportCiphersRequestModel model)
         {
             if(!_globalSettings.SelfHosted &&
-                (model.Ciphers.Count() > 5000 || model.FolderRelationships.Count() > 5000 ||
+                (model.Ciphers.Count() > 6000 || model.FolderRelationships.Count() > 6000 ||
                     model.Folders.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
@@ -236,7 +236,7 @@ namespace Bit.Api.Controllers
             [FromBody]ImportOrganizationCiphersRequestModel model)
         {
             if(!_globalSettings.SelfHosted &&
-                (model.Ciphers.Count() > 5000 || model.CollectionRelationships.Count() > 5000 ||
+                (model.Ciphers.Count() > 6000 || model.CollectionRelationships.Count() > 12000 ||
                     model.Collections.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
