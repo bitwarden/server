@@ -20,6 +20,7 @@ namespace Bit.Setup
                 _context.Install.Trusted = true;
                 _context.Install.SelfSignedCert = false;
                 _context.Install.DiffieHellman = false;
+                _context.Install.IdentityCertPassword = "IDENTITY_CERT_PASSWORD";
                 return;
             }
 
