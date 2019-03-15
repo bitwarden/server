@@ -68,7 +68,7 @@ namespace Bit.Setup
 
         private void Init()
         {
-            var dbPassword = Helpers.SecureRandomString(32);
+            var dbPassword = _context.Stub ? "DATABASE_PASSWORD" : Helpers.SecureRandomString(32);
             var dbConnectionString = new SqlConnectionStringBuilder
             {
                 DataSource = "tcp:mssql,1433",
