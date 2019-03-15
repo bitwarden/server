@@ -92,7 +92,10 @@ build_script:
     rm -rf $STUB_OUTPUT/letsencrypt
     rm -rf $STUB_OUTPUT/ssl
     rm $STUB_OUTPUT/env/uid.env
-- ps: Push-AppveyorArtifact .\docker-stub
+    cd docker-stub
+    zip -r ../docker-stub.zip *
+    cd ..
+- ps: Push-AppveyorArtifact .\docker-stub.zip
 
 
 after_build:
