@@ -112,3 +112,12 @@ on_finish:
         iex ((new-object net.webclient).DownloadString(`
           'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
+
+deploy:
+  provider: GitHub
+  auth_token: $(GH_TOKEN)
+  artifact: /.*/
+  force_update: true
+  on:
+    branch: master
+    PROD_DEPLOY: true
