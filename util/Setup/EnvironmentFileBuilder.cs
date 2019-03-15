@@ -68,7 +68,7 @@ namespace Bit.Setup
 
         private void Init()
         {
-            var dbPassword = _context.Stub ? "DATABASE_PASSWORD" : Helpers.SecureRandomString(32);
+            var dbPassword = _context.Stub ? "RANDOM_DATABASE_PASSWORD" : Helpers.SecureRandomString(32);
             var dbConnectionString = new SqlConnectionStringBuilder
             {
                 DataSource = "tcp:mssql,1433",
@@ -96,8 +96,10 @@ namespace Bit.Setup
                 ["globalSettings__dataProtection__directory"] = $"{_context.OutputDir}/core/aspnet-dataprotection",
                 ["globalSettings__logDirectory"] = $"{_context.OutputDir}/logs",
                 ["globalSettings__licenseDirectory"] = $"{_context.OutputDir}/core/licenses",
-                ["globalSettings__internalIdentityKey"] = Helpers.SecureRandomString(64, alpha: true, numeric: true),
-                ["globalSettings__duo__aKey"] = Helpers.SecureRandomString(64, alpha: true, numeric: true),
+                ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
+                    Helpers.SecureRandomString(64, alpha: true, numeric: true),
+                ["globalSettings__duo__aKey"] = _context.Stub ? "RANDOM_DUO_AKEY" :
+                    Helpers.SecureRandomString(64, alpha: true, numeric: true),
                 ["globalSettings__installation__id"] = _context.Install?.InstallationId.ToString(),
                 ["globalSettings__installation__key"] = _context.Install?.InstallationKey,
                 ["globalSettings__yubico__clientId"] = "REPLACE",

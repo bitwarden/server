@@ -57,7 +57,8 @@ namespace Bit.Setup
                 _context.Install.Trusted = true;
                 _context.Install.DiffieHellman = true;
                 Directory.CreateDirectory($"/bitwarden/letsencrypt/live/{_context.Install.Domain}/");
-                Helpers.Exec($"openssl dhparam -out /bitwarden/letsencrypt/live/{_context.Install.Domain}/dhparam.pem 2048");
+                Helpers.Exec($"openssl dhparam -out " +
+                    $"/bitwarden/letsencrypt/live/{_context.Install.Domain}/dhparam.pem 2048");
             }
             else if(_context.Config.Ssl && !_context.Install.SelfSignedCert)
             {
