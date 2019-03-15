@@ -20,11 +20,14 @@ init:
 
 install:
 - ps: |
+    $env:STUB_CORE_VER = "dev"
+    $env:STUB_WEB_VER = "dev"
     $env:PROD_DEPLOY = "false"
     $env:TAG_NAME = ""
     if($env:APPVEYOR_REPO_TAG -eq "true" -and $env:APPVEYOR_RE_BUILD -eq "True") {
       $env:PROD_DEPLOY = "true"
       $env:TAG_NAME = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
+      $env:STUB_CORE_VER = $env:TAG_NAME
       echo "This is a production deployment for ${env:TAG_NAME}."
     }
     if($isLinux) {
@@ -82,6 +85,15 @@ build_script:
       $env:swaggerGen = ""
       Push-AppveyorArtifact .\swagger.json
     }
+sh: |
+    echo "Make docker stubs"
+    mkdir stub
+    docker run -it --rm --name setup -v stub:/bitwarden bitwarden/setup:$STUB_CORE_VER \
+      dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.company.com -os lin \
+      -corev $STUB_CORE_VER -webv $STUB_WEB_VER
+    cd stub
+    ls
+
 
 after_build:
 - sh: docker logout
