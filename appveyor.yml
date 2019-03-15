@@ -85,7 +85,7 @@ build_script:
 - sh: |
     echo "Make docker stubs"
     STUB_OUTPUT=$(pwd)/docker-stub
-    docker run -it --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
+    docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
       dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.company.com -os lin
     rm -rf $STUB_OUTPUT/ca-certificates
     rm -rf $STUB_OUTPUT/identity
