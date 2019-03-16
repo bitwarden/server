@@ -3,7 +3,7 @@
 </p>
 <p align="center">
   <a href="https://ci.appveyor.com/project/bitwarden/server/branch/master" target="_blank">
-    <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/server?branch=master&svg=true" alt="appveyor build" />
+    <img src="https://ci.appveyor.com/api/projects/status/n4ntjp7ag1uwxckd/branch/master?svg=true" alt="appveyor build" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
     <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
