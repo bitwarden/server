@@ -2,7 +2,7 @@
   <img src="https://github.com/bitwarden/brand/blob/master/screenshots/apps-combo-logo.png" alt="Bitwarden" />
 </p>
 <p align="center">
-  <a href="https://ci.appveyor.com/project/bitwarden/core/branch/master" target="_blank">
+  <a href="https://ci.appveyor.com/project/bitwarden/server/branch/master" target="_blank">
     <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/server?branch=master&svg=true" alt="appveyor build" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
