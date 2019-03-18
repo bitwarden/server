@@ -20,6 +20,7 @@ init:
 
 install:
 - ps: |
+    $env:PUSH_DOCKER = "false"
     $env:PROD_DEPLOY = "false"
     $env:TAG_NAME = ""
     if($env:APPVEYOR_REPO_TAG -eq "true" -and $env:APPVEYOR_RE_BUILD -eq "True") {
@@ -38,6 +39,7 @@ before_build:
 - sh: |
     if [ "${DOCKER_USERNAME}" != "" -a "${DOCKER_PASSWORD}" != "" ]
     then
+      PUSH_DOCKER = "true"
       echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
     fi
 - ps: |
@@ -61,12 +63,14 @@ build_script:
       }
 
       docker images
-      ./build.sh push dev
 
-      if($env:PROD_DEPLOY -eq "true") {
-        ./build.sh push beta
-        ./build.sh push latest
-        ./build.sh push $env:TAG_NAME
+      if($env:PUSH_DOCKER -eq "true") {
+        ./build.sh push dev
+        if($env:PROD_DEPLOY -eq "true") {
+            ./build.sh push beta
+            ./build.sh push latest
+            ./build.sh push $env:TAG_NAME
+        }
       }
     } else {
       msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
@@ -95,7 +99,11 @@ build_script:
 
 
 after_build:
-- sh: docker logout
+- sh: |
+    if [ "${PUSH_DOCKER}" == "true" ]
+    then
+      docker logout
+    fi
 
 test_script:
 - ps: |
