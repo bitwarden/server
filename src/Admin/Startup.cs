@@ -77,7 +77,14 @@ namespace Bit.Admin
             services.AddHostedService<Jobs.JobsHostedService>();
             if(!globalSettings.SelfHosted)
             {
-                services.AddHostedService<HostedServices.BlockIpHostedService>();
+                if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+                {
+                    services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
+                }
+                else if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+                {
+                    services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
+                }
             }
         }
 

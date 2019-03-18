@@ -121,6 +121,10 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             }
+            else if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            {
+                services.AddSingleton<IBlockIpService, AmazonSqsBlockIpService>();
+            }
             else
             {
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
