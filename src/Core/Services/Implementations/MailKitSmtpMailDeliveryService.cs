@@ -67,9 +67,17 @@ namespace Bit.Core.Services
                     client.ServerCertificateValidationCallback = (s, c, h, e) => true;
                 }
 
-                var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
-                    false : _globalSettings.Mail.Smtp.Ssl;
-                await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
+                if(!_globalSettings.Mail.Smtp.Ssl && _globalSettings.Mail.Smtp.Port == 25)
+                {
+                    await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
+                        MailKit.Security.SecureSocketOptions.None);
+                }
+                else
+                {
+                    var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
+                        false : _globalSettings.Mail.Smtp.Ssl;
+                    await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
+                }
 
                 if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Username) &&
                     !string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Password))
