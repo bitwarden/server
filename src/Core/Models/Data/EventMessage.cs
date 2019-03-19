@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Data
         public EventMessage() { }
 
         public EventMessage(CurrentContext currentContext)
+            : base()
         {
             IpAddress = currentContext.IpAddress;
             DeviceType = currentContext.DeviceType;
@@ -24,5 +25,6 @@ namespace Bit.Core.Models.Data
         public Guid? ActingUserId { get; set; }
         public DeviceType? DeviceType { get; set; }
         public string IpAddress { get; set; }
+        public Guid? IdempotencyId { get; private set; } = Guid.NewGuid();
     }
 }

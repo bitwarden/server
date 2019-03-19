@@ -109,7 +109,7 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task CreateEntityAsync(ITableEntity entity)
         {
-            await _table.ExecuteAsync(TableOperation.Insert(entity));
+            await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
         }
 
         public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
