@@ -48,6 +48,7 @@ namespace Bit.Events
             });
 
             // Services
+            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             services.AddScoped<IEventService, EventService>();
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {

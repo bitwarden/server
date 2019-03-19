@@ -7,16 +7,17 @@ using Bit.Events.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Events.Controllers
+namespace Bit.Events.Controllers
 {
+    [Route("collect")]
     [Authorize("Application")]
-    public class EventsController : Controller
+    public class CollectController : Controller
     {
         private readonly CurrentContext _currentContext;
         private readonly IEventService _eventService;
         private readonly ICipherRepository _cipherRepository;
 
-        public EventsController(
+        public CollectController(
             CurrentContext currentContext,
             IEventService eventService,
             ICipherRepository cipherRepository)
@@ -26,14 +27,14 @@ namespace Events.Controllers
             _cipherRepository = cipherRepository;
         }
 
-        [HttpGet("~/collect")]
-        public Task<IActionResult> GetCollect([FromQuery]EventModel model)
+        [HttpGet]
+        public Task<IActionResult> Get([FromQuery]EventModel model)
         {
-            return PostCollect(model);
+            return Post(model);
         }
 
-        [HttpPost("~/collect")]
-        public async Task<IActionResult> PostCollect([FromBody]EventModel model)
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody]EventModel model)
         {
             switch(model.Type)
             {
