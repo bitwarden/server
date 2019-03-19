@@ -20,6 +20,7 @@ using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using PostgreSqlRepos = Bit.Core.Repositories.PostgreSql;
+using NoopRepos = Bit.Core.Repositories.Noop;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -58,10 +59,12 @@ namespace Bit.Core.Utilities
             if(globalSettings.SelfHosted)
             {
                 services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
+                services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
             }
             else
             {
                 services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
+                services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
             }
         }
 
