@@ -1,6 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Events.Models;
@@ -26,20 +26,39 @@ namespace Events.Controllers
             _cipherRepository = cipherRepository;
         }
 
-        [HttpPost("~/cipher/{id}")]
-        public async Task PostCipher(Guid id, [FromBody]EventModel model)
+        [HttpGet("~/collect")]
+        public Task<IActionResult> GetCollect([FromQuery]EventModel model)
         {
-            var cipher = await _cipherRepository.GetByIdAsync(id, _currentContext.UserId.Value);
-            if(cipher != null)
-            {
-                await _eventService.LogCipherEventAsync(cipher, model.Type);
-            }
+            return PostCollect(model);
         }
 
-        [HttpPost("~/user")]
-        public async Task PostUser([FromBody]EventModel model)
+        [HttpPost("~/collect")]
+        public async Task<IActionResult> PostCollect([FromBody]EventModel model)
         {
-            await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type);
+            switch(model.Type)
+            {
+                // User events
+                case EventType.User_LoggedIn:
+                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type);
+                    break;
+                // Cipher events
+                case EventType.Cipher_Created:
+                    if(!model.CipherId.HasValue)
+                    {
+                        return new BadRequestResult();
+                    }
+                    var cipher = await _cipherRepository.GetByIdAsync(model.CipherId.Value,
+                        _currentContext.UserId.Value);
+                    if(cipher == null)
+                    {
+                        return new BadRequestResult();
+                    }
+                    await _eventService.LogCipherEventAsync(cipher, model.Type);
+                    break;
+                default:
+                    return new BadRequestResult();
+            }
+            return new OkResult();
         }
     }
 }
