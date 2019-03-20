@@ -15,12 +15,14 @@ namespace Bit.Core.Services
         private readonly List<IPushNotificationService> _services = new List<IPushNotificationService>();
         private readonly IDeviceRepository _deviceRepository;
         private readonly IInstallationDeviceRepository _installationDeviceRepository;
+        private readonly ILogger<MultiServicePushNotificationService> _logger;
 
         public MultiServicePushNotificationService(
             IDeviceRepository deviceRepository,
             IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
+            ILogger<MultiServicePushNotificationService> logger,
             ILogger<RelayPushNotificationService> relayLogger,
             ILogger<NotificationsApiPushNotificationService> hubLogger)
         {
@@ -30,12 +32,15 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
+                    _logger.LogInformation(Constants.BypassFiltersEventId, "Use RelayPushNotificationService");
                     _services.Add(new RelayPushNotificationService(_deviceRepository, globalSettings,
                         httpContextAccessor, relayLogger));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
+                    _logger.LogInformation(Constants.BypassFiltersEventId,
+                        "Use NotificationsApiPushNotificationService");
                     _services.Add(new NotificationsApiPushNotificationService(
                         globalSettings, httpContextAccessor, hubLogger));
                 }
@@ -55,6 +60,7 @@ namespace Bit.Core.Services
 
             _deviceRepository = deviceRepository;
             _installationDeviceRepository = installationDeviceRepository;
+            _logger = logger;
         }
 
         public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

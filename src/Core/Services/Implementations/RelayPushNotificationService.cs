@@ -43,6 +43,7 @@ namespace Bit.Core.Services
 
         public async Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay PushSyncCipherUpdateAsync");
             await PushCipherAsync(cipher, PushType.SyncCipherUpdate, collectionIds);
         }
 
