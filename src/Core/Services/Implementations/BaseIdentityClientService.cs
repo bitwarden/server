@@ -54,12 +54,15 @@ namespace Bit.Core.Services
 
         protected async Task SendAsync(HttpMethod method, string path, object requestModel = null)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "SendAsync1");
             var tokenStateResponse = await HandleTokenStateAsync();
             if(!tokenStateResponse)
             {
+                _logger.LogInformation(Constants.BypassFiltersEventId, "SendAsync2");
                 return;
             }
 
+            _logger.LogInformation(Constants.BypassFiltersEventId, "SendAsync3");
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
             {
                 Method = method,

@@ -73,6 +73,7 @@ namespace Bit.Core.Services
                     RevisionDate = cipher.RevisionDate,
                 };
 
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Relay PushCipherAsync");
                 await SendPayloadToUserAsync(cipher.UserId.Value, type, message, true);
             }
         }
@@ -142,14 +143,17 @@ namespace Bit.Core.Services
 
         private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay SendPayloadToUserAsync1");
             var request = new PushSendRequestModel
             {
                 UserId = userId.ToString(),
                 Type = type,
                 Payload = payload
             };
-            
+
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay SendPayloadToUserAsync2");
             await AddCurrentContextAsync(request, excludeCurrentContext);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay SendPayloadToUserAsync3");
             await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
