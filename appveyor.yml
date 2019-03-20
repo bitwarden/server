@@ -28,7 +28,7 @@ install:
       $env:TAG_NAME = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
       echo "This is a production deployment for ${env:TAG_NAME}."
     }
-    if("${env:DOCKER_USERNAME}" != "" -and "${env:DOCKER_PASSWORD}" != "") {
+    if("${env:DOCKER_USERNAME}" -ne "" -and "${env:DOCKER_PASSWORD}" -ne "") {
       $env:PUSH_DOCKER = "true"
     }
     if($isLinux) {
