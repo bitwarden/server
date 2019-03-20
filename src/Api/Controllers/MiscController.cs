@@ -13,7 +13,8 @@ namespace Bit.Api.Controllers
         private readonly BitPayClient _bitPayClient;
         private readonly GlobalSettings _globalSettings;
 
-        public MiscController(BitPayClient bitPayClient,
+        public MiscController(
+            BitPayClient bitPayClient,
             GlobalSettings globalSettings)
         {
             _bitPayClient = bitPayClient;

@@ -9,10 +9,13 @@ namespace Bit.Core.Utilities
 
         public BitPayClient(GlobalSettings globalSettings)
         {
-            var btcSecret = new NBitcoin.BitcoinSecret(globalSettings.BitPay.Base58Secret,
-                globalSettings.BitPay.Production ? null : NBitcoin.Network.TestNet);
-            _bpClient = new NBitpayClient.Bitpay(btcSecret.PrivateKey,
-                new Uri(globalSettings.BitPay.Production ? "https://bitpay.com/" : "https://test.bitpay.com/"));
+            if(CoreHelpers.SettingHasValue(globalSettings.BitPay.Base58Secret))
+            {
+                var btcSecret = new NBitcoin.BitcoinSecret(globalSettings.BitPay.Base58Secret,
+                    globalSettings.BitPay.Production ? null : NBitcoin.Network.TestNet);
+                _bpClient = new NBitpayClient.Bitpay(btcSecret.PrivateKey,
+                    new Uri(globalSettings.BitPay.Production ? "https://bitpay.com/" : "https://test.bitpay.com/"));
+            }
         }
 
         public Task<bool> TestAccessAsync()

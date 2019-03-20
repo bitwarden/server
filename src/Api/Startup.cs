@@ -58,13 +58,14 @@ namespace Bit.Api
             // Caching
             services.AddMemoryCache();
 
+            // BitPay
+            services.AddSingleton<BitPayClient>();
+
             if(!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-                // BitPay
-                services.AddSingleton<BitPayClient>();
             }
 
             // Identity
