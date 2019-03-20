@@ -13,8 +13,6 @@ namespace Bit.Core.Services
     public class MultiServicePushNotificationService : IPushNotificationService
     {
         private readonly List<IPushNotificationService> _services = new List<IPushNotificationService>();
-        private readonly IDeviceRepository _deviceRepository;
-        private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly ILogger<MultiServicePushNotificationService> _logger;
 
         public MultiServicePushNotificationService(
@@ -32,7 +30,7 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
-                    _services.Add(new RelayPushNotificationService(_deviceRepository, globalSettings,
+                    _services.Add(new RelayPushNotificationService(deviceRepository, globalSettings,
                         httpContextAccessor, relayLogger));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
@@ -46,7 +44,7 @@ namespace Bit.Core.Services
             {
                 if(CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
                 {
-                    _services.Add(new NotificationHubPushNotificationService(_installationDeviceRepository,
+                    _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
                         globalSettings, httpContextAccessor));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
@@ -54,9 +52,7 @@ namespace Bit.Core.Services
                     _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
                 }
             }
-
-            _deviceRepository = deviceRepository;
-            _installationDeviceRepository = installationDeviceRepository;
+            
             _logger = logger;
         }
 
