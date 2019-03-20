@@ -68,7 +68,10 @@ namespace Bit.Core.Services
 
             try
             {
-                await Client.SendAsync(message);
+                _logger.LogInformation(Constants.BypassFiltersEventId,
+                    "SendAsync {0}: \n{1}", message.RequestUri.ToString(), JsonConvert.SerializeObject(requestModel));
+                var response = await Client.SendAsync(message);
+                _logger.LogInformation(Constants.BypassFiltersEventId, "SendAsync Response: {0}", response.StatusCode);
             }
             catch(Exception e)
             {
