@@ -148,9 +148,7 @@ namespace Bit.Core.Services
                 Payload = payload
             };
 
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay SendPayloadToUserAsync 1");
             await AddCurrentContextAsync(request, excludeCurrentContext);
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay SendPayloadToUserAsync 2");
             await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
@@ -169,26 +167,20 @@ namespace Bit.Core.Services
 
         private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 0");
             var currentContext = _httpContextAccessor?.HttpContext?.
                 RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
             if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 1");
                 var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 2");
                 if(device != null)
                 {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 3");
                     request.DeviceId = device.Id.ToString();
                 }
                 if(addIdentifier)
                 {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 4");
                     request.Identifier = currentContext.DeviceIdentifier;
                 }
             }
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Relay AddCurrentContextAsync 5");
         }
 
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
