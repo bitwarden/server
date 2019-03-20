@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Microsoft.WindowsAzure.Storage;
@@ -73,7 +74,18 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task DeleteAsync(InstallationDeviceEntity entity)
         {
-            await _table.ExecuteAsync(TableOperation.Delete(entity));
+            try
+            {
+                entity.ETag = "*";
+                await _table.ExecuteAsync(TableOperation.Delete(entity));
+            }
+            catch(StorageException e)
+            {
+                if(e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
+                {
+                    throw e;
+                }
+            }
         }
     }
 }
