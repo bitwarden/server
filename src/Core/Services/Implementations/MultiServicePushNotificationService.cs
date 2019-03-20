@@ -32,14 +32,14 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Use RelayPushNotificationService");
+                    logger.LogInformation(Constants.BypassFiltersEventId, "Use RelayPushNotificationService");
                     _services.Add(new RelayPushNotificationService(_deviceRepository, globalSettings,
                         httpContextAccessor, relayLogger));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
-                    _logger.LogInformation(Constants.BypassFiltersEventId,
+                    logger.LogInformation(Constants.BypassFiltersEventId,
                         "Use NotificationsApiPushNotificationService");
                     _services.Add(new NotificationsApiPushNotificationService(
                         globalSettings, httpContextAccessor, hubLogger));
