@@ -37,6 +37,10 @@ install:
       choco install cloc --no-progress
       cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
     }
+    if($env:APPVEYOR_REPO_TAG -eq "true") {
+      $tagName = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
+      $env:RELEASE_NAME = "Version ${tagName}"
+    }
 
 before_build:
 - sh: |
@@ -125,10 +129,12 @@ on_finish:
       }
 
 deploy:
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  release: $(RELEASE_NAME)
   provider: GitHub
   auth_token: $(GH_TOKEN)
   artifact: /.*/
   force_update: true
   on:
     branch: master
-    PROD_DEPLOY: true
+    APPVEYOR_REPO_TAG: true
