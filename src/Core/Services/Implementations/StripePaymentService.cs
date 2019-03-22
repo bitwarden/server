@@ -437,7 +437,7 @@ namespace Bit.Core.Services
 
                             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                             {
-                                AccountBalance = -1 * previewInvoice.AmountDue
+                                AccountBalance = customer.AccountBalance - previewInvoice.AmountDue
                             });
                             addedCreditToStripeCustomer = true;
                         }
