@@ -117,7 +117,7 @@ namespace Bit.Core.Services
             await _paymentService.ReinstateSubscriptionAsync(organization);
         }
 
-        public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
+        public async Task UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -127,7 +127,7 @@ namespace Bit.Core.Services
 
             if(string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
-                throw new BadRequestException("No payment method found.");
+                throw new BadRequestException("Your account has no payment method available.");
             }
 
             var existingPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
@@ -136,7 +136,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == plan && !p.Disabled);
+            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
             if(newPlan == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -152,31 +152,27 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot upgrade to this plan.");
             }
 
-            if(!newPlan.CanBuyAdditionalSeats && additionalSeats > 0)
+            if(existingPlan.Type != PlanType.Free)
             {
-                throw new BadRequestException("Plan does not allow additional seats.");
+                throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            if(newPlan.CanBuyAdditionalSeats && newPlan.MaxAdditionalSeats.HasValue &&
-                additionalSeats > newPlan.MaxAdditionalSeats.Value)
-            {
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{newPlan.MaxAdditionalSeats.Value} additional seats.");
-            }
+            ValidateOrganizationUpgradeParameters(newPlan, upgrade);
 
-            var newPlanSeats = (short)(newPlan.BaseSeats + (newPlan.CanBuyAdditionalSeats ? additionalSeats : 0));
+            var newPlanSeats = (short)(newPlan.BaseSeats +
+                (newPlan.CanBuyAdditionalSeats ? upgrade.AdditionalSeats : 0));
             if(!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(userCount > newPlanSeats)
                 {
-                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
-                        $"only has ({newPlanSeats}) seats. Remove some users.");
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
+                        $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                 }
             }
 
-            if(newPlan.MaxCollections.HasValue &&
-                (!organization.MaxCollections.HasValue || organization.MaxCollections.Value > newPlan.MaxCollections.Value))
+            if(newPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
+                organization.MaxCollections.Value > newPlan.MaxCollections.Value))
             {
                 var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(collectionCount > newPlan.MaxCollections.Value)
@@ -187,72 +183,47 @@ namespace Bit.Core.Services
                 }
             }
 
-            // TODO: Groups?
+            if(!newPlan.UseGroups && organization.UseGroups)
+            {
+                var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(groups.Any())
+                {
+                    throw new BadRequestException($"Your new plan does not allow the groups feature. " +
+                        $"Remove your groups.");
+                }
+            }
 
-            var subscriptionService = new Stripe.SubscriptionService();
+            // TODO: Check storage?
+
             if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                // They must have been on a free plan. Create new sub.
-                var subCreateOptions = new SubscriptionCreateOptions
-                {
-                    CustomerId = organization.GatewayCustomerId,
-                    TrialPeriodDays = newPlan.TrialPeriodDays,
-                    Items = new List<SubscriptionItemOption>(),
-                    Metadata = new Dictionary<string, string> {
-                        { "organizationId", organization.Id.ToString() }
-                    }
-                };
-
-                if(newPlan.StripePlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = newPlan.StripePlanId,
-                        Quantity = 1
-                    });
-                }
-
-                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = newPlan.StripeSeatPlanId,
-                        Quantity = additionalSeats
-                    });
-                }
-
-                await subscriptionService.CreateAsync(subCreateOptions);
+                await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
+                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
             }
             else
             {
-                // Update existing sub.
-                var subUpdateOptions = new SubscriptionUpdateOptions
-                {
-                    Items = new List<SubscriptionItemUpdateOption>()
-                };
-
-                if(newPlan.StripePlanId != null)
-                {
-                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
-                    {
-                        PlanId = newPlan.StripePlanId,
-                        Quantity = 1
-                    });
-                }
-
-                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
-                {
-                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
-                    {
-                        PlanId = newPlan.StripeSeatPlanId,
-                        Quantity = additionalSeats
-                    });
-                }
-
-                await subscriptionService.UpdateAsync(organization.GatewaySubscriptionId, subUpdateOptions);
+                // TODO: Update existing sub
+                throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            // TODO: Update organization
+            organization.BusinessName = upgrade.BusinessName;
+            organization.PlanType = newPlan.Type;
+            organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
+            organization.MaxCollections = newPlan.MaxCollections;
+            organization.MaxStorageGb = !newPlan.MaxStorageGb.HasValue ?
+                (short?)null : (short)(newPlan.MaxStorageGb.Value + upgrade.AdditionalStorageGb);
+            organization.UseGroups = newPlan.UseGroups;
+            organization.UseDirectory = newPlan.UseDirectory;
+            organization.UseEvents = newPlan.UseEvents;
+            organization.UseTotp = newPlan.UseTotp;
+            organization.Use2fa = newPlan.Use2fa;
+            organization.UseApi = newPlan.UseApi;
+            organization.SelfHost = newPlan.SelfHost;
+            organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+            organization.Plan = newPlan.Name;
+            organization.Enabled = true;
+            organization.RevisionDate = DateTime.UtcNow;
+            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -459,42 +430,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
-            if(!plan.MaxStorageGb.HasValue && signup.AdditionalStorageGb > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional storage.");
-            }
-
-            if(signup.AdditionalStorageGb < 0)
-            {
-                throw new BadRequestException("You can't subtract storage!");
-            }
-
-            if(!plan.CanBuyPremiumAccessAddon && signup.PremiumAccessAddon)
-            {
-                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-            }
-
-            if(plan.BaseSeats + signup.AdditionalSeats <= 0)
-            {
-                throw new BadRequestException("You do not have any seats!");
-            }
-
-            if(signup.AdditionalSeats < 0)
-            {
-                throw new BadRequestException("You can't subtract seats!");
-            }
-
-            if(!plan.CanBuyAdditionalSeats && signup.AdditionalSeats > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional users.");
-            }
-
-            if(plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
-                signup.AdditionalSeats > plan.MaxAdditionalSeats.Value)
-            {
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-            }
+            ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
             {
@@ -644,7 +580,8 @@ namespace Bit.Core.Services
 
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organization.Id.ToString());
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
+                    organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
@@ -1394,6 +1331,46 @@ namespace Bit.Core.Services
         private async Task<Organization> GetOrgById(Guid id)
         {
             return await _organizationRepository.GetByIdAsync(id);
+        }
+
+        private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+        {
+            if(!plan.MaxStorageGb.HasValue && upgrade.AdditionalStorageGb > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional storage.");
+            }
+
+            if(upgrade.AdditionalStorageGb < 0)
+            {
+                throw new BadRequestException("You can't subtract storage!");
+            }
+
+            if(!plan.CanBuyPremiumAccessAddon && upgrade.PremiumAccessAddon)
+            {
+                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            }
+
+            if(plan.BaseSeats + upgrade.AdditionalSeats <= 0)
+            {
+                throw new BadRequestException("You do not have any seats!");
+            }
+
+            if(upgrade.AdditionalSeats < 0)
+            {
+                throw new BadRequestException("You can't subtract seats!");
+            }
+
+            if(!plan.CanBuyAdditionalSeats && upgrade.AdditionalSeats > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional users.");
+            }
+
+            if(plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
+                upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
+            {
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            }
         }
     }
 }

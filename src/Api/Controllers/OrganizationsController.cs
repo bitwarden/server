@@ -223,7 +223,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
+            await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
         }
 
         [HttpPost("{id}/seat")]

@@ -13,7 +13,7 @@ namespace Bit.Core.Services
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType);
         Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
         Task ReinstateSubscriptionAsync(Guid organizationId);
-        Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats);
+        Task UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
         Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
         Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
