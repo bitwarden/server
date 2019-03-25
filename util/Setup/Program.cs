@@ -185,16 +185,20 @@ namespace Bit.Setup
                     command.ExecuteNonQuery();
                 }
 
-                var upgrader = DeployChanges.To
+                var builder = DeployChanges.To
                     .SqlDatabase(vaultConnectionString)
                     .JournalToSqlTable("dbo", "Migration")
                     .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                         s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
                     .WithTransaction()
-                    .WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                    .LogToConsole()
-                    .Build();
+                    .WithExecutionTimeout(new TimeSpan(0, 5, 0));
 
+                if(!_context.Quiet)
+                {
+                    builder.LogToConsole();
+                }
+
+                var upgrader = builder.Build();
                 var result = upgrader.PerformUpgrade();
                 if(result.Successful)
                 {
