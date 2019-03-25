@@ -1,10 +1,9 @@
-﻿using DbUp;
+﻿using Bit.Migrator;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net.Http;
-using System.Reflection;
 
 namespace Bit.Setup
 {
@@ -164,43 +163,11 @@ namespace Bit.Setup
             try
             {
                 Helpers.WriteLine(_context, "Migrating database.");
-
                 var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
                     "globalSettings__sqlServer__connectionString");
-                var masterConnectionString = new SqlConnectionStringBuilder(vaultConnectionString)
-                {
-                    InitialCatalog = "master"
-                }.ConnectionString;
-
-                using(var connection = new SqlConnection(masterConnectionString))
-                {
-                    var command = new SqlCommand(
-                        "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
-                        "CREATE DATABASE [vault];", connection);
-                    command.Connection.Open();
-                    command.ExecuteNonQuery();
-                    command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                        "FROM sys.databases WHERE [name] = 'vault') = 1) " +
-                        "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
-                    command.ExecuteNonQuery();
-                }
-
-                var builder = DeployChanges.To
-                    .SqlDatabase(vaultConnectionString)
-                    .JournalToSqlTable("dbo", "Migration")
-                    .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                        s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransaction()
-                    .WithExecutionTimeout(new TimeSpan(0, 5, 0));
-
-                if(!_context.Quiet)
-                {
-                    builder.LogToConsole();
-                }
-
-                var upgrader = builder.Build();
-                var result = upgrader.PerformUpgrade();
-                if(result.Successful)
+                var migrator = new DbMigrator(vaultConnectionString, null);
+                var success = migrator.MigrateMsSqlDatabase(false);
+                if(success)
                 {
                     Helpers.WriteLine(_context, "Migration successful.");
                 }
@@ -220,7 +187,6 @@ namespace Bit.Setup
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-
                 throw e;
             }
         }

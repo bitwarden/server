@@ -1,69 +1,97 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.Reflection;
+using System.Threading;
 using DbUp;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Migrator
 {
-    public static class DbMigrator
+    public class DbMigrator
     {
-        private static void MigrateMsSqlDatabase(string connectionString, int attempt = 1)
+        private readonly string _connectionString;
+        private readonly ILogger<DbMigrator> _logger;
+        private readonly string _masterConnectionString;
+
+        public DbMigrator(string connectionString, ILogger<DbMigrator> logger)
         {
-            var masterConnectionString = new SqlConnectionStringBuilder(connectionString)
+            _connectionString = connectionString;
+            _logger = logger;
+            _masterConnectionString = new SqlConnectionStringBuilder(connectionString)
             {
                 InitialCatalog = "master"
             }.ConnectionString;
+        }
 
-            try
+        public bool MigrateMsSqlDatabase(bool enableLogging = true,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if(enableLogging && _logger != null)
             {
-                using(var connection = new SqlConnection(masterConnectionString))
-                {
-                    var command = new SqlCommand(
-                        "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
-                        "CREATE DATABASE [vault];", connection);
-                    command.Connection.Open();
-                    command.ExecuteNonQuery();
-                    command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                        "FROM sys.databases WHERE [name] = 'vault') = 1) " +
-                        "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
-                    command.ExecuteNonQuery();
-                }
+                _logger.LogInformation("Migrating database.");
+            }
 
-                var builder = DeployChanges.To
-                    .SqlDatabase(connectionString)
-                    .JournalToSqlTable("dbo", "Migration")
-                    .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                        s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransaction()
-                    .WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                    .LogToConsole();
+            using(var connection = new SqlConnection(_masterConnectionString))
+            {
+                var command = new SqlCommand(
+                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
+                    "CREATE DATABASE [vault];", connection);
+                command.Connection.Open();
+                command.ExecuteNonQuery();
 
-                var upgrader = builder.Build();
-                var result = upgrader.PerformUpgrade();
-                if(result.Successful)
+                command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
+                    "FROM sys.databases WHERE [name] = 'vault') = 1) " +
+                    "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
+                command.ExecuteNonQuery();
+            }
+
+            using(var connection = new SqlConnection(_connectionString))
+            {
+                // Rename old migration scripts to new namespace.
+                var command = new SqlCommand(
+                    "IF OBJECT_ID('Migration','U') IS NOT NULL " +
+                    "UPDATE [dbo].[Migration] SET " +
+                    "[ScriptName] = REPLACE([ScriptName], '.Setup.', '.Migrator.');", connection);
+                command.Connection.Open();
+                command.ExecuteNonQuery();
+            }
+
+            var builder = DeployChanges.To
+                .SqlDatabase(_connectionString)
+                .JournalToSqlTable("dbo", "Migration")
+                .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+                    s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
+                .WithTransaction()
+                .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+
+            if(enableLogging)
+            {
+                if(_logger != null)
                 {
-                    Console.WriteLine("Migration successful.");
+                    builder.LogTo(new DbUpLogger(_logger));
                 }
                 else
                 {
-                    Console.WriteLine("Migration failed.");
+                    builder.LogToConsole();
                 }
             }
-            catch(SqlException e)
+
+            var upgrader = builder.Build();
+            var result = upgrader.PerformUpgrade();
+
+            if(enableLogging && _logger != null)
             {
-                if(e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
+                if(result.Successful)
                 {
-                    var nextAttempt = attempt + 1;
-                    Console.WriteLine("Database is in script upgrade mode. " +
-                        "Trying again (attempt #{0})...", nextAttempt);
-                    System.Threading.Thread.Sleep(20000);
-                    MigrateMsSqlDatabase(connectionString, nextAttempt);
-                    return;
+                    _logger.LogInformation("Migration successful.");
                 }
-
-                throw e;
+                else
+                {
+                    _logger.LogError(result.Error, "Migration failed.");
+                }
             }
-        }
 
+            return result.Successful;
+        }
     }
 }

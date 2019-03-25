@@ -57,8 +57,6 @@ services:
     image: bitwarden/api:{{{CoreVersion}}}
     container_name: bitwarden-api
     restart: always
-    depends_on:
-      - "mssql"
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -86,6 +84,8 @@ services:
     image: bitwarden/admin:{{{CoreVersion}}}
     container_name: bitwarden-admin
     restart: always
+    depends_on:
+      - "mssql"
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -123,7 +123,7 @@ services:
     container_name: bitwarden-nginx
     restart: always
     depends_on:
-      - "api"
+      - "admin"
 {{#if HasPort}}
     ports:
 {{#if HttpPort}}

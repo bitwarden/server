@@ -9,6 +9,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Migrator\Migrator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

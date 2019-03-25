@@ -75,7 +75,11 @@ namespace Bit.Admin
             // Jobs service
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if(!globalSettings.SelfHosted)
+            if(globalSettings.SelfHosted)
+            {
+                services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
+            }
+            else
             {
                 if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
                 {

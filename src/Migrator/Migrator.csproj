@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="dbup-sqlserver" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
   </ItemGroup>
 
 </Project>
