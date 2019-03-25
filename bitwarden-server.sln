@@ -47,7 +47,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Test", "test\Core.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventsProcessor", "src\EventsProcessor\EventsProcessor.csproj", "{79BB453F-D0D8-4DDF-9809-A405C56692BD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Migrator", "src\Migrator\Migrator.csproj", "{54DED792-A022-417E-9804-21FCC9C7C610}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Migrator", "util\Migrator\Migrator.csproj", "{54DED792-A022-417E-9804-21FCC9C7C610}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

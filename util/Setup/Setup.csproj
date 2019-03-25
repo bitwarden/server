@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Migrator\Migrator.csproj" />
+    <ProjectReference Include="..\Migrator\Migrator.csproj" />
   </ItemGroup>
 
 </Project>
