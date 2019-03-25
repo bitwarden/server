@@ -2,6 +2,7 @@
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Threading;
+using Bit.Core;
 using DbUp;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +29,7 @@ namespace Bit.Migrator
         {
             if(enableLogging && _logger != null)
             {
-                _logger.LogInformation("Migrating database.");
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
             }
 
             using(var connection = new SqlConnection(_masterConnectionString))
@@ -83,11 +84,11 @@ namespace Bit.Migrator
             {
                 if(result.Successful)
                 {
-                    _logger.LogInformation("Migration successful.");
+                    _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
                 }
                 else
                 {
-                    _logger.LogError(result.Error, "Migration failed.");
+                    _logger.LogError(Constants.BypassFiltersEventId, result.Error, "Migration failed.");
                 }
             }
 

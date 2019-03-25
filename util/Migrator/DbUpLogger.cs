@@ -1,4 +1,5 @@
-﻿using DbUp.Engine.Output;
+﻿using Bit.Core;
+using DbUp.Engine.Output;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Migrator
@@ -14,17 +15,17 @@ namespace Bit.Migrator
 
         public void WriteError(string format, params object[] args)
         {
-            _logger.LogError(format, args);
+            _logger.LogError(Constants.BypassFiltersEventId, format, args);
         }
 
         public void WriteInformation(string format, params object[] args)
         {
-            _logger.LogInformation(format, args);
+            _logger.LogInformation(Constants.BypassFiltersEventId, format, args);
         }
 
         public void WriteWarning(string format, params object[] args)
         {
-            _logger.LogWarning(format, args);
+            _logger.LogWarning(Constants.BypassFiltersEventId, format, args);
         }
     }
 }
