@@ -115,11 +115,11 @@ namespace Bit.Setup
             Console.WriteLine("\nNext steps, run:");
             if(_context.HostOS == "win")
             {
-                Console.WriteLine("`.\\bitwarden.ps1 -start` and then `.\\bitwarden.ps1 -updatedb`");
+                Console.WriteLine("`.\\bitwarden.ps1 -start`");
             }
             else
             {
-                Console.WriteLine("`./bitwarden.sh start` and then `./bitwarden.sh updatedb`");
+                Console.WriteLine("`./bitwarden.sh start`");
             }
             Console.WriteLine(string.Empty);
         }
