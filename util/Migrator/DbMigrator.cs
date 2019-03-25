@@ -46,17 +46,19 @@ namespace Bit.Migrator
                 command.ExecuteNonQuery();
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             using(var connection = new SqlConnection(_connectionString))
             {
                 // Rename old migration scripts to new namespace.
                 var command = new SqlCommand(
                     "IF OBJECT_ID('Migration','U') IS NOT NULL " +
                     "UPDATE [dbo].[Migration] SET " +
-                    "[ScriptName] = REPLACE([ScriptName], '.Setup.', '.Migrator.');", connection);
+                    "[ScriptName] = REPLACE([ScriptName], 'Bit.Setup.', 'Bit.Migrator.');", connection);
                 command.Connection.Open();
                 command.ExecuteNonQuery();
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             var builder = DeployChanges.To
                 .SqlDatabase(_connectionString)
                 .JournalToSqlTable("dbo", "Migration")
@@ -92,6 +94,7 @@ namespace Bit.Migrator
                 }
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             return result.Successful;
         }
     }
