@@ -84,7 +84,6 @@ curl -s -o bitwarden.sh \
     && chmod +x bitwarden.sh
 ./bitwarden.sh install
 ./bitwarden.sh start
-./bitwarden.sh updatedb
 ```
 
 ### Windows
@@ -94,7 +93,6 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
     -Uri https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.ps1
 .\bitwarden.ps1 -install
 .\bitwarden.ps1 -start
-.\bitwarden.ps1 -updatedb
 ```
 
 ## Contribute
