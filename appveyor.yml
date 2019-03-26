@@ -99,7 +99,7 @@ build_script:
       dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.company.com -os lin
     sudo chown -R appveyor:appveyor $STUB_OUTPUT
     rm -rf $STUB_OUTPUT/letsencrypt
-    rm $STUB_OUTPUT/env/uid.env
+    rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
     touch $STUB_OUTPUT/env/uid.env
     cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 - ps: |
