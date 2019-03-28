@@ -1012,12 +1012,20 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
-            if(savingUserId.HasValue && user.Type == OrganizationUserType.Owner)
+            if(savingUserId.HasValue)
             {
                 var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId.Value);
-                if(!savingUserOrgs.Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner))
+                var savingUserIsOrgOwner = savingUserOrgs
+                    .Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner);
+                if(!savingUserIsOrgOwner)
                 {
-                    throw new BadRequestException("Only owners can update other owners.");
+                    var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
+                    var isOwner = originalUser.Type == OrganizationUserType.Owner;
+                    var nowOwner = user.Type == OrganizationUserType.Owner;
+                    if((isOwner && !nowOwner) || (!isOwner && nowOwner))
+                    {
+                        throw new BadRequestException("Only an owner can change the user type of another owner.");
+                    }
                 }
             }
 
