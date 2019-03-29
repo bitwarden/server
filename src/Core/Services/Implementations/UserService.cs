@@ -405,8 +405,9 @@ namespace Bit.Core.Services
                 await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
                 return true;
             }
-            catch(U2fException)
+            catch(U2fException e)
             {
+                Logger.LogError(e, "Complete U2F registration error.");
                 return false;
             }
         }
