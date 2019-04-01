@@ -387,7 +387,7 @@ namespace Bit.Core.IdentityServer
                     {
                         var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
                             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                        if(!_globalSettings.DisableNewDeviceEmails)
+                        if(!_globalSettings.DisableEmailNewDevice)
                         {
                             await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
                                 _currentContext.IpAddress);
