@@ -33,6 +33,7 @@ namespace Bit.Core.IdentityServer
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IMailService _mailService;
         private readonly CurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
@@ -45,7 +46,8 @@ namespace Bit.Core.IdentityServer
             IOrganizationUserRepository organizationUserRepository,
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            GlobalSettings globalSettings)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -58,6 +60,7 @@ namespace Bit.Core.IdentityServer
             _applicationCacheService = applicationCacheService;
             _mailService = mailService;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -384,8 +387,11 @@ namespace Bit.Core.IdentityServer
                     {
                         var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
                             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                        await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
-                            _currentContext.IpAddress);
+                        if(!_globalSettings.DisableNewDeviceEmails)
+                        {
+                            await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
+                                _currentContext.IpAddress);
+                        }
                     }
 
                     return device;
