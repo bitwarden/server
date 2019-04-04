@@ -31,10 +31,16 @@ mkhomedir_helper $USERNAME
 
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 cp /etc/bitwarden/nginx/default.conf /etc/nginx/conf.d/default.conf
-mkdir -p /etc/letsencrypt
-chown -R $USERNAME:$GROUPNAME /etc/letsencrypt
-mkdir -p /etc/ssl
-chown -R $USERNAME:$GROUPNAME /etc/ssl
+if ! gosu $USERNAME:$GROUPNAME test -r /etc/letsencrypt/live
+then
+    mkdir -p /etc/letsencrypt
+    chown -R $USERNAME:$GROUPNAME /etc/letsencrypt
+fi
+if ! gosu $USERNAME:$GROUPNAME test -r /etc/ssl
+then
+    mkdir -p /etc/ssl
+    chown -R $USERNAME:$GROUPNAME /etc/ssl
+fi
 mkdir -p /var/run/nginx
 touch /var/run/nginx/nginx.pid
 chown -R $USERNAME:$GROUPNAME /var/run/nginx
