@@ -116,6 +116,7 @@ namespace Bit.Core
             {
                 public string Host { get; set; }
                 public int Port { get; set; } = 25;
+                public bool StartTls { get; set; } = false;
                 public bool Ssl { get; set; } = false;
                 public bool SslOverride { get; set; } = false;
                 public string Username { get; set; }

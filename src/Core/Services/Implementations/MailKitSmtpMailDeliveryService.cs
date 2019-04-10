@@ -67,7 +67,8 @@ namespace Bit.Core.Services
                     client.ServerCertificateValidationCallback = (s, c, h, e) => true;
                 }
 
-                if(!_globalSettings.Mail.Smtp.Ssl && _globalSettings.Mail.Smtp.Port == 25)
+                if(!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
+                    _globalSettings.Mail.Smtp.Port == 25)
                 {
                     await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
                         MailKit.Security.SecureSocketOptions.None);
