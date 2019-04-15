@@ -29,11 +29,13 @@ mkhomedir_helper $USERNAME
 
 # Read the SA_PASSWORD value from a file for swarm environments.
 # See https://github.com/Microsoft/mssql-docker/issues/326
-if [ ! -z "$SA_PASSWORD" ] && [ ! -z "$SA_PASSWORD_FILE" ]; then
+if [ ! -z "$SA_PASSWORD" ] && [ ! -z "$SA_PASSWORD_FILE" ]
+then
     echo "Provided both SA_PASSWORD and SA_PASSWORD_FILE environment variables. Please only use one."
     exit 1
 fi
-if [ ! -z "$SA_PASSWORD_FILE" ]; then
+if [ ! -z "$SA_PASSWORD_FILE" ]
+then
     # It should be exported, so it is available to the env command below.
     export SA_PASSWORD=$(cat $SA_PASSWORD_FILE)
 fi
