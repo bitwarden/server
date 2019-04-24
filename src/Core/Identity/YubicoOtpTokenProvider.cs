@@ -53,7 +53,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
+            if(string.IsNullOrWhiteSpace(token) || token.Length < 32 || token.Length > 48)
             {
                 return false;
             }
