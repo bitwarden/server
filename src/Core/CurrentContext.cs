@@ -183,6 +183,11 @@ namespace Bit.Core
                 return HttpContext.Request.Headers[CloudFlareConnectingIp].ToString();
             }
 
+	    if(HttpContext.Request.Headers.ContainsKey("X-Forwarded-For"))
+            {
+                return HttpContext.Request.Headers["X-Forwarded-For"].Split(',')[0];
+            }
+
             return HttpContext.Connection?.RemoteIpAddress?.ToString();
         }
 
