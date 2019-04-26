@@ -404,7 +404,7 @@ namespace Bit.Core.Utilities
                 var proxies = globalSettings.KnownProxies.Split(',');
                 foreach(var proxy in proxies)
                 {
-                    if(System.Net.IPAddress.TryParse(proxy, out var ip))
+                    if(System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
                     {
                         options.KnownProxies.Add(ip);
                     }
