@@ -41,4 +41,4 @@ chown -R $USERNAME:$GROUPNAME /var/run/nginx
 chown -R $USERNAME:$GROUPNAME /var/cache/nginx
 chown -R $USERNAME:$GROUPNAME /var/log/nginx
 
-exec gosu $USERNAME:$GROUPNAME nginx -g 'daemon off;'
+exec gosu $USERNAME:$GROUPNAME nginx -g 'daemon off;' --with-http_realip_module
