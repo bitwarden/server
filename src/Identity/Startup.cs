@@ -97,6 +97,10 @@ namespace Bit.Identity
                 // Rate limiting
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
             }
+            else
+            {
+                app.UseForwardedHeaders(globalSettings);
+            }
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();

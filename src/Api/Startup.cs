@@ -171,10 +171,7 @@ namespace Bit.Api
             }
             else
             {
-                app.UseForwardedHeaders(new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-                });
+                app.UseForwardedHeaders(globalSettings);
             }
 
             // Add static files to the request pipeline.

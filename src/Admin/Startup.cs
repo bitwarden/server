@@ -104,10 +104,7 @@ namespace Bit.Admin
             if(globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
-                app.UseForwardedHeaders(new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-                });
+                app.UseForwardedHeaders(globalSettings);
             }
 
             if(env.IsDevelopment())

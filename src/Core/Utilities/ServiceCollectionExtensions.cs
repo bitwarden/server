@@ -27,6 +27,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using IdentityServer4.AccessTokenValidation;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Linq;
 
 namespace Bit.Core.Utilities
 {
@@ -389,6 +391,30 @@ namespace Bit.Core.Utilities
 
                 await next.Invoke();
             });
+        }
+
+        public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+        {
+            var options = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            };
+            if(!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
+            {
+                var proxies = globalSettings.KnownProxies.Split(',');
+                foreach(var proxy in proxies)
+                {
+                    if(System.Net.IPAddress.TryParse(proxy, out var ip))
+                    {
+                        options.KnownProxies.Add(ip);
+                    }
+                }
+            }
+            if(options.KnownProxies.Count > 1)
+            {
+                options.ForwardLimit = null;
+            }
+            app.UseForwardedHeaders(options);
         }
     }
 }
