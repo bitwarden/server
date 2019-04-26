@@ -13,6 +13,7 @@ namespace Bit.Core
     public class CurrentContext
     {
         private const string CloudFlareConnectingIp = "CF-Connecting-IP";
+        private const string RealIp = "X-Real-IP";
 
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
@@ -181,6 +182,10 @@ namespace Bit.Core
             if(!globalSettings.SelfHosted && HttpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
             {
                 return HttpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            }
+            if(globalSettings.SelfHosted && HttpContext.Request.Headers.ContainsKey(RealIp))
+            {
+                return HttpContext.Request.Headers[RealIp].ToString();
             }
 
             return HttpContext.Connection?.RemoteIpAddress?.ToString();
