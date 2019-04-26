@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.IO;
 
 namespace Bit.Setup
@@ -78,6 +78,7 @@ namespace Bit.Setup
                 Ssl = context.Config.Ssl;
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
+                RealIps = context.Config.RealIps;
 
                 if(Ssl)
                 {
@@ -129,6 +130,7 @@ namespace Bit.Setup
             public string SslCiphers { get; set; }
             public string SslProtocols { get; set; }
             public string ContentSecurityPolicy => string.Format(NginxConfigBuilder.ContentSecurityPolicy, Domain);
+            public List<string> RealIps { get; set; }
         }
     }
 }

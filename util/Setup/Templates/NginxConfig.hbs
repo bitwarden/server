@@ -49,6 +49,12 @@ server {
   include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
   include /etc/nginx/security-headers.conf;
+{{#if RealIps}}
+
+{{#each RealIps}}
+  set_real_ip_from {{{Value}}}
+{{/each}}
+{{/if}}
 
   location / {
     proxy_pass http://web:5000/;

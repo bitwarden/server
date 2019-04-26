@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using YamlDotNet.Serialization;
 
@@ -80,6 +81,11 @@ namespace Bit.Setup
             "WARNING: Changing this value will cause you to lose access to the existing persisted database.\n" +
             "Learn more: https://docs.docker.com/storage/volumes/")]
         public bool DatabaseDockerVolume { get; set; }
+
+        [Description("Defines \"real\" IPs in nginx.conf. Useful for defining proxy servers that forward the \n" +
+            "client IP address.\n" +
+            "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html")]
+        public List<string> RealIps { get; set; }
 
         [YamlIgnore]
         public string Domain
