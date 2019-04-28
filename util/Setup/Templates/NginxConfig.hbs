@@ -54,8 +54,8 @@ server {
 {{#each RealIps}}
   set_real_ip_from {{{Value}}};
 {{/each}}
-real_ip_header X-Forwarded-For;
-real_ip_recursive on;
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
 {{/if}}
 
   location / {
