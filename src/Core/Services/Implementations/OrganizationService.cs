@@ -1143,7 +1143,8 @@ namespace Bit.Core.Services
             Guid importingUserId,
             IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers,
-            IEnumerable<string> removeUserExternalIds)
+            IEnumerable<string> removeUserExternalIds,
+            bool overwriteExisting)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -1178,6 +1179,23 @@ namespace Bit.Core.Services
                 {
                     await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
                     existingExternalUsersIdDict.Remove(user.ExternalId);
+                }
+            }
+
+            if(overwriteExisting)
+            {
+                // Remove existing external users that are not in new user set
+                foreach(var user in existingExternalUsers)
+                {
+                    if(!newUsersSet.Contains(user.ExternalId) &&
+                        existingExternalUsersIdDict.ContainsKey(user.ExternalId))
+                    {
+                        await _organizationUserRepository.DeleteAsync(new OrganizationUser
+                        {
+                            Id = user.Id
+                        });
+                        existingExternalUsersIdDict.Remove(user.ExternalId);
+                    }
                 }
             }
 

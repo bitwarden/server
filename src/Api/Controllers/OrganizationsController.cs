@@ -376,7 +376,8 @@ namespace Bit.Api.Controllers
                 userId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
                 model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
+                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
+                model.OverwriteExisting);
         }
 
         [HttpPost("{id}/api-key")]
