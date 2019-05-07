@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2017-CU12
+FROM mcr.microsoft.com/mssql/server:2017-CU14
 
 LABEL com.bitwarden.product="bitwarden"
 
