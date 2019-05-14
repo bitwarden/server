@@ -1187,8 +1187,11 @@ namespace Bit.Core.Services
 
                 foreach(var user in usersToRemove)
                 {
-                    await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
-                    existingExternalUsersIdDict.Remove(user.ExternalId);
+                    if(user.Type != OrganizationUserType.Owner)
+                    {
+                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
+                        existingExternalUsersIdDict.Remove(user.ExternalId);
+                    }
                 }
             }
 
@@ -1197,13 +1200,10 @@ namespace Bit.Core.Services
                 // Remove existing external users that are not in new user set
                 foreach(var user in existingExternalUsers)
                 {
-                    if(!newUsersSet.Contains(user.ExternalId) &&
+                    if(user.Type != OrganizationUserType.Owner && !newUsersSet.Contains(user.ExternalId) &&
                         existingExternalUsersIdDict.ContainsKey(user.ExternalId))
                     {
-                        await _organizationUserRepository.DeleteAsync(new OrganizationUser
-                        {
-                            Id = user.Id
-                        });
+                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
                         existingExternalUsersIdDict.Remove(user.ExternalId);
                     }
                 }
