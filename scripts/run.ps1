@@ -36,7 +36,7 @@ if("${env:BITWARDEN_CERTBOT_HTTPS_PORT}" -ne "") {
 function Install() {
     [string]$letsEncrypt = "n"
     Write-Host "(!) " -f cyan -nonewline
-    [string]$domain = $( Read-Host "Enter the domain name for your Bitwarden instance (ex. bitwarden.company.com)" )
+    [string]$domain = $( Read-Host "Enter the domain name for your Bitwarden instance (ex. bitwarden.example.com)" )
     echo ""
     
     if ($domain -eq "") {
