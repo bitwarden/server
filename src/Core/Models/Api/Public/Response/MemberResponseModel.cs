@@ -64,7 +64,7 @@ namespace Bit.Core.Models.Api.Public
         /// <summary>
         /// The member's email address.
         /// </summary>
-        /// <example>jsmith@company.com</example>
+        /// <example>jsmith@example.com</example>
         [Required]
         public string Email { get; set; }
         /// <summary>
