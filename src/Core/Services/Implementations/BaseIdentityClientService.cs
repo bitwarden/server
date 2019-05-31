@@ -84,7 +84,7 @@ namespace Bit.Core.Services
             }
             _nextAuthAttempt = null;
 
-            if(!string.IsNullOrWhiteSpace(AccessToken) && !TokenExpired())
+            if(!string.IsNullOrWhiteSpace(AccessToken) && !TokenNeedsRefresh())
             {
                 return true;
             }
@@ -151,7 +151,7 @@ namespace Bit.Core.Services
             }
         }
 
-        protected bool TokenExpired()
+        protected bool TokenNeedsRefresh(int minutes = 5)
         {
             var decoded = DecodeToken();
             var exp = decoded?["exp"];
@@ -161,7 +161,7 @@ namespace Bit.Core.Services
             }
 
             var expiration = CoreHelpers.FromEpocSeconds(exp.Value<long>());
-            return DateTime.UtcNow < expiration;
+            return DateTime.UtcNow.AddMinutes(-1 * minutes) > expiration;
         }
 
         protected JObject DecodeToken()
