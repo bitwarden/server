@@ -954,7 +954,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You are already part of this organization.");
             }
 
-            if(!UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id))
+            if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -1410,32 +1410,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException($"Selected plan allows a maximum of " +
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
-        }
-
-
-
-        public bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail, Guid orgUserId)
-        {
-            var invalid = true;
-            try
-            {
-                var unprotectedData = protector.Unprotect(token);
-                var dataParts = unprotectedData.Split(' ');
-                if(dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
-                    new Guid(dataParts[1]) == orgUserId &&
-                    dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    var creationTime = CoreHelpers.FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
-                    var expTime = creationTime.AddHours(_globalSettings.OrganizationInviteExpirationHours);
-                    invalid = expTime < DateTime.UtcNow;
-                }
-            }
-            catch
-            {
-                invalid = true;
-            }
-
-            return !invalid;
         }
     }
 }

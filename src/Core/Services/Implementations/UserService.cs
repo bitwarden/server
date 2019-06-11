@@ -250,7 +250,7 @@ namespace Bit.Core.Services
             if(_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
             {
                 tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                    user.Email, orgUserId.Value);
+                    user.Email, orgUserId.Value, _globalSettings);
             }
 
             if(_globalSettings.DisableUserRegistration && !tokenValid)
