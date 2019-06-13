@@ -55,7 +55,7 @@ namespace Bit.Core.Models.Table
 
         public string BillingEmailAddress()
         {
-            return BillingEmail;
+            return BillingEmail?.ToLowerInvariant()?.Trim();
         }
 
         public string BillingName()

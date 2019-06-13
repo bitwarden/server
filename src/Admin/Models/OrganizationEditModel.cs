@@ -102,7 +102,7 @@ namespace Bit.Admin.Models
         {
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BillingEmail = BillingEmail;
+            existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
             existingOrganization.PlanType = PlanType.Value;
             existingOrganization.Plan = Plan;
             existingOrganization.Seats = Seats;
