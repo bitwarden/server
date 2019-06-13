@@ -501,5 +501,27 @@ namespace Bit.Core.Utilities
 
             return !invalid;
         }
+
+        public static string GetApplicationCacheServiceBusSubcriptionName(GlobalSettings globalSettings)
+        {
+            var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
+            if(string.IsNullOrWhiteSpace(subName))
+            {
+                var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+                if(string.IsNullOrWhiteSpace(websiteInstanceId))
+                {
+                    throw new Exception("No service bus subscription name available.");
+                }
+                else
+                {
+                    subName = $"{globalSettings.ProjectName.ToLower()}_{websiteInstanceId}";
+                    if(subName.Length > 50)
+                    {
+                        subName = subName.Substring(0, 50);
+                    }
+                }
+            }
+            return subName;
+        }
     }
 }

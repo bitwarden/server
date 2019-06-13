@@ -22,8 +22,8 @@ namespace Bit.Core
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual StorageSettings Storage { get; set; } = new StorageSettings();
-        public virtual StorageSettings Events { get; set; } = new StorageSettings();
+        public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
+        public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -36,6 +36,7 @@ namespace Bit.Core
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
+        public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
 
         public class BaseServiceUriSettings
         {
@@ -77,7 +78,7 @@ namespace Bit.Core
             }
         }
 
-        public class StorageSettings
+        public class ConnectionStringSettings
         {
             private string _connectionString;
 
@@ -154,7 +155,7 @@ namespace Bit.Core
             public string Dsn { get; set; }
         }
 
-        public class NotificationsSettings : StorageSettings
+        public class NotificationsSettings : ConnectionStringSettings
         {
             public string AzureSignalRConnectionString { get; set; }
         }
@@ -212,6 +213,12 @@ namespace Bit.Core
             public string AccessKeyId { get; set; }
             public string AccessKeySecret { get; set; }
             public string Region { get; set; }
+        }
+
+        public class ServiceBusSettings : ConnectionStringSettings
+        {
+            public string ApplicationCacheTopicName { get; set; }
+            public string ApplicationCacheSubscriptionName { get; set; }
         }
     }
 }

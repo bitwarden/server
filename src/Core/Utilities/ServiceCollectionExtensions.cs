@@ -86,7 +86,16 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+
+            if(CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            }
+            else
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            }
 
             if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
             {

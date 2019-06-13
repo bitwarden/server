@@ -48,7 +48,16 @@ namespace Bit.Events
             });
 
             // Services
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
+            if(usingServiceBusAppCache)
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            }
+            else
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            }
             services.AddScoped<IEventService, EventService>();
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {
@@ -61,6 +70,11 @@ namespace Bit.Events
 
             // Mvc
             services.AddMvc();
+
+            if(usingServiceBusAppCache)
+            {
+                services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+            }
         }
 
         public void Configure(
