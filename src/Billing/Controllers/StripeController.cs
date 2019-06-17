@@ -345,7 +345,7 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
-                if(invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if(!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
@@ -357,7 +357,7 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
-                if(UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if(!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
