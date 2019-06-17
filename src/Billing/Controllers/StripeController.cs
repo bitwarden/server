@@ -471,9 +471,9 @@ namespace Bit.Billing.Controllers
                 return false;
             }
 
+            var invoiceService = new InvoiceService();
             try
             {
-                var invoiceService = new InvoiceService();
                 await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                 {
                     Metadata = new Dictionary<string, string>
@@ -488,7 +488,17 @@ namespace Bit.Billing.Controllers
             catch(Exception e)
             {
                 await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
-                throw e;
+                if(e.Message.Contains("Invoice is already paid"))
+                {
+                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                    {
+                        Metadata = invoice.Metadata
+                    });
+                }
+                else
+                {
+                    throw e;
+                }
             }
 
             return true;
