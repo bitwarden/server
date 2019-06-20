@@ -39,11 +39,16 @@ namespace Bit.Events.Controllers
             switch(model.Type)
             {
                 // User events
-                case EventType.User_LoggedIn:
+                case EventType.User_ExportedVault:
                     await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type);
                     break;
                 // Cipher events
-                case EventType.Cipher_Created:
+                case EventType.Cipher_ClientAutofilled:
+                case EventType.Cipher_ClientCopedHiddenField:
+                case EventType.Cipher_ClientCopiedPassword:
+                case EventType.Cipher_ClientToggledHiddenFieldVisible:
+                case EventType.Cipher_ClientToggledPasswordVisible:
+                case EventType.Cipher_ClientViewed:
                     if(!model.CipherId.HasValue)
                     {
                         return new BadRequestResult();
