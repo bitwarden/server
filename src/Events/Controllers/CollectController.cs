@@ -30,20 +30,7 @@ namespace Bit.Events.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody]EventModel model)
-        {
-            if(await LogEventAsync(model))
-            {
-                return new OkResult();
-            }
-            else
-            {
-                return new BadRequestResult();
-            }
-        }
-
-        [HttpPost("many")]
-        public async Task<IActionResult> PostMany([FromBody]IEnumerable<EventModel> model)
+        public async Task<IActionResult> Post([FromBody]IEnumerable<EventModel> model)
         {
             if(model == null || !model.Any())
             {
