@@ -9,7 +9,7 @@
         User_Recovered2fa = 1004,
         User_FailedLogIn = 1005,
         User_FailedLogIn2fa = 1006,
-        User_ExportedVault = 1007,
+        User_ClientExportedVault = 1007,
 
         Cipher_Created = 1100,
         Cipher_Updated = 1101,
