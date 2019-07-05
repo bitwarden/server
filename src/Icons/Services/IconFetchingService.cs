@@ -299,8 +299,9 @@ namespace Bit.Icons.Services
                 {
                     return await _httpClient.SendAsync(message);
                 }
-                catch
+                catch(Exception e)
                 {
+                    _logger.LogError(e, "SendAsync() failed.");
                     return null;
                 }
             }
