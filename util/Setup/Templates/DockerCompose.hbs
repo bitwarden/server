@@ -118,6 +118,18 @@ services:
       - ../env/uid.env
       - ../env/global.override.env
 
+  events:
+    image: bitwarden/events:{{{CoreVersion}}}
+    container_name: bitwarden-events
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/events:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
   nginx:
     image: bitwarden/nginx:{{{CoreVersion}}}
     container_name: bitwarden-nginx

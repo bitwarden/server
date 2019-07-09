@@ -113,6 +113,10 @@ server {
     proxy_set_header Connection $http_connection;
   }
 
+  location /events/ {
+    proxy_pass http://events:5000/;
+  }
+
   location /admin {
     proxy_pass http://admin:5000;
 {{#if Ssl}}
