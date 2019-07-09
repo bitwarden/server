@@ -7,11 +7,11 @@ namespace Bit.Core.Services
 {
     public interface IEventService
     {
-        Task LogUserEventAsync(Guid userId, EventType type);
-        Task LogCipherEventAsync(Cipher cipher, EventType type);
-        Task LogCollectionEventAsync(Collection collection, EventType type);
-        Task LogGroupEventAsync(Group group, EventType type);
-        Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type);
-        Task LogOrganizationEventAsync(Organization organization, EventType type);
+        Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null);
+        Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null);
+        Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);
+        Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null);
+        Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
+        Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
     }
 }

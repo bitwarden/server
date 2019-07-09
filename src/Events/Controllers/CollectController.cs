@@ -49,12 +49,14 @@ namespace Bit.Events.Controllers
             {
                 // User events
                 case EventType.User_ClientExportedVault:
-                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type);
+                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type, model.Date);
                     break;
                 // Cipher events
                 case EventType.Cipher_ClientAutofilled:
-                case EventType.Cipher_ClientCopedHiddenField:
+                case EventType.Cipher_ClientCopiedHiddenField:
                 case EventType.Cipher_ClientCopiedPassword:
+                case EventType.Cipher_ClientCopiedCardCode:
+                case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:
                 case EventType.Cipher_ClientViewed:
@@ -68,7 +70,7 @@ namespace Bit.Events.Controllers
                     {
                         return false;
                     }
-                    await _eventService.LogCipherEventAsync(cipher, model.Type);
+                    await _eventService.LogCipherEventAsync(cipher, model.Type, model.Date);
                     break;
                 default:
                     return false;

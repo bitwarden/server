@@ -31,9 +31,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task LogUserEventAsync(Guid userId, EventType type)
+        public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null)
         {
-            var now = DateTime.UtcNow;
             var events = new List<IEvent>
             {
                 new EventMessage(_currentContext)
@@ -41,7 +40,7 @@ namespace Bit.Core.Services
                     UserId = userId,
                     ActingUserId = userId,
                     Type = type,
-                    Date = now
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
                 }
             };
 
@@ -68,7 +67,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task LogCipherEventAsync(Cipher cipher, EventType type)
+        public async Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null)
         {
             // Only logging organization cipher events for now.
             if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
@@ -92,12 +91,12 @@ namespace Bit.Core.Services
                 CipherId = cipher.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogCollectionEventAsync(Collection collection, EventType type)
+        public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             if(!CanUseEvents(orgAbilities, collection.OrganizationId))
@@ -111,12 +110,12 @@ namespace Bit.Core.Services
                 CollectionId = collection.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogGroupEventAsync(Group group, EventType type)
+        public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             if(!CanUseEvents(orgAbilities, group.OrganizationId))
@@ -130,12 +129,13 @@ namespace Bit.Core.Services
                 GroupId = group.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
+        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+            DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
@@ -150,12 +150,12 @@ namespace Bit.Core.Services
                 OrganizationUserId = organizationUser.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogOrganizationEventAsync(Organization organization, EventType type)
+        public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
         {
             if(!organization.Enabled || !organization.UseEvents)
             {
@@ -167,7 +167,7 @@ namespace Bit.Core.Services
                 OrganizationId = organization.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
