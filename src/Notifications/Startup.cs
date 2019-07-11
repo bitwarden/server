@@ -102,7 +102,7 @@ namespace Bit.Notifications
                     return false;
                 }
 
-                return e.Level >= LogEventLevel.Error;
+                return e.Level >= LogEventLevel.Warning;
             });
 
             if(env.IsDevelopment())
