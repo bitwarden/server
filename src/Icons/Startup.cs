@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Utilities;
 using Bit.Icons.Services;
@@ -17,6 +18,7 @@ namespace Bit.Icons
     {
         public Startup(IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
         }
 

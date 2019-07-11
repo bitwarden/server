@@ -10,8 +10,8 @@ using Bit.Core.Utilities;
 using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Identity;
 using Microsoft.AspNetCore.Routing;
+using System.Globalization;
 
 namespace Bit.Billing
 {
@@ -19,6 +19,7 @@ namespace Bit.Billing
     {
         public Startup(IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
         }
 

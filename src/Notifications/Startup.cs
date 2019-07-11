@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -17,6 +18,7 @@ namespace Bit.Notifications
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }

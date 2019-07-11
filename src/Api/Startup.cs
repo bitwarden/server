@@ -13,7 +13,7 @@ using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
-using Microsoft.AspNetCore.HttpOverrides;
+using System.Globalization;
 
 namespace Bit.Api
 {
@@ -21,6 +21,7 @@ namespace Bit.Api
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }

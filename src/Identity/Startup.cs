@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Utilities;
 using Serilog.Events;
 using AspNetCoreRateLimit;
+using System.Globalization;
 
 namespace Bit.Identity
 {
@@ -15,6 +16,7 @@ namespace Bit.Identity
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }

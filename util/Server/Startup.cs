@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,11 @@ namespace Bit.Server
         {
             "/images/"
         };
+
+        public Startup()
+        {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+        }
 
         public void ConfigureServices(IServiceCollection services)
         { }

@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Net.Http;
 
 namespace Bit.Setup
@@ -13,6 +14,8 @@ namespace Bit.Setup
 
         public static void Main(string[] args)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+
             _context = new Context
             {
                 Args = args

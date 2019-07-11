@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Identity;
 using Bit.Core.Utilities;
@@ -19,6 +20,7 @@ namespace Bit.Admin
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
