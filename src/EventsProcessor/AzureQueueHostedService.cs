@@ -71,18 +71,26 @@ namespace Bit.EventsProcessor
 
             while(!cancellationToken.IsCancellationRequested)
             {
-                var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                    null, null, cancellationToken);
-                if(messages.Any())
+                try
                 {
-                    foreach(var message in messages)
+                    var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
+                        null, null, cancellationToken);
+                    if(messages.Any())
                     {
-                        await ProcessQueueMessageAsync(message.AsString, cancellationToken);
-                        await _queue.DeleteMessageAsync(message);
+                        foreach(var message in messages)
+                        {
+                            await ProcessQueueMessageAsync(message.AsString, cancellationToken);
+                            await _queue.DeleteMessageAsync(message);
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
                 }
-                else
+                catch(Exception e)
                 {
+                    _logger.LogError(e, "Exception occurred: " + e.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
@@ -123,11 +131,6 @@ namespace Bit.EventsProcessor
             catch(JsonSerializationException)
             {
                 _logger.LogError("JsonSerializationException: Unable to serialize token.");
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(e, "Exception occurred. " + e.Message);
-                throw e;
             }
         }
     }
