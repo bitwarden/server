@@ -94,6 +94,8 @@ namespace Bit.EventsProcessor
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+
+            _logger.LogWarning("Done processing.");
         }
 
         public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)

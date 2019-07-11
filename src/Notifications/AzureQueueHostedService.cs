@@ -95,6 +95,8 @@ namespace Bit.Notifications
                     _logger.LogError("Error processing messages.", e);
                 }
             }
+
+            _logger.LogWarning("Done processing.");
         }
     }
 }
