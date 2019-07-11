@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -165,8 +166,10 @@ namespace Bit.Billing.Utilities
                         CultureInfo.InvariantCulture, DateTimeStyles.None, out var paymentDate);
                     if(parsed)
                     {
-                        return TimeZoneInfo.ConvertTimeToUtc(paymentDate,
-                            TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"));
+                        var pacificTime = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                            TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time") :
+                            TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
+                        return TimeZoneInfo.ConvertTimeToUtc(paymentDate, pacificTime);
                     }
                 }
                 return default(DateTime);
