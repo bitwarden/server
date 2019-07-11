@@ -29,6 +29,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Bit.Core.Utilities
 {
@@ -131,7 +132,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             }
 
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             }
@@ -326,7 +327,8 @@ namespace Bit.Core.Utilities
             {
                 identityServerBuilder.AddDeveloperSigningCredential(false);
             }
-            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword)
+            else if(globalSettings.SelfHosted &&
+                !string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword)
                 && File.Exists("identity.pfx"))
             {
                 var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
@@ -336,6 +338,15 @@ namespace Bit.Core.Utilities
             else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificateThumbprint))
             {
                 var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else if(!globalSettings.SelfHosted &&
+                CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                var identityServerCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
             else
@@ -366,12 +377,21 @@ namespace Bit.Core.Utilities
                     .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
+            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
             {
-                var dataProtectionCert = CoreHelpers.GetCertificate(
-                    globalSettings.DataProtection.CertificateThumbprint);
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                X509Certificate2 dataProtectionCert = null;
+                if(CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
+                {
+                    dataProtectionCert = CoreHelpers.GetCertificate(
+                        globalSettings.DataProtection.CertificateThumbprint);
+                }
+                else if(CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
+                {
+                    dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                        "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
+                        .GetAwaiter().GetResult();
+                }
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);

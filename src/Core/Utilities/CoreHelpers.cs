@@ -15,6 +15,8 @@ using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Bit.Core.Enums;
+using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage;
 
 namespace Bit.Core.Utilities
 {
@@ -147,6 +149,24 @@ namespace Bit.Core.Utilities
                 s.CopyTo(ms);
                 return new X509Certificate2(ms.ToArray(), password);
             }
+        }
+
+        public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
+            string container, string file, string password)
+        {
+            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+            var containerRef = blobClient.GetContainerReference(container);
+            if(await containerRef.ExistsAsync())
+            {
+                var blobRef = containerRef.GetBlobReference(file);
+                if(await blobRef.ExistsAsync())
+                {
+                    var blobBytes = new byte[blobRef.Properties.Length];
+                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0);
+                    return new X509Certificate2(blobBytes, password);
+                }
+            }
+            return null;
         }
 
         public static long ToEpocMilliseconds(DateTime date)

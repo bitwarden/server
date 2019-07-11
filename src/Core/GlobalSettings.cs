@@ -11,6 +11,7 @@ namespace Bit.Core
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
         public virtual string LicenseDirectory { get; set; }
+        public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
         public virtual string InternalIdentityKey { get; set; }
         public virtual string HibpBreachApiKey { get; set; }
@@ -141,6 +142,7 @@ namespace Bit.Core
         public class DataProtectionSettings
         {
             public string CertificateThumbprint { get; set; }
+            public string CertificatePassword { get; set; }
             public string Directory { get; set; }
         }
 
