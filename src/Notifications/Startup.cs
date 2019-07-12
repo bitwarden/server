@@ -102,6 +102,11 @@ namespace Bit.Notifications
                     return false;
                 }
 
+                if(e.Level == LogEventLevel.Warning && e.MessageTemplate.Text.StartsWith("Heartbeat took longer"))
+                {
+                    return false;
+                }
+
                 return e.Level >= LogEventLevel.Warning;
             });
 
