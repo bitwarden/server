@@ -44,6 +44,7 @@ namespace Bit.Notifications
             {
                 return;
             }
+            _logger.LogWarning("Stopping service.");
             _cts.Cancel();
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
