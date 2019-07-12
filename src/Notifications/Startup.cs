@@ -68,6 +68,7 @@ namespace Bit.Notifications
             // Mvc
             services.AddMvc();
 
+            services.AddHostedService<HeartbeatHostedService>();
             if(!globalSettings.SelfHosted)
             {
                 // Hosted Services
