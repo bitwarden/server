@@ -301,7 +301,6 @@ namespace Bit.Icons.Services
                 }
                 catch(Exception e)
                 {
-                    _logger.LogError(e, "SendAsync() failed.");
                     return null;
                 }
             }
