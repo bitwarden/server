@@ -25,7 +25,13 @@ namespace Bit.EventsProcessor
 
         public void ConfigureServices(IServiceCollection services)
         {
+            // Options
             services.AddOptions();
+
+            // Settings
+            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+
+            // Hosted Services
             services.AddHostedService<AzureQueueHostedService>();
         }
 
