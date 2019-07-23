@@ -111,6 +111,7 @@ namespace Bit.Setup
                 ["globalSettings__mail__smtp__username"] = "REPLACE",
                 ["globalSettings__mail__smtp__password"] = "REPLACE",
                 ["globalSettings__disableUserRegistration"] = "false",
+                ["globalSettings__hibpApiKey"] = "REPLACE",
                 ["adminSettings__admins"] = string.Empty,
             };
 
