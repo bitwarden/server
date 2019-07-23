@@ -2,11 +2,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Utilities;
-using Serilog.Events;
 using AspNetCoreRateLimit;
 using System.Globalization;
 
@@ -76,26 +74,10 @@ namespace Bit.Identity
         public void Configure(
             IApplicationBuilder app,
             IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
-                {
-                    return true;
-                }
-
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
             app.UseDefaultMiddleware(env);

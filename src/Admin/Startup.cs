@@ -5,13 +5,10 @@ using Bit.Core.Identity;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Serilog.Events;
 using Stripe;
 
 namespace Bit.Admin
@@ -98,10 +95,9 @@ namespace Bit.Admin
             IApplicationBuilder app,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings,
-            ILoggerFactory loggerFactory)
+            GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(globalSettings.SelfHosted)
             {

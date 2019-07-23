@@ -1,6 +1,7 @@
-﻿using System;
-using Microsoft.AspNetCore;
+﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Bit.Core.Utilities;
+using Serilog.Events;
 
 namespace Bit.Icons
 {
@@ -11,6 +12,8 @@ namespace Bit.Icons
             WebHost
                 .CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
+                .ConfigureLogging((hostingContext, logging) =>
+                    logging.AddSerilog(hostingContext, e => e.Level >= LogEventLevel.Error))
                 .Build()
                 .Run();
         }

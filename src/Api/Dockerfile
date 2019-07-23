@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/aspnet:2.1.10
+FROM mcr.microsoft.com/dotnet/core/aspnet:2.2
 
 LABEL com.bitwarden.product="bitwarden"
 

@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
-using Serilog.Events;
 
 namespace Bit.EventsProcessor
 {
@@ -29,7 +27,7 @@ namespace Bit.EventsProcessor
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            services.AddGlobalSettingsServices(Configuration);
 
             // Hosted Services
             services.AddHostedService<AzureQueueHostedService>();
@@ -38,12 +36,11 @@ namespace Bit.EventsProcessor
         public void Configure(
             IApplicationBuilder app,
             IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             IdentityModelEventSource.ShowPII = true;
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Warning);
+            app.UseSerilog(env, appLifetime, globalSettings);
         }
     }
 }

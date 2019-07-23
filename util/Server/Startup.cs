@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Server
 {
@@ -30,13 +29,8 @@ namespace Bit.Server
 
         public void Configure(
             IApplicationBuilder app,
-            ILoggerFactory loggerFactory,
             IConfiguration configuration)
         {
-            loggerFactory
-                .AddConsole()
-                .AddDebug();
-
             if(configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
                 app.UseStaticFiles(new StaticFileOptions

@@ -3,11 +3,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Bit.Core;
 using Stripe;
 using Bit.Core.Utilities;
-using Serilog.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Routing;
@@ -75,20 +73,9 @@ namespace Bit.Billing
             IApplicationBuilder app,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings,
-            ILoggerFactory loggerFactory)
+            GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(e.Level == LogEventLevel.Information &&
-                    (context.StartsWith("\"Bit.Billing.Jobs") || context.StartsWith("\"Bit.Core.Jobs")))
-                {
-                    return true;
-                }
-
-                return e.Level >= LogEventLevel.Warning;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(env.IsDevelopment())
             {

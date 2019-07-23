@@ -3,13 +3,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Identity;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
-using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -140,32 +138,10 @@ namespace Bit.Api
         public void Configure(
             IApplicationBuilder app,
             IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
-                    e.Exception.Message == "Bad security stamp."))
-                {
-                    return false;
-                }
-
-                if(e.Level == LogEventLevel.Information && context.Contains(typeof(IpRateLimitMiddleware).FullName))
-                {
-                    return true;
-                }
-
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
             app.UseDefaultMiddleware(env);
