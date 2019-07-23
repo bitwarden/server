@@ -14,7 +14,7 @@ namespace Bit.Core
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
         public virtual string InternalIdentityKey { get; set; }
-        public virtual string HibpBreachApiKey { get; set; }
+        public virtual string HibpApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days

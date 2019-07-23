@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core;
 using System.Net;
 using Bit.Core.Exceptions;
+using System.Linq;
 
 namespace Bit.Api.Controllers
 {
@@ -15,17 +16,18 @@ namespace Bit.Api.Controllers
     [Authorize("Application")]
     public class HibpController : Controller
     {
-        private const string HibpBreachApi = "https://haveibeenpwned.com/api/v2/breachedaccount/{0}";
+        private const string HibpBreachApi = "https://haveibeenpwned.com/api/v3/breachedaccount/{0}" +
+            "?truncateResponse=false&includeUnverified=false";
         private static HttpClient _httpClient;
 
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly string _userAgent;
 
         static HibpController()
         {
             _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Bitwarden");
         }
 
         public HibpController(
@@ -36,19 +38,24 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _userAgent = _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden";
         }
 
         [HttpGet("breach")]
         public async Task<IActionResult> Get(string username)
         {
-            var encodedUsername = WebUtility.UrlEncode(username);
-            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, encodedUsername));
-            if(!string.IsNullOrWhiteSpace(_globalSettings.HibpBreachApiKey))
+            return await SendAsync(WebUtility.UrlEncode(username), true);
+        }
+
+        private async Task<IActionResult> SendAsync(string username, bool retry)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, username));
+            if(!string.IsNullOrWhiteSpace(_globalSettings.HibpApiKey))
             {
-                request.Headers.Add("Authorization", $"Basic {_globalSettings.HibpBreachApiKey}");
+                request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
             }
-            request.Headers.Add("Client-Id", GetClientId());
-            request.Headers.Add("Client-Ip", _currentContext.IpAddress);
+            request.Headers.Add("hibp-client-id", GetClientId());
+            request.Headers.Add("User-Agent", _userAgent);
             var response = await _httpClient.SendAsync(request);
             if(response.IsSuccessStatusCode)
             {
@@ -58,6 +65,20 @@ namespace Bit.Api.Controllers
             else if(response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new NotFoundResult();
+            }
+            else if(response.StatusCode == HttpStatusCode.TooManyRequests && retry)
+            {
+                var delay = 2000;
+                if(response.Headers.Contains("retry-after"))
+                {
+                    var vals = response.Headers.GetValues("retry-after");
+                    if(vals.Any() && int.TryParse(vals.FirstOrDefault(), out var secDelay))
+                    {
+                        delay = (secDelay * 1000) + 200;
+                    }
+                }
+                await Task.Delay(delay);
+                return await SendAsync(username, false);
             }
             else
             {
