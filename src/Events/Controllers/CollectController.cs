@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Events.Models;
@@ -36,46 +38,45 @@ namespace Bit.Events.Controllers
             {
                 return new BadRequestResult();
             }
+            var cipherEvents = new List<Tuple<Cipher, EventType, DateTime?>>();
             foreach(var eventModel in model)
             {
-                await LogEventAsync(eventModel);
+                switch(eventModel.Type)
+                {
+                    // User events
+                    case EventType.User_ClientExportedVault:
+                        await _eventService.LogUserEventAsync(_currentContext.UserId.Value, eventModel.Type, eventModel.Date);
+                        break;
+                    // Cipher events
+                    case EventType.Cipher_ClientAutofilled:
+                    case EventType.Cipher_ClientCopiedHiddenField:
+                    case EventType.Cipher_ClientCopiedPassword:
+                    case EventType.Cipher_ClientCopiedCardCode:
+                    case EventType.Cipher_ClientToggledCardCodeVisible:
+                    case EventType.Cipher_ClientToggledHiddenFieldVisible:
+                    case EventType.Cipher_ClientToggledPasswordVisible:
+                    case EventType.Cipher_ClientViewed:
+                        if(!eventModel.CipherId.HasValue)
+                        {
+                            continue;
+                        }
+                        var cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
+                            _currentContext.UserId.Value);
+                        if(cipher == null)
+                        {
+                            continue;
+                        }
+                        cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
+                        break;
+                    default:
+                        continue;
+                }
+            }
+            if(cipherEvents.Any())
+            {
+                await _eventService.LogCipherEventsAsync(cipherEvents);
             }
             return new OkResult();
-        }
-
-        private async Task<bool> LogEventAsync(EventModel model)
-        {
-            switch(model.Type)
-            {
-                // User events
-                case EventType.User_ClientExportedVault:
-                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, model.Type, model.Date);
-                    break;
-                // Cipher events
-                case EventType.Cipher_ClientAutofilled:
-                case EventType.Cipher_ClientCopiedHiddenField:
-                case EventType.Cipher_ClientCopiedPassword:
-                case EventType.Cipher_ClientCopiedCardCode:
-                case EventType.Cipher_ClientToggledCardCodeVisible:
-                case EventType.Cipher_ClientToggledHiddenFieldVisible:
-                case EventType.Cipher_ClientToggledPasswordVisible:
-                case EventType.Cipher_ClientViewed:
-                    if(!model.CipherId.HasValue)
-                    {
-                        return false;
-                    }
-                    var cipher = await _cipherRepository.GetByIdAsync(model.CipherId.Value,
-                        _currentContext.UserId.Value);
-                    if(cipher == null)
-                    {
-                        return false;
-                    }
-                    await _eventService.LogCipherEventAsync(cipher, model.Type, model.Date);
-                    break;
-                default:
-                    return false;
-            }
-            return true;
         }
     }
 }

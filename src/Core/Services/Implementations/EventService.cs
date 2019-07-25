@@ -69,10 +69,33 @@ namespace Bit.Core.Services
 
         public async Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null)
         {
+            var e = await BuildCipherEventMessageAsync(cipher, type, date);
+            if(e != null)
+            {
+                await _eventWriteService.CreateAsync(e);
+            }
+        }
+
+        public async Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events)
+        {
+            var cipherEvents = new List<IEvent>();
+            foreach(var ev in events)
+            {
+                var e = await BuildCipherEventMessageAsync(ev.Item1, ev.Item2, ev.Item3);
+                if(e != null)
+                {
+                    cipherEvents.Add(e);
+                }
+            }
+            await _eventWriteService.CreateManyAsync(cipherEvents);
+        }
+
+        private async Task<EventMessage> BuildCipherEventMessageAsync(Cipher cipher, EventType type, DateTime? date = null)
+        {
             // Only logging organization cipher events for now.
             if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
             {
-                return;
+                return null;
             }
 
             if(cipher.OrganizationId.HasValue)
@@ -80,11 +103,11 @@ namespace Bit.Core.Services
                 var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
                 if(!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
                 {
-                    return;
+                    return null;
                 }
             }
 
-            var e = new EventMessage(_currentContext)
+            return new EventMessage(_currentContext)
             {
                 OrganizationId = cipher.OrganizationId,
                 UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId,
@@ -93,7 +116,6 @@ namespace Bit.Core.Services
                 ActingUserId = _currentContext?.UserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
-            await _eventWriteService.CreateAsync(e);
         }
 
         public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
