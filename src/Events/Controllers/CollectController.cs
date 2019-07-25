@@ -40,6 +40,7 @@ namespace Bit.Events.Controllers
                 return new BadRequestResult();
             }
             var cipherEvents = new List<Tuple<Cipher, EventType, DateTime?>>();
+            var ciphersCache = new Dictionary<Guid, Cipher>();
             foreach(var eventModel in model)
             {
                 switch(eventModel.Type)
@@ -61,11 +62,23 @@ namespace Bit.Events.Controllers
                         {
                             continue;
                         }
-                        var cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
-                            _currentContext.UserId.Value);
+                        Cipher cipher = null;
+                        if(ciphersCache.ContainsKey(eventModel.CipherId.Value))
+                        {
+                            cipher = ciphersCache[eventModel.CipherId.Value];
+                        }
+                        else
+                        {
+                            cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
+                               _currentContext.UserId.Value);
+                        }
                         if(cipher == null)
                         {
                             continue;
+                        }
+                        if(!ciphersCache.ContainsKey(eventModel.CipherId.Value))
+                        {
+                            ciphersCache.Add(eventModel.CipherId.Value, cipher);
                         }
                         cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
                         break;
