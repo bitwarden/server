@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Newtonsoft.Json;
 using System.IO;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -295,9 +296,12 @@ namespace Bit.Core.Services
 
             await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
 
-            var events = deletingCiphers.Select(c => 
+            var events = deletingCiphers.Select(c =>
                 new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
-            await _eventService.LogCipherEventsAsync(events);
+            foreach(var eventsBatch in events.Batch(100))
+            {
+                await _eventService.LogCipherEventsAsync(eventsBatch);
+            }
 
             // push
             await _pushService.PushSyncCiphersAsync(deletingUserId);
@@ -509,7 +513,10 @@ namespace Bit.Core.Services
 
             var events = ciphers.Select(c =>
                 new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Shared, null));
-            await _eventService.LogCipherEventsAsync(events);
+            foreach(var eventsBatch in events.Batch(100))
+            {
+                await _eventService.LogCipherEventsAsync(eventsBatch);
+            }
 
             // push
             await _pushService.PushSyncCiphersAsync(sharingUserId);

@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Events.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -74,7 +75,10 @@ namespace Bit.Events.Controllers
             }
             if(cipherEvents.Any())
             {
-                await _eventService.LogCipherEventsAsync(cipherEvents);
+                foreach(var eventsBatch in cipherEvents.Batch(50))
+                {
+                    await _eventService.LogCipherEventsAsync(eventsBatch);
+                }
             }
             return new OkResult();
         }
