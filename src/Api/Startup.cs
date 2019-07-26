@@ -12,6 +12,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Microsoft.IdentityModel.Logging;
 
 namespace Bit.Api
 {
@@ -141,6 +142,7 @@ namespace Bit.Api
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
+            IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
