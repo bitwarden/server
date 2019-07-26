@@ -20,6 +20,6 @@ EXPOSE 8443
 
 RUN chmod +x /entrypoint.sh
 
-HEALTHCHECK CMD curl -L -f http://localhost/alive || exit 1
+HEALTHCHECK CMD curl -L -f http://localhost:8080/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
