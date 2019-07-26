@@ -5,6 +5,7 @@ LABEL com.bitwarden.product="bitwarden"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gosu \
+        curl \
         libcurl3 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -14,5 +15,7 @@ EXPOSE 5000
 COPY obj/Docker/publish .
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+
+HEALTHCHECK CMD curl -f http://localhost:5000/.well-known/openid-configuration || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
