@@ -69,6 +69,11 @@ server {
     add_header X-Robots-Tag "noindex, nofollow";
   }
 
+  location /alive {
+    return 200 'alive';
+    add_header Content-Type text/plain;
+  }
+
   location = /app-id.json {
     proxy_pass http://web:5000/app-id.json;
 {{#if Ssl}}
