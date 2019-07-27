@@ -9,6 +9,7 @@ using Bit.Core;
 using System.Net;
 using Bit.Core.Exceptions;
 using System.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -49,11 +50,12 @@ namespace Bit.Api.Controllers
 
         private async Task<IActionResult> SendAsync(string username, bool retry)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, username));
-            if(!string.IsNullOrWhiteSpace(_globalSettings.HibpApiKey))
+            if(!CoreHelpers.SettingHasValue(_globalSettings.HibpApiKey))
             {
-                request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
+                throw new BadRequestException("HaveIBeenPwned API key not set.");
             }
+            var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, username));
+            request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
             request.Headers.Add("hibp-client-id", GetClientId());
             request.Headers.Add("User-Agent", _userAgent);
             var response = await _httpClient.SendAsync(request);
