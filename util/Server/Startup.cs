@@ -33,6 +33,7 @@ namespace Bit.Server
         {
             if(configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
+                app.Map("/alive", HandleMapAlive);
                 app.UseStaticFiles(new StaticFileOptions
                 {
                     ServeUnknownFileTypes = true,
@@ -70,8 +71,14 @@ namespace Bit.Server
             }
             else
             {
+                app.Map("/alive", HandleMapAlive);
                 app.UseFileServer();
             }
+        }
+
+        private static void HandleMapAlive(IApplicationBuilder app)
+        {
+            app.Run(async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
         }
     }
 }
