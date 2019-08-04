@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
@@ -41,6 +42,12 @@ namespace Bit.EventsProcessor
         {
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
+            app.Map("/alive", HandleMapAlive);
+        }
+
+        private static void HandleMapAlive(IApplicationBuilder app)
+        {
+            app.Run(async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
         }
     }
 }

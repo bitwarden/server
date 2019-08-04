@@ -35,6 +35,7 @@ namespace Bit.EventsProcessor
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            _logger.LogWarning("Starting service.");
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _executingTask = ExecuteAsync(_cts.Token);
             return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
