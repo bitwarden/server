@@ -31,6 +31,13 @@ namespace Bit.Icons.Controllers
             _iconsSettings = iconsSettings;
         }
 
+        [HttpGet("~/alive")]
+        [HttpGet("~/now")]
+        public DateTime GetAlive()
+        {
+            return DateTime.UtcNow;
+        }
+
         [HttpGet("{hostname}/icon.png")]
         public async Task<IActionResult> Get(string hostname)
         {
