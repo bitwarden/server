@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +36,7 @@ namespace Bit.EventsProcessor
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogWarning("Starting service.");
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _executingTask = ExecuteAsync(_cts.Token);
             return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
