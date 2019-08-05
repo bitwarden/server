@@ -43,7 +43,7 @@ server {
 
   # Verify chain of trust of OCSP response using Root CA and Intermediate certs
   ssl_trusted_certificate {{{CaPath}}};
-  resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
+  resolver 1.1.1.1 1.0.0.1 9.9.9.9 valid=300s;
 {{/if}}
 
   include /etc/nginx/security-headers-ssl.conf;
