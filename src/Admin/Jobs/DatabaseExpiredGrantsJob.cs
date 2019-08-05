@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,9 @@ namespace Bit.Admin.Jobs
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteExpiredGrantsAsync");
             await _maintenanceRepository.DeleteExpiredGrantsAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteExpiredGrantsAsync");
         }
     }
 }
