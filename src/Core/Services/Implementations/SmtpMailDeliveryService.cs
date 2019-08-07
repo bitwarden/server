@@ -4,6 +4,7 @@ using System.Net.Mail;
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -38,10 +39,10 @@ namespace Bit.Core.Services
             client.UseDefaultCredentials = _globalSettings.Mail.Smtp.UseDefaultCredentials;
             client.DeliveryMethod = SmtpDeliveryMethod.Network;
 
-            if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Username) &&
-                !string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.Password))
+            if(CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
+                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
             {
-                if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.Smtp.AuthType))
+                if(CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.AuthType))
                 {
                     var cred = new NetworkCredential(_globalSettings.Mail.Smtp.Username,
                         _globalSettings.Mail.Smtp.Password);
