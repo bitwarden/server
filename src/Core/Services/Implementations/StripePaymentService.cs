@@ -136,7 +136,7 @@ namespace Bit.Core.Services
                 {
                     Description = org.BusinessName,
                     Email = org.BillingEmail,
-                    SourceToken = stipeCustomerSourceToken,
+                    Source = stipeCustomerSourceToken,
                     Metadata = stripeCustomerMetadata
                 });
                 subCreateOptions.CustomerId = customer.Id;
@@ -171,8 +171,9 @@ namespace Bit.Core.Services
             }
 
             var customerService = new CustomerService();
-            customerService.ExpandDefaultSource = true;
-            var customer = await customerService.GetAsync(org.GatewayCustomerId);
+            var customerOptions = new CustomerGetOptions();
+            customerOptions.AddExpand("default_source");
+            var customer = await customerService.GetAsync(org.GatewayCustomerId, customerOptions);
             if(customer == null)
             {
                 throw new GatewayException("Could not find customer payment profile.");
@@ -332,7 +333,7 @@ namespace Bit.Core.Services
                 {
                     Description = user.Name,
                     Email = user.Email,
-                    SourceToken = stipeCustomerSourceToken,
+                    Source = stipeCustomerSourceToken,
                     Metadata = stripeCustomerMetadata
                 });
                 createdStripeCustomer = true;
@@ -437,7 +438,7 @@ namespace Bit.Core.Services
 
                             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                             {
-                                AccountBalance = customer.AccountBalance - previewInvoice.AmountDue
+                                Balance = customer.Balance - previewInvoice.AmountDue
                             });
                             addedCreditToStripeCustomer = true;
                         }
@@ -492,11 +493,11 @@ namespace Bit.Core.Services
                     {
                         await customerService.DeleteAsync(customer.Id);
                     }
-                    else if(addedCreditToStripeCustomer || customer.AccountBalance < 0)
+                    else if(addedCreditToStripeCustomer || customer.Balance < 0)
                     {
                         await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                         {
-                            AccountBalance = customer.AccountBalance
+                            Balance = customer.Balance
                         });
                     }
                 }
@@ -690,8 +691,9 @@ namespace Bit.Core.Services
                 // Invoice them and pay now instead of waiting until next billing cycle.
 
                 var customerService = new CustomerService();
-                customerService.ExpandDefaultSource = true;
-                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                var customerOptions = new CustomerGetOptions();
+                customerOptions.AddExpand("default_source");
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
 
                 var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
                 if(invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
@@ -728,7 +730,7 @@ namespace Bit.Core.Services
 
                     invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
                     {
-                        Billing = Billing.SendInvoice,
+                        CollectionMethod = "send_invoice",
                         DaysUntilDue = 1,
                         CustomerId = subscriber.GatewayCustomerId,
                         SubscriptionId = subscriber.GatewaySubscriptionId
@@ -800,7 +802,7 @@ namespace Bit.Core.Services
                         {
                             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                             {
-                                AccountBalance = customer.AccountBalance
+                                Balance = customer.Balance
                             });
                         }
 
@@ -1041,7 +1043,7 @@ namespace Bit.Core.Services
                     {
                         Description = subscriber.BillingName(),
                         Email = subscriber.BillingEmailAddress(),
-                        SourceToken = stipeCustomerSourceToken,
+                        Source = stipeCustomerSourceToken,
                         Metadata = stripeCustomerMetadata
                     });
 
@@ -1059,7 +1061,7 @@ namespace Bit.Core.Services
                         {
                             var bankAccount = await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
                             {
-                                SourceToken = paymentToken
+                                Source = paymentToken
                             });
                             defaultSourceId = bankAccount.Id;
                         }
@@ -1067,7 +1069,7 @@ namespace Bit.Core.Services
                         {
                             var card = await cardService.CreateAsync(customer.Id, new CardCreateOptions
                             {
-                                SourceToken = paymentToken,
+                                Source = paymentToken,
                             });
                             defaultSourceId = card.Id;
                         }
@@ -1126,7 +1128,7 @@ namespace Bit.Core.Services
             }
             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
             {
-                AccountBalance = customer.AccountBalance - (long)(creditAmount * 100)
+                Balance = customer.Balance - (long)(creditAmount * 100)
             });
             return !customerExists;
         }
@@ -1165,7 +1167,7 @@ namespace Bit.Core.Services
                 catch(StripeException) { }
                 if(customer != null)
                 {
-                    billingInfo.Balance = customer.AccountBalance / 100M;
+                    billingInfo.Balance = customer.Balance / 100M;
 
                     if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
@@ -1200,7 +1202,7 @@ namespace Bit.Core.Services
                         Limit = 50
                     });
                     billingInfo.Invoices = invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-                        .OrderByDescending(i => i.Date).Select(i => new BillingInfo.BillingInvoice(i));
+                        .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
                 }
             }
 

@@ -33,7 +33,7 @@ namespace Bit.Billing
             services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
 
             // Stripe Billing
-            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
+            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);

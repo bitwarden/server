@@ -506,7 +506,7 @@ namespace Bit.Billing.Controllers
 
         private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
         {
-            return invoice.AmountDue > 0 && !invoice.Paid && invoice.Billing == Stripe.Billing.ChargeAutomatically &&
+            return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
                 invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
         }
     }

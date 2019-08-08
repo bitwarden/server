@@ -123,7 +123,7 @@ namespace Bit.Core.Models.Business
             public BillingUpcomingInvoice(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
-                Date = inv.Date.Value;
+                Date = inv.Created;
             }
 
             public BillingUpcomingInvoice(Braintree.Subscription sub)

@@ -47,7 +47,7 @@ namespace Bit.Api
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
-            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
+            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);

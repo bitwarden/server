@@ -299,7 +299,7 @@ namespace Bit.Icons.Services
                 {
                     return await _httpClient.SendAsync(message);
                 }
-                catch(Exception e)
+                catch
                 {
                     return null;
                 }

@@ -124,13 +124,12 @@ namespace Bit.Core.Models.Business
             public BillingInvoice(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
-                Date = inv.Date.Value;
+                Date = inv.Created;
                 Url = inv.HostedInvoiceUrl;
                 PdfUrl = inv.InvoicePdf;
                 Number = inv.Number;
                 Paid = inv.Paid;
                 Amount = inv.Total / 100M;
-                Date = inv.Date.Value;
             }
 
             public decimal Amount { get; set; }
