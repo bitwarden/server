@@ -42,7 +42,6 @@ namespace Bit.Core.Services
             string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
             short additionalSeats, bool premiumAccessAddon)
         {
-            var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
 
             Braintree.Customer braintreeCustomer = null;
