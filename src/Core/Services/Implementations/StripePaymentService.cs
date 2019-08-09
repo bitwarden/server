@@ -1153,8 +1153,6 @@ namespace Bit.Core.Services
             }
 
             var customerService = new CustomerService();
-            var subscriptionService = new SubscriptionService();
-            var chargeService = new ChargeService();
             var invoiceService = new InvoiceService();
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
