@@ -292,6 +292,7 @@ namespace Bit.Core.Services
                 catch { }
             }
 
+            string stipeCustomerPaymentMethodId = null;
             if(customer == null && !string.IsNullOrWhiteSpace(paymentToken))
             {
                 string stipeCustomerSourceToken = null;
@@ -299,7 +300,14 @@ namespace Bit.Core.Services
 
                 if(stripePaymentMethod)
                 {
-                    stipeCustomerSourceToken = paymentToken;
+                    if(paymentToken.StartsWith("pm_"))
+                    {
+                        stipeCustomerPaymentMethodId = paymentToken;
+                    }
+                    else
+                    {
+                        stipeCustomerSourceToken = paymentToken;
+                    }
                 }
                 else if(paymentMethodType == PaymentMethodType.PayPal)
                 {
@@ -332,8 +340,9 @@ namespace Bit.Core.Services
                 {
                     Description = user.Name,
                     Email = user.Email,
-                    Source = stipeCustomerSourceToken,
-                    Metadata = stripeCustomerMetadata
+                    Metadata = stripeCustomerMetadata,
+                    PaymentMethodId = stipeCustomerPaymentMethodId,
+                    Source = stipeCustomerSourceToken
                 });
                 createdStripeCustomer = true;
             }
@@ -346,6 +355,7 @@ namespace Bit.Core.Services
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
+                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -460,8 +470,22 @@ namespace Bit.Core.Services
                     }
                 }
 
+                subCreateOptions.OffSession = true;
+                subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
+                if(subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+                {
+                    if(subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
+                    {
+                        await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                        throw new GatewayException("Payment method failed.");
+                    }
+                    else if(subscription.LatestInvoice.PaymentIntent.Status == "requires_action")
+                    {
+                        // Needs SCA. Send email? Should be handled by Stripe.
+                    }
+                }
 
                 if(!stripePaymentMethod && subInvoiceMetadata.Any())
                 {
