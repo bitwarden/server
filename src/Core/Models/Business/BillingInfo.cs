@@ -15,6 +15,20 @@ namespace Bit.Core.Models.Business
 
         public class BillingSource
         {
+            public BillingSource(PaymentMethod method)
+            {
+                if(method.Card != null)
+                {
+                    Type = PaymentMethodType.Card;
+                    Description = $"{method.Card.Brand?.ToUpperInvariant()}, *{method.Card.Last4}, " +
+                        string.Format("{0}/{1}",
+                            string.Concat(method.Card.ExpMonth < 10 ?
+                                "0" : string.Empty, method.Card.ExpMonth),
+                            method.Card.ExpYear);
+                    CardBrand = method.Card.Brand;
+                }
+            }
+
             public BillingSource(IPaymentSource source)
             {
                 if(source is BankAccount bankAccount)

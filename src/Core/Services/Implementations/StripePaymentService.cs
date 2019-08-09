@@ -1216,6 +1216,18 @@ namespace Bit.Core.Services
                             }
                         }
                     }
+                    if(billingInfo.PaymentSource == null)
+                    {
+                        var paymentMethodService = new PaymentMethodService();
+                        var paymentMethods = paymentMethodService.ListAutoPaging(
+                            new PaymentMethodListOptions { CustomerId = customer.Id, Type = "card" });
+                        var paymentMethod = paymentMethods.Where(m => m.Card != null)
+                            .OrderByDescending(m => m.Created).FirstOrDefault();
+                        if(paymentMethod != null)
+                        {
+                            billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
+                        }
+                    }
 
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
