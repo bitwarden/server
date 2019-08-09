@@ -960,6 +960,7 @@ namespace Bit.Core.Services
             var createdCustomer = false;
             Braintree.Customer braintreeCustomer = null;
             string stipeCustomerSourceToken = null;
+            string stipeCustomerPaymentMethodId = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
@@ -967,6 +968,7 @@ namespace Bit.Core.Services
             var cardService = new CardService();
             var bankSerice = new BankAccountService();
             var customerService = new CustomerService();
+            var paymentMethodService = new PaymentMethodService();
             Customer customer = null;
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -981,7 +983,14 @@ namespace Bit.Core.Services
             var hadBtCustomer = stripeCustomerMetadata.ContainsKey("btCustomerId");
             if(stripePaymentMethod)
             {
-                stipeCustomerSourceToken = paymentToken;
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
             }
             else if(paymentMethodType == PaymentMethodType.PayPal)
             {
@@ -1066,8 +1075,9 @@ namespace Bit.Core.Services
                     {
                         Description = subscriber.BillingName(),
                         Email = subscriber.BillingEmailAddress(),
+                        Metadata = stripeCustomerMetadata,
                         Source = stipeCustomerSourceToken,
-                        Metadata = stripeCustomerMetadata
+                        PaymentMethodId = stipeCustomerPaymentMethodId,
                     });
 
                     subscriber.Gateway = GatewayType.Stripe;
@@ -1078,9 +1088,10 @@ namespace Bit.Core.Services
                 if(!createdCustomer)
                 {
                     string defaultSourceId = null;
+                    string defaultPaymentMethodId = null;
                     if(stripePaymentMethod)
                     {
-                        if(paymentToken.StartsWith("btok_"))
+                        if(!string.IsNullOrWhiteSpace(stipeCustomerSourceToken) && paymentToken.StartsWith("btok_"))
                         {
                             var bankAccount = await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
                             {
@@ -1088,13 +1099,11 @@ namespace Bit.Core.Services
                             });
                             defaultSourceId = bankAccount.Id;
                         }
-                        else
+                        else if(!string.IsNullOrWhiteSpace(stipeCustomerPaymentMethodId))
                         {
-                            var card = await cardService.CreateAsync(customer.Id, new CardCreateOptions
-                            {
-                                Source = paymentToken,
-                            });
-                            defaultSourceId = card.Id;
+                            await paymentMethodService.AttachAsync(stipeCustomerPaymentMethodId,
+                                new PaymentMethodAttachOptions { CustomerId = customer.Id });
+                            defaultPaymentMethodId = stipeCustomerPaymentMethodId;
                         }
                     }
 
@@ -1108,6 +1117,16 @@ namespace Bit.Core.Services
                         {
                             await cardService.DeleteAsync(customer.Id, source.Id);
                         }
+                    }
+
+                    var cardPaymentMethods = paymentMethodService.ListAutoPaging(new PaymentMethodListOptions
+                    {
+                        CustomerId = customer.Id,
+                        Type = "card"
+                    });
+                    foreach(var cardMethod in cardPaymentMethods.Where(m => m.Id != defaultPaymentMethodId))
+                    {
+                        await paymentMethodService.DetachAsync(cardMethod.Id, new PaymentMethodDetachOptions());
                     }
 
                     customer = await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
@@ -1219,10 +1238,9 @@ namespace Bit.Core.Services
                     if(billingInfo.PaymentSource == null)
                     {
                         var paymentMethodService = new PaymentMethodService();
-                        var paymentMethods = paymentMethodService.ListAutoPaging(
+                        var cardPaymentMethods = paymentMethodService.ListAutoPaging(
                             new PaymentMethodListOptions { CustomerId = customer.Id, Type = "card" });
-                        var paymentMethod = paymentMethods.Where(m => m.Card != null)
-                            .OrderByDescending(m => m.Created).FirstOrDefault();
+                        var paymentMethod = cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
                         if(paymentMethod != null)
                         {
                             billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
