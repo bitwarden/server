@@ -91,6 +91,7 @@ namespace Bit.Core.Services
 
             var subCreateOptions = new SubscriptionCreateOptions
             {
+                OffSession = true,
                 TrialPeriodDays = plan.TrialPeriodDays,
                 DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
@@ -148,6 +149,7 @@ namespace Bit.Core.Services
                     PaymentMethodId = stipeCustomerPaymentMethodId,
                     Metadata = stripeCustomerMetadata
                 });
+                subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 subCreateOptions.CustomerId = customer.Id;
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
