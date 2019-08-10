@@ -8,8 +8,9 @@ namespace Bit.Core.Services
     public interface IPaymentService
     {
         Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
-        Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType, string paymentToken,
-            Models.StaticStore.Plan plan, short additionalStorageGb, short additionalSeats, bool premiumAccessAddon);
+        Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb, short additionalSeats,
+            bool premiumAccessAddon);
         Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
            short additionalStorageGb, short additionalSeats, bool premiumAccessAddon);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,

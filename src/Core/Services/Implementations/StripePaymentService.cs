@@ -38,7 +38,7 @@ namespace Bit.Core.Services
             _logger = logger;
         }
 
-        public async Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+        public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
             string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
             short additionalSeats, bool premiumAccessAddon)
         {
@@ -46,13 +46,21 @@ namespace Bit.Core.Services
 
             Braintree.Customer braintreeCustomer = null;
             string stipeCustomerSourceToken = null;
+            string stipeCustomerPaymentMethodId = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
 
             if(stripePaymentMethod)
             {
-                stipeCustomerSourceToken = paymentToken;
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
             }
             else if(paymentMethodType == PaymentMethodType.PayPal)
             {
@@ -84,6 +92,7 @@ namespace Bit.Core.Services
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 TrialPeriodDays = plan.TrialPeriodDays,
+                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -136,11 +145,20 @@ namespace Bit.Core.Services
                     Description = org.BusinessName,
                     Email = org.BillingEmail,
                     Source = stipeCustomerSourceToken,
+                    PaymentMethodId = stipeCustomerPaymentMethodId,
                     Metadata = stripeCustomerMetadata
                 });
                 subCreateOptions.CustomerId = customer.Id;
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
+                if(subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+                {
+                    if(subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
+                    {
+                        await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                        throw new GatewayException("Payment method was declined.");
+                    }
+                }
             }
             catch(Exception e)
             {
@@ -158,7 +176,19 @@ namespace Bit.Core.Services
             org.Gateway = GatewayType.Stripe;
             org.GatewayCustomerId = customer.Id;
             org.GatewaySubscriptionId = subscription.Id;
-            org.ExpirationDate = subscription.CurrentPeriodEnd;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
         }
 
         public async Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
@@ -514,7 +544,7 @@ namespace Bit.Core.Services
                     if(subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
                     {
                         await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
-                        throw new GatewayException("Payment method failed.");
+                        throw new GatewayException("Payment method was declined.");
                     }
                 }
 
