@@ -246,7 +246,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostStorage(string id, [FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -254,7 +254,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/verify-bank")]

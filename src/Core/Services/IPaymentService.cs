@@ -15,7 +15,7 @@ namespace Bit.Core.Services
            short additionalStorageGb, short additionalSeats, bool premiumAccessAddon);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb);
-        Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
+        Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
         Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
         Task ReinstateSubscriptionAsync(ISubscriber subscriber);
         Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,

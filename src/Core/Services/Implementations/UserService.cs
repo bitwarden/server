@@ -774,7 +774,7 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
         }
 
-        public async Task AdjustStorageAsync(User user, short storageAdjustmentGb)
+        public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
         {
             if(user == null)
             {
@@ -786,8 +786,10 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Not a premium user.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, StoragePlanId);
+            var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
+                StoragePlanId);
             await SaveUserAsync(user);
+            return secret;
         }
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType)

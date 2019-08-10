@@ -46,7 +46,7 @@ namespace Bit.Core.Services
         Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
             PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license);
         Task UpdateLicenseAsync(User user, UserLicense license);
-        Task AdjustStorageAsync(User user, short storageAdjustmentGb);
+        Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
         Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType);
         Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
         Task ReinstatePremiumAsync(User user);

@@ -230,7 +230,7 @@ namespace Bit.Core.Services
             return new Tuple<bool, string>(success, paymentIntentClientSecret);
         }
 
-        public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
+        public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -249,9 +249,10 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
+            var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
                 plan.StripeStoragePlanId);
             await ReplaceAndUpdateCache(organization);
+            return secret;
         }
 
         public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
@@ -374,8 +375,9 @@ namespace Bit.Core.Services
             var invoicedNow = false;
             if(additionalSeats > 0)
             {
-                invoicedNow = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
+                var result = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
                     organization, plan.StripeSeatPlanId, subItemOptions, 500);
+                invoicedNow = result.Item1;
             }
 
             await subUpdateAction(!invoicedNow);

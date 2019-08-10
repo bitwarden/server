@@ -616,7 +616,7 @@ namespace Bit.Core.Services
             }).ToList();
         }
 
-        public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
+        public async Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
             string storagePlanId)
         {
             var subscriptionItemService = new SubscriptionItemService();
@@ -679,14 +679,18 @@ namespace Bit.Core.Services
                 subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(storageItem.Id);
             }
 
+            string paymentIntentClientSecret = null;
             var invoicedNow = false;
             if(additionalStorage > 0)
             {
-                invoicedNow = await PreviewUpcomingInvoiceAndPayAsync(
+                var result = await PreviewUpcomingInvoiceAndPayAsync(
                     storableSubscriber, storagePlanId, subItemOptions, 400);
+                invoicedNow = result.Item1;
+                paymentIntentClientSecret = result.Item2;
             }
 
             await subUpdateAction(!invoicedNow);
+            return paymentIntentClientSecret;
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -748,11 +752,12 @@ namespace Bit.Core.Services
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
-        public async Task<bool> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
+        public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
         {
             var invoiceService = new InvoiceService();
             var invoiceItemService = new InvoiceItemService();
+            string paymentIntentClientSecret = null;
 
             var pendingInvoiceItems = invoiceItemService.ListAutoPaging(new InvoiceItemListOptions
             {
@@ -781,13 +786,18 @@ namespace Bit.Core.Services
                 customerOptions.AddExpand("default_source");
                 var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
 
+                PaymentMethod cardPaymentMethod = null;
                 var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
                 if(invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
                 {
                     if(customer.DefaultSource == null ||
                         (!(customer.DefaultSource is Card) && !(customer.DefaultSource is BankAccount)))
                     {
-                        throw new BadRequestException("No payment method is available.");
+                        cardPaymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                        if(cardPaymentMethod == null)
+                        {
+                            throw new BadRequestException("No payment method is available.");
+                        }
                     }
                 }
 
@@ -819,7 +829,8 @@ namespace Bit.Core.Services
                         CollectionMethod = "send_invoice",
                         DaysUntilDue = 1,
                         CustomerId = subscriber.GatewayCustomerId,
-                        SubscriptionId = subscriber.GatewaySubscriptionId
+                        SubscriptionId = subscriber.GatewaySubscriptionId,
+                        DefaultPaymentMethodId = cardPaymentMethod?.Id
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
@@ -864,15 +875,32 @@ namespace Bit.Core.Services
                                 }
                             });
                         }
+                        else
+                        {
+                            invoicePayOptions.OffSession = true;
+                            invoicePayOptions.PaymentMethodId = cardPaymentMethod?.Id;
+                        }
                     }
 
                     try
                     {
                         await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
                     }
-                    catch(StripeException)
+                    catch(StripeException e)
                     {
-                        throw new GatewayException("Unable to pay invoice.");
+                        if(e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
+                            e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                        {
+                            // SCA required, get intent client secret
+                            var invoiceGetOptions = new InvoiceGetOptions();
+                            invoiceGetOptions.AddExpand("payment_intent");
+                            invoice = await invoiceService.GetAsync(invoice.Id, invoiceGetOptions);
+                            paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
+                        }
+                        else
+                        {
+                            throw new GatewayException("Unable to pay invoice.");
+                        }
                     }
                 }
                 catch(Exception e)
@@ -926,7 +954,7 @@ namespace Bit.Core.Services
                     throw e;
                 }
             }
-            return invoiceNow;
+            return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
         }
 
         public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
