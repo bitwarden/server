@@ -13,7 +13,7 @@ namespace Bit.Core.Services
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType);
         Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
         Task ReinstateSubscriptionAsync(Guid organizationId);
-        Task UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
+        Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
         Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
         Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
@@ -22,6 +22,7 @@ namespace Bit.Core.Services
             string ownerKey, string collectionName);
         Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license);
         Task DeleteAsync(Organization organization);
+        Task EnableAsync(Guid organizationId, DateTime? expirationDate);
         Task DisableAsync(Guid organizationId, DateTime? expirationDate);
         Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
         Task EnableAsync(Guid organizationId);

@@ -117,7 +117,7 @@ namespace Bit.Core.Services
             await _paymentService.ReinstateSubscriptionAsync(organization);
         }
 
-        public async Task UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+        public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -195,10 +195,13 @@ namespace Bit.Core.Services
 
             // TODO: Check storage?
 
+            string paymentIntentClientSecret = null;
+            var success = true;
             if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
+                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
                     upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
+                success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
             else
             {
@@ -221,9 +224,10 @@ namespace Bit.Core.Services
             organization.SelfHost = newPlan.SelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;
-            organization.Enabled = true;
-            organization.RevisionDate = DateTime.UtcNow;
+            organization.Enabled = success;
             await ReplaceAndUpdateCache(organization);
+
+            return new Tuple<bool, string>(success, paymentIntentClientSecret);
         }
 
         public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -708,6 +712,18 @@ namespace Bit.Core.Services
 
             await _organizationRepository.DeleteAsync(organization);
             await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+        }
+
+        public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
+        {
+            var org = await GetOrgById(organizationId);
+            if(org != null && !org.Enabled)
+            {
+                org.Enabled = true;
+                org.ExpirationDate = expirationDate;
+                org.RevisionDate = DateTime.UtcNow;
+                await ReplaceAndUpdateCache(org);
+            }
         }
 
         public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)

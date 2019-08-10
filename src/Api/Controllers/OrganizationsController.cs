@@ -215,7 +215,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -223,7 +223,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+            var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+            return new PaymentResponseModel
+            {
+                Success = result.Item1,
+                PaymentIntentClientSecret = result.Item2
+            };
         }
 
         [HttpPost("{id}/seat")]

@@ -161,7 +161,7 @@ namespace Bit.Core.Services
             org.ExpirationDate = subscription.CurrentPeriodEnd;
         }
 
-        public async Task UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
+        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
             short additionalStorageGb, short additionalSeats, bool premiumAccessAddon)
         {
             if(!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -231,28 +231,53 @@ namespace Bit.Core.Services
             {
                 paymentMethodType = PaymentMethodType.PayPal;
             }
-            if(!hasBtCustomerId && customer.DefaultSource != null)
+            else
             {
-                if(customer.DefaultSource is Card || customer.DefaultSource is SourceCard)
+                if(customer.DefaultSource != null)
                 {
-                    paymentMethodType = PaymentMethodType.Card;
-                    stripePaymentMethod = true;
+                    if(customer.DefaultSource is Card || customer.DefaultSource is SourceCard)
+                    {
+                        paymentMethodType = PaymentMethodType.Card;
+                        stripePaymentMethod = true;
+                    }
+                    else if(customer.DefaultSource is BankAccount || customer.DefaultSource is SourceAchDebit)
+                    {
+                        paymentMethodType = PaymentMethodType.BankAccount;
+                        stripePaymentMethod = true;
+                    }
                 }
-                else if(customer.DefaultSource is BankAccount || customer.DefaultSource is SourceAchDebit)
+                else
                 {
-                    paymentMethodType = PaymentMethodType.BankAccount;
-                    stripePaymentMethod = true;
+                    var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                    if(paymentMethod != null)
+                    {
+                        paymentMethodType = PaymentMethodType.Card;
+                        stripePaymentMethod = true;
+                        subCreateOptions.DefaultPaymentMethodId = paymentMethod.Id;
+                    }
                 }
             }
 
             var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
                 stripePaymentMethod, paymentMethodType, subCreateOptions, null);
             org.GatewaySubscriptionId = subscription.Id;
-            org.ExpirationDate = subscription.CurrentPeriodEnd;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
         }
 
-        public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
-            short additionalStorageGb)
+        public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
+            string paymentToken, short additionalStorageGb)
         {
             if(paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -384,8 +409,18 @@ namespace Bit.Core.Services
             user.Gateway = GatewayType.Stripe;
             user.GatewayCustomerId = customer.Id;
             user.GatewaySubscriptionId = subscription.Id;
-            user.Premium = true;
-            user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                user.Premium = true;
+                user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
         }
 
         private async Task<Subscription> ChargeForNewSubscriptionAsync(ISubscriber subcriber, Customer customer,
@@ -480,10 +515,6 @@ namespace Bit.Core.Services
                     {
                         await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
                         throw new GatewayException("Payment method failed.");
-                    }
-                    else if(subscription.LatestInvoice.PaymentIntent.Status == "requires_action")
-                    {
-                        // Needs SCA. Send email? Should be handled by Stripe.
                     }
                 }
 
@@ -1237,10 +1268,7 @@ namespace Bit.Core.Services
                     }
                     if(billingInfo.PaymentSource == null)
                     {
-                        var paymentMethodService = new PaymentMethodService();
-                        var cardPaymentMethods = paymentMethodService.ListAutoPaging(
-                            new PaymentMethodListOptions { CustomerId = customer.Id, Type = "card" });
-                        var paymentMethod = cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
+                        var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
                         if(paymentMethod != null)
                         {
                             billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
@@ -1291,6 +1319,14 @@ namespace Bit.Core.Services
             }
 
             return subscriptionInfo;
+        }
+
+        private PaymentMethod GetDefaultCardPaymentMethod(string customerId)
+        {
+            var paymentMethodService = new PaymentMethodService();
+            var cardPaymentMethods = paymentMethodService.ListAutoPaging(
+                new PaymentMethodListOptions { CustomerId = customerId, Type = "card" });
+            return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
         }
     }
 }

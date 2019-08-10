@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -336,6 +337,39 @@ namespace Bit.Billing.Controllers
                 else
                 {
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
+                }
+            }
+            else if(parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            {
+                if(!(parsedEvent.Data.Object is Invoice invoice))
+                {
+                    throw new Exception("Invoice is null. " + parsedEvent.Id);
+                }
+
+                if(invoice.Paid && invoice.BillingReason == "subscription_create")
+                {
+                    var subscriptionService = new SubscriptionService();
+                    var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                    if(subscription?.Status == "active")
+                    {
+                        var ids = GetIdsFromMetaData(subscription.Metadata);
+                        // org
+                        if(ids.Item1.HasValue)
+                        {
+                            if(subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
+                            {
+                                await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                            }
+                        }
+                        // user
+                        else if(ids.Item2.HasValue)
+                        {
+                            if(subscription.Items.Any(i => i.Plan.Id == "premium-annually"))
+                            {
+                                await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                            }
+                        }
+                    }
                 }
             }
             else if(parsedEvent.Type.Equals("invoice.payment_failed"))
