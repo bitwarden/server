@@ -102,8 +102,9 @@ namespace Bit.Billing.Controllers
 
                 var subCanceled = subDeleted && subscription.Status == "canceled";
                 var subUnpaid = subUpdated && subscription.Status == "unpaid";
+                var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
-                if(subCanceled || subUnpaid)
+                if(subCanceled || subUnpaid || subIncompleteExpired)
                 {
                     // org
                     if(ids.Item1.HasValue)
@@ -213,7 +214,7 @@ namespace Bit.Billing.Controllers
                     });
                     foreach(var sub in subscriptions)
                     {
-                        if(sub.Status != "canceled")
+                        if(sub.Status != "canceled" && sub.Status != "incomplete_expired")
                         {
                             ids = GetIdsFromMetaData(sub.Metadata);
                             if(ids.Item1.HasValue || ids.Item2.HasValue)
