@@ -21,7 +21,7 @@ namespace Bit.Core.Models.Business
                 PeriodEndDate = sub.CurrentPeriodEnd;
                 CancelledDate = sub.CanceledAt;
                 CancelAtEndDate = sub.CancelAtPeriodEnd;
-                Cancelled = sub.Status == "canceled" || sub.Status == "unpaid";
+                Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
                 if(sub.Items?.Data != null)
                 {
                     Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));

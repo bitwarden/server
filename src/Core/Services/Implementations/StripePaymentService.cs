@@ -976,7 +976,8 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if(sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid")
+            if(sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
+                sub.Status == "incomplete_expired")
             {
                 // Already canceled
                 return;
@@ -1021,7 +1022,8 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if((sub.Status != "active" && sub.Status != "trialing") || !sub.CanceledAt.HasValue)
+            if((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
+                !sub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Subscription is not marked for cancellation.");
             }
