@@ -332,6 +332,20 @@ namespace Bit.Core.Services
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.Credit;
 
+            string stipeCustomerPaymentMethodId = null;
+            string stipeCustomerSourceToken = null;
+            if(stripePaymentMethod)
+            {
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
+            }
+
             if(user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
                 if(!string.IsNullOrWhiteSpace(paymentToken))
@@ -349,24 +363,10 @@ namespace Bit.Core.Services
                 catch { }
             }
 
-            string stipeCustomerPaymentMethodId = null;
             if(customer == null && !string.IsNullOrWhiteSpace(paymentToken))
             {
-                string stipeCustomerSourceToken = null;
                 var stripeCustomerMetadata = new Dictionary<string, string>();
-
-                if(stripePaymentMethod)
-                {
-                    if(paymentToken.StartsWith("pm_"))
-                    {
-                        stipeCustomerPaymentMethodId = paymentToken;
-                    }
-                    else
-                    {
-                        stipeCustomerSourceToken = paymentToken;
-                    }
-                }
-                else if(paymentMethodType == PaymentMethodType.PayPal)
+                if(paymentMethodType == PaymentMethodType.PayPal)
                 {
                     var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
                     var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
