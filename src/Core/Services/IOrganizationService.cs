@@ -15,7 +15,7 @@ namespace Bit.Core.Services
         Task ReinstateSubscriptionAsync(Guid organizationId);
         Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
         Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
-        Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
+        Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
         Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,

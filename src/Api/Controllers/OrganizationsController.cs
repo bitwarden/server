@@ -233,7 +233,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -241,7 +241,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/storage")]

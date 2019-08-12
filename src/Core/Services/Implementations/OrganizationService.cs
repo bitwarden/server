@@ -255,7 +255,7 @@ namespace Bit.Core.Services
             return secret;
         }
 
-        public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
+        public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -372,17 +372,20 @@ namespace Bit.Core.Services
                 subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id);
             }
 
+            string paymentIntentClientSecret = null;
             var invoicedNow = false;
             if(additionalSeats > 0)
             {
                 var result = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
                     organization, plan.StripeSeatPlanId, subItemOptions, 500);
                 invoicedNow = result.Item1;
+                paymentIntentClientSecret = result.Item2;
             }
 
             await subUpdateAction(!invoicedNow);
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
+            return paymentIntentClientSecret;
         }
 
         public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
