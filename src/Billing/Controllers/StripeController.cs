@@ -93,11 +93,7 @@ namespace Bit.Billing.Controllers
 
             if(subDeleted || subUpdated)
             {
-                if(!(parsedEvent.Data.Object is Subscription subscription))
-                {
-                    throw new Exception("Subscription is null. " + parsedEvent.Id);
-                }
-
+                var subscription = await GetSubscriptionAsync(parsedEvent, true);
                 var ids = GetIdsFromMetaData(subscription.Metadata);
 
                 var subCanceled = subDeleted && subscription.Status == "canceled";
@@ -136,11 +132,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.upcoming"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 if(subscription == null)
@@ -178,11 +170,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.succeeded"))
             {
-                if(!(parsedEvent.Data.Object is Charge charge))
-                {
-                    throw new Exception("Charge is null. " + parsedEvent.Id);
-                }
-
+                var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction != null)
@@ -288,11 +276,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.refunded"))
             {
-                if(!(parsedEvent.Data.Object is Charge charge))
-                {
-                    throw new Exception("Charge is null. " + parsedEvent.Id);
-                }
-
+                var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction == null)
@@ -342,11 +326,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.payment_succeeded"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(invoice.Paid && invoice.BillingReason == "subscription_create")
                 {
                     var subscriptionService = new SubscriptionService();
@@ -375,11 +355,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.payment_failed"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
@@ -387,11 +363,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.created"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
@@ -543,6 +515,63 @@ namespace Bit.Billing.Controllers
         {
             return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
                 invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
+        }
+
+        private async Task<Charge> GetChargeAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Charge eventCharge))
+            {
+                throw new Exception("Charge is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventCharge;
+            }
+            var chargeService = new ChargeService();
+            var charge = await chargeService.GetAsync(eventCharge.Id);
+            if(charge == null)
+            {
+                throw new Exception("Charge is null. " + eventCharge.Id);
+            }
+            return charge;
+        }
+
+        private async Task<Invoice> GetInvoiceAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Invoice eventInvoice))
+            {
+                throw new Exception("Invoice is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventInvoice;
+            }
+            var invoiceService = new InvoiceService();
+            var invoice = await invoiceService.GetAsync(eventInvoice.Id);
+            if(invoice == null)
+            {
+                throw new Exception("Invoice is null. " + eventInvoice.Id);
+            }
+            return invoice;
+        }
+
+        private async Task<Subscription> GetSubscriptionAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Subscription eventSubscription))
+            {
+                throw new Exception("Subscription is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventSubscription;
+            }
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(eventSubscription.Id);
+            if(subscription == null)
+            {
+                throw new Exception("Subscription is null. " + eventSubscription.Id);
+            }
+            return subscription;
         }
     }
 }
