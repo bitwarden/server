@@ -92,9 +92,15 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            if(ipnTransaction.PaymentType == "echeck")
+            if(ipnTransaction.PaymentStatus == "Refunded" && ipnTransaction.ParentTxnId == null)
             {
-                // Not accepting eChecks
+                // Refunds require parent transaction
+                return new OkResult();
+            }
+
+            if(ipnTransaction.PaymentType == "echeck" && ipnTransaction.PaymentStatus != "Refunded")
+            {
+                // Not accepting eChecks, unless it is a refund
                 _logger.LogWarning("Got an eCheck payment. " + ipnTransaction.TxnId);
                 return new OkResult();
             }

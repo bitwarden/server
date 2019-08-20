@@ -10,29 +10,6 @@ param (
     [string] $output = ""
 )
 
-$year = (Get-Date).year
-
-Write-Host @'
- _     _ _                         _            
-| |__ (_) |___      ____ _ _ __ __| | ___ _ __  
-| '_ \| | __\ \ /\ / / _` | '__/ _` |/ _ \ '_ \ 
-| |_) | | |_ \ V  V / (_| | | | (_| |  __/ | | |
-|_.__/|_|\__| \_/\_/ \__,_|_|  \__,_|\___|_| |_|
-'@
-
-Write-Host "
-Open source password management solutions
-Copyright 2015-${year}, 8bit Solutions LLC
-https://bitwarden.com, https://github.com/bitwarden
-
-===================================================
-"
-
-docker --version
-docker-compose --version
-
-echo ""
-
 # Setup
 
 $scriptPath = $MyInvocation.MyCommand.Path
@@ -43,8 +20,8 @@ if ($output -eq "") {
 
 $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
-$coreVersion = "1.30.0"
-$webVersion = "2.9.0"
+$coreVersion = "1.31.1"
+$webVersion = "2.11.0"
 
 # Functions
 
@@ -70,6 +47,39 @@ function Check-Output-Dir-Not-Exists {
         throw "Looks like Bitwarden is already installed at $output."
     }
 }
+
+function Write-Line($str) {
+    if($env:BITWARDEN_QUIET -ne "true") {
+        Write-Host $str
+    }
+}
+
+# Intro
+
+$year = (Get-Date).year
+
+Write-Line @'
+ _     _ _                         _            
+| |__ (_) |___      ____ _ _ __ __| | ___ _ __  
+| '_ \| | __\ \ /\ / / _` | '__/ _` |/ _ \ '_ \ 
+| |_) | | |_ \ V  V / (_| | | | (_| |  __/ | | |
+|_.__/|_|\__| \_/\_/ \__,_|_|  \__,_|\___|_| |_|
+'@
+
+Write-Line "
+Open source password management solutions
+Copyright 2015-${year}, 8bit Solutions LLC
+https://bitwarden.com, https://github.com/bitwarden
+
+===================================================
+"
+
+if($env:BITWARDEN_QUIET -ne "true") {
+    docker --version
+    docker-compose --version
+}
+
+Write-Line ""
 
 # Commands
 
@@ -102,8 +112,8 @@ elseif ($stop) {
 }
 elseif ($updateself) {
     Download-Self
-    echo "Updated self."
+    Write-Line "Updated self."
 }
 else {
-    echo "No command found."
+    Write-Line "No command found."
 }

@@ -117,8 +117,10 @@ else
         <dt class="col-sm-4 col-lg-3">SSL</dt>
         <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
 
-        <dt class="col-sm-4 col-lg-3">Credentials</dt>
-        <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Default" : "Provided")</dd>
+        <dt class="col-sm-4 col-lg-3">StartTLS</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @(Model.GlobalSettings.Mail.Smtp.StartTls ? "Yes" : Model.GlobalSettings.Mail.Smtp.Port == 25 ? "No" : "Discover")
+        </dd>
 
         <dt class="col-sm-4 col-lg-3">Username</dt>
         <dd class="col-sm-8 col-lg-9">

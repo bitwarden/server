@@ -1,11 +1,12 @@
-FROM nginx:1.14
+FROM nginx:1.16
 
 LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gosu \
-&& rm -rf /var/lib/apt/lists/*
+        curl \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY nginx.conf /etc/nginx
 COPY proxy.conf /etc/nginx
@@ -18,5 +19,7 @@ EXPOSE 8080
 EXPOSE 8443
 
 RUN chmod +x /entrypoint.sh
+
+HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

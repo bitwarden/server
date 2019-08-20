@@ -250,7 +250,7 @@ namespace Bit.Core.Services
             if(_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
             {
                 tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                    user.Email, orgUserId.Value);
+                    user.Email, orgUserId.Value, _globalSettings);
             }
 
             if(_globalSettings.DisableUserRegistration && !tokenValid)
@@ -405,8 +405,9 @@ namespace Bit.Core.Services
                 await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
                 return true;
             }
-            catch(U2fException)
+            catch(U2fException e)
             {
+                Logger.LogError(e, "Complete U2F registration error.");
                 return false;
             }
         }
@@ -678,8 +679,8 @@ namespace Bit.Core.Services
             return true;
         }
 
-        public async Task SignUpPremiumAsync(User user, string paymentToken, PaymentMethodType paymentMethodType,
-            short additionalStorageGb, UserLicense license)
+        public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
+            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license)
         {
             if(user.Premium)
             {
@@ -691,6 +692,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You can't subtract storage!");
             }
 
+            string paymentIntentClientSecret = null;
             IPaymentService paymentService = null;
             if(_globalSettings.SelfHosted)
             {
@@ -710,7 +712,8 @@ namespace Bit.Core.Services
             }
             else
             {
-                await _paymentService.PurchasePremiumAsync(user, paymentMethodType, paymentToken, additionalStorageGb);
+                paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
+                    paymentToken, additionalStorageGb);
             }
 
             user.Premium = true;
@@ -738,6 +741,8 @@ namespace Bit.Core.Services
                 await paymentService.CancelAndRecoverChargesAsync(user);
                 throw;
             }
+            return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
+                paymentIntentClientSecret);
         }
 
         public async Task UpdateLicenseAsync(User user, UserLicense license)
@@ -769,7 +774,7 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
         }
 
-        public async Task AdjustStorageAsync(User user, short storageAdjustmentGb)
+        public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
         {
             if(user == null)
             {
@@ -781,8 +786,10 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Not a premium user.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, StoragePlanId);
+            var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
+                StoragePlanId);
             await SaveUserAsync(user);
+            return secret;
         }
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType)
@@ -813,6 +820,23 @@ namespace Bit.Core.Services
         public async Task ReinstatePremiumAsync(User user)
         {
             await _paymentService.ReinstateSubscriptionAsync(user);
+        }
+
+        public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            await EnablePremiumAsync(user, expirationDate);
+        }
+
+        public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
+        {
+            if(user != null && !user.Premium)
+            {
+                user.Premium = true;
+                user.PremiumExpirationDate = expirationDate;
+                user.RevisionDate = DateTime.UtcNow;
+                await _userRepository.ReplaceAsync(user);
+            }
         }
 
         public async Task DisablePremiumAsync(Guid userId, DateTime? expirationDate)

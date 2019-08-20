@@ -1,16 +1,14 @@
 ﻿using System;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Identity;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Serilog.Events;
 using Stripe;
 
 namespace Bit.Admin
@@ -19,6 +17,7 @@ namespace Bit.Admin
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
@@ -39,7 +38,7 @@ namespace Bit.Admin
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
-            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
+            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
@@ -75,9 +74,20 @@ namespace Bit.Admin
             // Jobs service
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if(!globalSettings.SelfHosted)
+            if(globalSettings.SelfHosted)
             {
-                services.AddHostedService<HostedServices.BlockIpHostedService>();
+                services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
+            }
+            else
+            {
+                if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+                {
+                    services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
+                }
+                else if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+                {
+                    services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
+                }
             }
         }
 
@@ -85,18 +95,14 @@ namespace Bit.Admin
             IApplicationBuilder app,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings,
-            ILoggerFactory loggerFactory)
+            GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) => e.Level >= LogEventLevel.Error);
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
-                app.UseForwardedHeaders(new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-                });
+                app.UseForwardedHeaders(globalSettings);
             }
 
             if(env.IsDevelopment())

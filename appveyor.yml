@@ -20,6 +20,7 @@ init:
 
 install:
 - ps: |
+    $env:PUSH_DOCKER = "false"
     $env:PROD_DEPLOY = "false"
     $env:TAG_NAME = ""
     if($env:APPVEYOR_REPO_TAG -eq "true" -and $env:APPVEYOR_RE_BUILD -eq "True") {
@@ -27,16 +28,23 @@ install:
       $env:TAG_NAME = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
       echo "This is a production deployment for ${env:TAG_NAME}."
     }
+    if("${env:DOCKER_USERNAME}" -ne "" -and "${env:DOCKER_PASSWORD}" -ne "") {
+      $env:PUSH_DOCKER = "true"
+    }
     if($isLinux) {
       npm i -g gulp
     } else {
       choco install cloc --no-progress
       cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
     }
+    if($env:APPVEYOR_REPO_TAG -eq "true") {
+      $tagName = $env:APPVEYOR_REPO_TAG_NAME.TrimStart("v")
+      $env:RELEASE_NAME = "Version ${tagName}"
+    }
 
 before_build:
 - sh: |
-    if [ "${DOCKER_USERNAME}" != "" -a "${DOCKER_PASSWORD}" != "" ]
+    if [ "${PUSH_DOCKER}" == "true" ]
     then
       echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
     fi
@@ -61,12 +69,14 @@ build_script:
       }
 
       docker images
-      ./build.sh push dev
 
-      if($env:PROD_DEPLOY -eq "true") {
-        ./build.sh push beta
-        ./build.sh push latest
-        ./build.sh push $env:TAG_NAME
+      if($env:PUSH_DOCKER -eq "true") {
+        ./build.sh push dev
+        if($env:PROD_DEPLOY -eq "true") {
+            ./build.sh push beta
+            ./build.sh push latest
+            ./build.sh push $env:TAG_NAME
+        }
       }
     } else {
       msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal `
@@ -76,7 +86,7 @@ build_script:
       $env:ASPNETCORE_ENVIRONMENT = "Production"
       cd .\src\Api
       dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com --format Indented `
-        .\bin\Debug\netcoreapp2.1\Api.dll public
+        .\bin\Debug\netcoreapp2.2\Api.dll public
       cd ..\..
       $env:ASPNETCORE_ENVIRONMENT = ""
       $env:swaggerGen = ""
@@ -86,16 +96,24 @@ build_script:
     echo "Make docker stubs"
     STUB_OUTPUT=$(pwd)/docker-stub
     docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
-      dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.company.com -os lin
+      dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
     sudo chown -R appveyor:appveyor $STUB_OUTPUT
-    rm -rf $STUB_OUTPUT/ca-certificates $STUB_OUTPUT/identity $STUB_OUTPUT/letsencrypt $STUB_OUTPUT/ssl
-    rm $STUB_OUTPUT/env/uid.env
+    rm -rf $STUB_OUTPUT/letsencrypt
+    rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
+    touch $STUB_OUTPUT/env/uid.env
     cd docker-stub; zip -r ../docker-stub.zip *; cd ..
-- ps: Push-AppveyorArtifact ./docker-stub.zip
+- ps: |
+    if($isLinux) {
+      Push-AppveyorArtifact ./docker-stub.zip
+    }
 
 
 after_build:
-- sh: docker logout
+- sh: |
+    if [ "${PUSH_DOCKER}" == "true" ]
+    then
+      docker logout
+    fi
 
 test_script:
 - ps: |
@@ -112,10 +130,12 @@ on_finish:
       }
 
 deploy:
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  release: $(RELEASE_NAME)
   provider: GitHub
   auth_token: $(GH_TOKEN)
   artifact: /.*/
   force_update: true
   on:
     branch: master
-    PROD_DEPLOY: true
+    APPVEYOR_REPO_TAG: true

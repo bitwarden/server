@@ -117,7 +117,7 @@ namespace Bit.Core.Services
             await _paymentService.ReinstateSubscriptionAsync(organization);
         }
 
-        public async Task UpgradePlanAsync(Guid organizationId, PlanType plan, int additionalSeats)
+        public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -127,7 +127,7 @@ namespace Bit.Core.Services
 
             if(string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
-                throw new BadRequestException("No payment method found.");
+                throw new BadRequestException("Your account has no payment method available.");
             }
 
             var existingPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
@@ -136,7 +136,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == plan && !p.Disabled);
+            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
             if(newPlan == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -152,31 +152,27 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot upgrade to this plan.");
             }
 
-            if(!newPlan.CanBuyAdditionalSeats && additionalSeats > 0)
+            if(existingPlan.Type != PlanType.Free)
             {
-                throw new BadRequestException("Plan does not allow additional seats.");
+                throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            if(newPlan.CanBuyAdditionalSeats && newPlan.MaxAdditionalSeats.HasValue &&
-                additionalSeats > newPlan.MaxAdditionalSeats.Value)
-            {
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{newPlan.MaxAdditionalSeats.Value} additional seats.");
-            }
+            ValidateOrganizationUpgradeParameters(newPlan, upgrade);
 
-            var newPlanSeats = (short)(newPlan.BaseSeats + (newPlan.CanBuyAdditionalSeats ? additionalSeats : 0));
+            var newPlanSeats = (short)(newPlan.BaseSeats +
+                (newPlan.CanBuyAdditionalSeats ? upgrade.AdditionalSeats : 0));
             if(!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(userCount > newPlanSeats)
                 {
-                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
-                        $"only has ({newPlanSeats}) seats. Remove some users.");
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
+                        $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                 }
             }
 
-            if(newPlan.MaxCollections.HasValue &&
-                (!organization.MaxCollections.HasValue || organization.MaxCollections.Value > newPlan.MaxCollections.Value))
+            if(newPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
+                organization.MaxCollections.Value > newPlan.MaxCollections.Value))
             {
                 var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(collectionCount > newPlan.MaxCollections.Value)
@@ -187,75 +183,54 @@ namespace Bit.Core.Services
                 }
             }
 
-            // TODO: Groups?
+            if(!newPlan.UseGroups && organization.UseGroups)
+            {
+                var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(groups.Any())
+                {
+                    throw new BadRequestException($"Your new plan does not allow the groups feature. " +
+                        $"Remove your groups.");
+                }
+            }
 
-            var subscriptionService = new Stripe.SubscriptionService();
+            // TODO: Check storage?
+
+            string paymentIntentClientSecret = null;
+            var success = true;
             if(string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                // They must have been on a free plan. Create new sub.
-                var subCreateOptions = new SubscriptionCreateOptions
-                {
-                    CustomerId = organization.GatewayCustomerId,
-                    TrialPeriodDays = newPlan.TrialPeriodDays,
-                    Items = new List<SubscriptionItemOption>(),
-                    Metadata = new Dictionary<string, string> {
-                        { "organizationId", organization.Id.ToString() }
-                    }
-                };
-
-                if(newPlan.StripePlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = newPlan.StripePlanId,
-                        Quantity = 1
-                    });
-                }
-
-                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
-                {
-                    subCreateOptions.Items.Add(new SubscriptionItemOption
-                    {
-                        PlanId = newPlan.StripeSeatPlanId,
-                        Quantity = additionalSeats
-                    });
-                }
-
-                await subscriptionService.CreateAsync(subCreateOptions);
+                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
+                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
+                success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
             else
             {
-                // Update existing sub.
-                var subUpdateOptions = new SubscriptionUpdateOptions
-                {
-                    Items = new List<SubscriptionItemUpdateOption>()
-                };
-
-                if(newPlan.StripePlanId != null)
-                {
-                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
-                    {
-                        PlanId = newPlan.StripePlanId,
-                        Quantity = 1
-                    });
-                }
-
-                if(additionalSeats > 0 && newPlan.StripeSeatPlanId != null)
-                {
-                    subUpdateOptions.Items.Add(new SubscriptionItemUpdateOption
-                    {
-                        PlanId = newPlan.StripeSeatPlanId,
-                        Quantity = additionalSeats
-                    });
-                }
-
-                await subscriptionService.UpdateAsync(organization.GatewaySubscriptionId, subUpdateOptions);
+                // TODO: Update existing sub
+                throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            // TODO: Update organization
+            organization.BusinessName = upgrade.BusinessName;
+            organization.PlanType = newPlan.Type;
+            organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
+            organization.MaxCollections = newPlan.MaxCollections;
+            organization.MaxStorageGb = !newPlan.MaxStorageGb.HasValue ?
+                (short?)null : (short)(newPlan.MaxStorageGb.Value + upgrade.AdditionalStorageGb);
+            organization.UseGroups = newPlan.UseGroups;
+            organization.UseDirectory = newPlan.UseDirectory;
+            organization.UseEvents = newPlan.UseEvents;
+            organization.UseTotp = newPlan.UseTotp;
+            organization.Use2fa = newPlan.Use2fa;
+            organization.UseApi = newPlan.UseApi;
+            organization.SelfHost = newPlan.SelfHost;
+            organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+            organization.Plan = newPlan.Name;
+            organization.Enabled = success;
+            await ReplaceAndUpdateCache(organization);
+
+            return new Tuple<bool, string>(success, paymentIntentClientSecret);
         }
 
-        public async Task AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
+        public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -274,12 +249,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
 
-            await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
+            var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
                 plan.StripeStoragePlanId);
             await ReplaceAndUpdateCache(organization);
+            return secret;
         }
 
-        public async Task AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
+        public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -331,8 +307,8 @@ namespace Bit.Core.Services
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(userCount > newSeatTotal)
                 {
-                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. Your new plan " +
-                        $"only has ({newSeatTotal}) seats. Remove some users.");
+                    throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
+                        $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
                 }
             }
 
@@ -396,16 +372,20 @@ namespace Bit.Core.Services
                 subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id);
             }
 
+            string paymentIntentClientSecret = null;
             var invoicedNow = false;
             if(additionalSeats > 0)
             {
-                invoicedNow = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
+                var result = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
                     organization, plan.StripeSeatPlanId, subItemOptions, 500);
+                invoicedNow = result.Item1;
+                paymentIntentClientSecret = result.Item2;
             }
 
             await subUpdateAction(!invoicedNow);
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
+            return paymentIntentClientSecret;
         }
 
         public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
@@ -459,42 +439,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
-            if(!plan.MaxStorageGb.HasValue && signup.AdditionalStorageGb > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional storage.");
-            }
-
-            if(signup.AdditionalStorageGb < 0)
-            {
-                throw new BadRequestException("You can't subtract storage!");
-            }
-
-            if(!plan.CanBuyPremiumAccessAddon && signup.PremiumAccessAddon)
-            {
-                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-            }
-
-            if(plan.BaseSeats + signup.AdditionalSeats <= 0)
-            {
-                throw new BadRequestException("You do not have any seats!");
-            }
-
-            if(signup.AdditionalSeats < 0)
-            {
-                throw new BadRequestException("You can't subtract seats!");
-            }
-
-            if(!plan.CanBuyAdditionalSeats && signup.AdditionalSeats > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional users.");
-            }
-
-            if(plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
-                signup.AdditionalSeats > plan.MaxAdditionalSeats.Value)
-            {
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-            }
+            ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
             {
@@ -644,7 +589,8 @@ namespace Bit.Core.Services
 
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organization.Id.ToString());
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
+                    organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
@@ -696,7 +642,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("License is already in use by another organization.");
             }
 
-            if(license.Seats.HasValue && (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
+            if(license.Seats.HasValue &&
+                (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(userCount > license.Seats.Value)
@@ -706,8 +653,8 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(license.MaxCollections.HasValue &&
-                (!organization.MaxCollections.HasValue || organization.MaxCollections.Value > license.MaxCollections.Value))
+            if(license.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
+                organization.MaxCollections.Value > license.MaxCollections.Value))
             {
                 var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if(collectionCount > license.MaxCollections.Value)
@@ -770,6 +717,18 @@ namespace Bit.Core.Services
 
             await _organizationRepository.DeleteAsync(organization);
             await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+        }
+
+        public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
+        {
+            var org = await GetOrgById(organizationId);
+            if(org != null && !org.Enabled)
+            {
+                org.Enabled = true;
+                org.ExpirationDate = expirationDate;
+                org.RevisionDate = DateTime.UtcNow;
+                await ReplaceAndUpdateCache(org);
+            }
         }
 
         public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
@@ -871,8 +830,8 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
         {
-            var results = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email }, type, accessAll,
-                externalId, collections);
+            var results = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email },
+                type, accessAll, externalId, collections);
             var result = results.FirstOrDefault();
             if(result == null)
             {
@@ -894,7 +853,9 @@ namespace Bit.Core.Services
             if(type == OrganizationUserType.Owner && invitingUserId.HasValue)
             {
                 var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId.Value);
-                if(!invitingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
+                var anyOwners = invitingUserOrgs.Any(
+                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
+                if(!anyOwners)
                 {
                     throw new BadRequestException("Only owners can invite new owners.");
                 }
@@ -998,7 +959,8 @@ namespace Bit.Core.Services
                 var org = await GetOrgById(orgUser.OrganizationId);
                 if(org.PlanType == PlanType.Free)
                 {
-                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
+                        user.Id);
                     if(adminCount > 0)
                     {
                         throw new BadRequestException("You can only be an admin of one free organization.");
@@ -1013,7 +975,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You are already part of this organization.");
             }
 
-            if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id))
+            if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -1075,17 +1037,26 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
-            if(savingUserId.HasValue && user.Type == OrganizationUserType.Owner)
+            if(savingUserId.HasValue)
             {
                 var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId.Value);
-                if(!savingUserOrgs.Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner))
+                var savingUserIsOrgOwner = savingUserOrgs
+                    .Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner);
+                if(!savingUserIsOrgOwner)
                 {
-                    throw new BadRequestException("Only owners can update other owners.");
+                    var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
+                    var isOwner = originalUser.Type == OrganizationUserType.Owner;
+                    var nowOwner = user.Type == OrganizationUserType.Owner;
+                    if((isOwner && !nowOwner) || (!isOwner && nowOwner))
+                    {
+                        throw new BadRequestException("Only an owner can change the user type of another owner.");
+                    }
                 }
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
-            if(user.Type != OrganizationUserType.Owner && confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+            if(user.Type != OrganizationUserType.Owner &&
+                confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1115,7 +1086,9 @@ namespace Bit.Core.Services
             if(orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue)
             {
                 var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId.Value);
-                if(!deletingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner))
+                var anyOwners = deletingUserOrgs.Any(
+                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
+                if(!anyOwners)
                 {
                     throw new BadRequestException("Only owners can delete other owners.");
                 }
@@ -1134,7 +1107,8 @@ namespace Bit.Core.Services
             {
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                    organizationId.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
             }
         }
@@ -1160,7 +1134,8 @@ namespace Bit.Core.Services
             {
                 // push
                 var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
+                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                    organizationId.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
             }
         }
@@ -1168,7 +1143,8 @@ namespace Bit.Core.Services
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
         {
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser,
+                EventType.OrganizationUser_UpdatedGroups);
         }
 
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
@@ -1198,7 +1174,8 @@ namespace Bit.Core.Services
             Guid importingUserId,
             IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers,
-            IEnumerable<string> removeUserExternalIds)
+            IEnumerable<string> removeUserExternalIds,
+            bool overwriteExisting)
         {
             var organization = await GetOrgById(organizationId);
             if(organization == null)
@@ -1231,8 +1208,25 @@ namespace Bit.Core.Services
 
                 foreach(var user in usersToRemove)
                 {
-                    await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
-                    existingExternalUsersIdDict.Remove(user.ExternalId);
+                    if(user.Type != OrganizationUserType.Owner)
+                    {
+                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
+                        existingExternalUsersIdDict.Remove(user.ExternalId);
+                    }
+                }
+            }
+
+            if(overwriteExisting)
+            {
+                // Remove existing external users that are not in new user set
+                foreach(var user in existingExternalUsers)
+                {
+                    if(user.Type != OrganizationUserType.Owner && !newUsersSet.Contains(user.ExternalId) &&
+                        existingExternalUsersIdDict.ContainsKey(user.ExternalId))
+                    {
+                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
+                        existingExternalUsersIdDict.Remove(user.ExternalId);
+                    }
                 }
             }
 
@@ -1303,7 +1297,8 @@ namespace Bit.Core.Services
 
                 var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
                 var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-                var existingExternalGroups = existingGroups.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
+                var existingExternalGroups = existingGroups
+                    .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
                 var existingExternalGroupsDict = existingExternalGroups.ToDictionary(g => g.ExternalId);
 
                 var newGroups = groups
@@ -1315,7 +1310,8 @@ namespace Bit.Core.Services
                     group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
                     await _groupRepository.CreateAsync(group);
-                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds, existingExternalUsersIdDict);
+                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
+                        existingExternalUsersIdDict);
                 }
 
                 var updateGroups = existingExternalGroups
@@ -1340,7 +1336,8 @@ namespace Bit.Core.Services
                             await _groupRepository.ReplaceAsync(group);
                         }
 
-                        await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds, existingExternalUsersIdDict,
+                        await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
+                            existingExternalUsersIdDict,
                             existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
                     }
                 }
@@ -1394,6 +1391,46 @@ namespace Bit.Core.Services
         private async Task<Organization> GetOrgById(Guid id)
         {
             return await _organizationRepository.GetByIdAsync(id);
+        }
+
+        private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+        {
+            if(!plan.MaxStorageGb.HasValue && upgrade.AdditionalStorageGb > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional storage.");
+            }
+
+            if(upgrade.AdditionalStorageGb < 0)
+            {
+                throw new BadRequestException("You can't subtract storage!");
+            }
+
+            if(!plan.CanBuyPremiumAccessAddon && upgrade.PremiumAccessAddon)
+            {
+                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            }
+
+            if(plan.BaseSeats + upgrade.AdditionalSeats <= 0)
+            {
+                throw new BadRequestException("You do not have any seats!");
+            }
+
+            if(upgrade.AdditionalSeats < 0)
+            {
+                throw new BadRequestException("You can't subtract seats!");
+            }
+
+            if(!plan.CanBuyAdditionalSeats && upgrade.AdditionalSeats > 0)
+            {
+                throw new BadRequestException("Plan does not allow additional users.");
+            }
+
+            if(plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
+                upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
+            {
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            }
         }
     }
 }

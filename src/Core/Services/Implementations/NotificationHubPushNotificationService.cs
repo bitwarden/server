@@ -7,20 +7,25 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
     public class NotificationHubPushNotificationService : IPushNotificationService
     {
+        private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         private NotificationHubClient _client = null;
 
         public NotificationHubPushNotificationService(
+            IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor)
         {
+            _installationDeviceRepository = installationDeviceRepository;
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
             _client = NotificationHubClient.CreateClientFromConnectionString(
@@ -141,16 +146,26 @@ namespace Bit.Core.Services
             await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
         }
 
-        public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             var tag = BuildTag($"template:payload_userId:{userId}", identifier);
             await SendPayloadAsync(tag, type, payload);
+            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            {
+                await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+            }
         }
 
-        public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             var tag = BuildTag($"template:payload && organizationId:{orgId}", identifier);
             await SendPayloadAsync(tag, type, payload);
+            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            {
+                await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+            }
         }
 
         private string GetContextIdentifier(bool excludeCurrentContext)

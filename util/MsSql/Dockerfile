@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2017-CU12
+FROM mcr.microsoft.com/mssql/server:2017-CU14
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -21,5 +21,8 @@ RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 # As the setting above does not work, let's use the workaround below
 RUN echo 127.0.0.1 settings-win.data.microsoft.com >> /etc/hosts
 RUN echo 127.0.0.1 vortex.data.microsoft.com >> /etc/hosts
+
+HEALTHCHECK --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
+    -S localhost -U sa -P ${SA_PASSWORD} -Q "SELECT 1" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -141,7 +141,7 @@ namespace Bit.Core.Services
         private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
         {
             var contextId = GetContextIdentifier(excludeCurrentContext);
-            var message = JsonConvert.SerializeObject(new PushNotificationData<T>(type, payload, contextId), 
+            var message = JsonConvert.SerializeObject(new PushNotificationData<T>(type, payload, contextId),
                 _jsonSettings);
             var queueMessage = new CloudQueueMessage(message);
             await _queue.AddMessageAsync(queueMessage);
@@ -159,13 +159,15 @@ namespace Bit.Core.Services
             return currentContext?.DeviceIdentifier;
         }
 
-        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             // Noop
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             // Noop
             return Task.FromResult(0);

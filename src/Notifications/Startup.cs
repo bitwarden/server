@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -7,9 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
-using Serilog.Events;
 
 namespace Bit.Notifications
 {
@@ -17,6 +16,7 @@ namespace Bit.Notifications
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
@@ -66,6 +66,7 @@ namespace Bit.Notifications
             // Mvc
             services.AddMvc();
 
+            services.AddHostedService<HeartbeatHostedService>();
             if(!globalSettings.SelfHosted)
             {
                 // Hosted Services
@@ -81,27 +82,11 @@ namespace Bit.Notifications
         public void Configure(
             IApplicationBuilder app,
             IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             IdentityModelEventSource.ShowPII = true;
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                if(e.Level == LogEventLevel.Error && e.MessageTemplate.Text == "Failed connection handshake.")
-                {
-                    return false;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(env.IsDevelopment())
             {
@@ -109,7 +94,9 @@ namespace Bit.Notifications
             }
 
             // Add Cors
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+            app.UseCors(policy => policy
+                .WithOrigins(globalSettings.BaseServiceUri.Vault)
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();

@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -101,8 +102,9 @@ namespace Bit.Billing.Controllers
 
                 var subCanceled = subDeleted && subscription.Status == "canceled";
                 var subUnpaid = subUpdated && subscription.Status == "unpaid";
+                var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
-                if(subCanceled || subUnpaid)
+                if(subCanceled || subUnpaid || subIncompleteExpired)
                 {
                     // org
                     if(ids.Item1.HasValue)
@@ -212,7 +214,7 @@ namespace Bit.Billing.Controllers
                     });
                     foreach(var sub in subscriptions)
                     {
-                        if(sub.Status != "canceled")
+                        if(sub.Status != "canceled" && sub.Status != "incomplete_expired")
                         {
                             ids = GetIdsFromMetaData(sub.Metadata);
                             if(ids.Item1.HasValue || ids.Item2.HasValue)
@@ -338,6 +340,39 @@ namespace Bit.Billing.Controllers
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
                 }
             }
+            else if(parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            {
+                if(!(parsedEvent.Data.Object is Invoice invoice))
+                {
+                    throw new Exception("Invoice is null. " + parsedEvent.Id);
+                }
+
+                if(invoice.Paid && invoice.BillingReason == "subscription_create")
+                {
+                    var subscriptionService = new SubscriptionService();
+                    var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                    if(subscription?.Status == "active")
+                    {
+                        var ids = GetIdsFromMetaData(subscription.Metadata);
+                        // org
+                        if(ids.Item1.HasValue)
+                        {
+                            if(subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
+                            {
+                                await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                            }
+                        }
+                        // user
+                        else if(ids.Item2.HasValue)
+                        {
+                            if(subscription.Items.Any(i => i.Plan.Id == "premium-annually"))
+                            {
+                                await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                            }
+                        }
+                    }
+                }
+            }
             else if(parsedEvent.Type.Equals("invoice.payment_failed"))
             {
                 if(!(parsedEvent.Data.Object is Invoice invoice))
@@ -345,7 +380,7 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
-                if(invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if(!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
@@ -357,7 +392,7 @@ namespace Bit.Billing.Controllers
                     throw new Exception("Invoice is null. " + parsedEvent.Id);
                 }
 
-                if(UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if(!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceWithBraintreeAsync(invoice);
                 }
@@ -471,9 +506,9 @@ namespace Bit.Billing.Controllers
                 return false;
             }
 
+            var invoiceService = new InvoiceService();
             try
             {
-                var invoiceService = new InvoiceService();
                 await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                 {
                     Metadata = new Dictionary<string, string>
@@ -488,7 +523,17 @@ namespace Bit.Billing.Controllers
             catch(Exception e)
             {
                 await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
-                throw e;
+                if(e.Message.Contains("Invoice is already paid"))
+                {
+                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                    {
+                        Metadata = invoice.Metadata
+                    });
+                }
+                else
+                {
+                    throw e;
+                }
             }
 
             return true;
@@ -496,7 +541,7 @@ namespace Bit.Billing.Controllers
 
         private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
         {
-            return invoice.AmountDue > 0 && !invoice.Paid && invoice.Billing == Stripe.Billing.ChargeAutomatically &&
+            return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
                 invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
         }
     }

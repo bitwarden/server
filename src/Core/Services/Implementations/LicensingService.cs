@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -38,12 +39,27 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
+            _globalSettings = globalSettings;
 
             var certThumbprint = environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-            _globalSettings = globalSettings;
-            _certificate = !_globalSettings.SelfHosted ? CoreHelpers.GetCertificate(certThumbprint)
-                : CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+            if(_globalSettings.SelfHosted)
+            {
+                _certificate = CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+            }
+            else if(CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
+                CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                _certificate = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                    "licensing.pfx", _globalSettings.LicenseCertificatePassword)
+                    .GetAwaiter().GetResult();
+            }
+            else
+            {
+                _certificate = CoreHelpers.GetCertificate(certThumbprint);
+            }
+
             if(_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
                 StringComparison.InvariantCultureIgnoreCase))
             {

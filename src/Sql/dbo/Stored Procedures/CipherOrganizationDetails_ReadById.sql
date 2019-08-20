@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[CipherDetails_ReadById]
+﻿CREATE PROCEDURE [dbo].[CipherOrganizationDetails_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -6,13 +6,12 @@ BEGIN
 
     SELECT
         C.*,
-        1 [Edit],
         CASE 
             WHEN O.[UseTotp] = 1 THEN 1
             ELSE 0
         END [OrganizationUseTotp]
     FROM
-        [dbo].[CipherDetails](NULL) C
+        [dbo].[CipherView] C
     LEFT JOIN
         [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
     WHERE

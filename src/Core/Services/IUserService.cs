@@ -43,13 +43,15 @@ namespace Bit.Core.Services
         Task<IdentityResult> DeleteAsync(User user);
         Task<IdentityResult> DeleteAsync(User user, string token);
         Task SendDeleteConfirmationAsync(string email);
-        Task SignUpPremiumAsync(User user, string paymentToken, PaymentMethodType paymentMethodType,
-            short additionalStorageGb, UserLicense license);
+        Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
+            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license);
         Task UpdateLicenseAsync(User user, UserLicense license);
-        Task AdjustStorageAsync(User user, short storageAdjustmentGb);
+        Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
         Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType);
         Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
         Task ReinstatePremiumAsync(User user);
+        Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
+        Task EnablePremiumAsync(User user, DateTime? expirationDate);
         Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
         Task DisablePremiumAsync(User user, DateTime? expirationDate);
         Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);

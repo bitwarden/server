@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -17,6 +18,14 @@ namespace Bit.Notifications
         public SendController(IHubContext<NotificationsHub> hubContext)
         {
             _hubContext = hubContext;
+        }
+
+        [HttpGet("~/alive")]
+        [HttpGet("~/now")]
+        [AllowAnonymous]
+        public DateTime GetAlive()
+        {
+            return DateTime.UtcNow;
         }
 
         [HttpPost("~/send")]

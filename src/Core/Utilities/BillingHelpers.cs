@@ -8,7 +8,7 @@ namespace Bit.Core.Utilities
 {
     public static class BillingHelpers
     {
-        internal static async Task AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,
+        internal static async Task<string> AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,
             short storageAdjustmentGb, string storagePlanId)
         {
             if(storableSubscriber == null)
@@ -51,8 +51,10 @@ namespace Bit.Core.Utilities
             }
 
             var additionalStorage = newStorageGb - 1;
-            await paymentService.AdjustStorageAsync(storableSubscriber, additionalStorage, storagePlanId);
+            var paymentIntentClientSecret = await paymentService.AdjustStorageAsync(storableSubscriber,
+                additionalStorage, storagePlanId);
             storableSubscriber.MaxStorageGb = newStorageGb;
+            return paymentIntentClientSecret;
         }
     }
 }

@@ -3,17 +3,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Identity;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
-using Serilog.Events;
 using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
-using Microsoft.AspNetCore.HttpOverrides;
+using System.Globalization;
+using Microsoft.IdentityModel.Logging;
 
 namespace Bit.Api
 {
@@ -21,6 +20,7 @@ namespace Bit.Api
     {
         public Startup(IHostingEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
@@ -47,7 +47,7 @@ namespace Bit.Api
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
-            StripeConfiguration.SetApiKey(globalSettings.StripeApiKey);
+            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
@@ -58,13 +58,14 @@ namespace Bit.Api
             // Caching
             services.AddMemoryCache();
 
+            // BitPay
+            services.AddSingleton<BitPayClient>();
+
             if(!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-                // BitPay
-                services.AddSingleton<BitPayClient>();
             }
 
             // Identity
@@ -128,37 +129,21 @@ namespace Bit.Api
                 Jobs.JobsHostedService.AddJobsServices(services);
                 services.AddHostedService<Jobs.JobsHostedService>();
             }
+            if(CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
+            {
+                services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+            }
         }
 
         public void Configure(
             IApplicationBuilder app,
             IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
             IApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(e.Exception != null && (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
-                    e.Exception.Message == "Bad security stamp."))
-                {
-                    return false;
-                }
-
-                if(e.Level == LogEventLevel.Information && context.Contains(typeof(IpRateLimitMiddleware).FullName))
-                {
-                    return true;
-                }
-
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            IdentityModelEventSource.ShowPII = true;
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
             app.UseDefaultMiddleware(env);
@@ -170,17 +155,16 @@ namespace Bit.Api
             }
             else
             {
-                app.UseForwardedHeaders(new ForwardedHeadersOptions
-                {
-                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-                });
+                app.UseForwardedHeaders(globalSettings);
             }
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();
 
             // Add Cors
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+            app.UseCors(policy => policy
+                .WithOrigins(globalSettings.BaseServiceUri.Vault)
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();

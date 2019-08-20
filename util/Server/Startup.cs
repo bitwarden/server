@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Server
 {
@@ -19,20 +19,21 @@ namespace Bit.Server
             "/images/"
         };
 
+        public Startup()
+        {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+        }
+
         public void ConfigureServices(IServiceCollection services)
         { }
 
         public void Configure(
             IApplicationBuilder app,
-            ILoggerFactory loggerFactory,
             IConfiguration configuration)
         {
-            loggerFactory
-                .AddConsole()
-                .AddDebug();
-
             if(configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
+                app.Map("/alive", HandleMapAlive);
                 app.UseStaticFiles(new StaticFileOptions
                 {
                     ServeUnknownFileTypes = true,
@@ -70,8 +71,14 @@ namespace Bit.Server
             }
             else
             {
+                app.Map("/alive", HandleMapAlive);
                 app.UseFileServer();
             }
+        }
+
+        private static void HandleMapAlive(IApplicationBuilder app)
+        {
+            app.Run(async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
         }
     }
 }

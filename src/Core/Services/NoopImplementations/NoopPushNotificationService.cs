@@ -63,12 +63,14 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             return Task.FromResult(0);
         }

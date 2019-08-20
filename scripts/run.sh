@@ -62,7 +62,7 @@ fi
 
 function install() {
     LETS_ENCRYPT="n"
-    echo -e -n "${CYAN}(!)${NC} Enter the domain name for your Bitwarden instance (ex. bitwarden.company.com): "
+    echo -e -n "${CYAN}(!)${NC} Enter the domain name for your Bitwarden instance (ex. bitwarden.example.com): "
     read DOMAIN
     echo ""
     

@@ -43,12 +43,20 @@ server {
 
   # Verify chain of trust of OCSP response using Root CA and Intermediate certs
   ssl_trusted_certificate {{{CaPath}}};
-  resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 valid=300s;
+  resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
 {{/if}}
 
   include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
   include /etc/nginx/security-headers.conf;
+{{#if RealIps}}
+
+{{#each RealIps}}
+  set_real_ip_from {{{this}}};
+{{/each}}
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+{{/if}}
 
   location / {
     proxy_pass http://web:5000/;
@@ -59,6 +67,11 @@ server {
     add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
     add_header X-Frame-Options SAMEORIGIN;
     add_header X-Robots-Tag "noindex, nofollow";
+  }
+
+  location /alive {
+    return 200 'alive';
+    add_header Content-Type text/plain;
   }
 
   location = /app-id.json {
@@ -103,6 +116,10 @@ server {
     proxy_pass http://notifications:5000/hub;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
+  }
+
+  location /events/ {
+    proxy_pass http://events:5000/;
   }
 
   location /admin {

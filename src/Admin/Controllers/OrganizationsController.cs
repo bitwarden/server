@@ -18,17 +18,20 @@ namespace Bit.Admin.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
+        private readonly IApplicationCacheService _applicationCacheService;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
+            IApplicationCacheService applicationCacheService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _paymentService = paymentService;
+            _applicationCacheService = applicationCacheService;
             _globalSettings = globalSettings;
         }
 
@@ -99,6 +102,7 @@ namespace Bit.Admin.Controllers
 
             model.ToOrganization(organization);
             await _organizationRepository.ReplaceAsync(organization);
+            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
             return RedirectToAction("Edit", new { id });
         }
 
@@ -110,6 +114,7 @@ namespace Bit.Admin.Controllers
             if(organization != null)
             {
                 await _organizationRepository.DeleteAsync(organization);
+                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             return RedirectToAction("Index");

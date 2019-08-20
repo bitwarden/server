@@ -76,12 +76,12 @@ namespace Bit.Api.Controllers
             if(!string.IsNullOrWhiteSpace(model.UserId))
             {
                 await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                       model.Type.Value, model.Payload, Prefix(model.Identifier));
+                       model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
             }
             else if(!string.IsNullOrWhiteSpace(model.OrganizationId))
             {
                 await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                    model.Type.Value, model.Payload, Prefix(model.Identifier));
+                    model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
             }
         }
 

@@ -4,18 +4,23 @@ using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Enums;
 using System.Linq;
 using System;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
     public class NotificationHubPushRegistrationService : IPushRegistrationService
     {
+        private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
-        
+
         private NotificationHubClient _client = null;
 
         public NotificationHubPushRegistrationService(
+            IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings)
         {
+            _installationDeviceRepository = installationDeviceRepository;
             _globalSettings = globalSettings;
             _client = NotificationHubClient.CreateClientFromConnectionString(
                 _globalSettings.NotificationHub.ConnectionString,
@@ -83,6 +88,10 @@ namespace Bit.Core.Services
                 userId, identifier);
 
             await _client.CreateOrUpdateInstallationAsync(installation);
+            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            {
+                await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+            }
         }
 
         private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
@@ -118,6 +127,10 @@ namespace Bit.Core.Services
             try
             {
                 await _client.DeleteInstallationAsync(deviceId);
+                if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+                {
+                    await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
+                }
             }
             catch(Exception e)
             {
@@ -131,12 +144,22 @@ namespace Bit.Core.Services
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
+            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            {
+                var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+                await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
+            }
         }
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
                 $"organizationId:{organizationId}");
+            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            {
+                var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+                await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
+            }
         }
 
         private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,

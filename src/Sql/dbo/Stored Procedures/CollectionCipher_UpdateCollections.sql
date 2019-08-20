@@ -42,9 +42,18 @@ BEGIN
                 OR G.[AccessAll] = 1
                 OR CG.[ReadOnly] = 0
             )
+    ),
+    [CollectionCiphersCTE] AS(
+        SELECT
+            [CollectionId],
+            [CipherId]
+        FROM
+            [dbo].[CollectionCipher]
+        WHERE
+            [CipherId] = @CipherId
     )
     MERGE
-        [dbo].[CollectionCipher] AS [Target]
+        [CollectionCiphersCTE] AS [Target]
     USING 
         @CollectionIds AS [Source]
     ON

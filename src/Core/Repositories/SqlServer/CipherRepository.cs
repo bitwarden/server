@@ -36,12 +36,12 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<CipherDetails> GetDetailsByIdAsync(Guid id)
+        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadById]",
+                    $"[{Schema}].[CipherOrganizationDetails_ReadById]",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
 

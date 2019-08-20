@@ -84,6 +84,8 @@ services:
     image: bitwarden/admin:{{{CoreVersion}}}
     container_name: bitwarden-admin
     restart: always
+    depends_on:
+      - mssql
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -116,10 +118,27 @@ services:
       - ../env/uid.env
       - ../env/global.override.env
 
+  events:
+    image: bitwarden/events:{{{CoreVersion}}}
+    container_name: bitwarden-events
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/events:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+
   nginx:
     image: bitwarden/nginx:{{{CoreVersion}}}
     container_name: bitwarden-nginx
     restart: always
+    depends_on:
+      - web
+      - admin
+      - api
+      - identity
 {{#if HasPort}}
     ports:
 {{#if HttpPort}}

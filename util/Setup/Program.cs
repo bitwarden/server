@@ -1,10 +1,10 @@
-﻿using DbUp;
+﻿using Bit.Migrator;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Net.Http;
-using System.Reflection;
 
 namespace Bit.Setup
 {
@@ -14,6 +14,8 @@ namespace Bit.Setup
 
         public static void Main(string[] args)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+
             _context = new Context
             {
                 Args = args
@@ -116,11 +118,11 @@ namespace Bit.Setup
             Console.WriteLine("\nNext steps, run:");
             if(_context.HostOS == "win")
             {
-                Console.WriteLine("`.\\bitwarden.ps1 -start` and then `.\\bitwarden.ps1 -updatedb`");
+                Console.WriteLine("`.\\bitwarden.ps1 -start`");
             }
             else
             {
-                Console.WriteLine("`./bitwarden.sh start` and then `./bitwarden.sh updatedb`");
+                Console.WriteLine("`./bitwarden.sh start`");
             }
             Console.WriteLine(string.Empty);
         }
@@ -164,39 +166,11 @@ namespace Bit.Setup
             try
             {
                 Helpers.WriteLine(_context, "Migrating database.");
-
                 var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
                     "globalSettings__sqlServer__connectionString");
-                var masterConnectionString = new SqlConnectionStringBuilder(vaultConnectionString)
-                {
-                    InitialCatalog = "master"
-                }.ConnectionString;
-
-                using(var connection = new SqlConnection(masterConnectionString))
-                {
-                    var command = new SqlCommand(
-                        "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
-                        "CREATE DATABASE [vault];", connection);
-                    command.Connection.Open();
-                    command.ExecuteNonQuery();
-                    command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                        "FROM sys.databases WHERE [name] = 'vault') = 1) " +
-                        "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
-                    command.ExecuteNonQuery();
-                }
-
-                var upgrader = DeployChanges.To
-                    .SqlDatabase(vaultConnectionString)
-                    .JournalToSqlTable("dbo", "Migration")
-                    .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                        s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransaction()
-                    .WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                    .LogToConsole()
-                    .Build();
-
-                var result = upgrader.PerformUpgrade();
-                if(result.Successful)
+                var migrator = new DbMigrator(vaultConnectionString, null);
+                var success = migrator.MigrateMsSqlDatabase(false);
+                if(success)
                 {
                     Helpers.WriteLine(_context, "Migration successful.");
                 }
@@ -216,7 +190,6 @@ namespace Bit.Setup
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-
                 throw e;
             }
         }

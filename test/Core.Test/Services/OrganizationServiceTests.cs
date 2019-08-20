@@ -63,7 +63,7 @@ namespace Bit.Core.Test.Services
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
-            await orgService.ImportAsync(id, userId, null, newUsers, null);
+            await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.DidNotReceive().UpsertAsync(Arg.Any<OrganizationUser>());
             await orgUserRepo.Received(2).CreateAsync(Arg.Any<OrganizationUser>());
@@ -121,7 +121,7 @@ namespace Bit.Core.Test.Services
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
             newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
-            await orgService.ImportAsync(id, userId, null, newUsers, null);
+            await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.Received(1).UpsertAsync(Arg.Any<OrganizationUser>());
             await orgUserRepo.Received(2).CreateAsync(Arg.Any<OrganizationUser>());

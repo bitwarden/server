@@ -38,22 +38,29 @@ namespace Bit.Core.Services
             _logger = logger;
         }
 
-        public async Task PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+        public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
             string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
             short additionalSeats, bool premiumAccessAddon)
         {
-            var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
 
             Braintree.Customer braintreeCustomer = null;
             string stipeCustomerSourceToken = null;
+            string stipeCustomerPaymentMethodId = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
 
             if(stripePaymentMethod)
             {
-                stipeCustomerSourceToken = paymentToken;
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
             }
             else if(paymentMethodType == PaymentMethodType.PayPal)
             {
@@ -84,7 +91,9 @@ namespace Bit.Core.Services
 
             var subCreateOptions = new SubscriptionCreateOptions
             {
+                OffSession = true,
                 TrialPeriodDays = plan.TrialPeriodDays,
+                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -136,12 +145,22 @@ namespace Bit.Core.Services
                 {
                     Description = org.BusinessName,
                     Email = org.BillingEmail,
-                    SourceToken = stipeCustomerSourceToken,
+                    Source = stipeCustomerSourceToken,
+                    PaymentMethodId = stipeCustomerPaymentMethodId,
                     Metadata = stripeCustomerMetadata
                 });
+                subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 subCreateOptions.CustomerId = customer.Id;
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
+                if(subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+                {
+                    if(subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
+                    {
+                        await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                        throw new GatewayException("Payment method was declined.");
+                    }
+                }
             }
             catch(Exception e)
             {
@@ -159,11 +178,138 @@ namespace Bit.Core.Services
             org.Gateway = GatewayType.Stripe;
             org.GatewayCustomerId = customer.Id;
             org.GatewaySubscriptionId = subscription.Id;
-            org.ExpirationDate = subscription.CurrentPeriodEnd;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
         }
 
-        public async Task PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
-            short additionalStorageGb)
+        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
+            short additionalStorageGb, short additionalSeats, bool premiumAccessAddon)
+        {
+            if(!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
+            {
+                throw new BadRequestException("Organization already has a subscription.");
+            }
+
+            var customerService = new CustomerService();
+            var customerOptions = new CustomerGetOptions();
+            customerOptions.AddExpand("default_source");
+            var customer = await customerService.GetAsync(org.GatewayCustomerId, customerOptions);
+            if(customer == null)
+            {
+                throw new GatewayException("Could not find customer payment profile.");
+            }
+
+            var subCreateOptions = new SubscriptionCreateOptions
+            {
+                CustomerId = customer.Id,
+                Items = new List<SubscriptionItemOption>(),
+                Metadata = new Dictionary<string, string>
+                {
+                    [org.GatewayIdField()] = org.Id.ToString()
+                }
+            };
+
+            if(plan.StripePlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripePlanId,
+                    Quantity = 1
+                });
+            }
+
+            if(additionalSeats > 0 && plan.StripeSeatPlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats
+                });
+            }
+
+            if(additionalStorageGb > 0)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripeStoragePlanId,
+                    Quantity = additionalStorageGb
+                });
+            }
+
+            if(premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
+            {
+                subCreateOptions.Items.Add(new SubscriptionItemOption
+                {
+                    PlanId = plan.StripePremiumAccessPlanId,
+                    Quantity = 1
+                });
+            }
+
+            var stripePaymentMethod = false;
+            var paymentMethodType = PaymentMethodType.Credit;
+            var hasBtCustomerId = customer.Metadata.ContainsKey("btCustomerId");
+            if(hasBtCustomerId)
+            {
+                paymentMethodType = PaymentMethodType.PayPal;
+            }
+            else
+            {
+                if(customer.DefaultSource != null)
+                {
+                    if(customer.DefaultSource is Card || customer.DefaultSource is SourceCard)
+                    {
+                        paymentMethodType = PaymentMethodType.Card;
+                        stripePaymentMethod = true;
+                    }
+                    else if(customer.DefaultSource is BankAccount || customer.DefaultSource is SourceAchDebit)
+                    {
+                        paymentMethodType = PaymentMethodType.BankAccount;
+                        stripePaymentMethod = true;
+                    }
+                }
+                else
+                {
+                    var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                    if(paymentMethod != null)
+                    {
+                        paymentMethodType = PaymentMethodType.Card;
+                        stripePaymentMethod = true;
+                        subCreateOptions.DefaultPaymentMethodId = paymentMethod.Id;
+                    }
+                }
+            }
+
+            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
+                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
+            org.GatewaySubscriptionId = subscription.Id;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
+        }
+
+        public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
+            string paymentToken, short additionalStorageGb)
         {
             if(paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -179,16 +325,26 @@ namespace Bit.Core.Services
                 throw new GatewayException("Bank account payment method is not supported at this time.");
             }
 
-            var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
-
             var createdStripeCustomer = false;
-            var addedCreditToStripeCustomer = false;
             Customer customer = null;
-            Braintree.Transaction braintreeTransaction = null;
             Braintree.Customer braintreeCustomer = null;
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.Credit;
+
+            string stipeCustomerPaymentMethodId = null;
+            string stipeCustomerSourceToken = null;
+            if(stripePaymentMethod)
+            {
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
+            }
 
             if(user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
@@ -209,14 +365,8 @@ namespace Bit.Core.Services
 
             if(customer == null && !string.IsNullOrWhiteSpace(paymentToken))
             {
-                string stipeCustomerSourceToken = null;
                 var stripeCustomerMetadata = new Dictionary<string, string>();
-
-                if(stripePaymentMethod)
-                {
-                    stipeCustomerSourceToken = paymentToken;
-                }
-                else if(paymentMethodType == PaymentMethodType.PayPal)
+                if(paymentMethodType == PaymentMethodType.PayPal)
                 {
                     var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
                     var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
@@ -247,8 +397,9 @@ namespace Bit.Core.Services
                 {
                     Description = user.Name,
                     Email = user.Email,
-                    SourceToken = stipeCustomerSourceToken,
-                    Metadata = stripeCustomerMetadata
+                    Metadata = stripeCustomerMetadata,
+                    PaymentMethodId = stipeCustomerPaymentMethodId,
+                    Source = stipeCustomerSourceToken
                 });
                 createdStripeCustomer = true;
             }
@@ -261,6 +412,7 @@ namespace Bit.Core.Services
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
+                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -282,6 +434,35 @@ namespace Bit.Core.Services
                     Quantity = additionalStorageGb
                 });
             }
+
+            var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
+                stripePaymentMethod, paymentMethodType, subCreateOptions, braintreeCustomer);
+
+            user.Gateway = GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+            user.GatewaySubscriptionId = subscription.Id;
+
+            if(subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                user.Premium = true;
+                user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
+        }
+
+        private async Task<Subscription> ChargeForNewSubscriptionAsync(ISubscriber subcriber, Customer customer,
+            bool createdStripeCustomer, bool stripePaymentMethod, PaymentMethodType paymentMethodType,
+            SubscriptionCreateOptions subCreateOptions, Braintree.Customer braintreeCustomer)
+        {
+            var addedCreditToStripeCustomer = false;
+            Braintree.Transaction braintreeTransaction = null;
+            var invoiceService = new InvoiceService();
+            var customerService = new CustomerService();
 
             var subInvoiceMetadata = new Dictionary<string, string>();
             Subscription subscription = null;
@@ -312,12 +493,12 @@ namespace Bit.Core.Services
                                         SubmitForSettlement = true,
                                         PayPal = new Braintree.TransactionOptionsPayPalRequest
                                         {
-                                            CustomField = $"{user.BraintreeIdField()}:{user.Id}"
+                                            CustomField = $"{subcriber.BraintreeIdField()}:{subcriber.Id}"
                                         }
                                     },
                                     CustomFields = new Dictionary<string, string>
                                     {
-                                        [user.BraintreeIdField()] = user.Id.ToString()
+                                        [subcriber.BraintreeIdField()] = subcriber.Id.ToString()
                                     }
                                 });
 
@@ -333,7 +514,7 @@ namespace Bit.Core.Services
 
                             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                             {
-                                AccountBalance = -1 * previewInvoice.AmountDue
+                                Balance = customer.Balance - previewInvoice.AmountDue
                             });
                             addedCreditToStripeCustomer = true;
                         }
@@ -356,8 +537,18 @@ namespace Bit.Core.Services
                     }
                 }
 
+                subCreateOptions.OffSession = true;
+                subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
+                if(subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+                {
+                    if(subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
+                    {
+                        await subscriptionService.CancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                        throw new GatewayException("Payment method was declined.");
+                    }
+                }
 
                 if(!stripePaymentMethod && subInvoiceMetadata.Any())
                 {
@@ -377,6 +568,8 @@ namespace Bit.Core.Services
                         Metadata = subInvoiceMetadata
                     });
                 }
+
+                return subscription;
             }
             catch(Exception e)
             {
@@ -386,11 +579,11 @@ namespace Bit.Core.Services
                     {
                         await customerService.DeleteAsync(customer.Id);
                     }
-                    else if(addedCreditToStripeCustomer)
+                    else if(addedCreditToStripeCustomer || customer.Balance < 0)
                     {
                         await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                         {
-                            AccountBalance = customer.AccountBalance
+                            Balance = customer.Balance
                         });
                     }
                 }
@@ -402,14 +595,15 @@ namespace Bit.Core.Services
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
+
+                if(e is StripeException strEx &&
+                    (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+                {
+                    throw new GatewayException("Bank account is not yet verified.");
+                }
+
                 throw e;
             }
-
-            user.Gateway = GatewayType.Stripe;
-            user.GatewayCustomerId = customer.Id;
-            user.GatewaySubscriptionId = subscription.Id;
-            user.Premium = true;
-            user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
         }
 
         private List<InvoiceSubscriptionItemOptions> ToInvoiceSubscriptionItemOptions(
@@ -422,7 +616,7 @@ namespace Bit.Core.Services
             }).ToList();
         }
 
-        public async Task AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
+        public async Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
             string storagePlanId)
         {
             var subscriptionItemService = new SubscriptionItemService();
@@ -485,14 +679,18 @@ namespace Bit.Core.Services
                 subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(storageItem.Id);
             }
 
+            string paymentIntentClientSecret = null;
             var invoicedNow = false;
             if(additionalStorage > 0)
             {
-                invoicedNow = await PreviewUpcomingInvoiceAndPayAsync(
+                var result = await PreviewUpcomingInvoiceAndPayAsync(
                     storableSubscriber, storagePlanId, subItemOptions, 400);
+                invoicedNow = result.Item1;
+                paymentIntentClientSecret = result.Item2;
             }
 
             await subUpdateAction(!invoicedNow);
+            return paymentIntentClientSecret;
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -544,7 +742,7 @@ namespace Bit.Core.Services
                 if(charges?.Data != null)
                 {
                     var refundService = new RefundService();
-                    foreach(var charge in charges.Data.Where(c => !c.Refunded))
+                    foreach(var charge in charges.Data.Where(c => c.Captured.GetValueOrDefault() && !c.Refunded))
                     {
                         await refundService.CreateAsync(new RefundCreateOptions { ChargeId = charge.Id });
                     }
@@ -554,11 +752,12 @@ namespace Bit.Core.Services
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
-        public async Task<bool> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
+        public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
         {
             var invoiceService = new InvoiceService();
             var invoiceItemService = new InvoiceItemService();
+            string paymentIntentClientSecret = null;
 
             var pendingInvoiceItems = invoiceItemService.ListAutoPaging(new InvoiceItemListOptions
             {
@@ -583,16 +782,22 @@ namespace Bit.Core.Services
                 // Invoice them and pay now instead of waiting until next billing cycle.
 
                 var customerService = new CustomerService();
-                customerService.ExpandDefaultSource = true;
-                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                var customerOptions = new CustomerGetOptions();
+                customerOptions.AddExpand("default_source");
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
 
+                PaymentMethod cardPaymentMethod = null;
                 var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
                 if(invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
                 {
                     if(customer.DefaultSource == null ||
                         (!(customer.DefaultSource is Card) && !(customer.DefaultSource is BankAccount)))
                     {
-                        throw new BadRequestException("No payment method is available.");
+                        cardPaymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                        if(cardPaymentMethod == null)
+                        {
+                            throw new BadRequestException("No payment method is available.");
+                        }
                     }
                 }
 
@@ -621,10 +826,11 @@ namespace Bit.Core.Services
 
                     invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
                     {
-                        Billing = Billing.SendInvoice,
+                        CollectionMethod = "send_invoice",
                         DaysUntilDue = 1,
                         CustomerId = subscriber.GatewayCustomerId,
-                        SubscriptionId = subscriber.GatewaySubscriptionId
+                        SubscriptionId = subscriber.GatewaySubscriptionId,
+                        DefaultPaymentMethodId = cardPaymentMethod?.Id
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
@@ -669,15 +875,32 @@ namespace Bit.Core.Services
                                 }
                             });
                         }
+                        else
+                        {
+                            invoicePayOptions.OffSession = true;
+                            invoicePayOptions.PaymentMethodId = cardPaymentMethod?.Id;
+                        }
                     }
 
                     try
                     {
                         await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
                     }
-                    catch(StripeException)
+                    catch(StripeException e)
                     {
-                        throw new GatewayException("Unable to pay invoice.");
+                        if(e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
+                            e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                        {
+                            // SCA required, get intent client secret
+                            var invoiceGetOptions = new InvoiceGetOptions();
+                            invoiceGetOptions.AddExpand("payment_intent");
+                            invoice = await invoiceService.GetAsync(invoice.Id, invoiceGetOptions);
+                            paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
+                        }
+                        else
+                        {
+                            throw new GatewayException("Unable to pay invoice.");
+                        }
                     }
                 }
                 catch(Exception e)
@@ -693,7 +916,7 @@ namespace Bit.Core.Services
                         {
                             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                             {
-                                AccountBalance = customer.AccountBalance
+                                Balance = customer.Balance
                             });
                         }
 
@@ -721,10 +944,17 @@ namespace Bit.Core.Services
                             await invoiceItemService.DeleteAsync(ii.Id);
                         }
                     }
+
+                    if(e is StripeException strEx &&
+                        (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+                    {
+                        throw new GatewayException("Bank account is not yet verified.");
+                    }
+
                     throw e;
                 }
             }
-            return invoiceNow;
+            return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
         }
 
         public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
@@ -746,7 +976,8 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if(sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid")
+            if(sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
+                sub.Status == "incomplete_expired")
             {
                 // Already canceled
                 return;
@@ -791,7 +1022,8 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription was not found.");
             }
 
-            if((sub.Status != "active" && sub.Status != "trialing") || !sub.CanceledAt.HasValue)
+            if((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
+                !sub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Subscription is not marked for cancellation.");
             }
@@ -821,6 +1053,7 @@ namespace Bit.Core.Services
             var createdCustomer = false;
             Braintree.Customer braintreeCustomer = null;
             string stipeCustomerSourceToken = null;
+            string stipeCustomerPaymentMethodId = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
@@ -828,6 +1061,7 @@ namespace Bit.Core.Services
             var cardService = new CardService();
             var bankSerice = new BankAccountService();
             var customerService = new CustomerService();
+            var paymentMethodService = new PaymentMethodService();
             Customer customer = null;
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -842,7 +1076,14 @@ namespace Bit.Core.Services
             var hadBtCustomer = stripeCustomerMetadata.ContainsKey("btCustomerId");
             if(stripePaymentMethod)
             {
-                stipeCustomerSourceToken = paymentToken;
+                if(paymentToken.StartsWith("pm_"))
+                {
+                    stipeCustomerPaymentMethodId = paymentToken;
+                }
+                else
+                {
+                    stipeCustomerSourceToken = paymentToken;
+                }
             }
             else if(paymentMethodType == PaymentMethodType.PayPal)
             {
@@ -927,8 +1168,9 @@ namespace Bit.Core.Services
                     {
                         Description = subscriber.BillingName(),
                         Email = subscriber.BillingEmailAddress(),
-                        SourceToken = stipeCustomerSourceToken,
-                        Metadata = stripeCustomerMetadata
+                        Metadata = stripeCustomerMetadata,
+                        Source = stipeCustomerSourceToken,
+                        PaymentMethodId = stipeCustomerPaymentMethodId,
                     });
 
                     subscriber.Gateway = GatewayType.Stripe;
@@ -939,23 +1181,22 @@ namespace Bit.Core.Services
                 if(!createdCustomer)
                 {
                     string defaultSourceId = null;
+                    string defaultPaymentMethodId = null;
                     if(stripePaymentMethod)
                     {
-                        if(paymentToken.StartsWith("btok_"))
+                        if(!string.IsNullOrWhiteSpace(stipeCustomerSourceToken) && paymentToken.StartsWith("btok_"))
                         {
                             var bankAccount = await bankSerice.CreateAsync(customer.Id, new BankAccountCreateOptions
                             {
-                                SourceToken = paymentToken
+                                Source = paymentToken
                             });
                             defaultSourceId = bankAccount.Id;
                         }
-                        else
+                        else if(!string.IsNullOrWhiteSpace(stipeCustomerPaymentMethodId))
                         {
-                            var card = await cardService.CreateAsync(customer.Id, new CardCreateOptions
-                            {
-                                SourceToken = paymentToken,
-                            });
-                            defaultSourceId = card.Id;
+                            await paymentMethodService.AttachAsync(stipeCustomerPaymentMethodId,
+                                new PaymentMethodAttachOptions { CustomerId = customer.Id });
+                            defaultPaymentMethodId = stipeCustomerPaymentMethodId;
                         }
                     }
 
@@ -969,6 +1210,16 @@ namespace Bit.Core.Services
                         {
                             await cardService.DeleteAsync(customer.Id, source.Id);
                         }
+                    }
+
+                    var cardPaymentMethods = paymentMethodService.ListAutoPaging(new PaymentMethodListOptions
+                    {
+                        CustomerId = customer.Id,
+                        Type = "card"
+                    });
+                    foreach(var cardMethod in cardPaymentMethods.Where(m => m.Id != defaultPaymentMethodId))
+                    {
+                        await paymentMethodService.DetachAsync(cardMethod.Id, new PaymentMethodDetachOptions());
                     }
 
                     customer = await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
@@ -1012,7 +1263,7 @@ namespace Bit.Core.Services
             }
             await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
             {
-                AccountBalance = customer.AccountBalance - (long)(creditAmount * 100)
+                Balance = customer.Balance - (long)(creditAmount * 100)
             });
             return !customerExists;
         }
@@ -1037,8 +1288,6 @@ namespace Bit.Core.Services
             }
 
             var customerService = new CustomerService();
-            var subscriptionService = new SubscriptionService();
-            var chargeService = new ChargeService();
             var invoiceService = new InvoiceService();
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -1051,7 +1300,7 @@ namespace Bit.Core.Services
                 catch(StripeException) { }
                 if(customer != null)
                 {
-                    billingInfo.Balance = customer.AccountBalance / 100M;
+                    billingInfo.Balance = customer.Balance / 100M;
 
                     if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
@@ -1079,6 +1328,14 @@ namespace Bit.Core.Services
                             }
                         }
                     }
+                    if(billingInfo.PaymentSource == null)
+                    {
+                        var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                        if(paymentMethod != null)
+                        {
+                            billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
+                        }
+                    }
 
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
@@ -1086,7 +1343,7 @@ namespace Bit.Core.Services
                         Limit = 50
                     });
                     billingInfo.Invoices = invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-                        .OrderByDescending(i => i.Date).Select(i => new BillingInfo.BillingInvoice(i));
+                        .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
                 }
             }
 
@@ -1124,6 +1381,14 @@ namespace Bit.Core.Services
             }
 
             return subscriptionInfo;
+        }
+
+        private PaymentMethod GetDefaultCardPaymentMethod(string customerId)
+        {
+            var paymentMethodService = new PaymentMethodService();
+            var cardPaymentMethods = paymentMethodService.ListAutoPaging(
+                new PaymentMethodListOptions { CustomerId = customerId, Type = "card" });
+            return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
         }
     }
 }

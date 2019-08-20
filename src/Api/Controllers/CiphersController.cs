@@ -56,16 +56,16 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/admin")]
-        public async Task<CipherResponseModel> GetAdmin(string id)
+        public async Task<CipherMiniResponseModel> GetAdmin(string id)
         {
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
-            return new CipherResponseModel(cipher, _globalSettings);
+            return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
         }
 
         [HttpGet("{id}/full-details")]
@@ -179,7 +179,7 @@ namespace Bit.Api.Controllers
         public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody]CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
@@ -461,13 +461,13 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/attachment-admin")]
         [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
-        public async Task<CipherResponseModel> PostAttachmentAdmin(string id)
+        public async Task<CipherMiniResponseModel> PostAttachmentAdmin(string id)
         {
             ValidateAttachment();
 
             var idGuid = new Guid(id);
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(idGuid);
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid);
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
@@ -480,7 +480,7 @@ namespace Bit.Api.Controllers
                         Request.ContentLength.GetValueOrDefault(0), userId, true);
             });
 
-            return new CipherResponseModel(cipher, _globalSettings);
+            return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +36,7 @@ namespace Bit.EventsProcessor
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _executingTask = ExecuteAsync(_cts.Token);
             return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
@@ -46,6 +48,7 @@ namespace Bit.EventsProcessor
             {
                 return;
             }
+            _logger.LogWarning("Stopping service.");
             _cts.Cancel();
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
@@ -71,21 +74,31 @@ namespace Bit.EventsProcessor
 
             while(!cancellationToken.IsCancellationRequested)
             {
-                var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                    null, null, cancellationToken);
-                if(messages.Any())
+                try
                 {
-                    foreach(var message in messages)
+                    var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
+                        null, null, cancellationToken);
+                    if(messages.Any())
                     {
-                        await ProcessQueueMessageAsync(message.AsString, cancellationToken);
-                        await _queue.DeleteMessageAsync(message);
+                        foreach(var message in messages)
+                        {
+                            await ProcessQueueMessageAsync(message.AsString, cancellationToken);
+                            await _queue.DeleteMessageAsync(message);
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
                 }
-                else
+                catch(Exception e)
                 {
+                    _logger.LogError(e, "Exception occurred: " + e.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+
+            _logger.LogWarning("Done processing.");
         }
 
         public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
@@ -123,11 +136,6 @@ namespace Bit.EventsProcessor
             catch(JsonSerializationException)
             {
                 _logger.LogError("JsonSerializationException: Unable to serialize token.");
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(e, "Exception occurred. " + e.Message);
-                throw e;
             }
         }
     }

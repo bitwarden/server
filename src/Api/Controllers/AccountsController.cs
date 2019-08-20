@@ -443,7 +443,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("premium")]
-        public async Task<ProfileResponseModel> PostPremium(PremiumRequestModel model)
+        public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -463,9 +463,15 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid license.");
             }
 
-            await _userService.SignUpPremiumAsync(user, model.PaymentToken, model.PaymentMethodType.Value,
-                model.AdditionalStorageGb.GetValueOrDefault(0), license);
-            return new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var result = await _userService.SignUpPremiumAsync(user, model.PaymentToken,
+                model.PaymentMethodType.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license);
+            var profile = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+            return new PaymentResponseModel
+            {
+                UserProfile = profile,
+                PaymentIntentClientSecret = result.Item2,
+                Success = result.Item1
+            };
         }
 
         [HttpGet("billing")]
@@ -523,7 +529,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostStorage([FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage([FromBody]StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)
@@ -531,7 +537,12 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
+            var result = await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("license")]

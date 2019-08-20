@@ -215,7 +215,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -223,12 +223,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
+            var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+            return new PaymentResponseModel
+            {
+                Success = result.Item1,
+                PaymentIntentClientSecret = result.Item2
+            };
         }
 
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -236,12 +241,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostStorage(string id, [FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -249,7 +259,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/verify-bank")]
@@ -376,7 +391,8 @@ namespace Bit.Api.Controllers
                 userId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
                 model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
+                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
+                model.OverwriteExisting);
         }
 
         [HttpPost("{id}/api-key")]
