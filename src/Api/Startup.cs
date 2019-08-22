@@ -162,7 +162,8 @@ namespace Bit.Api
             app.UseStaticFiles();
 
             // Add Cors
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseCors(policy => policy.SetIsOriginAllowed(h => true)
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();
