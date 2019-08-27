@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="1.1.5" />
-    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.11" />
+    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.12" />
   </ItemGroup>
 
   <ItemGroup>
