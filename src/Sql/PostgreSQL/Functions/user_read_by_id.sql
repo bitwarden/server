@@ -1,8 +1,8 @@
-CREATE OR REPLACE FUNCTION bitwarden.user_read_by_id
+CREATE OR REPLACE FUNCTION user_read_by_id
 (
     _id uuid
 )
-RETURNS SETOF bitwarden."user"
+RETURNS SETOF "user"
 LANGUAGE 'plpgsql'
 AS 
 $BODY$
@@ -11,7 +11,7 @@ BEGIN
     SELECT
         *
     FROM
-        bitwarden."user"
+        "user"
     WHERE
         "id" = _id;
 END
