@@ -23,6 +23,7 @@ namespace Bit.Notifications
         [HttpGet("~/alive")]
         [HttpGet("~/now")]
         [AllowAnonymous]
+        [SelfHosted(SelfHostedOnly = false, NotSelfHostedOnly = false)]
         public DateTime GetAlive()
         {
             return DateTime.UtcNow;
