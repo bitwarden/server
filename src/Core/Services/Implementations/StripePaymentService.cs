@@ -51,7 +51,7 @@ namespace Bit.Core.Services
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
 
-            if(stripePaymentMethod)
+            if(stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
             {
                 if(paymentToken.StartsWith("pm_"))
                 {
@@ -334,7 +334,7 @@ namespace Bit.Core.Services
 
             string stipeCustomerPaymentMethodId = null;
             string stipeCustomerSourceToken = null;
-            if(stripePaymentMethod)
+            if(stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
             {
                 if(paymentToken.StartsWith("pm_"))
                 {
