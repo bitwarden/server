@@ -333,6 +333,11 @@ namespace Bit.Billing.Controllers
                     var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                     if(subscription?.Status == "active")
                     {
+                        if(DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                        {
+                            await Task.Delay(5000);
+                        }
+
                         var ids = GetIdsFromMetaData(subscription.Metadata);
                         // org
                         if(ids.Item1.HasValue)
