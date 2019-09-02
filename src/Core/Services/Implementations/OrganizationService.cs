@@ -722,7 +722,7 @@ namespace Bit.Core.Services
         public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
         {
             var org = await GetOrgById(organizationId);
-            if(org != null && !org.Enabled)
+            if(org != null && !org.Enabled && org.Gateway.HasValue)
             {
                 org.Enabled = true;
                 org.ExpirationDate = expirationDate;

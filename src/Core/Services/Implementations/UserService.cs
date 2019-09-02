@@ -830,7 +830,7 @@ namespace Bit.Core.Services
 
         public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
         {
-            if(user != null && !user.Premium)
+            if(user != null && !user.Premium && user.Gateway.HasValue)
             {
                 user.Premium = true;
                 user.PremiumExpirationDate = expirationDate;
