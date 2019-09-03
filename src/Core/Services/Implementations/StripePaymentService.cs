@@ -388,7 +388,7 @@ namespace Bit.Core.Services
                     braintreeCustomer = customerResult.Target;
                     stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
                 }
-                else
+                else if(!stripePaymentMethod)
                 {
                     throw new GatewayException("Payment method is not supported at this time.");
                 }
