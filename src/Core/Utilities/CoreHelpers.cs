@@ -33,6 +33,8 @@ namespace Bit.Core.Utilities
             "RL?+AOEUIDHTNS_:QJKXBMWVZ";
         private static readonly string _qwertyColemakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
         private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
+        private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
+        private static readonly string RealIp = "X-Real-IP";
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -568,6 +570,26 @@ namespace Bit.Core.Utilities
                 }
             }
             return subName;
+        }
+
+        public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
+            GlobalSettings globalSettings)
+        {
+            if(httpContext == null)
+            {
+                return null;
+            }
+
+            if(!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+            {
+                return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            }
+            if(globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
+            {
+                return httpContext.Request.Headers[RealIp].ToString();
+            }
+
+            return httpContext.Connection?.RemoteIpAddress?.ToString();
         }
     }
 }
