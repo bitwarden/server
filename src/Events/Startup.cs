@@ -91,7 +91,7 @@ namespace Bit.Events
             }
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
 
             // Add Cors
             app.UseCors(policy => policy.SetIsOriginAllowed(h => true)

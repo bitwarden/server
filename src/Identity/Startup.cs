@@ -80,7 +80,7 @@ namespace Bit.Identity
             app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
 
             if(!globalSettings.SelfHosted)
             {

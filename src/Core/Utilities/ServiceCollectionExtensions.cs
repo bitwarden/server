@@ -30,6 +30,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Utilities;
+using Serilog.Context;
 
 namespace Bit.Core.Utilities
 {
@@ -407,18 +409,33 @@ namespace Bit.Core.Utilities
             return globalSettings;
         }
 
-        public static void UseDefaultMiddleware(this IApplicationBuilder app, IHostingEnvironment env)
+        public static void UseDefaultMiddleware(this IApplicationBuilder app,
+            IHostingEnvironment env, GlobalSettings globalSettings)
         {
+            string GetHeaderValue(HttpContext httpContext, string header)
+            {
+                if(httpContext.Request.Headers.ContainsKey(header))
+                {
+                    return httpContext.Request.Headers[header];
+                }
+                return null;
+            }
+
             // Add version information to response headers
             app.Use(async (httpContext, next) =>
             {
-                httpContext.Response.OnStarting((state) =>
+                using(LogContext.PushProperty("IPAddress", httpContext.GetIpAddress(globalSettings)))
+                using(LogContext.PushProperty("UserAgent", GetHeaderValue(httpContext, "user-agent")))
+                using(LogContext.PushProperty("DeviceType", GetHeaderValue(httpContext, "device-type")))
+                using(LogContext.PushProperty("Origin", GetHeaderValue(httpContext, "origin")))
                 {
-                    httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
-                    return Task.FromResult(0);
-                }, null);
-
-                await next.Invoke();
+                    httpContext.Response.OnStarting((state) =>
+                    {
+                        httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
+                        return Task.FromResult(0);
+                    }, null);
+                    await next.Invoke();
+                }
             });
         }
 
