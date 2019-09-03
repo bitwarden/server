@@ -931,7 +931,7 @@ namespace Bit.Core.Services
                                 SubscriptionId = item.SubscriptionId,
                                 Discountable = item.Discountable,
                                 Metadata = item.Metadata,
-                                Quantity = 1,
+                                Quantity = item.Proration ? 1 : item.Quantity,
                                 UnitAmount = item.UnitAmount
                             };
                             await invoiceItemService.CreateAsync(i);
