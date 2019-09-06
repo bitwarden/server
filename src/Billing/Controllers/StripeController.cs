@@ -265,7 +265,7 @@ namespace Bit.Billing.Controllers
                     if(charge.PaymentMethodDetails.Card != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.Card;
-                        tx.Details = $"{charge.PaymentMethodDetails.Card.Brand}, " +
+                        tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
                             $"*{charge.PaymentMethodDetails.Card.Last4}";
                     }
                     else if(charge.PaymentMethodDetails.AchDebit != null)
