@@ -93,7 +93,6 @@ namespace Bit.Core.Services
             {
                 OffSession = true,
                 TrialPeriodDays = plan.TrialPeriodDays,
-                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -147,7 +146,11 @@ namespace Bit.Core.Services
                     Email = org.BillingEmail,
                     Source = stipeCustomerSourceToken,
                     PaymentMethodId = stipeCustomerPaymentMethodId,
-                    Metadata = stripeCustomerMetadata
+                    Metadata = stripeCustomerMetadata,
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                    }
                 });
                 subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 subCreateOptions.CustomerId = customer.Id;
@@ -204,6 +207,7 @@ namespace Bit.Core.Services
             var customerService = new CustomerService();
             var customerOptions = new CustomerGetOptions();
             customerOptions.AddExpand("default_source");
+            customerOptions.AddExpand("invoice_settings.default_payment_method");
             var customer = await customerService.GetAsync(org.GatewayCustomerId, customerOptions);
             if(customer == null)
             {
@@ -265,7 +269,12 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(customer.DefaultSource != null)
+                if(customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
+                {
+                    paymentMethodType = PaymentMethodType.Card;
+                    stripePaymentMethod = true;
+                }
+                else if(customer.DefaultSource != null)
                 {
                     if(customer.DefaultSource is Card || customer.DefaultSource is SourceCard)
                     {
@@ -280,7 +289,7 @@ namespace Bit.Core.Services
                 }
                 else
                 {
-                    var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                    var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
                     if(paymentMethod != null)
                     {
                         paymentMethodType = PaymentMethodType.Card;
@@ -399,7 +408,11 @@ namespace Bit.Core.Services
                     Email = user.Email,
                     Metadata = stripeCustomerMetadata,
                     PaymentMethodId = stipeCustomerPaymentMethodId,
-                    Source = stipeCustomerSourceToken
+                    Source = stipeCustomerSourceToken,
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                    }
                 });
                 createdStripeCustomer = true;
             }
@@ -412,7 +425,6 @@ namespace Bit.Core.Services
             var subCreateOptions = new SubscriptionCreateOptions
             {
                 CustomerId = customer.Id,
-                DefaultPaymentMethodId = stipeCustomerPaymentMethodId,
                 Items = new List<SubscriptionItemOption>(),
                 Metadata = new Dictionary<string, string>
                 {
@@ -784,17 +796,20 @@ namespace Bit.Core.Services
                 var customerService = new CustomerService();
                 var customerOptions = new CustomerGetOptions();
                 customerOptions.AddExpand("default_source");
+                customerOptions.AddExpand("invoice_settings.default_payment_method");
                 var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
 
-                PaymentMethod cardPaymentMethod = null;
+                string cardPaymentMethodId = null;
                 var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
                 if(invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
                 {
-                    if(customer.DefaultSource == null ||
-                        (!(customer.DefaultSource is Card) && !(customer.DefaultSource is BankAccount)))
+                    var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+                    var hasDefaultValidSource = customer.DefaultSource != null &&
+                        (customer.DefaultSource is Card || customer.DefaultSource is BankAccount);
+                    if(!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
                     {
-                        cardPaymentMethod = GetDefaultCardPaymentMethod(customer.Id);
-                        if(cardPaymentMethod == null)
+                        cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
+                        if(cardPaymentMethodId == null)
                         {
                             throw new BadRequestException("No payment method is available.");
                         }
@@ -830,7 +845,7 @@ namespace Bit.Core.Services
                         DaysUntilDue = 1,
                         CustomerId = subscriber.GatewayCustomerId,
                         SubscriptionId = subscriber.GatewaySubscriptionId,
-                        DefaultPaymentMethodId = cardPaymentMethod?.Id
+                        DefaultPaymentMethodId = cardPaymentMethodId
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
@@ -878,7 +893,7 @@ namespace Bit.Core.Services
                         else
                         {
                             invoicePayOptions.OffSession = true;
-                            invoicePayOptions.PaymentMethodId = cardPaymentMethod?.Id;
+                            invoicePayOptions.PaymentMethodId = cardPaymentMethodId;
                         }
                     }
 
@@ -1171,6 +1186,10 @@ namespace Bit.Core.Services
                         Metadata = stripeCustomerMetadata,
                         Source = stipeCustomerSourceToken,
                         PaymentMethodId = stipeCustomerPaymentMethodId,
+                        InvoiceSettings = new CustomerInvoiceSettingsOptions
+                        {
+                            DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                        }
                     });
 
                     subscriber.Gateway = GatewayType.Stripe;
@@ -1225,7 +1244,11 @@ namespace Bit.Core.Services
                     customer = await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
                     {
                         Metadata = stripeCustomerMetadata,
-                        DefaultSource = defaultSourceId
+                        DefaultSource = defaultSourceId,
+                        InvoiceSettings = new CustomerInvoiceSettingsOptions
+                        {
+                            DefaultPaymentMethodId = defaultPaymentMethodId
+                        }
                     });
                 }
             }
@@ -1295,7 +1318,10 @@ namespace Bit.Core.Services
                 Customer customer = null;
                 try
                 {
-                    customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                    var customerOptions = new CustomerGetOptions();
+                    customerOptions.AddExpand("default_source");
+                    customerOptions.AddExpand("invoice_settings.default_payment_method");
+                    customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
                 }
                 catch(StripeException) { }
                 if(customer != null)
@@ -1316,21 +1342,19 @@ namespace Bit.Core.Services
                         }
                         catch(Braintree.Exceptions.NotFoundException) { }
                     }
-                    else if(!string.IsNullOrWhiteSpace(customer.DefaultSourceId) && customer.Sources?.Data != null)
+                    else if(customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
                     {
-                        if(customer.DefaultSourceId.StartsWith("card_") || customer.DefaultSourceId.StartsWith("ba_"))
-                        {
-                            var source = customer.Sources.Data.FirstOrDefault(s =>
-                                (s is Card || s is BankAccount) && s.Id == customer.DefaultSourceId);
-                            if(source != null)
-                            {
-                                billingInfo.PaymentSource = new BillingInfo.BillingSource(source);
-                            }
-                        }
+                        billingInfo.PaymentSource = new BillingInfo.BillingSource(
+                            customer.InvoiceSettings.DefaultPaymentMethod);
+                    }
+                    else if(customer.DefaultSource != null &&
+                        (customer.DefaultSource is Card || customer.DefaultSource is BankAccount))
+                    {
+                        billingInfo.PaymentSource = new BillingInfo.BillingSource(customer.DefaultSource);
                     }
                     if(billingInfo.PaymentSource == null)
                     {
-                        var paymentMethod = GetDefaultCardPaymentMethod(customer.Id);
+                        var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
                         if(paymentMethod != null)
                         {
                             billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
@@ -1383,7 +1407,7 @@ namespace Bit.Core.Services
             return subscriptionInfo;
         }
 
-        private PaymentMethod GetDefaultCardPaymentMethod(string customerId)
+        private PaymentMethod GetLatestCardPaymentMethod(string customerId)
         {
             var paymentMethodService = new PaymentMethodService();
             var cardPaymentMethods = paymentMethodService.ListAutoPaging(
