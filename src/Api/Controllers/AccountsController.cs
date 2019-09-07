@@ -14,6 +14,7 @@ using Bit.Core.Models.Business;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -25,9 +26,7 @@ namespace Bit.Api.Controllers
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
-        private readonly ICipherService _cipherService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ILicensingService _licenseService;
         private readonly IPaymentService _paymentService;
         private readonly GlobalSettings _globalSettings;
 
@@ -36,9 +35,7 @@ namespace Bit.Api.Controllers
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IFolderRepository folderRepository,
-            ICipherService cipherService,
             IOrganizationUserRepository organizationUserRepository,
-            ILicensingService licenseService,
             IPaymentService paymentService,
             GlobalSettings globalSettings)
         {
@@ -46,9 +43,7 @@ namespace Bit.Api.Controllers
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
-            _cipherService = cipherService;
             _organizationUserRepository = organizationUserRepository;
-            _licenseService = licenseService;
             _paymentService = paymentService;
             _globalSettings = globalSettings;
         }
@@ -60,7 +55,11 @@ namespace Bit.Api.Controllers
             var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
             if(kdfInformation == null)
             {
-                throw new NotFoundException();
+                kdfInformation = new UserKdfInformation
+                {
+                    Kdf = KdfType.PBKDF2_SHA256,
+                    KdfIterations = 100000
+                };
             }
             return new PreloginResponseModel(kdfInformation);
         }
