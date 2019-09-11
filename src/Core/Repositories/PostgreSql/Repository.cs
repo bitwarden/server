@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<T>(
                     $"{Table}_read_by_id",
-                    new { id = id },
+                    ToParam(new { Id = id }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -47,7 +47,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_create",
-                    obj,
+                    ToParam(obj),
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -58,7 +58,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_update",
-                    obj,
+                    ToParam(obj),
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -81,7 +81,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 await connection.ExecuteAsync(
                     $"{Table}_delete_by_id",
-                    new { id = obj.Id },
+                    ToParam(new { Id = obj.Id }),
                     commandType: CommandType.StoredProcedure);
             }
         }
