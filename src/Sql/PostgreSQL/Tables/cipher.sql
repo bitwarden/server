@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS cipher (
     attachments     TEXT        NULL,
     creation_date   TIMESTAMPTZ NOT NULL,
     revision_date   TIMESTAMPTZ NOT NULL,
-    CONSTRAINT pk_cipher PRIMARY KEY  (Id),
+    CONSTRAINT pk_cipher PRIMARY KEY  (id),
     CONSTRAINT fk_cipher_organization FOREIGN KEY (organization_id) REFERENCES Organization (id),
     CONSTRAINT fk_cipher_user FOREIGN KEY (user_id) REFERENCES "user" (id)
 );
