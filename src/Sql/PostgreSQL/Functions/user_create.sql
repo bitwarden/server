@@ -46,7 +46,7 @@ BEGIN
         culture,
         security_stamp,
         two_factor_providers,
-        two_factor_recoverycode,
+        two_factor_recovery_code,
         equivalent_domains,
         excluded_global_equivalent_domains,
         account_revision_date,
