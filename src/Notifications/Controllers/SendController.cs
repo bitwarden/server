@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 namespace Bit.Notifications
 {
     [Authorize("Internal")]
-    [SelfHosted(SelfHostedOnly = true)]
     public class SendController : Controller
     {
         private readonly IHubContext<NotificationsHub> _hubContext;
@@ -29,6 +28,7 @@ namespace Bit.Notifications
         }
 
         [HttpPost("~/send")]
+        [SelfHosted(SelfHostedOnly = true)]
         public async Task PostSend()
         {
             using(var reader = new StreamReader(Request.Body, Encoding.UTF8))

@@ -22,12 +22,20 @@ namespace Bit.Notifications
                             return e.Level > LogEventLevel.Error;
                         }
 
-                        if(e.Level == LogEventLevel.Error && e.MessageTemplate.Text == "Failed connection handshake.")
+                        if(e.Level == LogEventLevel.Error && 
+                            e.MessageTemplate.Text == "Failed connection handshake.")
                         {
                             return false;
                         }
 
-                        if(e.Level == LogEventLevel.Warning && e.MessageTemplate.Text.StartsWith("Heartbeat took longer"))
+                        if(e.Level == LogEventLevel.Error &&
+                            e.MessageTemplate.Text.StartsWith("Failed writing message."))
+                        {
+                            return false;
+                        }
+
+                        if(e.Level == LogEventLevel.Warning &&
+                            e.MessageTemplate.Text.StartsWith("Heartbeat took longer"))
                         {
                             return false;
                         }

@@ -125,10 +125,6 @@ namespace Bit.Core
                 public bool SslOverride { get; set; } = false;
                 public string Username { get; set; }
                 public string Password { get; set; }
-                [Obsolete]
-                public bool UseDefaultCredentials { get; set; } = false;
-                [Obsolete]
-                public string AuthType { get; set; }
                 public bool TrustServer { get; set; } = false;
             }
         }

@@ -231,17 +231,17 @@ namespace Bit.Billing.Controllers
                     GatewayId = charge.Id
                 };
 
-                if(charge.Source is Card card)
+                if(charge.Source != null && charge.Source is Card card)
                 {
                     tx.PaymentMethodType = PaymentMethodType.Card;
                     tx.Details = $"{card.Brand}, *{card.Last4}";
                 }
-                else if(charge.Source is BankAccount bankAccount)
+                else if(charge.Source != null && charge.Source is BankAccount bankAccount)
                 {
                     tx.PaymentMethodType = PaymentMethodType.BankAccount;
                     tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
                 }
-                else if(charge.Source is Source source)
+                else if(charge.Source != null && charge.Source is Source source)
                 {
                     if(source.Card != null)
                     {
@@ -260,10 +260,31 @@ namespace Bit.Billing.Controllers
                             $"{source.AchCreditTransfer.AccountNumber}";
                     }
                 }
+                else if(charge.PaymentMethodDetails != null)
+                {
+                    if(charge.PaymentMethodDetails.Card != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.Card;
+                        tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
+                            $"*{charge.PaymentMethodDetails.Card.Last4}";
+                    }
+                    else if(charge.PaymentMethodDetails.AchDebit != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
+                            $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
+                    }
+                    else if(charge.PaymentMethodDetails.AchCreditTransfer != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
+                            $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
+                    }
+                }
 
                 if(!tx.PaymentMethodType.HasValue)
                 {
-                    _logger.LogWarning("Charge success from unsupported source. " + charge.Id);
+                    _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
                     return new OkResult();
                 }
 
@@ -333,6 +354,11 @@ namespace Bit.Billing.Controllers
                     var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                     if(subscription?.Status == "active")
                     {
+                        if(DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                        {
+                            await Task.Delay(5000);
+                        }
+
                         var ids = GetIdsFromMetaData(subscription.Metadata);
                         // org
                         if(ids.Item1.HasValue)

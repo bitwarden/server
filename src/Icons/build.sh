@@ -14,6 +14,9 @@ dotnet clean $DIR/Icons.csproj -c "Release" -o $DIR/obj/Docker/publish
 echo "Publish"
 dotnet publish $DIR/Icons.csproj -c "Release" -o $DIR/obj/Docker/publish
 
-echo -e "\nBuilding docker image"
-docker --version
-docker build -t bitwarden/icons $DIR/.
+if [ "$1" != "nodocker" ]
+then
+    echo -e "\nBuilding docker image"
+    docker --version
+    docker build -t bitwarden/icons $DIR/.
+fi

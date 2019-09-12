@@ -69,7 +69,10 @@ namespace Bit.Events
             }
 
             // Mvc
-            services.AddMvc();
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+            });
 
             if(usingServiceBusAppCache)
             {
@@ -91,7 +94,7 @@ namespace Bit.Events
             }
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
 
             // Add Cors
             app.UseCors(policy => policy.SetIsOriginAllowed(h => true)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>1.31.1</Version>
+    <Version>1.32.0</Version>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <RootNamespace>Bit.Notifications</RootNamespace>
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="1.1.5" />
-    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.11" />
+    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.12" />
   </ItemGroup>
 
   <ItemGroup>

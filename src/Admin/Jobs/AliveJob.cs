@@ -22,7 +22,10 @@ namespace Bit.Admin.Jobs
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            await _httpClient.GetAsync(_globalSettings.BaseServiceUri.Admin);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: Keep alive");
+            var response = await _httpClient.GetAsync(_globalSettings.BaseServiceUri.Admin);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: Keep alive, " +
+                response.StatusCode);
         }
     }
 }

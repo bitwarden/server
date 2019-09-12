@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION user_read_by_id
 (
     _id uuid
 )
-RETURNS SETOF "user"
+RETURNS SETOF user_view
 LANGUAGE 'plpgsql'
 AS 
 $BODY$
@@ -13,8 +13,8 @@ BEGIN
     SELECT
         *
     FROM
-        "user"
+        user_view
     WHERE
-        "id" = _id;
+        id = _id;
 END
 $BODY$;

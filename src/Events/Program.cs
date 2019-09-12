@@ -22,6 +22,13 @@ namespace Bit.Events
                             return e.Level > LogEventLevel.Error;
                         }
 
+                        if(e.Properties.ContainsKey("RequestPath") &&
+                            !string.IsNullOrWhiteSpace(e.Properties["RequestPath"]?.ToString()) &&
+                            (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
+                        {
+                            return false;
+                        }
+
                         return e.Level >= LogEventLevel.Error;
                     }))
                 .Build()
