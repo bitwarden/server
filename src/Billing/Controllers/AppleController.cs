@@ -51,7 +51,7 @@ namespace Bit.Billing.Controllers
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if(key != _billingSettings.PayPal.WebhookKey)
+            if(key != _billingSettings.AppleWebhookKey)
             {
                 return new BadRequestResult();
             }
