@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Utilities;
+using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -67,7 +68,8 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Got IAP Status Update");
+            _logger.LogInformation(Constants.BypassFiltersEventId, body);
 
             return new OkResult();
         }
