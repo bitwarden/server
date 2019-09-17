@@ -23,17 +23,17 @@ namespace Bit.Core.Repositories.TableStorage
             _table = tableClient.GetTableReference("metadata");
         }
 
-        public async Task<IDictionary<string, string>> GetAsync(string id)
+        public async Task<IDictionary<string, string>> GetAsync(string objectName, string id)
         {
             var query = new TableQuery<DictionaryEntity>().Where(
-                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id));
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"{objectName}_{id}"));
             var queryResults = await _table.ExecuteQuerySegmentedAsync(query, null);
             return queryResults.Results.FirstOrDefault()?.ToDictionary(d => d.Key, d => d.Value.StringValue);
         }
 
-        public async Task<string> GetAsync(string id, string prop)
+        public async Task<string> GetAsync(string objectName, string id, string prop)
         {
-            var dict = await GetAsync(id);
+            var dict = await GetAsync(objectName, id);
             if(dict != null && dict.ContainsKey(prop))
             {
                 return dict[prop];
@@ -41,10 +41,10 @@ namespace Bit.Core.Repositories.TableStorage
             return null;
         }
 
-        public async Task UpsertAsync(string id, KeyValuePair<string, string> keyValuePair)
+        public async Task UpsertAsync(string objectName, string id, KeyValuePair<string, string> keyValuePair)
         {
             var query = new TableQuery<DictionaryEntity>().Where(
-                   TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id));
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"{objectName}_{id}"));
             var queryResults = await _table.ExecuteQuerySegmentedAsync(query, null);
             var entity = queryResults.Results.FirstOrDefault();
             if(entity == null)
@@ -62,11 +62,11 @@ namespace Bit.Core.Repositories.TableStorage
             await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
         }
 
-        public async Task UpsertAsync(string id, IDictionary<string, string> dict)
+        public async Task UpsertAsync(string objectName, string id, IDictionary<string, string> dict)
         {
             var entity = new DictionaryEntity
             {
-                PartitionKey = id
+                PartitionKey = $"{objectName}_{id}"
             };
             foreach(var item in dict)
             {
@@ -75,13 +75,13 @@ namespace Bit.Core.Repositories.TableStorage
             await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
         }
 
-        public async Task DeleteAsync(string id)
+        public async Task DeleteAsync(string objectName, string id)
         {
             try
             {
                 await _table.ExecuteAsync(TableOperation.Delete(new DictionaryEntity
                 {
-                    PartitionKey = id,
+                    PartitionKey = $"{objectName}_{id}",
                     ETag = "*"
                 }));
             }
