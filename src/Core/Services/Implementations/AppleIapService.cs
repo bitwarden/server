@@ -18,13 +18,13 @@ namespace Bit.Core.Services
 
         private readonly GlobalSettings _globalSettings;
         private readonly IHostingEnvironment _hostingEnvironment;
-        private readonly IMetaDataRespository _metaDataRespository;
+        private readonly IMetaDataRepository _metaDataRespository;
         private readonly ILogger<AppleIapService> _logger;
 
         public AppleIapService(
             GlobalSettings globalSettings,
             IHostingEnvironment hostingEnvironment,
-            IMetaDataRespository metaDataRespository,
+            IMetaDataRepository metaDataRespository,
             ILogger<AppleIapService> logger)
         {
             _globalSettings = globalSettings;
