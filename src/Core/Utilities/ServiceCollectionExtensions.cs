@@ -65,13 +65,13 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
                 services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-                services.AddSingleton<IMetaDataRespository, NoopRepos.MetaDataRepository>();
+                services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
             }
             else
             {
                 services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
                 services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
-                services.AddSingleton<IMetaDataRespository, TableStorageRepos.MetaDataRespository>();
+                services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
             }
         }
 

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Bit.Core.Repositories
 {
-    public interface IMetaDataRespository
+    public interface IMetaDataRepository
     {
         Task DeleteAsync(string objectName, string id);
         Task<IDictionary<string, string>> GetAsync(string objectName, string id);

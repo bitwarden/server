@@ -8,15 +8,15 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Bit.Core.Repositories.TableStorage
 {
-    public class MetaDataRespository : IMetaDataRespository
+    public class MetaDataRepository : IMetaDataRepository
     {
         private readonly CloudTable _table;
 
-        public MetaDataRespository(GlobalSettings globalSettings)
+        public MetaDataRepository(GlobalSettings globalSettings)
             : this(globalSettings.Events.ConnectionString)
         { }
 
-        public MetaDataRespository(string storageConnectionString)
+        public MetaDataRepository(string storageConnectionString)
         {
             var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
             var tableClient = storageAccount.CreateCloudTableClient();

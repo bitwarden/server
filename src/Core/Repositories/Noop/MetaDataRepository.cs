@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Bit.Core.Repositories.Noop
 {
-    public class MetaDataRepository : IMetaDataRespository
+    public class MetaDataRepository : IMetaDataRepository
     {
         public Task DeleteAsync(string objectName, string id)
         {
