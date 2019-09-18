@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 
 namespace Bit.Billing.Models
@@ -16,20 +19,47 @@ namespace Bit.Billing.Models
         public AppleReceipt Receipt { get; set; }
         [JsonProperty("latest_receipt_info")]
         public List<AppleTransaction> LatestReceiptInfo { get; set; }
-        /*
-        [JsonProperty("latest_expired_receipt_info")]
-        public AppleReceipt LatestExpiredReceiptInfo { get; set; }
-        [JsonProperty("auto_renew_status")]
-        public string AutoRenewStatus { get; set; }
-        [JsonProperty("auto_renew_product_id")]
-        public string AutoRenewProductId { get; set; }
-        [JsonProperty("notification_type")]
-        public string NotificationType { get; set; }
-        [JsonProperty("expiration_intent")]
-        public string ExpirationIntent { get; set; }
-        [JsonProperty("is_in_billing_retry_period")]
-        public string IsInBillingRetryPeriod { get; set; }
-        */
+        [JsonProperty("pending_renewal_info")]
+        public AppleRenewalInfo PendingRenewalInfo { get; set; }
+
+        public string GetOriginalTransactionId()
+        {
+            return LatestReceiptInfo?.LastOrDefault()?.OriginalTransactionId;
+        }
+
+        public string GetLastTransactionId()
+        {
+            return LatestReceiptInfo?.LastOrDefault()?.TransactionId;
+        }
+
+        public AppleTransaction GetLastTransaction()
+        {
+            return LatestReceiptInfo?.LastOrDefault();
+        }
+
+        public DateTime? GetLastExpiresDate()
+        {
+            return LatestReceiptInfo?.LastOrDefault()?.ExpiresDate;
+        }
+
+        public string GetReceiptData()
+        {
+            return LatestReceipt;
+        }
+
+        public Transaction BuildTransactionFromLastTransaction(decimal amount, Guid userId)
+        {
+            return new Transaction
+            {
+                Amount = amount,
+                CreationDate = GetLastTransaction().PurchaseDate,
+                Gateway = GatewayType.AppStore,
+                GatewayId = GetLastTransactionId(),
+                UserId = userId,
+                PaymentMethodType = PaymentMethodType.AppleInApp,
+                Details = GetLastTransactionId()
+            };
+        }
 
         public class AppleReceipt
         {
@@ -41,6 +71,22 @@ namespace Bit.Billing.Models
             public DateTime ReceiptCreationDate { get; set; }
             [JsonProperty("in_app")]
             public List<AppleTransaction> InApp { get; set; }
+        }
+
+        public class AppleRenewalInfo
+        {
+            [JsonProperty("expiration_intent")]
+            public string ExpirationIntent { get; set; }
+            [JsonProperty("auto_renew_product_id")]
+            public string AutoRenewProductId { get; set; }
+            [JsonProperty("original_transaction_id")]
+            public string OriginalTransactionId { get; set; }
+            [JsonProperty("is_in_billing_retry_period")]
+            public string IsInBillingRetryPeriod { get; set; }
+            [JsonProperty("product_id")]
+            public string ProductId { get; set; }
+            [JsonProperty("auto_renew_status")]
+            public string AutoRenewStatus { get; set; }
         }
 
         public class AppleTransaction
