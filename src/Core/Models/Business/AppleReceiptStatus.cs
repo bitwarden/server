@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Bit.Billing.Models
 {
@@ -20,7 +22,7 @@ namespace Bit.Billing.Models
         [JsonProperty("latest_receipt_info")]
         public List<AppleTransaction> LatestReceiptInfo { get; set; }
         [JsonProperty("pending_renewal_info")]
-        public AppleRenewalInfo PendingRenewalInfo { get; set; }
+        public List<AppleRenewalInfo> PendingRenewalInfo { get; set; }
 
         public string GetOriginalTransactionId()
         {
@@ -67,7 +69,8 @@ namespace Bit.Billing.Models
             public string ReceiptType { get; set; }
             [JsonProperty("bundle_id")]
             public string BundleId { get; set; }
-            [JsonProperty("receipt_creation_date")]
+            [JsonProperty("receipt_creation_date_ms")]
+            [JsonConverter(typeof(MsEpochConverter))]
             public DateTime ReceiptCreationDate { get; set; }
             [JsonProperty("in_app")]
             public List<AppleTransaction> InApp { get; set; }
@@ -99,14 +102,30 @@ namespace Bit.Billing.Models
             public string TransactionId { get; set; }
             [JsonProperty("original_transaction_id")]
             public string OriginalTransactionId { get; set; }
-            [JsonProperty("purchase_date")]
+            [JsonProperty("purchase_date_ms")]
+            [JsonConverter(typeof(MsEpochConverter))]
             public DateTime PurchaseDate { get; set; }
-            [JsonProperty("original_purchase_date")]
+            [JsonProperty("original_purchase_date_ms")]
+            [JsonConverter(typeof(MsEpochConverter))]
             public DateTime OriginalPurchaseDate { get; set; }
-            [JsonProperty("expires_date")]
+            [JsonProperty("expires_date_ms")]
+            [JsonConverter(typeof(MsEpochConverter))]
             public DateTime ExpiresDate { get; set; }
             [JsonProperty("web_order_line_item_id")]
             public string WebOrderLineItemId { get; set; }
+        }
+
+        public class MsEpochConverter : DateTimeConverterBase
+        {
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                writer.WriteRawValue(CoreHelpers.ToEpocMilliseconds((DateTime)value).ToString());
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                return CoreHelpers.FromEpocMilliseconds(long.Parse(reader.Value.ToString()));
+            }
         }
     }
 }
