@@ -34,47 +34,7 @@ namespace Bit.Core.Services.Implementations
             _logger = logger;
         }
 
-        public async Task<bool> VerifyReceiptAsync(string receiptData)
-        {
-            var receiptStatus = await GetVerifiedReceiptStatusAsync(receiptData);
-            return receiptStatus != null;
-        }
-
-        public async Task<string> GetVerifiedLastTransactionIdAsync(string receiptData)
-        {
-            var receiptStatus = await GetVerifiedReceiptStatusAsync(receiptData);
-            return receiptStatus?.LatestReceiptInfo?.LastOrDefault()?.TransactionId;
-        }
-
-        public async Task<DateTime?> GetVerifiedLastExpiresDateAsync(string receiptData)
-        {
-            var receiptStatus = await GetVerifiedReceiptStatusAsync(receiptData);
-            return receiptStatus?.LatestReceiptInfo?.LastOrDefault()?.ExpiresDate;
-        }
-
-        public string HashReceipt(string receiptData)
-        {
-            using(var sha256 = SHA256.Create())
-            {
-                var hash = sha256.ComputeHash(Convert.FromBase64String(receiptData));
-                return BitConverter.ToString(hash).Replace("-", string.Empty);
-            }
-        }
-
-        public async Task SaveReceiptAsync(string receiptData)
-        {
-            var hash = HashReceipt(receiptData);
-            await _metaDataRespository.UpsertAsync("appleReceipt", hash,
-                new KeyValuePair<string, string>("data", receiptData));
-        }
-
-        public async Task<string> GetReceiptAsync(string hash)
-        {
-            var receipt = await _metaDataRespository.GetAsync("appleReceipt", hash);
-            return receipt != null && receipt.ContainsKey("data") ? receipt["data"] : null;
-        }
-
-        private async Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData)
+        public async Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData)
         {
             var receiptStatus = await GetReceiptStatusAsync(receiptData);
             if(receiptStatus?.Status != 0)
@@ -86,11 +46,39 @@ namespace Bit.Core.Services.Implementations
             var validProductBundle = receiptStatus.Receipt.BundleId == "com.bitwarden.desktop" ||
                 receiptStatus.Receipt.BundleId == "com.8bit.bitwarden";
             var validProduct = receiptStatus.LatestReceiptInfo.LastOrDefault()?.ProductId == "premium_annually";
-            if(validEnvironment && validProductBundle && validProduct)
+            if(validEnvironment && validProductBundle && validProduct &&
+                receiptStatus.GetOriginalTransactionId() != null &&
+                receiptStatus.GetLastTransactionId() != null)
             {
                 return receiptStatus;
             }
             return null;
+        }
+
+        public async Task SaveReceiptAsync(AppleReceiptStatus receiptStatus)
+        {
+            var originalTransactionId = receiptStatus.GetOriginalTransactionId();
+            if(string.IsNullOrWhiteSpace(originalTransactionId))
+            {
+                throw new Exception("OriginalTransactionId is null");
+            }
+            await _metaDataRespository.UpsertAsync("AppleReceipt", originalTransactionId,
+                new Dictionary<string, string>
+                {
+                    ["Data"] = receiptStatus.GetReceiptData(),
+                    ["UserId"] = receiptStatus.GetReceiptData()
+                });
+        }
+
+        public async Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId)
+        {
+            var receipt = await _metaDataRespository.GetAsync("AppleReceipt", originalTransactionId);
+            if(receipt == null)
+            {
+                return null;
+            }
+            return new Tuple<string, Guid?>(receipt.ContainsKey("Data") ? receipt["Data"] : null,
+                receipt.ContainsKey("UserId") ? new Guid(receipt["UserId"]) : (Guid?)null);
         }
 
         private async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,

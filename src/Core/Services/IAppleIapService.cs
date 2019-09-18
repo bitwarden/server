@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Billing.Models;
 
 namespace Bit.Core.Services
 {
     public interface IAppleIapService
     {
-        Task<bool> VerifyReceiptAsync(string receiptData);
-        Task<string> GetVerifiedLastTransactionIdAsync(string receiptData);
-        Task<DateTime?> GetVerifiedLastExpiresDateAsync(string receiptData);
-        string HashReceipt(string receiptData);
-        Task SaveReceiptAsync(string receiptData);
-        Task<string> GetReceiptAsync(string hash);
+        Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData);
+        Task SaveReceiptAsync(AppleReceiptStatus receiptStatus);
+        Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId);
     }
 }
