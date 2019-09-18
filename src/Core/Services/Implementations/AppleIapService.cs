@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
@@ -11,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Bit.Core.Services.Implementations
+namespace Bit.Core.Services
 {
     public class AppleIapService : IAppleIapService
     {
