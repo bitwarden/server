@@ -73,6 +73,7 @@ namespace Bit.Core
 
             var clientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
+            var orgApi = false;
             if(clientSubject != null)
             {
                 if(clientId?.StartsWith("installation.") ?? false)
@@ -87,6 +88,7 @@ namespace Bit.Core
                     if(Guid.TryParse(clientSubject, out var idGuid))
                     {
                         OrganizationId = idGuid;
+                        orgApi = true;
                     }
                 }
             }
@@ -102,6 +104,14 @@ namespace Bit.Core
                         Id = new Guid(c.Value),
                         Type = OrganizationUserType.Owner
                     }));
+            }
+            else if(orgApi && OrganizationId.HasValue)
+            {
+                Organizations.Add(new CurrentContentOrganization
+                {
+                    Id = OrganizationId.Value,
+                    Type = OrganizationUserType.Owner
+                });
             }
 
             if(claimsDict.ContainsKey("orgadmin"))
