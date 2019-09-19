@@ -442,7 +442,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("iap-check")]
-        public async Task PostIapCheck(IapCheckRequestModel model)
+        public async Task PostIapCheck([FromBody]IapCheckRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if(user == null)

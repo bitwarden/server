@@ -51,7 +51,8 @@ namespace Bit.Core.Repositories.TableStorage
             {
                 entity = new DictionaryEntity
                 {
-                    PartitionKey = id
+                    PartitionKey = $"{objectName}_{id}",
+                    RowKey = string.Empty
                 };
             }
             if(entity.ContainsKey(keyValuePair.Key))
@@ -66,7 +67,8 @@ namespace Bit.Core.Repositories.TableStorage
         {
             var entity = new DictionaryEntity
             {
-                PartitionKey = $"{objectName}_{id}"
+                PartitionKey = $"{objectName}_{id}",
+                RowKey = string.Empty
             };
             foreach(var item in dict)
             {
@@ -82,6 +84,7 @@ namespace Bit.Core.Repositories.TableStorage
                 await _table.ExecuteAsync(TableOperation.Delete(new DictionaryEntity
                 {
                     PartitionKey = $"{objectName}_{id}",
+                    RowKey = string.Empty,
                     ETag = "*"
                 }));
             }
