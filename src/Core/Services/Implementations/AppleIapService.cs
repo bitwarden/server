@@ -45,9 +45,11 @@ namespace Bit.Core.Services
             var validProductBundle = receiptStatus.Receipt.BundleId == "com.bitwarden.desktop" ||
                 receiptStatus.Receipt.BundleId == "com.8bit.bitwarden";
             var validProduct = receiptStatus.LatestReceiptInfo.LastOrDefault()?.ProductId == "premium_annually";
-            if(validEnvironment && validProductBundle && validProduct &&
-                receiptStatus.GetOriginalTransactionId() != null &&
-                receiptStatus.GetLastTransactionId() != null)
+            var validIds = receiptStatus.GetOriginalTransactionId() != null &&
+                receiptStatus.GetLastTransactionId() != null;
+            var validTransaction = receiptStatus.GetLastExpiresDate()
+                .GetValueOrDefault(DateTime.MinValue) > DateTime.UtcNow;
+            if(validEnvironment && validProductBundle && validProduct && validIds && validTransaction)
             {
                 return receiptStatus;
             }
