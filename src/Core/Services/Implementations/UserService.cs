@@ -751,6 +751,29 @@ namespace Bit.Core.Services
                 paymentIntentClientSecret);
         }
 
+        public async Task IapCheckAsync(User user, PaymentMethodType paymentMethodType)
+        {
+            if(paymentMethodType != PaymentMethodType.AppleInApp)
+            {
+                throw new BadRequestException("Payment method not supported for in-app purchases.");
+            }
+
+            if(user.Premium)
+            {
+                throw new BadRequestException("Already a premium user.");
+            }
+
+            if(!string.IsNullOrWhiteSpace(user.GatewayCustomerId))
+            {
+                var customerService = new Stripe.CustomerService();
+                var customer = await customerService.GetAsync(user.GatewayCustomerId);
+                if(customer != null && customer.Balance != 0)
+                {
+                    throw new BadRequestException("Customer balance cannot exist when using in-app purchases.");
+                }
+            }
+        }
+
         public async Task UpdateLicenseAsync(User user, UserLicense license)
         {
             if(!_globalSettings.SelfHosted)
