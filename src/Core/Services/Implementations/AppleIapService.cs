@@ -54,7 +54,7 @@ namespace Bit.Core.Services
             return null;
         }
 
-        public async Task SaveReceiptAsync(AppleReceiptStatus receiptStatus)
+        public async Task SaveReceiptAsync(AppleReceiptStatus receiptStatus, Guid userId)
         {
             var originalTransactionId = receiptStatus.GetOriginalTransactionId();
             if(string.IsNullOrWhiteSpace(originalTransactionId))
@@ -65,7 +65,7 @@ namespace Bit.Core.Services
                 new Dictionary<string, string>
                 {
                     ["Data"] = receiptStatus.GetReceiptData(),
-                    ["UserId"] = receiptStatus.GetReceiptData()
+                    ["UserId"] = userId.ToString()
                 });
         }
 
