@@ -377,7 +377,14 @@ namespace Bit.Core.Services
                     {
                         await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, true);
                     }
-                    catch { }
+                    catch(Exception e)
+                    {
+                        var message = e.Message.ToLowerInvariant();
+                        if(message.Contains("apple") || message.Contains("in-app"))
+                        {
+                            throw e;
+                        }
+                    }
                 }
                 try
                 {
@@ -534,7 +541,7 @@ namespace Bit.Core.Services
                                 appleReceipt.Item1);
                             if(verifiedAppleReceipt == null)
                             {
-                                throw new GatewayException("Failed to get Apple IAP receipt data.");
+                                throw new GatewayException("Failed to get Apple in-app purchase receipt data.");
                             }
                             subInvoiceMetadata.Add("appleReceipt", verifiedAppleReceipt.GetOriginalTransactionId());
                             var lastTransactionId = verifiedAppleReceipt.GetLastTransactionId();
@@ -1264,7 +1271,7 @@ namespace Bit.Core.Services
                 appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(paymentToken);
                 if(appleReceiptStatus == null)
                 {
-                    throw new GatewayException("Cannot verify apple in-app purchase.");
+                    throw new GatewayException("Cannot verify Apple in-app purchase.");
                 }
                 await VerifyAppleReceiptNotInUseAsync(appleReceiptStatus.GetOriginalTransactionId(), subscriber);
             }
@@ -1556,7 +1563,7 @@ namespace Bit.Core.Services
                 var existingUser = await _userRepository.GetByIdAsync(existingReceipt.Item2.Value);
                 if(existingUser != null)
                 {
-                    throw new GatewayException("Apple receipt already in use.");
+                    throw new GatewayException("Apple receipt already in use by another user.");
                 }
             }
         }
