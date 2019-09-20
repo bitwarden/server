@@ -9,21 +9,28 @@ using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using Bit.Billing.Models;
 
 namespace Bit.Core.Services
 {
     public class StripePaymentService : IPaymentService
     {
         private const string PremiumPlanId = "premium-annually";
+        private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
+        private const decimal PremiumPlanAppleIapPrice = 14.99M;
         private const string StoragePlanId = "storage-gb-annually";
 
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IAppleIapService _appleIapService;
         private readonly ILogger<StripePaymentService> _logger;
         private readonly Braintree.BraintreeGateway _btGateway;
 
         public StripePaymentService(
             ITransactionRepository transactionRepository,
+            IUserRepository userRepository,
             GlobalSettings globalSettings,
+            IAppleIapService appleIapService,
             ILogger<StripePaymentService> logger)
         {
             _btGateway = new Braintree.BraintreeGateway
@@ -35,6 +42,8 @@ namespace Bit.Core.Services
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
             _transactionRepository = transactionRepository;
+            _userRepository = userRepository;
+            _appleIapService = appleIapService;
             _logger = logger;
         }
 
@@ -329,9 +338,14 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Your account does not have any credit available.");
             }
-            if(paymentMethodType == PaymentMethodType.BankAccount)
+            if(paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.GoogleInApp)
             {
-                throw new GatewayException("Bank account payment method is not supported at this time.");
+                throw new GatewayException("Payment method is not supported at this time.");
+            }
+            if((paymentMethodType == PaymentMethodType.GoogleInApp ||
+                paymentMethodType == PaymentMethodType.AppleInApp) && additionalStorageGb > 0)
+            {
+                throw new BadRequestException("You cannot add storage with this payment method.");
             }
 
             var customerService = new CustomerService();
@@ -361,7 +375,7 @@ namespace Bit.Core.Services
                 {
                     try
                     {
-                        await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
+                        await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, true);
                     }
                     catch { }
                 }
@@ -396,6 +410,18 @@ namespace Bit.Core.Services
 
                     braintreeCustomer = customerResult.Target;
                     stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+                }
+                else if(paymentMethodType == PaymentMethodType.AppleInApp)
+                {
+                    var verifiedReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(paymentToken);
+                    if(verifiedReceiptStatus == null)
+                    {
+                        throw new GatewayException("Cannot verify apple in-app purchase.");
+                    }
+                    var receiptOriginalTransactionId = verifiedReceiptStatus.GetOriginalTransactionId();
+                    await VerifyAppleReceiptNotInUseAsync(receiptOriginalTransactionId, user);
+                    await _appleIapService.SaveReceiptAsync(verifiedReceiptStatus, user.Id);
+                    stripeCustomerMetadata.Add("appleReceipt", receiptOriginalTransactionId);
                 }
                 else if(!stripePaymentMethod)
                 {
@@ -434,7 +460,7 @@ namespace Bit.Core.Services
 
             subCreateOptions.Items.Add(new SubscriptionItemOption
             {
-                PlanId = PremiumPlanId,
+                PlanId = paymentMethodType == PaymentMethodType.AppleInApp ? PremiumPlanAppleIapId : PremiumPlanId,
                 Quantity = 1,
             });
 
@@ -473,6 +499,7 @@ namespace Bit.Core.Services
         {
             var addedCreditToStripeCustomer = false;
             Braintree.Transaction braintreeTransaction = null;
+            Transaction appleTransaction = null;
             var invoiceService = new InvoiceService();
             var customerService = new CustomerService();
 
@@ -490,9 +517,39 @@ namespace Bit.Core.Services
 
                     if(previewInvoice.AmountDue > 0)
                     {
+                        var appleReceiptOrigTransactionId = customer.Metadata != null &&
+                            customer.Metadata.ContainsKey("appleReceipt") ? customer.Metadata["appleReceipt"] : null;
                         var braintreeCustomerId = customer.Metadata != null &&
                             customer.Metadata.ContainsKey("btCustomerId") ? customer.Metadata["btCustomerId"] : null;
-                        if(!string.IsNullOrWhiteSpace(braintreeCustomerId))
+                        if(!string.IsNullOrWhiteSpace(appleReceiptOrigTransactionId))
+                        {
+                            if(!subcriber.IsUser())
+                            {
+                                throw new GatewayException("In-app purchase is only allowed for users.");
+                            }
+
+                            var appleReceipt = await _appleIapService.GetReceiptAsync(
+                                appleReceiptOrigTransactionId);
+                            var verifiedAppleReceipt = await _appleIapService.GetVerifiedReceiptStatusAsync(
+                                appleReceipt.Item1);
+                            if(verifiedAppleReceipt == null)
+                            {
+                                throw new GatewayException("Failed to get Apple IAP receipt data.");
+                            }
+                            subInvoiceMetadata.Add("appleReceipt", verifiedAppleReceipt.GetOriginalTransactionId());
+                            var lastTransactionId = verifiedAppleReceipt.GetLastTransactionId();
+                            subInvoiceMetadata.Add("appleReceiptTransactionId", lastTransactionId);
+                            var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                                GatewayType.AppStore, lastTransactionId);
+                            if(existingTransaction == null)
+                            {
+                                appleTransaction = verifiedAppleReceipt.BuildTransactionFromLastTransaction(
+                                    PremiumPlanAppleIapPrice, subcriber.Id);
+                                appleTransaction.Type = TransactionType.Charge;
+                                await _transactionRepository.CreateAsync(appleTransaction);
+                            }
+                        }
+                        else if(!string.IsNullOrWhiteSpace(braintreeCustomerId))
                         {
                             var btInvoiceAmount = (previewInvoice.AmountDue / 100M);
                             var transactionResult = await _btGateway.Transaction.SaleAsync(
@@ -523,17 +580,17 @@ namespace Bit.Core.Services
                             subInvoiceMetadata.Add("btTransactionId", braintreeTransaction.Id);
                             subInvoiceMetadata.Add("btPayPalTransactionId",
                                 braintreeTransaction.PayPalDetails.AuthorizationId);
-
-                            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
-                            {
-                                Balance = customer.Balance - previewInvoice.AmountDue
-                            });
-                            addedCreditToStripeCustomer = true;
                         }
                         else
                         {
                             throw new GatewayException("No payment was able to be collected.");
                         }
+
+                        await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                        {
+                            Balance = customer.Balance - previewInvoice.AmountDue
+                        });
+                        addedCreditToStripeCustomer = true;
                     }
                 }
                 else if(paymentMethodType == PaymentMethodType.Credit)
@@ -606,6 +663,10 @@ namespace Bit.Core.Services
                 if(braintreeCustomer != null)
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
+                }
+                if(appleTransaction != null)
+                {
+                    await _transactionRepository.DeleteAsync(appleTransaction);
                 }
 
                 if(e is StripeException strEx &&
@@ -701,7 +762,10 @@ namespace Bit.Core.Services
                 paymentIntentClientSecret = result.Item2;
             }
 
-            await subUpdateAction(!invoicedNow);
+            if(subUpdateAction != null)
+            {
+                await subUpdateAction(!invoicedNow);
+            }
             return paymentIntentClientSecret;
         }
 
@@ -767,6 +831,18 @@ namespace Bit.Core.Services
         public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
         {
+            var customerService = new CustomerService();
+            var customerOptions = new CustomerGetOptions();
+            customerOptions.AddExpand("default_source");
+            customerOptions.AddExpand("invoice_settings.default_payment_method");
+            var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
+            var usingInAppPaymentMethod = customer.Metadata.ContainsKey("appleReceipt");
+            if(usingInAppPaymentMethod)
+            {
+                throw new BadRequestException("Cannot perform this action with in-app purchase payment method. " +
+                    "Contact support.");
+            }
+
             var invoiceService = new InvoiceService();
             var invoiceItemService = new InvoiceItemService();
             string paymentIntentClientSecret = null;
@@ -792,12 +868,6 @@ namespace Bit.Core.Services
             {
                 // Owes more than prorateThreshold on next invoice.
                 // Invoice them and pay now instead of waiting until next billing cycle.
-
-                var customerService = new CustomerService();
-                var customerOptions = new CustomerGetOptions();
-                customerOptions.AddExpand("default_source");
-                customerOptions.AddExpand("invoice_settings.default_payment_method");
-                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
 
                 string cardPaymentMethodId = null;
                 var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
@@ -984,6 +1054,16 @@ namespace Bit.Core.Services
                 throw new GatewayException("No subscription.");
             }
 
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                if(customer.Metadata.ContainsKey("appleReceipt"))
+                {
+                    throw new BadRequestException("You are required to manage your subscription from the app store.");
+                }
+            }
+
             var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
             if(sub == null)
@@ -1052,7 +1132,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-            string paymentToken)
+            string paymentToken, bool allowInAppPurchases = false)
         {
             if(subscriber == null)
             {
@@ -1066,18 +1146,31 @@ namespace Bit.Core.Services
             }
 
             var createdCustomer = false;
+            AppleReceiptStatus appleReceiptStatus = null;
             Braintree.Customer braintreeCustomer = null;
             string stipeCustomerSourceToken = null;
             string stipeCustomerPaymentMethodId = null;
             var stripeCustomerMetadata = new Dictionary<string, string>();
             var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
                 paymentMethodType == PaymentMethodType.BankAccount;
+            var inAppPurchase = paymentMethodType == PaymentMethodType.AppleInApp ||
+                paymentMethodType == PaymentMethodType.GoogleInApp;
 
             var cardService = new CardService();
             var bankSerice = new BankAccountService();
             var customerService = new CustomerService();
             var paymentMethodService = new PaymentMethodService();
             Customer customer = null;
+
+            if(!allowInAppPurchases && inAppPurchase)
+            {
+                throw new GatewayException("In-app purchase payment method is not allowed.");
+            }
+
+            if(!subscriber.IsUser() && inAppPurchase)
+            {
+                throw new GatewayException("In-app purchase payment method is only allowed for users.");
+            }
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
@@ -1086,6 +1179,16 @@ namespace Bit.Core.Services
                 {
                     stripeCustomerMetadata = customer.Metadata;
                 }
+            }
+
+            if(inAppPurchase && customer != null && customer.Balance != 0)
+            {
+                throw new GatewayException("Customer balance cannot exist when using in-app purchases.");
+            }
+
+            if(!inAppPurchase && customer != null && stripeCustomerMetadata.ContainsKey("appleReceipt"))
+            {
+                throw new GatewayException("Cannot change from in-app payment method. Contact support.");
             }
 
             var hadBtCustomer = stripeCustomerMetadata.ContainsKey("btCustomerId");
@@ -1156,6 +1259,15 @@ namespace Bit.Core.Services
                     braintreeCustomer = customerResult.Target;
                 }
             }
+            else if(paymentMethodType == PaymentMethodType.AppleInApp)
+            {
+                appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(paymentToken);
+                if(appleReceiptStatus == null)
+                {
+                    throw new GatewayException("Cannot verify apple in-app purchase.");
+                }
+                await VerifyAppleReceiptNotInUseAsync(appleReceiptStatus.GetOriginalTransactionId(), subscriber);
+            }
             else
             {
                 throw new GatewayException("Payment method is not supported at this time.");
@@ -1173,6 +1285,12 @@ namespace Bit.Core.Services
             else if(!string.IsNullOrWhiteSpace(braintreeCustomer?.Id))
             {
                 stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+            }
+
+            if(appleReceiptStatus != null)
+            {
+                stripeCustomerMetadata.Add("appleReceipt", appleReceiptStatus.GetOriginalTransactionId());
+                await _appleIapService.SaveReceiptAsync(appleReceiptStatus, subscriber.Id);
             }
 
             try
@@ -1328,7 +1446,14 @@ namespace Bit.Core.Services
                 {
                     billingInfo.Balance = customer.Balance / 100M;
 
-                    if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
+                    if(customer.Metadata?.ContainsKey("appleReceipt") ?? false)
+                    {
+                        billingInfo.PaymentSource = new BillingInfo.BillingSource
+                        {
+                            Type = PaymentMethodType.AppleInApp
+                        };
+                    }
+                    else if(customer.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
                         try
                         {
@@ -1377,11 +1502,19 @@ namespace Bit.Core.Services
         public async Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber)
         {
             var subscriptionInfo = new SubscriptionInfo();
-            var subscriptionService = new SubscriptionService();
-            var invoiceService = new InvoiceService();
+
+            if(subscriber.IsUser() && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+                subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
+            }
 
             if(!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
             {
+                var subscriptionService = new SubscriptionService();
+                var invoiceService = new InvoiceService();
+
                 var sub = await subscriptionService.GetAsync(subscriber.GatewaySubscriptionId);
                 if(sub != null)
                 {
@@ -1413,6 +1546,19 @@ namespace Bit.Core.Services
             var cardPaymentMethods = paymentMethodService.ListAutoPaging(
                 new PaymentMethodListOptions { CustomerId = customerId, Type = "card" });
             return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
+        }
+
+        private async Task VerifyAppleReceiptNotInUseAsync(string receiptOriginalTransactionId, ISubscriber subscriber)
+        {
+            var existingReceipt = await _appleIapService.GetReceiptAsync(receiptOriginalTransactionId);
+            if(existingReceipt != null && existingReceipt.Item2.HasValue && existingReceipt.Item2 != subscriber.Id)
+            {
+                var existingUser = await _userRepository.GetByIdAsync(existingReceipt.Item2.Value);
+                if(existingUser != null)
+                {
+                    throw new GatewayException("Apple receipt already in use.");
+                }
+            }
         }
     }
 }

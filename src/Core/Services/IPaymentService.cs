@@ -19,7 +19,7 @@ namespace Bit.Core.Services
         Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
         Task ReinstateSubscriptionAsync(ISubscriber subscriber);
         Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-            string paymentToken);
+            string paymentToken, bool allowInAppPurchases = false);
         Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
         Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
         Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
