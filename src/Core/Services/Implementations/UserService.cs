@@ -210,7 +210,7 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    await CancelPremiumAsync(user);
+                    await CancelPremiumAsync(user, null, true);
                 }
                 catch(GatewayException) { }
             }
@@ -835,7 +835,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
+        public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false)
         {
             var eop = endOfPeriod.GetValueOrDefault(true);
             if(!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
@@ -843,7 +843,7 @@ namespace Bit.Core.Services
             {
                 eop = false;
             }
-            await _paymentService.CancelSubscriptionAsync(user, eop);
+            await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
         }
 
         public async Task ReinstatePremiumAsync(User user)

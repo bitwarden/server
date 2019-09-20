@@ -1049,7 +1049,8 @@ namespace Bit.Core.Services
             return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
         }
 
-        public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
+        public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
+            bool skipInAppPurchaseCheck = false)
         {
             if(subscriber == null)
             {
@@ -1061,7 +1062,7 @@ namespace Bit.Core.Services
                 throw new GatewayException("No subscription.");
             }
 
-            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            if(!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId) && !skipInAppPurchaseCheck)
             {
                 var customerService = new CustomerService();
                 var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
