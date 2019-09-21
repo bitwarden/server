@@ -380,7 +380,7 @@ namespace Bit.Api.Controllers
             }
 
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if(!_currentContext.OrganizationAdmin(orgIdGuid) && !_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
