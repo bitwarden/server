@@ -1297,7 +1297,20 @@ namespace Bit.Core.Services
 
             if(appleReceiptStatus != null)
             {
-                stripeCustomerMetadata.Add("appleReceipt", appleReceiptStatus.GetOriginalTransactionId());
+                var originalTransactionId = appleReceiptStatus.GetOriginalTransactionId();
+                if(stripeCustomerMetadata.ContainsKey("appleReceipt"))
+                {
+                    if(originalTransactionId != stripeCustomerMetadata["appleReceipt"])
+                    {
+                        var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
+                        stripeCustomerMetadata.Add($"appleReceipt_{nowSec}", stripeCustomerMetadata["appleReceipt"]);
+                    }
+                    stripeCustomerMetadata["appleReceipt"] = originalTransactionId;
+                }
+                else
+                {
+                    stripeCustomerMetadata.Add("appleReceipt", originalTransactionId);
+                }
                 await _appleIapService.SaveReceiptAsync(appleReceiptStatus, subscriber.Id);
             }
 
