@@ -53,7 +53,7 @@ namespace Bit.Billing.Controllers
             try
             {
                 var json = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(body), Formatting.Indented);
-                _logger.LogInformation("Apple IAP Notification:\n\n" + Constants.BypassFiltersEventId, json);
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
                 return new OkResult();
             }
             catch(Exception e)
