@@ -43,21 +43,6 @@ then
     echo $LGID >>$ENV_DIR/uid.env
 fi
 
-# Backwards compat GID/UID for pre-1.20.0 installations
-if [[ "$COREVERSION" == *.*.* ]] &&
-   echo -e "1.19.0\n$COREVERSION" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -n | awk 'END {if($0!="1.19.0") {exit 1}}'
-then
-    LUID="LOCAL_UID=`id -u $USER`"
-    LGID="LOCAL_GID=`awk -F: '$1=="docker" {print $3}' /etc/group`"
-    if [ "$OS" == "mac" ]
-    then
-        LUID="LOCAL_UID=999"
-        LGID="LOCAL_GID=999"
-    fi
-    echo $LUID >$ENV_DIR/uid.env
-    echo $LGID >>$ENV_DIR/uid.env
-fi
-
 # Functions
 
 function install() {
