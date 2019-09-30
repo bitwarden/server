@@ -140,7 +140,10 @@ function updateLetsEncrypt() {
 
 function updateDatabase() {
     pullSetup
-    docker run -i --rm --name setup --network container:bitwarden-mssql \
+    # Admin may have tuned the container name
+    MSSQL_NAME=$(awk -F': *' '/^  mssql:/ {r=1; next} {if(r==1 && ! /^    /){r=0}; if(r==1 && /^    container_name:/) {print $2}}' $DOCKER_DIR/docker-compose.override.yml 2>/dev/null)
+    [ ! "$MSSQL_NAME" ] && MSSQL_NAME=bitwarden-mssql
+    docker run -i --rm --name setup --network container:$MSSQL_NAME \
         -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
     echo "Database update complete"
