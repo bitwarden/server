@@ -40,7 +40,8 @@ namespace Bit.Core.Services
             {
                 return null;
             }
-            var validEnvironment = (!_hostingEnvironment.IsProduction() && receiptStatus.Environment == "Sandbox") ||
+            var validEnvironment = _globalSettings.AppleIap.AppInReview ||
+                (!_hostingEnvironment.IsProduction() && receiptStatus.Environment == "Sandbox") ||
                 (_hostingEnvironment.IsProduction() && receiptStatus.Environment != "Sandbox");
             var validProductBundle = receiptStatus.Receipt.BundleId == "com.bitwarden.desktop" ||
                 receiptStatus.Receipt.BundleId == "com.8bit.bitwarden";
@@ -95,7 +96,7 @@ namespace Bit.Core.Services
 
                 var url = string.Format("https://{0}.itunes.apple.com/verifyReceipt", prod ? "buy" : "sandbox");
                 var json = new JObject(new JProperty("receipt-data", receiptData),
-                   new JProperty("password", _globalSettings.AppleIapPassword)).ToString();
+                   new JProperty("password", _globalSettings.AppleIap.Password)).ToString();
 
                 var response = await _httpClient.PostAsync(url, new StringContent(json));
                 if(response.IsSuccessStatusCode)

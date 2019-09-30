@@ -18,7 +18,6 @@ namespace Bit.Core
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
-        public virtual string AppleIapPassword { get; set; }
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
@@ -39,6 +38,7 @@ namespace Bit.Core
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
+        public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
 
         public class BaseServiceUriSettings
         {
@@ -218,6 +218,12 @@ namespace Bit.Core
         {
             public string ApplicationCacheTopicName { get; set; }
             public string ApplicationCacheSubscriptionName { get; set; }
+        }
+
+        public class AppleIapSettings
+        {
+            public string Password { get; set; }
+            public bool AppInReview { get; set; }
         }
     }
 }
