@@ -115,7 +115,9 @@ function Update-Lets-Encrypt {
 
 function Update-Database {
     Pull-Setup
-    docker run -it --rm --name setup --network container:bitwarden-mssql `
+    Docker-Compose-Files
+    $mssqlId = docker-compose ps -q mssql
+    docker run -it --rm --name setup --network container:$mssqlId `
         -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
     Write-Line "Database update complete"
