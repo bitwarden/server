@@ -170,7 +170,6 @@ function restart() {
     dockerComposePull
     updateLetsEncrypt
     dockerComposeUp
-    dockerPrune
     printEnvironment
 }
 
@@ -200,6 +199,7 @@ then
     dockerComposeDown
     update withpull
     restart
+    dockerPrune
     echo "Pausing 60 seconds for database to come online. Please wait..."
     sleep 60
     updateDatabase

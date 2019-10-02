@@ -142,7 +142,6 @@ function Restart {
     Docker-Compose-Pull
     Update-Lets-Encrypt
     Docker-Compose-Up
-    Docker-Prune
     Print-Environment
 }
 
@@ -177,6 +176,7 @@ elseif ($update) {
     Docker-Compose-Down
     Update -withpull
     Restart
+    Docker-Prune
     Write-Line "Pausing 60 seconds for database to come online. Please wait..."
     Start-Sleep -s 60
     Update-Database
