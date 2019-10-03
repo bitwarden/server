@@ -7,6 +7,7 @@ param (
     [switch] $restart,
     [switch] $stop,
     [switch] $pull,
+    [switch] $updateconf,
     [switch] $updatedb,
     [switch] $update
 )
@@ -168,6 +169,10 @@ elseif ($pull) {
 }
 elseif ($stop) {
     Docker-Compose-Down
+}
+elseif ($updateconf) {
+    Docker-Compose-Down
+    Update -withpull
 }
 elseif ($updatedb) {
     Update-Database
