@@ -5,6 +5,7 @@ param (
     [switch] $stop,
     [switch] $update,
     [switch] $rebuild,
+    [switch] $updateconf,
     [switch] $updatedb,
     [switch] $updateself,
     [string] $output = ""
@@ -101,6 +102,10 @@ elseif ($update) {
 elseif ($rebuild) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -rebuild -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
+}
+elseif ($updateconf) {
+    Check-Output-Dir-Exists
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -updateconf -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($updatedb) {
     Check-Output-Dir-Exists
