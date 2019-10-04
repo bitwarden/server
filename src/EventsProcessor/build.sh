@@ -8,11 +8,11 @@ echo -e "\n## Building Event Processor"
 echo -e "\nBuilding app"
 echo ".NET Core version $(dotnet --version)"
 echo "Restore"
-dotnet restore $DIR/Icons.csproj
+dotnet restore $DIR/EventsProcessor.csproj
 echo "Clean"
-dotnet clean $DIR/Icons.csproj -c "Release" -o $DIR/obj/Docker/publish
+dotnet clean $DIR/EventsProcessor.csproj -c "Release" -o $DIR/obj/Docker/publish
 echo "Publish"
-dotnet publish $DIR/Icons.csproj -c "Release" -o $DIR/obj/Docker/publish
+dotnet publish $DIR/EventsProcessor.csproj -c "Release" -o $DIR/obj/Docker/publish
 
 if [ "$1" != "nodocker" ]
 then
