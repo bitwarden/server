@@ -914,7 +914,7 @@ namespace Bit.Core.Services
             return orgUsers;
         }
 
-        public async Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId)
+        public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId ||

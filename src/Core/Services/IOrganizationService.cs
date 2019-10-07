@@ -33,7 +33,7 @@ namespace Bit.Core.Services
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
         Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<string> emails,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
-        Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId);
+        Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
         Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
