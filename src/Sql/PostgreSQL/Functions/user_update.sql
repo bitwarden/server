@@ -1,11 +1,11 @@
-drop function user_update(UUID,VARCHAR,VARCHAR,INT4,VARCHAR,VARCHAR,VARCHAR,VARCHAR,TEXT,VARCHAR,TEXT,TEXT,TIMESTAMPTZ,TEXT,TEXT,TEXT,INT4,TEXT,TEXT,INT8,INT2,INT2,VARCHAR,VARCHAR,VARCHAR,INT4,INT4,TIMESTAMPTZ,TIMESTAMPTZ);
+DROP FUNCTION IF EXISTS user_update(uuid,"varchar","varchar","bool","varchar","varchar","varchar","varchar","text","varchar","text","text","timestamptz","text","text","text",BOOLEAN,"timestamptz","timestamptz","int8","int2","int2","varchar","varchar","varchar","int4","int4","timestamptz","timestamptz")
 
 CREATE OR REPLACE FUNCTION user_update
 (
     _id                                 UUID,
     _name                               VARCHAR,
     _email                              VARCHAR,
-    _email_verified                     INT,
+    _email_verified                     BOOLEAN,
     _master_password                    VARCHAR,
     _master_password_hint               VARCHAR,
     _culture                            VARCHAR,
@@ -18,9 +18,9 @@ CREATE OR REPLACE FUNCTION user_update
     _key                                TEXT,
     _public_key                         TEXT,
     _private_key                        TEXT ,
-    _premium                            INT,
-    _premium_expiration_date            TEXT,
-    _renewal_reminder_date              TEXT,
+    _premium                            BOOLEAN,
+    _premium_expiration_date            TIMESTAMPTZ,
+    _renewal_reminder_date              TIMESTAMPTZ,
     _storage                            BIGINT,
     _max_storage_gb                     SMALLINT,
     _gateway                            SMALLINT,
@@ -42,7 +42,7 @@ begin
         "user"
     SET name = _name,
         email = _email,
-        email_verified = _email_verified::BIT,
+        email_verified = _email_verified,
         master_password = _master_password,
         master_password_hint = _master_password_hint,
         culture = _culture,
@@ -55,9 +55,9 @@ begin
         key = _key,
         public_key = _public_key,
         private_key = _private_key,
-        premium = _premium::BIT,
-        premium_expiration_date = _premium_expiration_date::TIMESTAMPTZ,
-        renewal_reminder_date = _renewal_reminder_date::TIMESTAMPTZ,
+        premium = _premium,
+        premium_expiration_date = _premium_expiration_date,
+        renewal_reminder_date = _renewal_reminder_date,
         storage = _storage,
         max_storage_gb = _max_storage_gb,
         gateway = _gateway,
