@@ -1,4 +1,4 @@
-﻿CREATE VIEW transaction_view
+﻿CREATE OR REPLACE VIEW transaction_view
 AS
 SELECT
     *

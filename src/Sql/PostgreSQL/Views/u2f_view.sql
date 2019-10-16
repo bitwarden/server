@@ -1,4 +1,4 @@
-CREATE VIEW u2f_view
+CREATE OR REPLACE VIEW u2f_view
 AS
 SELECT
     *

@@ -1,4 +1,4 @@
-﻿CREATE VIEW device_view
+﻿CREATE OR REPLACE VIEW device_view
 AS
 SELECT
     *
