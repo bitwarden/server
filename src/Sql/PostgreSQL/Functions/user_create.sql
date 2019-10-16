@@ -76,7 +76,7 @@ BEGIN
         _email,
         _email_verified,
         _master_password,
-        _master_password_hINT,
+        _master_password_hint,
         _culture,
         _security_stamp,
         _two_factor_providers,
