@@ -1,4 +1,4 @@
-DROP FUNCTION IF EXISTS user_create(uuid,"varchar","varchar","bool","varchar","varchar","varchar","varchar","text","varchar","text","text","timestamptz","text","text","text","bool","timestamptz","timestamptz","int8","int4","int4","varchar","varchar","varchar","int4","int4","timestamptz","timestamptz");
+DROP FUNCTION IF EXISTS user_create(UUID,VARCHAR,VARCHAR,BOOLEAN,VARCHAR,VARCHAR,VARCHAR,VARCHAR,TEXT,VARCHAR,TEXT,TEXT,TIMESTAMPTZ,TEXT,TEXT,TEXT,BOOLEAN,TIMESTAMPTZ,TIMESTAMPTZ,BIGINT,INT,INT,VARCHAR,VARCHAR,VARCHAR,INT,INT,TIMESTAMPTZ,TIMESTAMPTZ);
 
 CREATE OR REPLACE FUNCTION user_create
 (
@@ -91,8 +91,8 @@ BEGIN
         _premium_expiration_date,
         _renewal_reminder_date,
         _storage,
-        _max_storage_gb,
-        _gateway,
+        _max_storage_gb::SMALLINT,
+        _gateway::SMALLINT,
         _gateway_customer_id,
         _gateway_subscription_id,
         _license_key,
