@@ -129,6 +129,5 @@ server {
 {{/if}}
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
-    proxy_set_header Host $host:$server_port;
   }
 }
