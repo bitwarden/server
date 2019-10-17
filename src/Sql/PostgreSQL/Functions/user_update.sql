@@ -1,4 +1,4 @@
-DROP FUNCTION IF EXISTS user_update(UUID,VARCHAR,VARCHAR,BOOLEAN,VARCHAR,VARCHAR,VARCHAR,VARCHAR,TEXT,VARCHAR,TEXT,TEXT,TIMESTAMPTZ,TEXT,TEXT,TEXT,BOOLEAN,TIMESTAMPTZ,TIMESTAMPTZ,BIGINT,INT,INT,VARCHAR,VARCHAR,VARCHAR,INT,INT,TIMESTAMPTZ,TIMESTAMPTZ)
+DROP FUNCTION IF EXISTS user_update(UUID,VARCHAR,VARCHAR,BOOLEAN,VARCHAR,VARCHAR,VARCHAR,VARCHAR,TEXT,VARCHAR,TEXT,TEXT,TIMESTAMPTZ,TEXT,TEXT,TEXT,BOOLEAN,TIMESTAMPTZ,TIMESTAMPTZ,BIGINT,SMALLINT,SMALLINT,VARCHAR,VARCHAR,VARCHAR,SMALLINT,INT,TIMESTAMPTZ,TIMESTAMPTZ)
 
 CREATE OR REPLACE FUNCTION user_update
 (
@@ -22,12 +22,12 @@ CREATE OR REPLACE FUNCTION user_update
     _premium_expiration_date            TIMESTAMPTZ,
     _renewal_reminder_date              TIMESTAMPTZ,
     _storage                            BIGINT,
-    _max_storage_gb                     INT,
-    _gateway                            INT,
+    _max_storage_gb                     SMALLINT,
+    _gateway                            SMALLINT,
     _gateway_customer_id                VARCHAR,
     _gateway_subscription_id            VARCHAR,
     _license_key                        VARCHAR,
-    _kdf                                INT,
+    _kdf                                SMALLINT,
     _kdf_iterations                     INT,
     _creation_date                      TIMESTAMPTZ,
     _revision_date                      TIMESTAMPTZ
@@ -59,12 +59,12 @@ begin
         premium_expiration_date = _premium_expiration_date,
         renewal_reminder_date = _renewal_reminder_date,
         storage = _storage,
-        max_storage_gb = _max_storage_gb::SMALLINT,
-        gateway = _gateway::SMALLINT,
+        max_storage_gb = _max_storage_gb,
+        gateway = _gateway,
         gateway_customer_id = _gateway_customer_id,
         gateway_subscription_id = _gateway_subscription_id,
         license_key = _license_key,
-        kdf = _kdf::SMALLINT,
+        kdf = _kdf,
         kdf_iterations = _kdf_iterations,
         creation_date = _creation_date,
         revision_date = _revision_date
