@@ -73,6 +73,21 @@ function checkOutputDirNotExists() {
     fi
 }
 
+function commandList() {
+cat << EOT
+Available commands:
+
+install
+update
+rebuild
+updateconf
+updatedb
+stop
+updateself
+
+EOT
+}
+
 # Commands
 
 if [ "$1" == "install" ]
@@ -109,6 +124,11 @@ then
 elif [ "$1" == "updateself" ]
 then
     downloadSelf && echo "Updated self." && exit
+elif [ "$1" == "help" ]
+then
+    commandList
 else
     echo "No command found."
+    echo
+    commandList
 fi
