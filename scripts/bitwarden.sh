@@ -73,17 +73,22 @@ function checkOutputDirNotExists() {
     fi
 }
 
-function commandList() {
+function listCommands() {
 cat << EOT
 Available commands:
 
 install
-update
-rebuild
-updateconf
-updatedb
+start
+restart
 stop
+update
+updatedb
 updateself
+updateconf
+rebuild
+help
+
+See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
 
 EOT
 }
@@ -126,9 +131,9 @@ then
     downloadSelf && echo "Updated self." && exit
 elif [ "$1" == "help" ]
 then
-    commandList
+    listCommands
 else
     echo "No command found."
     echo
-    commandList
+    listCommands
 fi

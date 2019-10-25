@@ -8,6 +8,7 @@ param (
     [switch] $updateconf,
     [switch] $updatedb,
     [switch] $updateself,
+    [switch] $help,
     [string] $output = ""
 )
 
@@ -47,6 +48,25 @@ function Check-Output-Dir-Not-Exists {
     if (Test-Path -Path "$output\docker") {
         throw "Looks like Bitwarden is already installed at $output."
     }
+}
+
+function List-Commands {
+    Write-Line "
+Available commands:
+
+-install
+-start
+-restart
+-stop
+-update
+-updatedb
+-updateself
+-updateconf
+-rebuild
+-help
+
+See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
+"
 }
 
 function Write-Line($str) {
@@ -119,6 +139,11 @@ elseif ($updateself) {
     Download-Self
     Write-Line "Updated self."
 }
+elseif ($help) {
+    List-Commands
+}
 else {
     Write-Line "No command found."
+    Write-Line ""
+    List-Commands
 }
