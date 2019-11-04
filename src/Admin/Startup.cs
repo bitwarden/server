@@ -72,7 +72,7 @@ namespace Bit.Admin
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
             // Jobs service
-            Jobs.JobsHostedService.AddJobsServices(services);
+            Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
             services.AddHostedService<Jobs.JobsHostedService>();
             if(globalSettings.SelfHosted)
             {
