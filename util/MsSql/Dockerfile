@@ -17,7 +17,7 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
-# Unfortunately above rule does not work (https://github.com/microsoft/mssql-docker/issues/312)
+# Unfortunately rule below does not work (https://github.com/microsoft/mssql-docker/issues/312)
 # Thankfully service does not have public network anymore
 # However telemetry should perhaps still impact performance
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
