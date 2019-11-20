@@ -32,6 +32,8 @@ services:
       - mssql.env
       - ../env/uid.env
       - ../env/mssql.override.env
+    networks:
+      - private
 
   web:
     image: bitwarden/web:{{{WebVersion}}}
@@ -42,6 +44,8 @@ services:
     env_file:
       - global.env
       - ../env/uid.env
+    networks:
+      - private
 
   attachments:
     image: bitwarden/attachments:{{{CoreVersion}}}
@@ -52,6 +56,8 @@ services:
     env_file:
       - global.env
       - ../env/uid.env
+    networks:
+      - private
 
   api:
     image: bitwarden/api:{{{CoreVersion}}}
@@ -160,3 +166,7 @@ services:
 volumes:
   mssql_data:
 {{/if}}
+
+networks:
+  private:
+    internal: true
