@@ -17,10 +17,10 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
+# Unfortunately above rule does not work (https://github.com/microsoft/mssql-docker/issues/312)
+# Thankfully service does not have public network anymore
+# However telemetry should perhaps still impact performance
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
-# As the setting above does not work, let's use the workaround below
-RUN echo 127.0.0.1 settings-win.data.microsoft.com >> /etc/hosts
-RUN echo 127.0.0.1 vortex.data.microsoft.com >> /etc/hosts
 
 HEALTHCHECK --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
     -S localhost -U sa -P ${SA_PASSWORD} -Q "SELECT 1" || exit 1
