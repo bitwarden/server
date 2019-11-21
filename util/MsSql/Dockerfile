@@ -4,12 +4,9 @@ LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        cron \
         gosu \
     && rm -rf /var/lib/apt/lists/*
 
-COPY crontab /etc/cron.d/bitwarden-cron
-RUN chmod 0644 /etc/cron.d/bitwarden-cron
 COPY backup-db.sql /
 COPY backup-db.sh /
 COPY entrypoint.sh /
