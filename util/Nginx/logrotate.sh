@@ -1,6 +1,6 @@
 #!/bin/sh
 
-while [ "$NGINX_LOGROTATE" != "0" ]
+while true
 do
   sleep $((24 * 3600 - (`date +%H` * 3600 + `date +%M` * 60 + `date +%S`)))
   ts=$(date +%Y%m%d_%H%M%S)
