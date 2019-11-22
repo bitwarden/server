@@ -6,6 +6,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         cron \
         gosu \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY crontab /etc/cron.d/bitwarden-cron
