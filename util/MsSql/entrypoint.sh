@@ -52,8 +52,11 @@ chown -R $USERNAME:$GROUPNAME /var/opt/mssql
 chown $USERNAME:$GROUPNAME /backup-db.sh
 chown $USERNAME:$GROUPNAME /backup-db.sql
 
-# Sounds like gosu keeps env when switching, but of course cron does not
-env > /etc/environment
-cron
+if [ "$BACKUP_DB" != "0" ]
+then
+    # Sounds like gosu keeps env when switching, but of course cron does not
+    env > /etc/environment
+    cron
+fi
 
 exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
