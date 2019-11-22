@@ -52,11 +52,6 @@ chown $USERNAME:$GROUPNAME /backup-db.sql
 # Launch a loop to backup database on a daily basis
 # User can disable this setting env SQL_BACKUP=0
 
-while [[ "$SQL_BACKUP" != "0" ]]
-do
-  sleep $((24 * 3600 - 60 - (`date +%H` * 3600 + `date +%M` * 60 + `date +%S`)))
-  su - bitwarden -s /bin/bash -c "/backup-db.sh >> /var/log/cron.log 2>&1"
-done &
-disown %1
+su - bitwarden -s /bin/sh -c "/backup-db.sh &"
 
 exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
