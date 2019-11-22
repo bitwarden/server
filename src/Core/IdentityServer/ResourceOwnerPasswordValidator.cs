@@ -220,8 +220,11 @@ namespace Bit.Core.IdentityServer
                     twoFactorRequest ? EventType.User_FailedLogIn2fa : EventType.User_FailedLogIn);
             }
 
-            _logger.LogWarning(Constants.BypassFiltersEventId, "Failed login attempt.{0}",
-                twoFactorRequest ? " 2FA invalid." : string.Empty);
+            if(_globalSettings.SelfHosted)
+            {
+                _logger.LogWarning(Constants.BypassFiltersEventId, "Failed login attempt{0}{1}",
+                    twoFactorRequest ? ", 2FA invalid." : ".", $" {_currentContext.IpAddress}");
+            }
             await Task.Delay(2000); // Delay for brute force.
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
                 customResponse: new Dictionary<string, object>
