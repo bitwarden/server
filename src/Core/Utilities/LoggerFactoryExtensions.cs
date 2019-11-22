@@ -77,11 +77,11 @@ namespace Bit.Core.Utilities
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
-                if(globalSettings.LogRoleBySizeLimit.HasValue)
+                if(globalSettings.LogRollBySizeLimit.HasValue)
                 {
                     config.WriteTo
                         .RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
-                            fileSizeLimitBytes: globalSettings.LogRoleBySizeLimit);
+                            fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
                 }
                 else
                 {
