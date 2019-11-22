@@ -13,6 +13,7 @@ COPY proxy.conf /etc/nginx
 COPY mime.types /etc/nginx
 COPY security-headers.conf /etc/nginx
 COPY security-headers-ssl.conf /etc/nginx
+COPY logrotate.sh /
 COPY entrypoint.sh /
 
 EXPOSE 8080
