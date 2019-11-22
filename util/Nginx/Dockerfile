@@ -18,7 +18,8 @@ COPY entrypoint.sh /
 EXPOSE 8080
 EXPOSE 8443
 
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && chmod +x /logrotate.sh
 
 HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
 
