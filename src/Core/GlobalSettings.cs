@@ -10,6 +10,7 @@ namespace Bit.Core
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
+        public virtual long? LogRoleBySizeLimit { get; set; }
         public virtual string LicenseDirectory { get; set; }
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
