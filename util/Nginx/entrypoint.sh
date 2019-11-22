@@ -42,7 +42,6 @@ chown -R $USERNAME:$GROUPNAME /var/cache/nginx
 chown -R $USERNAME:$GROUPNAME /var/log/nginx
 
 # Launch a loop to rotate nginx logs on a daily basis
-# User can disable this setting env NGINX_LOGROTATE=0
 
 su - bitwarden -s /bin/sh -c "/logrotate.sh &"
 
