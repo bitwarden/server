@@ -9,17 +9,14 @@ do
   export now=$(date +%Y%m%d_%H%M%S)
 
   # Do a new backup
-  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -i /backup-db.sql 2>&1 | tee /var/log/backup-db_$now.log
+  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -i /backup-db.sql 2>&1 | tee /var/opt/mssql/log/backup-db_$now.log
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
   find /etc/bitwarden/mssql/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
 
-  # Purge log files
-  find /var/log/ -mindepth 1 -type f -name 'backup-db_*.log' -mtime +32 -delete
-
-  # Remove the old cron log file (remove one day, as it will become useless)
-  find /var/log/ -mindepth 1 -type f -name 'cron.log' -mtime +32 -delete
+  # Purge our log files
+  find /var/opt/mssql/log/ -mindepth 1 -type f -name 'backup-db_*.log' -mtime +32 -delete
 
   # Break if called manually (without loop option)
   [ "$1" != "loop" ] && break
