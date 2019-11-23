@@ -42,9 +42,6 @@ fi
 
 # The rest...
 
-# ref: https://stackoverflow.com/a/38850273
-touch /var/log/cron.log /etc/crontab /etc/cron.*/*
-chown $USERNAME:$GROUPNAME /var/log/cron.log
 mkdir -p /etc/bitwarden/mssql/backups
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 mkdir -p /var/opt/mssql/data
@@ -52,8 +49,10 @@ chown -R $USERNAME:$GROUPNAME /var/opt/mssql
 chown $USERNAME:$GROUPNAME /backup-db.sh
 chown $USERNAME:$GROUPNAME /backup-db.sql
 
-# Sounds like gosu keeps env when switching, but of course cron does not
-env > /etc/environment
-cron
+# Launch a loop to backup database on a daily basis
+if [ "$BACKUP_DB" != "0" ]
+then
+    su - bitwarden -s /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
+fi
 
 exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
