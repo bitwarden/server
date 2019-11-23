@@ -43,6 +43,6 @@ chown -R $USERNAME:$GROUPNAME /var/log/nginx
 
 # Launch a loop to rotate nginx logs on a daily basis
 
-su - bitwarden -s /bin/sh -c "/logrotate.sh loop &"
+su - bitwarden -s /bin/sh -c "/logrotate.sh loop >/dev/null 2>&1 &"
 
 exec gosu $USERNAME:$GROUPNAME nginx -g 'daemon off;'
