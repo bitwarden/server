@@ -11,5 +11,5 @@ do
   gzip /var/log/nginx/access.$ts.log
   gzip /var/log/nginx/error.$ts.log
   find /var/log/nginx/ -name "*.gz" -mtime +32 -delete
-    [ "$1" != "loop" ] && break
+  [ "$1" != "loop" ] && break
 done
