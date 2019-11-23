@@ -4,12 +4,9 @@ LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        cron \
         gosu \
     && rm -rf /var/lib/apt/lists/*
 
-COPY crontab /etc/cron.d/bitwarden-cron
-RUN chmod 0644 /etc/cron.d/bitwarden-cron
 COPY backup-db.sql /
 COPY backup-db.sh /
 COPY entrypoint.sh /
@@ -17,6 +14,7 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
+# Does not work unfortunately (https://github.com/bitwarden/server/issues/286)
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 
 HEALTHCHECK --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
