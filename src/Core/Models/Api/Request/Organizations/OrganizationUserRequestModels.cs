@@ -31,13 +31,15 @@ namespace Bit.Core.Models.Api
             for(var i = 0; i < Emails.Count(); i++)
             {
                 var email = Emails.ElementAt(i);
-                if(!attr.IsValid(email))
+                if(!attr.IsValid(email) || email.Contains(" ") || email.Contains("<"))
                 {
-                    yield return new ValidationResult($"Email #{i + 1} is not valid.", new string[] { nameof(Emails) });
+                    yield return new ValidationResult($"Email #{i + 1} is not valid.",
+                        new string[] { nameof(Emails) });
                 }
                 else if(email.Length > 50)
                 {
-                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.", new string[] { nameof(Emails) });
+                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.",
+                        new string[] { nameof(Emails) });
                 }
             }
         }
