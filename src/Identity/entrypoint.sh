@@ -32,6 +32,7 @@ mkhomedir_helper $USERNAME
 mkdir -p /etc/bitwarden/identity
 mkdir -p /etc/bitwarden/core
 mkdir -p /etc/bitwarden/logs
+touch /etc/bitwarden/logs/log.txt
 mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
