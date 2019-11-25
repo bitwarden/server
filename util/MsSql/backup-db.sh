@@ -3,7 +3,7 @@
 while true
 do
   # Sleep until next day
-  [ "$1" == "loop" ] && sleep $((24 * 3600 - (`date +%H` * 3600 + `date +%M` * 60 + `date +%S`)))
+  [ "$1" = "loop" ] && sleep $((24 * 3600 - (`date +%H` * 3600 + `date +%M` * 60 + `date +%S`)))
 
   # Backup timestamp
   export now=$(date +%Y%m%d_%H%M%S)
