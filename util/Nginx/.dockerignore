@@ -5,3 +5,4 @@
 !security-headers.conf
 !security-headers-ssl.conf
 !mime.types
+!logrotate.sh
