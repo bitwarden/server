@@ -52,7 +52,7 @@ chown $USERNAME:$GROUPNAME /backup-db.sql
 # Launch a loop to backup database on a daily basis
 if [ "$BACKUP_DB" != "0" ]
 then
-    gosu $USERNAME:$GROUPNAME /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
+    exec gosu $USERNAME:$GROUPNAME /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
 fi
 
 exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
