@@ -79,9 +79,8 @@ namespace Bit.Core.Utilities
             {
                 if(globalSettings.LogRollBySizeLimit.HasValue)
                 {
-                    config.WriteTo
-                        .RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
-                            fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                    config.WriteTo.File($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
+                        rollOnFileSizeLimit: true, fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
                 }
                 else
                 {

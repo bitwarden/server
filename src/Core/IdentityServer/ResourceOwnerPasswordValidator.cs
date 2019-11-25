@@ -222,8 +222,9 @@ namespace Bit.Core.IdentityServer
 
             if(_globalSettings.SelfHosted)
             {
-                _logger.LogWarning(Constants.BypassFiltersEventId, "Failed login attempt{0}{1}",
-                    twoFactorRequest ? ", 2FA invalid." : ".", $" {_currentContext.IpAddress}");
+                _logger.LogWarning(Constants.BypassFiltersEventId,
+                    string.Format("Failed login attempt{0}{1}", twoFactorRequest ? ", 2FA invalid." : ".",
+                        $" {_currentContext.IpAddress}"));
             }
             await Task.Delay(2000); // Delay for brute force.
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
