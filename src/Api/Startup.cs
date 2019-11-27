@@ -140,7 +140,8 @@ namespace Bit.Api
             IApplicationBuilder app,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<Startup> logger)
         {
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
@@ -194,6 +195,9 @@ namespace Bit.Api
                     config.OAuthClientSecret("secretKey");
                 });
             }
+
+            // Log startup
+            logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
         }
     }
 }

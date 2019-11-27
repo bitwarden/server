@@ -7,6 +7,7 @@ using Bit.Core;
 using Bit.Core.Utilities;
 using AspNetCoreRateLimit;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity
 {
@@ -75,7 +76,8 @@ namespace Bit.Identity
             IApplicationBuilder app,
             IHostingEnvironment env,
             IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<Startup> logger)
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
@@ -97,6 +99,9 @@ namespace Bit.Identity
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
+
+            // Log startup
+            logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
         }
     }
 }
