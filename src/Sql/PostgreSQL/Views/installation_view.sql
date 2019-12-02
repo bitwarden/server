@@ -1,4 +1,4 @@
-﻿CREATE VIEW installation_view
+﻿CREATE OR REPLACE VIEW installation_view
 AS
 SELECT
     *

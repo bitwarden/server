@@ -1,8 +1,8 @@
-DROP FUNCTION IF EXISTS user_search;
+DROP FUNCTION IF EXISTS user_search (VARCHAR,INT,INT);
 
 CREATE OR REPLACE FUNCTION user_search 
 (
-    _email VARCHAR(50),
+    _email VARCHAR,
     _skip  INT DEFAULT 0,
     _take  INT DEFAULT 25
 )
