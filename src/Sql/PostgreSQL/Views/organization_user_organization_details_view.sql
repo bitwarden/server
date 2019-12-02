@@ -1,4 +1,4 @@
-﻿CREATE VIEW organization_user_organization_details_view
+﻿CREATE OR REPLACE VIEW organization_user_organization_details_view
 AS
 SELECT
     ou.user_id,

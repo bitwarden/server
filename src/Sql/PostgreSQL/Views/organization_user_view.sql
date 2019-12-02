@@ -1,4 +1,4 @@
-﻿CREATE VIEW organization_user_view
+﻿CREATE OR REPLACE VIEW organization_user_view
 AS
 SELECT
     *

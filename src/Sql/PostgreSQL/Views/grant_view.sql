@@ -1,4 +1,4 @@
-﻿CREATE VIEW grant_view
+﻿CREATE OR REPLACE VIEW grant_view
 AS
 SELECT
     *

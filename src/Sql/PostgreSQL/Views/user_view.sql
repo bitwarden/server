@@ -1,4 +1,4 @@
-CREATE VIEW user_view
+CREATE OR REPLACE VIEW user_view
 AS
 SELECT
     *

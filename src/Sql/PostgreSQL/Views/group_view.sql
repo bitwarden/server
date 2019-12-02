@@ -1,4 +1,4 @@
-﻿CREATE VIEW group_view
+﻿CREATE OR REPLACE VIEW group_view
 AS
 SELECT
     *

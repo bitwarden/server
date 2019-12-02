@@ -1,4 +1,4 @@
-﻿CREATE VIEW folder_view
+﻿CREATE OR REPLACE VIEW folder_view
 AS
 SELECT
     *
