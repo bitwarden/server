@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION user_create
     _email                              VARCHAR,
     _email_verified                     BOOLEAN,
     _master_password                    VARCHAR,
-    _master_password_hINT               VARCHAR,
+    _master_password_hint               VARCHAR,
     _culture                            VARCHAR,
     _security_stamp                     VARCHAR,
     _two_factor_providers               TEXT,
