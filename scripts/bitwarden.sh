@@ -73,6 +73,26 @@ function checkOutputDirNotExists() {
     fi
 }
 
+function listCommands() {
+cat << EOT
+Available commands:
+
+install
+start
+restart
+stop
+update
+updatedb
+updateself
+updateconf
+rebuild
+help
+
+See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
+
+EOT
+}
+
 # Commands
 
 if [ "$1" == "install" ]
@@ -94,6 +114,10 @@ elif [ "$1" == "rebuild" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "updateconf" ]
+then
+    checkOutputDirExists
+    $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists
@@ -105,6 +129,11 @@ then
 elif [ "$1" == "updateself" ]
 then
     downloadSelf && echo "Updated self." && exit
+elif [ "$1" == "help" ]
+then
+    listCommands
 else
     echo "No command found."
+    echo
+    listCommands
 fi

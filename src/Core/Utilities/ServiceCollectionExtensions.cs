@@ -65,11 +65,13 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
                 services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
+                services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
             }
             else
             {
                 services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
                 services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
+                services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
             }
         }
 
@@ -82,6 +84,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<Services.IEventService, EventService>();
             services.AddSingleton<IDeviceService, DeviceService>();
+            services.AddSingleton<IAppleIapService, AppleIapService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)

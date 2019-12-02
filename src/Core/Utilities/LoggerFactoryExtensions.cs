@@ -18,7 +18,7 @@ namespace Bit.Core.Utilities
         {
             if(env.IsDevelopment())
             {
-               return;
+                return;
             }
 
             if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
@@ -35,7 +35,7 @@ namespace Bit.Core.Utilities
         {
             if(context.HostingEnvironment.IsDevelopment())
             {
-               return builder;
+                return builder;
             }
 
             bool inclusionPredicate(LogEvent e)
@@ -77,7 +77,17 @@ namespace Bit.Core.Utilities
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
-                config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt")
+                if(globalSettings.LogRollBySizeLimit.HasValue)
+                {
+                    config.WriteTo.File($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
+                        rollOnFileSizeLimit: true, fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                }
+                else
+                {
+                    config.WriteTo
+                        .RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
+                }
+                config
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }

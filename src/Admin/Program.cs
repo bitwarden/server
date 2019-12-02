@@ -11,6 +11,10 @@ namespace Bit.Admin
         {
             WebHost
                 .CreateDefaultBuilder(args)
+                .ConfigureKestrel(o =>
+                {
+                    o.Limits.MaxRequestLineSize = 20_000;
+                })
                 .UseStartup<Startup>()
                 .ConfigureLogging((hostingContext, logging) =>
                     logging.AddSerilog(hostingContext, e =>

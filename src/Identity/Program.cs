@@ -17,7 +17,8 @@ namespace Bit.Identity
                     logging.AddSerilog(hostingContext, e =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
-                        if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
+                        if(context.Contains(typeof(IpRateLimitMiddleware).FullName) &&
+                            e.Level == LogEventLevel.Information)
                         {
                             return true;
                         }

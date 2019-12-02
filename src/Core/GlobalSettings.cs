@@ -10,6 +10,7 @@ namespace Bit.Core
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
+        public virtual long? LogRollBySizeLimit { get; set; }
         public virtual string LicenseDirectory { get; set; }
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
@@ -38,6 +39,7 @@ namespace Bit.Core
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
+        public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
 
         public class BaseServiceUriSettings
         {
@@ -217,6 +219,12 @@ namespace Bit.Core
         {
             public string ApplicationCacheTopicName { get; set; }
             public string ApplicationCacheSubscriptionName { get; set; }
+        }
+
+        public class AppleIapSettings
+        {
+            public string Password { get; set; }
+            public bool AppInReview { get; set; }
         }
     }
 }

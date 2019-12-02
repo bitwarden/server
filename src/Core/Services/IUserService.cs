@@ -45,10 +45,11 @@ namespace Bit.Core.Services
         Task SendDeleteConfirmationAsync(string email);
         Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
             PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license);
+        Task IapCheckAsync(User user, PaymentMethodType paymentMethodType);
         Task UpdateLicenseAsync(User user, UserLicense license);
         Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
         Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType);
-        Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
+        Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false);
         Task ReinstatePremiumAsync(User user);
         Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
         Task EnablePremiumAsync(User user, DateTime? expirationDate);

@@ -78,6 +78,11 @@ namespace Bit.Core.Models.Table
             return "organizationId";
         }
 
+        public bool IsUser()
+        {
+            return false;
+        }
+
         public long StorageBytesRemaining()
         {
             if(!MaxStorageGb.HasValue)
