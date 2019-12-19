@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -104,7 +105,7 @@ namespace Bit.Billing.Controllers
             {
                 var tx = new Core.Models.Table.Transaction
                 {
-                    Amount = invoice.Price,
+                    Amount = Convert.ToDecimal(invoice.Price),
                     CreationDate = GetTransactionDate(invoice),
                     OrganizationId = ids.Item1,
                     UserId = ids.Item2,
@@ -112,7 +113,7 @@ namespace Bit.Billing.Controllers
                     Gateway = GatewayType.BitPay,
                     GatewayId = invoice.Id,
                     PaymentMethodType = PaymentMethodType.BitPay,
-                    Details = $"{invoice.TransactionCurrency}, BitPay {invoice.Id}"
+                    Details = $"{invoice.Currency}, BitPay {invoice.Id}"
                 };
                 await _transactionRepository.CreateAsync(tx);
 
@@ -156,23 +157,24 @@ namespace Bit.Billing.Controllers
             return new OkResult();
         }
 
-        private bool IsAccountCredit(NBitpayClient.Invoice invoice)
+        private bool IsAccountCredit(BitPayLight.Models.Invoice.Invoice invoice)
         {
             return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
         }
 
-        private DateTime GetTransactionDate(NBitpayClient.Invoice invoice)
+        private DateTime GetTransactionDate(BitPayLight.Models.Invoice.Invoice invoice)
         {
             var transactions = invoice.Transactions?.Where(t => t.Type == null &&
                 !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0");
             if(transactions != null && transactions.Count() == 1)
             {
-                return transactions.First().ReceivedTime.DateTime;
+                return DateTime.Parse(transactions.First().ReceivedTime, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind);
             }
-            return invoice.CurrentTime.DateTime;
+            return CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
         }
 
-        public Tuple<Guid?, Guid?> GetIdsFromPosData(NBitpayClient.Invoice invoice)
+        public Tuple<Guid?, Guid?> GetIdsFromPosData(BitPayLight.Models.Invoice.Invoice invoice)
         {
             Guid? orgId = null;
             Guid? userId = null;

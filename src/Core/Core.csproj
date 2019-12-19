@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.38" />
     <PackageReference Include="AWSSDK.SQS" Version="3.3.102" />
+    <PackageReference Include="BitPay.Light" Version="1.0.1907" />
     <PackageReference Include="Handlebars.Net" Version="1.10.1" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="2.7.0" />
     <PackageReference Include="MailKit" Version="2.3.0" />
@@ -37,7 +38,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="2.2.0" />
-    <PackageReference Include="NBitpayClient" Version="1.0.0.34" />
     <PackageReference Include="Npgsql" Version="4.0.9" />
     <PackageReference Include="Quartz" Version="3.0.7" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.0.0" />

@@ -15,20 +15,19 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public string Email { get; set; }
 
-        public NBitpayClient.Invoice ToBitpayClientInvoice(GlobalSettings globalSettings)
+        public BitPayLight.Models.Invoice.Invoice ToBitpayInvoice(GlobalSettings globalSettings)
         {
-            var inv = new NBitpayClient.Invoice
+            var inv = new BitPayLight.Models.Invoice.Invoice
             {
-                Price = Amount.Value,
+                Price = Convert.ToDouble(Amount.Value),
                 Currency = "USD",
-                RedirectURL = ReturnUrl,
-                BuyerEmail = Email,
-                Buyer = new NBitpayClient.Buyer
+                RedirectUrl = ReturnUrl,
+                Buyer = new BitPayLight.Models.Invoice.Buyer
                 {
-                    email = Email,
+                    Email = Email,
                     Name = Name
                 },
-                NotificationURL = globalSettings.BitPay.NotificationUrl,
+                NotificationUrl = globalSettings.BitPay.NotificationUrl,
                 FullNotifications = true,
                 ExtendedNotifications = true
             };
