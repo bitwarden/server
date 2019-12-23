@@ -87,5 +87,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

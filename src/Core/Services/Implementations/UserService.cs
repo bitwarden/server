@@ -674,6 +674,7 @@ namespace Bit.Core.Services
             user.TwoFactorProviders = null;
             user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             await SaveUserAsync(user);
+            await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
 
             return true;
