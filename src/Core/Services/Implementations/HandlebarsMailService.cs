@@ -283,6 +283,23 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
+        {
+            var message = CreateDefaultMessage($"Recover 2FA From {ip}", email);
+            var model = new RecoverTwoFactorModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                TheDate = timestamp.ToLongDateString(),
+                TheTime = timestamp.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip
+            };
+            await AddMessageContentAsync(message, "RecoverTwoFactor", model);
+            message.Category = "RecoverTwoFactor";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });
