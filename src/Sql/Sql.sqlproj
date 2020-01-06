@@ -252,5 +252,12 @@
     <Build Include="dbo\Stored Procedures\Transaction_ReadByGatewayId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadWithCollectionsById.sql" />
+    <Build Include="dbo\Tables\Policy.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_Update.sql" />
+    <Build Include="dbo\Views\PolicyView.sql" />
   </ItemGroup>
 </Project>
