@@ -35,6 +35,12 @@ namespace Bit.Core.Repositories.EntityFramework
             builder.Entity<Cipher>().Ignore(e => e.Attachments);
             builder.Entity<Cipher>().Property(e => e.Attachments).HasColumnName("Attachments");
 
+            builder.Entity<User>().Ignore(e => e.TwoFactorProviders);
+            builder.Entity<User>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
+
+            builder.Entity<Organization>().Ignore(e => e.TwoFactorProviders);
+            builder.Entity<Organization>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
+
             builder.Entity<User>().ToTable(nameof(User));
             builder.Entity<Cipher>().ToTable(nameof(Cipher));
             builder.Entity<Organization>().ToTable(nameof(Organization));

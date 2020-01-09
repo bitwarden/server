@@ -55,7 +55,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     Use2fa = e.Use2fa,
                     UseEvents = e.UseEvents,
                     UsersGetPremium = e.UsersGetPremium,
-                    Using2fa = e.Use2fa && e.TwoFactorProviders != null && e.TwoFactorProviders != "{}",
+                    Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                 }).ToListAsync();
         }
     }
