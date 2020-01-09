@@ -34,7 +34,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public async Task<ICollection<TableModel.User>> SearchAsync(string email, int skip, int take)
         {
             var users = await GetDbSet()
-                .Where(e => e.Email == null || e.Email.StartsWith(email))
+                .Where(e => email == null || e.Email.StartsWith(email))
                 .OrderBy(e => e.Email)
                 .Skip(skip).Take(take)
                 .ToListAsync();

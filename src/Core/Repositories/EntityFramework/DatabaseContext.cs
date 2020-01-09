@@ -18,6 +18,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public DbSet<User> Users { get; set; }
         public DbSet<Cipher> Ciphers { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder builder)
         {
@@ -29,8 +30,14 @@ namespace Bit.Core.Repositories.EntityFramework
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            builder.Entity<Cipher>().Ignore(e => e.Data);
+            builder.Entity<Cipher>().Property(e => e.Data).HasColumnName("Data");
+            builder.Entity<Cipher>().Ignore(e => e.Attachments);
+            builder.Entity<Cipher>().Property(e => e.Attachments).HasColumnName("Attachments");
+
             builder.Entity<User>().ToTable(nameof(User));
             builder.Entity<Cipher>().ToTable(nameof(Cipher));
+            builder.Entity<Organization>().ToTable(nameof(Organization));
         }
     }
 }
