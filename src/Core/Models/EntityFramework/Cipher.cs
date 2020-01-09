@@ -10,6 +10,7 @@ namespace Bit.Core.Models.EntityFramework
 
         public User User { get; set; }
         public Organization Organization { get; set; }
+        [IgnoreMap]
         public JsonDocument DataJson
         {
             get => _dataJson;
@@ -19,6 +20,7 @@ namespace Bit.Core.Models.EntityFramework
                 _dataJson = value;
             }
         }
+        [IgnoreMap]
         public JsonDocument AttachmentsJson
         {
             get => _attachmentsJson;

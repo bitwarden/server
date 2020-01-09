@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -11,35 +12,47 @@ namespace Bit.Core.Repositories.EntityFramework
         where T : class, ITableObject<TId>
         where TEntity : class, ITableObject<TId>
     {
-        public Repository(DatabaseContext databaseContext, IMapper mapper, Func<DbSet<TEntity>> getDbSet)
-            : base(databaseContext, mapper)
+        public Repository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, Func<DatabaseContext, DbSet<TEntity>> getDbSet)
+            : base(serviceScopeFactory, mapper)
         {
             GetDbSet = getDbSet;
         }
 
-        protected Func<DbSet<TEntity>> GetDbSet { get; private set; }
+        protected Func<DatabaseContext, DbSet<TEntity>> GetDbSet { get; private set; }
 
         public virtual async Task<T> GetByIdAsync(TId id)
         {
-            var entity = await GetDbSet().FindAsync(id);
-            return entity as T;
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await GetDbSet(dbContext).FindAsync(id);
+                return entity as T;
+            }
         }
 
         public virtual async Task CreateAsync(T obj)
         {
-            var entity = Mapper.Map<TEntity>(obj);
-            DatabaseContext.Add(entity);
-            await DatabaseContext.SaveChangesAsync();
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = Mapper.Map<TEntity>(obj);
+                dbContext.Add(entity);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            var entity = await GetDbSet().FindAsync(obj.Id);
-            if(entity != null)
+            using(var scope = ServiceScopeFactory.CreateScope())
             {
-                var mappedEntity = Mapper.Map<TEntity>(obj);
-                DatabaseContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                await DatabaseContext.SaveChangesAsync();
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
+                if(entity != null)
+                {
+                    var mappedEntity = Mapper.Map<TEntity>(obj);
+                    dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                    await dbContext.SaveChangesAsync();
+                }
             }
         }
 
@@ -57,9 +70,13 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task DeleteAsync(T obj)
         {
-            var entity = Mapper.Map<TEntity>(obj);
-            DatabaseContext.Entry(entity).State = EntityState.Deleted;
-            await DatabaseContext.SaveChangesAsync();
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = Mapper.Map<TEntity>(obj);
+                dbContext.Entry(entity).State = EntityState.Deleted;
+                await dbContext.SaveChangesAsync();
+            }
         }
     }
 }

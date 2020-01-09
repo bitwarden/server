@@ -9,7 +9,8 @@ namespace Bit.Core.Models.EntityFramework
         private JsonDocument _twoFactorProvidersJson;
 
         public ICollection<Cipher> Ciphers { get; set; }
-
+        
+        [IgnoreMap]
         public JsonDocument TwoFactorProvidersJson
         {
             get => _twoFactorProvidersJson;

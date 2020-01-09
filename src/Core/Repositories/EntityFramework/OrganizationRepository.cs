@@ -7,19 +7,24 @@ using System.Linq;
 using System.Collections.Generic;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
     public class OrganizationRepository : Repository<TableModel.Organization, EFModel.Organization, Guid>, IOrganizationRepository
     {
-        public OrganizationRepository(DatabaseContext databaseContext, IMapper mapper)
-           : base(databaseContext, mapper, () => databaseContext.Organizations)
+        public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+            : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
         { }
 
         public async Task<ICollection<TableModel.Organization>> GetManyByEnabledAsync()
         {
-            var organizations = await GetDbSet().Where(e => e.Enabled).ToListAsync();
-            return Mapper.Map<List<TableModel.Organization>>(organizations);
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
+                return Mapper.Map<List<TableModel.Organization>>(organizations);
+            }
         }
 
         public async Task<ICollection<TableModel.Organization>> GetManyByUserIdAsync(Guid userId)
@@ -31,13 +36,17 @@ namespace Bit.Core.Repositories.EntityFramework
         public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail, bool? paid,
             int skip, int take)
         {
-            // TODO: more filters
-            var organizations = await GetDbSet()
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // TODO: more filters
+                var organizations = await GetDbSet(dbContext)
                 .Where(e => name == null || e.Name.StartsWith(name))
                 .OrderBy(e => e.Name)
                 .Skip(skip).Take(take)
                 .ToListAsync();
-            return Mapper.Map<List<TableModel.Organization>>(organizations);
+                return Mapper.Map<List<TableModel.Organization>>(organizations);
+            }
         }
 
         public async Task UpdateStorageAsync(Guid id)
@@ -47,7 +56,10 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<ICollection<DataModel.OrganizationAbility>> GetManyAbilitiesAsync()
         {
-            return await GetDbSet()
+            using(var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetDbSet(dbContext)
                 .Select(e => new DataModel.OrganizationAbility
                 {
                     Enabled = e.Enabled,
@@ -57,6 +69,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     UsersGetPremium = e.UsersGetPremium,
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                 }).ToListAsync();
+            }
         }
     }
 }

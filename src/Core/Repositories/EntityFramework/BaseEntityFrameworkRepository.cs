@@ -1,16 +1,22 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
     public abstract class BaseEntityFrameworkRepository
     {
-        public BaseEntityFrameworkRepository(DatabaseContext databaseContext, IMapper mapper)
+        public BaseEntityFrameworkRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         {
-            DatabaseContext = databaseContext;
+            ServiceScopeFactory = serviceScopeFactory;
             Mapper = mapper;
         }
 
-        protected DatabaseContext DatabaseContext { get; private set; }
+        protected IServiceScopeFactory ServiceScopeFactory { get; private set; }
         protected IMapper Mapper { get; private set; }
+
+        public DatabaseContext GetDatabaseContext(IServiceScope serviceScope)
+        {
+            return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        }
     }
 }
