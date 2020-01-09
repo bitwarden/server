@@ -20,6 +20,7 @@ using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using PostgreSqlRepos = Bit.Core.Repositories.PostgreSql;
+using EntityFrameworkRepos = Bit.Core.Repositories.EntityFramework;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using System.Threading.Tasks;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -32,6 +33,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Utilities;
 using Serilog.Context;
+using AutoMapper;
 
 namespace Bit.Core.Utilities
 {
@@ -41,7 +43,9 @@ namespace Bit.Core.Utilities
         {
             if(!string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString))
             {
-                services.AddSingleton<IUserRepository, PostgreSqlRepos.UserRepository>();
+                services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
+                services.AddDbContext<EntityFrameworkRepos.DatabaseContext>();
+                services.AddSingleton<IUserRepository, EntityFrameworkRepos.UserRepository>();
             }
             else
             {
