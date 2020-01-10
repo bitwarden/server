@@ -22,17 +22,17 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.38" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.102" />
-    <PackageReference Include="Azure.Storage.Queues" Version="12.1.0" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.92" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.102.53" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.1.1" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
     <PackageReference Include="Handlebars.Net" Version="1.10.1" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
-    <PackageReference Include="MailKit" Version="2.3.0" />
+    <PackageReference Include="MailKit" Version="2.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="3.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="3.3.0" />
     <PackageReference Include="Microsoft.Azure.ServiceBus" Version="3.4.0" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.0" />
@@ -48,14 +48,14 @@
     <PackageReference Include="Serilog.Sinks.Sentry.AspNetCore" Version="2.4.2" />
     <PackageReference Include="IdentityServer4" Version="3.1.0" />
     <PackageReference Include="Dapper" Version="1.60.6" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.Text.Json" Version="4.7.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
-    <PackageReference Include="Braintree" Version="4.15.0" />
+    <PackageReference Include="Braintree" Version="4.16.0" />
     <PackageReference Include="Sendgrid" Version="9.12.0" />
     <PackageReference Include="Stripe.net" Version="28.8.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
-    <PackageReference Include="Otp.NET" Version="1.2.1" />
+    <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
   </ItemGroup>

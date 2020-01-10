@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="3.1.0" />
-    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.12" />
+    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.2.3" />
   </ItemGroup>
 
   <ItemGroup>
