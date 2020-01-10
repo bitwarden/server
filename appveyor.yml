@@ -53,6 +53,7 @@ before_build:
       #dotnet restore
     } else {
       msbuild /t:restore
+      dotnet tool restore
     }
 
 build_script:
