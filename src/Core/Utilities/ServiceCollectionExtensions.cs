@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
-using PostgreSqlRepos = Bit.Core.Repositories.PostgreSql;
 using EntityFrameworkRepos = Bit.Core.Repositories.EntityFramework;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using System.Threading.Tasks;

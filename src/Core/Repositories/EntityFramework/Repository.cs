@@ -38,6 +38,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var entity = Mapper.Map<TEntity>(obj);
                 dbContext.Add(entity);
                 await dbContext.SaveChangesAsync();
+                obj.Id = entity.Id;
             }
         }
 
