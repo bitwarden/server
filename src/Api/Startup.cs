@@ -14,6 +14,8 @@ using IdentityModel;
 using System.Globalization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using System.Collections.Generic;
 
 namespace Bit.Api
 {
@@ -122,7 +124,7 @@ namespace Bit.Api
                 }
             });
 
-            //services.AddSwagger(globalSettings);
+            services.AddSwagger(globalSettings);
 
             if(globalSettings.SelfHosted)
             {
@@ -181,25 +183,29 @@ namespace Bit.Api
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
             // Add Swagger
-            //if(Environment.IsDevelopment() || globalSettings.SelfHosted)
-            //{
-            //    app.UseSwagger(config =>
-            //    {
-            //        config.RouteTemplate = "specs/{documentName}/swagger.json";
-            //        var host = globalSettings.BaseServiceUri.Api.Replace("https://", string.Empty)
-            //            .Replace("http://", string.Empty);
-            //        config.PreSerializeFilters.Add((swaggerDoc, httpReq) => swaggerDoc.Host = host);
-            //    });
-            //    app.UseSwaggerUI(config =>
-            //    {
-            //        config.DocumentTitle = "Bitwarden API Documentation";
-            //        config.RoutePrefix = "docs";
-            //        config.SwaggerEndpoint($"{globalSettings.BaseServiceUri.Api}/specs/public/swagger.json",
-            //            "Bitwarden Public API");
-            //        config.OAuthClientId("accountType.id");
-            //        config.OAuthClientSecret("secretKey");
-            //    });
-            //}
+            if(Environment.IsDevelopment() || globalSettings.SelfHosted)
+            {
+                app.UseSwagger(config =>
+                {
+                    config.RouteTemplate = "specs/{documentName}/swagger.json";
+                    var host = globalSettings.BaseServiceUri.Api.Replace("https://", string.Empty)
+                        .Replace("http://", string.Empty);
+                    config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
+                        swaggerDoc.Servers = new List<OpenApiServer>
+                        {
+                            new OpenApiServer { Url = $"{httpReq.Scheme}://{host}" }
+                        });
+                });
+                app.UseSwaggerUI(config =>
+                {
+                    config.DocumentTitle = "Bitwarden API Documentation";
+                    config.RoutePrefix = "docs";
+                    config.SwaggerEndpoint($"{globalSettings.BaseServiceUri.Api}/specs/public/swagger.json",
+                        "Bitwarden Public API");
+                    config.OAuthClientId("accountType.id");
+                    config.OAuthClientSecret("secretKey");
+                });
+            }
 
             // Log startup
             logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
