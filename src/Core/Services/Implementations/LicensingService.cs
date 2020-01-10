@@ -13,6 +13,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services
 {
@@ -31,7 +32,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IHostingEnvironment environment,
+            IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
             GlobalSettings globalSettings)
         {

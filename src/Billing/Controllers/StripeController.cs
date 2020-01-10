@@ -6,6 +6,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -24,7 +25,7 @@ namespace Bit.Billing.Controllers
         private const decimal PremiumPlanAppleIapPrice = 14.99M;
 
         private readonly BillingSettings _billingSettings;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
@@ -37,7 +38,7 @@ namespace Bit.Billing.Controllers
         public StripeController(
             GlobalSettings globalSettings,
             IOptions<BillingSettings> billingSettings,
-            IHostingEnvironment hostingEnvironment,
+            IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,

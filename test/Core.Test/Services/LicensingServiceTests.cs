@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -16,7 +16,7 @@ namespace Bit.Core.Test.Services
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<LicensingService> _logger;
 
         public LicensingServiceTests()
@@ -24,7 +24,7 @@ namespace Bit.Core.Test.Services
             _userRepository = Substitute.For<IUserRepository>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _hostingEnvironment = Substitute.For<IHostingEnvironment>();
+            _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<LicensingService>>();
             _globalSettings = new GlobalSettings();
 

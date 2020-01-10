@@ -9,6 +9,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Bit.Api.Utilities;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Controllers
 {
@@ -19,14 +20,14 @@ namespace Bit.Api.Controllers
     {
         private readonly IPushRegistrationService _pushRegistrationService;
         private readonly IPushNotificationService _pushNotificationService;
-        private readonly IHostingEnvironment _environment;
+        private readonly IWebHostEnvironment _environment;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public PushController(
             IPushRegistrationService pushRegistrationService,
             IPushNotificationService pushNotificationService,
-            IHostingEnvironment environment,
+            IWebHostEnvironment environment,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {

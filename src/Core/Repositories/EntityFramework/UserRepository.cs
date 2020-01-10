@@ -83,9 +83,10 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public async Task UpdateStorageAsync(Guid id)
+        public Task UpdateStorageAsync(Guid id)
         {
             // TODO
+            return Task.FromResult(0);
         }
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)

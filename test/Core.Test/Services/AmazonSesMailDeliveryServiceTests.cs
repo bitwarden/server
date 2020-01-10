@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,13 +12,13 @@ namespace Bit.Core.Test.Services
         private readonly AmazonSesMailDeliveryService _sut;
 
         private readonly GlobalSettings _globalSettings;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<AmazonSesMailDeliveryService> _logger;
 
         public AmazonSesMailDeliveryServiceTests()
         {
             _globalSettings = new GlobalSettings();
-            _hostingEnvironment = Substitute.For<IHostingEnvironment>();
+            _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<AmazonSesMailDeliveryService>>();
             _sut = new AmazonSesMailDeliveryService(
                 _globalSettings,

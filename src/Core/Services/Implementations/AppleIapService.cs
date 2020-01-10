@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -17,13 +18,13 @@ namespace Bit.Core.Services
         private readonly HttpClient _httpClient = new HttpClient();
 
         private readonly GlobalSettings _globalSettings;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IMetaDataRepository _metaDataRespository;
         private readonly ILogger<AppleIapService> _logger;
 
         public AppleIapService(
             GlobalSettings globalSettings,
-            IHostingEnvironment hostingEnvironment,
+            IWebHostEnvironment hostingEnvironment,
             IMetaDataRepository metaDataRespository,
             ILogger<AppleIapService> logger)
         {
