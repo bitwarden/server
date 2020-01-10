@@ -20,6 +20,10 @@ namespace Bit.Core.Repositories.EntityFramework
             builder.Entity<Cipher>().Property(e => e.DataJson).HasColumnName("Data");
             builder.Entity<Cipher>().Ignore(e => e.Attachments);
             builder.Entity<Cipher>().Property(e => e.AttachmentsJson).HasColumnName("Attachments");
+            builder.Entity<Cipher>().Ignore(e => e.Favorites);
+            builder.Entity<Cipher>().Property(e => e.FavoritesJson).HasColumnName("Favorites");
+            builder.Entity<Cipher>().Ignore(e => e.Folders);
+            builder.Entity<Cipher>().Property(e => e.FoldersJson).HasColumnName("Folders");
 
             builder.Entity<User>().Ignore(e => e.TwoFactorProviders);
             builder.Entity<User>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");

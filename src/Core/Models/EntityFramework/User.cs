@@ -16,7 +16,7 @@ namespace Bit.Core.Models.EntityFramework
             get => _twoFactorProvidersJson;
             set
             {
-                TwoFactorProviders = value.ToString();
+                TwoFactorProviders = value?.ToString();
                 _twoFactorProvidersJson = value;
             }
         }
