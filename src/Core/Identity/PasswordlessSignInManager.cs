@@ -22,8 +22,9 @@ namespace Bit.Core.Identity
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<SignInManager<TUser>> logger,
             IAuthenticationSchemeProvider schemes,
+            IUserConfirmation<TUser> confirmation,
             IMailService mailService)
-            : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes)
+            : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes, confirmation)
         {
             _mailService = mailService;
         }

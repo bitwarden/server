@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Version>1.33.0</Version>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bit.Icons</RootNamespace>
     <UserSecretsId>bitwarden-Icons</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.12.1" />
-    <PackageReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

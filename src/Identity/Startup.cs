@@ -8,12 +8,13 @@ using Bit.Core.Utilities;
 using AspNetCoreRateLimit;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Identity
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
@@ -21,7 +22,7 @@ namespace Bit.Identity
         }
 
         public IConfiguration Configuration { get; private set; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -74,8 +75,8 @@ namespace Bit.Identity
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {

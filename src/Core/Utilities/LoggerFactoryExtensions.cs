@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
@@ -12,8 +13,8 @@ namespace Bit.Core.Utilities
     {
         public static void UseSerilog(
             this IApplicationBuilder appBuilder,
-            IHostingEnvironment env,
-            IApplicationLifetime applicationLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime applicationLifetime,
             GlobalSettings globalSettings)
         {
             if(env.IsDevelopment())

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Routing;
 using System.Globalization;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Billing
 {
@@ -71,8 +72,8 @@ namespace Bit.Billing
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             app.UseSerilog(env, appLifetime, globalSettings);
@@ -82,9 +83,11 @@ namespace Bit.Billing
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseAuthentication();
             app.UseStaticFiles();
-            app.UseMvcWithDefaultRoute();
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }
 }

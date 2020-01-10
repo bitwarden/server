@@ -16,7 +16,8 @@ using System.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Bit.Core.Enums;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Utilities
 {

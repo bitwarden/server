@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
-using Microsoft.WindowsAzure.Storage;
 using System;
 using System.IO;
 using SqlServerRepos = Bit.Core.Repositories.SqlServer;
@@ -34,6 +33,9 @@ using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Utilities;
 using Serilog.Context;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.Storage;
 
 namespace Bit.Core.Utilities
 {
@@ -41,11 +43,22 @@ namespace Bit.Core.Utilities
     {
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            if(!string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString))
+            var usePostgreSql = !string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString);
+            var useEf = usePostgreSql;
+
+            if(useEf)
             {
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
-                services.AddDbContext<EntityFrameworkRepos.DatabaseContext>();
+                services.AddDbContext<EntityFrameworkRepos.DatabaseContext>(options =>
+                {
+                    if(usePostgreSql)
+                    {
+                        options.UseNpgsql(globalSettings.PostgreSql.ConnectionString);
+                    }
+                });
                 services.AddSingleton<IUserRepository, EntityFrameworkRepos.UserRepository>();
+                //services.AddSingleton<ICipherRepository, EntityFrameworkRepos.CipherRepository>();
+                //services.AddSingleton<IOrganizationRepository, EntityFrameworkRepos.OrganizationRepository>();
             }
             else
             {
@@ -67,7 +80,14 @@ namespace Bit.Core.Utilities
 
             if(globalSettings.SelfHosted)
             {
-                services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
+                if(useEf)
+                {
+                    // TODO
+                }
+                else
+                {
+                    services.AddSingleton<IEventRepository, SqlServerRepos.EventRepository>();
+                }
                 services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
                 services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
             }
@@ -283,7 +303,7 @@ namespace Bit.Core.Utilities
         }
 
         public static void AddIdentityAuthenticationServices(
-            this IServiceCollection services, GlobalSettings globalSettings, IHostingEnvironment environment,
+            this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
             Action<AuthorizationOptions> addAuthorization)
         {
             services
@@ -313,7 +333,7 @@ namespace Bit.Core.Utilities
         }
 
         public static IIdentityServerBuilder AddCustomIdentityServerServices(
-            this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
+            this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
             var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
             var identityServerBuilder = services
@@ -373,7 +393,7 @@ namespace Bit.Core.Utilities
         }
 
         public static void AddCustomDataProtectionServices(
-            this IServiceCollection services, IHostingEnvironment env, GlobalSettings globalSettings)
+            this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
             if(env.IsDevelopment())
             {
@@ -417,7 +437,7 @@ namespace Bit.Core.Utilities
         }
 
         public static void UseDefaultMiddleware(this IApplicationBuilder app,
-            IHostingEnvironment env, GlobalSettings globalSettings)
+            IWebHostEnvironment env, GlobalSettings globalSettings)
         {
             string GetHeaderValue(HttpContext httpContext, string header)
             {
