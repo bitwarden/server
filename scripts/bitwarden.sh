@@ -108,7 +108,6 @@ then
 elif [ "$1" == "update" ]
 then
     checkOutputDirExists
-    downloadRunFile
     $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "rebuild" ]
 then
@@ -128,6 +127,8 @@ then
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updateself" ]
 then
+    checkOutputDirExists
+    downloadRunFile
     downloadSelf && echo "Updated self." && exit
 elif [ "$1" == "help" ]
 then
