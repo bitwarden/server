@@ -26,7 +26,7 @@ namespace Bit.Core.Services
             using(var fs = File.Create($"{cipherDirPath}/{attachmentId}"))
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                stream.CopyTo(fs);
+                await stream.CopyToAsync(fs);
             }
         }
 
@@ -39,7 +39,7 @@ namespace Bit.Core.Services
             using(var fs = File.Create($"{tempCipherOrgDirPath}/{attachmentId}"))
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                stream.CopyTo(fs);
+                await stream.CopyToAsync(fs);
             }
         }
 
