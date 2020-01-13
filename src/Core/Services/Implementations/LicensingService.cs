@@ -46,7 +46,8 @@ namespace Bit.Core.Services
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
             if(_globalSettings.SelfHosted)
             {
-                _certificate = CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+                _certificate = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null)
+                    .GetAwaiter().GetResult();
             }
             else if(CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
                 CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
