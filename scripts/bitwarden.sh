@@ -83,6 +83,7 @@ restart
 stop
 update
 updatedb
+updaterun
 updateself
 updateconf
 rebuild
@@ -126,6 +127,10 @@ elif [ "$1" == "stop" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "updaterun" ]
+then
+    checkOutputDirExists
+    downloadRunFile
 elif [ "$1" == "updateself" ]
 then
     downloadSelf && echo "Updated self." && exit
