@@ -118,6 +118,7 @@ elseif ($start -Or $restart) {
 }
 elseif ($update) {
     Check-Output-Dir-Exists
+    Download-Run-File
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -update -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($rebuild) {
