@@ -116,7 +116,7 @@ namespace Bit.Setup
 
             var configText = File.ReadAllText(ConfigPath);
             var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(new UnderscoredNamingConvention())
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
             Config = deserializer.Deserialize<Configuration>(configText);
         }
@@ -128,8 +128,7 @@ namespace Bit.Setup
                 throw new Exception("Config is null.");
             }
             var serializer = new SerializerBuilder()
-                .EmitDefaults()
-                .WithNamingConvention(new UnderscoredNamingConvention())
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .WithTypeInspector(inner => new CommentGatheringTypeInspector(inner))
                 .WithEmissionPhaseObjectGraphVisitor(args => new CommentsObjectGraphVisitor(args.InnerVisitor))
                 .Build();
