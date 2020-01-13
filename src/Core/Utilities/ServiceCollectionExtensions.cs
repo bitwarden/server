@@ -293,7 +293,7 @@ namespace Bit.Core.Utilities
                 options.AccessDeniedPath = "/login?accessDenied=true";
                 options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}";
                 options.Cookie.HttpOnly = true;
-                options.Cookie.Expiration = options.ExpireTimeSpan = TimeSpan.FromDays(2);
+                options.ExpireTimeSpan = TimeSpan.FromDays(2);
                 options.ReturnUrlParameter = "returnUrl";
                 options.SlidingExpiration = true;
             });
