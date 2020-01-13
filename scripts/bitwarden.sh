@@ -109,6 +109,7 @@ then
 elif [ "$1" == "update" ]
 then
     checkOutputDirExists
+    downloadRunFile
     $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "rebuild" ]
 then
