@@ -7,6 +7,7 @@ param (
     [switch] $rebuild,
     [switch] $updateconf,
     [switch] $updatedb,
+    [switch] $updaterun,
     [switch] $updateself,
     [switch] $help,
     [string] $output = ""
@@ -60,6 +61,7 @@ Available commands:
 -stop
 -update
 -updatedb
+-updaterun
 -updateself
 -updateconf
 -rebuild
@@ -134,9 +136,11 @@ elseif ($stop) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -stop -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
-elseif ($updateself) {
+elseif ($updaterun) {
     Check-Output-Dir-Exists
     Download-Run-File
+}
+elseif ($updateself) {
     Download-Self
     Write-Line "Updated self."
 }
