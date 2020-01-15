@@ -5,6 +5,7 @@
     [OrganizationId]        UNIQUEIDENTIFIER NULL,
     [CipherId]              UNIQUEIDENTIFIER NULL,
     [CollectionId]          UNIQUEIDENTIFIER NULL,
+    [PolicyId]              UNIQUEIDENTIFIER NULL,
     [GroupId]               UNIQUEIDENTIFIER NULL,
     [OrganizationUserId]    UNIQUEIDENTIFIER NULL,
     [ActingUserId]          UNIQUEIDENTIFIER NULL,

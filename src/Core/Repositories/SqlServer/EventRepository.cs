@@ -153,6 +153,8 @@ namespace Bit.Core.Repositories.SqlServer
             eventsTable.Columns.Add(cipherIdColumn);
             var collectionIdColumn = new DataColumn(nameof(e.CollectionId), typeof(Guid));
             eventsTable.Columns.Add(collectionIdColumn);
+            var policyIdColumn = new DataColumn(nameof(e.PolicyId), typeof(Guid));
+            eventsTable.Columns.Add(policyIdColumn);
             var groupIdColumn = new DataColumn(nameof(e.GroupId), typeof(Guid));
             eventsTable.Columns.Add(groupIdColumn);
             var organizationUserIdColumn = new DataColumn(nameof(e.OrganizationUserId), typeof(Guid));
@@ -182,6 +184,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[organizationIdColumn] = ev.OrganizationId.HasValue ? (object)ev.OrganizationId.Value : DBNull.Value;
                 row[cipherIdColumn] = ev.CipherId.HasValue ? (object)ev.CipherId.Value : DBNull.Value;
                 row[collectionIdColumn] = ev.CollectionId.HasValue ? (object)ev.CollectionId.Value : DBNull.Value;
+                row[policyIdColumn] = ev.PolicyId.HasValue ? (object)ev.PolicyId.Value : DBNull.Value;
                 row[groupIdColumn] = ev.GroupId.HasValue ? (object)ev.GroupId.Value : DBNull.Value;
                 row[organizationUserIdColumn] = ev.OrganizationUserId.HasValue ?
                     (object)ev.OrganizationUserId.Value : DBNull.Value;

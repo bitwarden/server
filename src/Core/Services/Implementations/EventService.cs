@@ -156,6 +156,25 @@ namespace Bit.Core.Services
             await _eventWriteService.CreateAsync(e);
         }
 
+        public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
+        {
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            if(!CanUseEvents(orgAbilities, policy.OrganizationId))
+            {
+                return;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = policy.OrganizationId,
+                PolicyId = policy.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            await _eventWriteService.CreateAsync(e);
+        }
+
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
             DateTime? date = null)
         {

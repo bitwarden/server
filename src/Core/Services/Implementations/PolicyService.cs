@@ -3,8 +3,6 @@ using System.Threading.Tasks;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using System.Collections.Generic;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
@@ -46,20 +44,20 @@ namespace Bit.Core.Services
             {
                 policy.CreationDate = policy.RevisionDate = DateTime.UtcNow;
                 await _policyRepository.CreateAsync(policy);
-                //await _eventService.LogGroupEventAsync(policy, Enums.EventType.Group_Created);
+                await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Created);
             }
             else
             {
                 policy.RevisionDate = DateTime.UtcNow;
                 await _policyRepository.ReplaceAsync(policy);
-                //await _eventService.LogGroupEventAsync(policy, Enums.EventType.Group_Updated);
+                await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
             }
         }
 
         public async Task DeleteAsync(Policy policy)
         {
             await _policyRepository.DeleteAsync(policy);
-            //await _eventService.LogGroupEventAsync(policy, Enums.EventType.Group_Deleted);
+            await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Deleted);
         }
     }
 }
