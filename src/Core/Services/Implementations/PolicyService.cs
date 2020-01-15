@@ -33,12 +33,10 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization not found");
             }
 
-            /*
-            if(!org.UseGroups)
+            if(!org.UsePolicies)
             {
                 throw new BadRequestException("This organization cannot use policies.");
             }
-            */
 
             if(policy.Id == default(Guid))
             {
