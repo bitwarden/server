@@ -2,7 +2,8 @@
 {
     public enum PolicyType : byte
     {
-        TwoStepLogin = 0,
-        MasterPassword = 1
+        TwoFactorAuthentication = 0,
+        MasterPassword = 1,
+        PasswordGenerator = 2
     }
 }
