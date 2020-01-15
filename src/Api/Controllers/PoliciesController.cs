@@ -16,13 +16,16 @@ namespace Bit.Api.Controllers
     public class PoliciesController : Controller
     {
         private readonly IPolicyRepository _policyRepository;
+        private readonly IPolicyService _policyService;
         private readonly CurrentContext _currentContext;
 
         public PoliciesController(
             IPolicyRepository policyRepository,
+            IPolicyService policyService,
             CurrentContext currentContext)
         {
             _policyRepository = policyRepository;
+            _policyService = policyService;
             _currentContext = currentContext;
         }
 
@@ -62,7 +65,7 @@ namespace Bit.Api.Controllers
             }
 
             var policy = model.ToPolicy(orgIdGuid);
-            //await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            await _policyService.SaveAsync(policy);
             return new PolicyResponseModel(policy);
         }
 
@@ -76,7 +79,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            //await _groupService.SaveAsync(model.ToPolicy(policy));
+            await _policyService.SaveAsync(model.ToPolicy(policy));
             return new PolicyResponseModel(policy);
         }
 
@@ -90,7 +93,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            //await _groupService.DeleteAsync(policy);
+            await _policyService.DeleteAsync(policy);
         }
     }
 }
