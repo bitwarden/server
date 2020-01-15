@@ -75,6 +75,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
                 services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
+                services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
             }
 
             if(globalSettings.SelfHosted)
@@ -105,6 +106,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
+            services.AddScoped<IPolicyService, PolicyService>();
             services.AddScoped<Services.IEventService, EventService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();

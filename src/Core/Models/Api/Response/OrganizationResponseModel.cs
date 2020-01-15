@@ -30,6 +30,7 @@ namespace Bit.Core.Models.Api
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
             MaxStorageGb = organization.MaxStorageGb;
+            UsePolicies = organization.UsePolicies;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -54,6 +55,7 @@ namespace Bit.Core.Models.Api
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

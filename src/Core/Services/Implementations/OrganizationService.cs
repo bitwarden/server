@@ -33,6 +33,7 @@ namespace Bit.Core.Services
         private readonly IInstallationRepository _installationRepository;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IPaymentService _paymentService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationService(
@@ -51,6 +52,7 @@ namespace Bit.Core.Services
             IInstallationRepository installationRepository,
             IApplicationCacheService applicationCacheService,
             IPaymentService paymentService,
+            IPolicyRepository policyRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -68,6 +70,7 @@ namespace Bit.Core.Services
             _installationRepository = installationRepository;
             _applicationCacheService = applicationCacheService;
             _paymentService = paymentService;
+            _policyRepository = policyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -190,6 +193,16 @@ namespace Bit.Core.Services
                 {
                     throw new BadRequestException($"Your new plan does not allow the groups feature. " +
                         $"Remove your groups.");
+                }
+            }
+
+            if(!newPlan.UsePolicies && organization.UsePolicies)
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(policies.Any(p => p.Enabled))
+                {
+                    throw new BadRequestException($"Your new plan does not allow the policies feature. " +
+                        $"Disable your policies.");
                 }
             }
 
@@ -453,6 +466,7 @@ namespace Bit.Core.Services
                 MaxCollections = plan.MaxCollections,
                 MaxStorageGb = !plan.MaxStorageGb.HasValue ?
                     (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
+                UsePolicies = plan.UsePolicies,
                 UseGroups = plan.UseGroups,
                 UseEvents = plan.UseEvents,
                 UseDirectory = plan.UseDirectory,
@@ -524,6 +538,7 @@ namespace Bit.Core.Services
                 Seats = license.Seats,
                 MaxCollections = license.MaxCollections,
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
+                UsePolicies = license.UsePolicies,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -672,6 +687,16 @@ namespace Bit.Core.Services
                 {
                     throw new BadRequestException($"Your organization currently has {groups.Count} groups. " +
                         $"Your new license does not allow for the use of groups. Remove all groups.");
+                }
+            }
+
+            if(!license.UsePolicies && organization.UsePolicies)
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(policies.Any(p => p.Enabled))
+                {
+                    throw new BadRequestException($"Your organization currently has {policies.Count} enabled " +
+                        $"policies. Your new license does not allow for the use of policies. Disable all policies.");
                 }
             }
 

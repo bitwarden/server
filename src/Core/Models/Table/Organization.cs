@@ -24,6 +24,7 @@ namespace Bit.Core.Models.Table
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

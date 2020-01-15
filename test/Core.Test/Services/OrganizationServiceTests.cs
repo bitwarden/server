@@ -31,11 +31,13 @@ namespace Bit.Core.Test.Services
             var installationRepo = Substitute.For<IInstallationRepository>();
             var appCacheService = Substitute.For<IApplicationCacheService>();
             var paymentService = Substitute.For<IPaymentService>();
+            var policyRepo = Substitute.For<IPolicyRepository>();
             var globalSettings = Substitute.For<GlobalSettings>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
                 groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
-                licenseService, eventService, installationRepo, appCacheService, paymentService, globalSettings);
+                licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
+                globalSettings);
 
             var id = Guid.NewGuid();
             var userId = Guid.NewGuid();
@@ -87,11 +89,13 @@ namespace Bit.Core.Test.Services
             var installationRepo = Substitute.For<IInstallationRepository>();
             var appCacheService = Substitute.For<IApplicationCacheService>();
             var paymentService = Substitute.For<IPaymentService>();
+            var policyRepo = Substitute.For<IPolicyRepository>();
             var globalSettings = Substitute.For<GlobalSettings>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
                 groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
-                licenseService, eventService, installationRepo, appCacheService, paymentService, globalSettings);
+                licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
+                globalSettings);
 
             var id = Guid.NewGuid();
             var userId = Guid.NewGuid();
