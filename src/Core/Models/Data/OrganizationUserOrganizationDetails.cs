@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Data
         public Guid OrganizationId { get; set; }
         public Guid? UserId { get; set; }
         public string Name { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
