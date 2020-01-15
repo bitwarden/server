@@ -40,6 +40,7 @@ namespace Bit.Core
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
+        public virtual string OrgAdmins { get; set; }
 
         public class BaseServiceUriSettings
         {

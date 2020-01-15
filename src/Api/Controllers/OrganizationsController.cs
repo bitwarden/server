@@ -172,6 +172,11 @@ namespace Bit.Api.Controllers
             }
 
             var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
+            if (_globalSettings.SelfHosted)
+            {
+                await _organizationService.InviteUserAsync(result.Item1.Id, user.Id,
+                    _globalSettings.OrgAdmins.Split(","), Core.Enums.OrganizationUserType.Admin, true, null, null);
+            }
             return new OrganizationResponseModel(result.Item1);
         }
 
