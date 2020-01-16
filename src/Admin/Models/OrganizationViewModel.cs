@@ -11,7 +11,8 @@ namespace Bit.Admin.Models
     {
         public OrganizationViewModel() { }
 
-        public OrganizationViewModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers)
+        public OrganizationViewModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
+            bool selfHosted = false, string adminEmail = null)
         {
             Organization = org;
             UserCount = orgUsers.Count();
@@ -23,11 +24,13 @@ namespace Bit.Admin.Models
                 orgUsers
                 .Where(u => u.Type == OrganizationUserType.Admin && u.Status == OrganizationUserStatusType.Confirmed)
                 .Select(u => u.Email));
+            CanInviteMyself = selfHosted && orgUsers.Where(u => u.Email.Equals(adminEmail)).Count() == 0;
         }
 
         public Organization Organization { get; set; }
         public string Owners { get; set; }
         public string Admins { get; set; }
         public int UserCount { get; set; }
+        public bool CanInviteMyself { get; set; }
     }
 }

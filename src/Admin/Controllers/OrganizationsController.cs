@@ -17,21 +17,27 @@ namespace Bit.Admin.Controllers
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly IPaymentService _paymentService;
         private readonly IApplicationCacheService _applicationCacheService;
+        private readonly IUserService _userService;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationService organizationService,
             IPaymentService paymentService,
             IApplicationCacheService applicationCacheService,
+            IUserService userService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationService = organizationService;
             _paymentService = paymentService;
             _applicationCacheService = applicationCacheService;
+            _userService = userService;
             _globalSettings = globalSettings;
         }
 
@@ -72,7 +78,8 @@ namespace Bit.Admin.Controllers
             }
 
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-            return View(new OrganizationViewModel(organization, users));
+            return View(new OrganizationViewModel(organization, users,
+                _globalSettings.SelfHosted, User.Identity.Name));
         }
 
         [SelfHosted(NotSelfHostedOnly = true)]
@@ -118,6 +125,18 @@ namespace Bit.Admin.Controllers
             }
 
             return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [SelfHosted(SelfHostedOnly = true)]
+        public async Task<IActionResult> InviteMyself(Guid id)
+        {
+            var adminId = _userService.GetProperUserId(User);
+            var adminEmail = User.Identity.Name;
+            await _organizationService.InviteUserAsync(id, adminId, adminEmail,
+                Core.Enums.OrganizationUserType.Admin, true, null, null);
+            return RedirectToAction("View", new { id });
         }
     }
 }

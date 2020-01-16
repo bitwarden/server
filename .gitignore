@@ -207,5 +207,3 @@ src/Core/Properties/launchSettings.json
 **/*.DS_Store
 src/Admin/wwwroot/lib
 src/Admin/wwwroot/css
-scripts/bwdata
-.vscode

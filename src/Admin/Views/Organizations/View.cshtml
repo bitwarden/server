@@ -11,3 +11,9 @@
       onsubmit="return confirm('Are you sure you want to delete this organization (@Model.Organization.Name)?')">
     <button class="btn btn-danger" type="submit">Delete</button>
 </form>
+@if(Model.CanInviteMyself)
+{
+    <form asp-action="InviteMyself" asp-route-id="@Model.Organization.Id">
+        <button class="btn btn-primary" type="submit">Invite myself</button>
+    </form>
+}
