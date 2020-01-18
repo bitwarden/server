@@ -584,9 +584,24 @@ namespace Bit.Billing.Controllers
                 return false;
             }
 
-            var btObjIdField = ids.Item1.HasValue ? "organization_id" : "user_id";
+            var orgTransaction = ids.Item1.HasValue;
+            var btObjIdField = orgTransaction ? "organization_id" : "user_id";
             var btObjId = ids.Item1 ?? ids.Item2.Value;
             var btInvoiceAmount = (invoice.AmountDue / 100M);
+
+            var existingTransactions = orgTransaction ?
+                await _transactionRepository.GetManyByOrganizationIdAsync(ids.Item1.Value) :
+                await _transactionRepository.GetManyByUserIdAsync(ids.Item2.Value);
+            var duplicateTimeSpan = TimeSpan.FromHours(24);
+            var now = DateTime.UtcNow;
+            var duplicateTransaction = existingTransactions?
+                .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
+            if(duplicateTransaction != null)
+            {
+                _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
+                    "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+                return false;
+            }
 
             var transactionResult = await _btGateway.Transaction.SaleAsync(
                 new Braintree.TransactionRequest
