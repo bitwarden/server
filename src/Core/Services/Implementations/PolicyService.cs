@@ -38,24 +38,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("This organization cannot use policies.");
             }
 
+            var now = DateTime.UtcNow;
             if(policy.Id == default(Guid))
             {
-                policy.CreationDate = policy.RevisionDate = DateTime.UtcNow;
-                await _policyRepository.CreateAsync(policy);
-                await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Created);
+                policy.CreationDate = now;
             }
-            else
-            {
-                policy.RevisionDate = DateTime.UtcNow;
-                await _policyRepository.ReplaceAsync(policy);
-                await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
-            }
-        }
-
-        public async Task DeleteAsync(Policy policy)
-        {
-            await _policyRepository.DeleteAsync(policy);
-            await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Deleted);
+            policy.RevisionDate = DateTime.UtcNow;
+            await _policyRepository.UpsertAsync(policy);
+            await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
     }
 }

@@ -6,6 +6,5 @@ namespace Bit.Core.Services
     public interface IPolicyService
     {
         Task SaveAsync(Policy policy);
-        Task DeleteAsync(Policy policy);
     }
 }
