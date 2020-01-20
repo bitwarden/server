@@ -2,7 +2,7 @@
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
     [Type]           TINYINT          NOT NULL,
-    [Data]           NVARCHAR (MAX)   NOT NULL,
+    [Data]           NVARCHAR (MAX)   NULL,
     [Enabled]        BIT              NOT NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,
     [RevisionDate]   DATETIME2 (7)    NOT NULL,
@@ -12,6 +12,6 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Policy_OrganizationId_Enabled]
-    ON [dbo].[Policy]([OrganizationId] ASC, [Enabled] ASC);
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Policy_OrganizationId_Type]
+    ON [dbo].[Policy]([OrganizationId] ASC, [Type] ASC);
 

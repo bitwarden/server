@@ -259,5 +259,6 @@
     <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Policy_Update.sql" />
     <Build Include="dbo\Views\PolicyView.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationIdType.sql" />
   </ItemGroup>
 </Project>

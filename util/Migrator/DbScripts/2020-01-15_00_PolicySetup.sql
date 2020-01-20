@@ -4,7 +4,7 @@ BEGIN
         [Id]             UNIQUEIDENTIFIER NOT NULL,
         [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
         [Type]           TINYINT          NOT NULL,
-        [Data]           NVARCHAR (MAX)   NOT NULL,
+        [Data]           NVARCHAR (MAX)   NULL,
         [Enabled]        BIT              NOT NULL,
         [CreationDate]   DATETIME2 (7)    NOT NULL,
         [RevisionDate]   DATETIME2 (7)    NOT NULL,
@@ -12,8 +12,8 @@ BEGIN
         CONSTRAINT [FK_Policy_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
     );
 
-    CREATE NONCLUSTERED INDEX [IX_Policy_OrganizationId_Enabled]
-        ON [dbo].[Policy]([OrganizationId] ASC, [Enabled] ASC);
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Policy_OrganizationId_Type]
+        ON [dbo].[Policy]([OrganizationId] ASC, [Type] ASC);
 END
 GO
 
@@ -125,6 +125,29 @@ BEGIN
         [dbo].[PolicyView]
     WHERE
         [OrganizationId] = @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Policy_ReadByOrganizationIdType]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Policy_ReadByOrganizationIdType]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Policy_ReadByOrganizationIdType]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[PolicyView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+        AND [Type] = @Type
 END
 GO
 

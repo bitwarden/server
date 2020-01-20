@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Enums;
 
 namespace Bit.Api.Controllers
 {
@@ -29,11 +30,16 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
         }
 
-        [HttpGet("{id}")]
-        public async Task<PolicyResponseModel> Get(string orgId, string id)
+        [HttpGet("{type}")]
+        public async Task<PolicyResponseModel> Get(string orgId, int type)
         {
-            var policy = await _policyRepository.GetByIdAsync(new Guid(id));
-            if(policy == null || !_currentContext.OrganizationAdmin(policy.OrganizationId))
+            var orgIdGuid = new Guid(orgId);
+            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+            if(policy == null)
             {
                 throw new NotFoundException();
             }
@@ -55,45 +61,26 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<PolicyResponseModel>(responses);
         }
 
-        [HttpPost("")]
-        public async Task<PolicyResponseModel> Post(string orgId, [FromBody]PolicyRequestModel model)
+        [HttpPut("{type}")]
+        public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody]PolicyRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
             if(!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(new Guid(orgId), (PolicyType)type);
+            if(policy == null)
+            {
+                policy = model.ToPolicy(orgIdGuid);
+            }
+            else
+            {
+                policy = model.ToPolicy(policy);
+            }
 
-            var policy = model.ToPolicy(orgIdGuid);
             await _policyService.SaveAsync(policy);
             return new PolicyResponseModel(policy);
-        }
-
-        [HttpPut("{id}")]
-        [HttpPost("{id}")]
-        public async Task<PolicyResponseModel> Put(string orgId, string id, [FromBody]PolicyRequestModel model)
-        {
-            var policy = await _policyRepository.GetByIdAsync(new Guid(id));
-            if(policy == null || !_currentContext.OrganizationAdmin(policy.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
-            await _policyService.SaveAsync(model.ToPolicy(policy));
-            return new PolicyResponseModel(policy);
-        }
-
-        [HttpDelete("{id}")]
-        [HttpPost("{id}/delete")]
-        public async Task Delete(string orgId, string id)
-        {
-            var policy = await _policyRepository.GetByIdAsync(new Guid(id));
-            if(policy == null || !_currentContext.OrganizationAdmin(policy.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
-            await _policyService.DeleteAsync(policy);
         }
     }
 }

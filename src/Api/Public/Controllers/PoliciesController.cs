@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -33,17 +34,17 @@ namespace Bit.Api.Public.Controllers
         /// Retrieve a policy.
         /// </summary>
         /// <remarks>
-        /// Retrieves the details of an existing policy. You need only supply the unique group identifier
-        /// that was returned upon policy creation.
+        /// Retrieves the details of a policy.
         /// </remarks>
-        /// <param name="id">The identifier of the policy to be retrieved.</param>
-        [HttpGet("{id}")]
+        /// <param name="type">The type of policy to be retrieved.</param>
+        [HttpGet("{type}")]
         [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Get(Guid id)
+        public async Task<IActionResult> Get(PolicyType type)
         {
-            var policy = await _policyRepository.GetByIdAsync(id);
-            if(policy == null || policy.OrganizationId != _currentContext.OrganizationId)
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
+                _currentContext.OrganizationId.Value, type);
+            if(policy == null)
             {
                 return new NotFoundResult();
             }
@@ -68,68 +69,33 @@ namespace Bit.Api.Public.Controllers
         }
 
         /// <summary>
-        /// Create a policy.
-        /// </summary>
-        /// <remarks>
-        /// Creates a new policy object.
-        /// </remarks>
-        /// <param name="model">The request model.</param>
-        [HttpPost]
-        [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
-        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> Post([FromBody]PolicyCreateRequestModel model)
-        {
-            var policy = model.ToPolicy(_currentContext.OrganizationId.Value);
-            await _policyService.SaveAsync(policy);
-            var response = new PolicyResponseModel(policy);
-            return new JsonResult(response);
-        }
-
-        /// <summary>
         /// Update a policy.
         /// </summary>
         /// <remarks>
-        /// Updates the specified policy object. If a property is not provided,
+        /// Updates the specified policy. If a property is not provided,
         /// the value of the existing property will be reset.
         /// </remarks>
-        /// <param name="id">The identifier of the policy to be updated.</param>
+        /// <param name="type">The type of policy to be updated.</param>
         /// <param name="model">The request model.</param>
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Put(Guid id, [FromBody]PolicyUpdateRequestModel model)
+        public async Task<IActionResult> Put(PolicyType type, [FromBody]PolicyUpdateRequestModel model)
         {
-            var existingPolicy = await _policyRepository.GetByIdAsync(id);
-            if(existingPolicy == null || existingPolicy.OrganizationId != _currentContext.OrganizationId)
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
+                _currentContext.OrganizationId.Value, type);
+            if(policy == null)
             {
-                return new NotFoundResult();
+                policy = model.ToPolicy(_currentContext.OrganizationId.Value);
             }
-            var updatedPolicy = model.ToPolicy(existingPolicy);
-            await _policyService.SaveAsync(updatedPolicy);
-            var response = new PolicyResponseModel(updatedPolicy);
+            else
+            {
+                policy = model.ToPolicy(policy);
+            }
+            await _policyService.SaveAsync(policy);
+            var response = new PolicyResponseModel(policy);
             return new JsonResult(response);
-        }
-
-        /// <summary>
-        /// Delete a policy.
-        /// </summary>
-        /// <remarks>
-        /// Permanently deletes a policy. This cannot be undone.
-        /// </remarks>
-        /// <param name="id">The identifier of the policy to be deleted.</param>
-        [HttpDelete("{id}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var policy = await _policyRepository.GetByIdAsync(id);
-            if(policy == null || policy.OrganizationId != _currentContext.OrganizationId)
-            {
-                return new NotFoundResult();
-            }
-            await _policyRepository.DeleteAsync(policy);
-            return new OkResult();
         }
     }
 }

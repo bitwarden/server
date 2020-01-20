@@ -13,7 +13,6 @@ namespace Bit.Core.Models.Api.Public
         /// <summary>
         /// Data for the policy.
         /// </summary>
-        [StringLength(300)]
         public Dictionary<string, object> Data { get; set; }
     }
 }
