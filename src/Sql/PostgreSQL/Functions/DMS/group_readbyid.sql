@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo.group_readbyid(par_id uuid, INOUT p_refcur refcursor)
+ LANGUAGE plpgsql
+AS $procedure$
 BEGIN
     /*
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
@@ -9,4 +12,5 @@ BEGIN
         FROM vault_dbo.groupview
         WHERE id = par_Id;
 END;
+$procedure$
 ;

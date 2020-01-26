@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo.group_deletebyid(par_id uuid)
+ LANGUAGE plpgsql
+AS $procedure$
 DECLARE
     var_OrganizationId UUID DEFAULT (SELECT
         organizationid
@@ -15,4 +18,5 @@ BEGIN
     DELETE FROM vault_dbo."Group"
         WHERE id = par_Id;
 END;
+$procedure$
 ;

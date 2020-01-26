@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo.group_createwithcollections(par_id uuid, par_organizationid uuid, par_name character varying, par_accessall numeric, par_externalid character varying, par_creationdate timestamp without time zone, par_revisiondate timestamp without time zone, par_collections vault_dbo.selectionreadonlyarray)
+ LANGUAGE plpgsql
+AS $procedure$
 BEGIN
     /*
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
@@ -23,4 +26,5 @@ BEGIN
             FROM availablecollectionscte);
     CALL vault_dbo.user_bumpaccountrevisiondatebyorganizationid(par_OrganizationId);
 END;
+$procedure$
 ;

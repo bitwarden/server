@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo.grant_deleteexpired()
+ LANGUAGE plpgsql
+AS $procedure$
 DECLARE
     var_BatchSize NUMERIC(10, 0) DEFAULT 100;
     var_Now TIMESTAMP(6) WITHOUT TIME ZONE DEFAULT timezone('UTC', CURRENT_TIMESTAMP(6));
@@ -18,4 +21,5 @@ BEGIN
         GET DIAGNOSTICS var_BatchSize = ROW_COUNT;
     END LOOP;
 END;
+$procedure$
 ;

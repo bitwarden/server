@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo.group_updatewithcollections(par_id uuid, par_organizationid uuid, par_name character varying, par_accessall numeric, par_externalid character varying, par_creationdate timestamp without time zone, par_revisiondate timestamp without time zone, par_collections vault_dbo.selectionreadonlyarray)
+ LANGUAGE plpgsql
+AS $procedure$
 /*
 [7916 - Severity CRITICAL - Current MERGE statement can not be emulated by INSERT ON CONFLICT usage. To achieve the effect of a MERGE statement, use separate INSERT, DELETE, and UPDATE statements or by cursor usage.]
 BEGIN
@@ -40,4 +43,5 @@ END
 */
 BEGIN
 END;
+$procedure$
 ;

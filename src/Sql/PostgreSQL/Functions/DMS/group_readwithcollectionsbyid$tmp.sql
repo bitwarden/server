@@ -1,3 +1,6 @@
+CREATE OR REPLACE PROCEDURE vault_dbo."group_readwithcollectionsbyid$tmp"(par_id uuid)
+ LANGUAGE plpgsql
+AS $procedure$
 DECLARE
     group_readbyid$refcur_1 refcursor;
 BEGIN
@@ -14,4 +17,5 @@ BEGIN
         FROM vault_dbo.collectiongroup
         WHERE groupid = par_Id;
 END;
+$procedure$
 ;
