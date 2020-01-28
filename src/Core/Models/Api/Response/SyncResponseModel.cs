@@ -18,7 +18,8 @@ namespace Bit.Core.Models.Api
             IEnumerable<CollectionDetails> collections,
             IEnumerable<CipherDetails> ciphers,
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
-            bool excludeDomains)
+            bool excludeDomains,
+            IEnumerable<Policy> policies)
             : base("sync")
         {
             Profile = new ProfileResponseModel(user, organizationUserDetails, userTwoFactorEnabled);
@@ -27,6 +28,7 @@ namespace Bit.Core.Models.Api
             Collections = collections?.Select(
                 c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
             Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
+            Policies = policies.Select(p => new PolicyResponseModel(p));
         }
 
         public ProfileResponseModel Profile { get; set; }
@@ -34,5 +36,6 @@ namespace Bit.Core.Models.Api
         public IEnumerable<CollectionDetailsResponseModel> Collections { get; set; }
         public IEnumerable<CipherDetailsResponseModel> Ciphers { get; set; }
         public DomainsResponseModel Domains { get; set; }
+        public IEnumerable<PolicyResponseModel> Policies { get; set; }
     }
 }
