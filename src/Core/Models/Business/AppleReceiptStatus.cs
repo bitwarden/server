@@ -49,6 +49,22 @@ namespace Bit.Billing.Models
             return LatestReceipt;
         }
 
+        public DateTime? GetLastCancellationDate()
+        {
+            return LatestReceiptInfo?.LastOrDefault()?.CancellationDate;
+        }
+
+        public bool IsRefunded()
+        {
+            var cancellationDate = GetLastCancellationDate();
+            var expiresDate = GetLastCancellationDate();
+            if(cancellationDate.HasValue && expiresDate.HasValue)
+            {
+                return cancellationDate.Value <= expiresDate.Value;
+            }
+            return false;
+        }
+
         public Transaction BuildTransactionFromLastTransaction(decimal amount, Guid userId)
         {
             return new Transaction
@@ -111,8 +127,13 @@ namespace Bit.Billing.Models
             [JsonProperty("expires_date_ms")]
             [JsonConverter(typeof(MsEpochConverter))]
             public DateTime ExpiresDate { get; set; }
+            [JsonProperty("cancellation_date_ms")]
+            [JsonConverter(typeof(MsEpochConverter))]
+            public DateTime? CancellationDate { get; set; }
             [JsonProperty("web_order_line_item_id")]
             public string WebOrderLineItemId { get; set; }
+            [JsonProperty("cancellation_reason")]
+            public string CancellationReason { get; set; }
         }
 
         public class MsEpochConverter : DateTimeConverterBase
