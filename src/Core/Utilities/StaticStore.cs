@@ -87,6 +87,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Eventbrite, new List<string> { "eventbrite.at", "eventbrite.be", "eventbrite.ca", "eventbrite.ch", "eventbrite.cl", "eventbrite.co.id", "eventbrite.co.in", "eventbrite.co.kr", "eventbrite.co.nz", "eventbrite.co.uk", "eventbrite.co.ve", "eventbrite.com", "eventbrite.com.au", "eventbrite.com.bo", "eventbrite.com.br", "eventbrite.com.co", "eventbrite.com.hk", "eventbrite.com.hn", "eventbrite.com.pe", "eventbrite.com.sg", "eventbrite.com.tr", "eventbrite.com.tw", "eventbrite.cz", "eventbrite.de", "eventbrite.dk", "eventbrite.fi", "eventbrite.fr", "eventbrite.gy", "eventbrite.hu", "eventbrite.ie", "eventbrite.is", "eventbrite.it", "eventbrite.jp", "eventbrite.mx", "eventbrite.nl", "eventbrite.no", "eventbrite.pl", "eventbrite.pt", "eventbrite.ru", "eventbrite.se" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.StackExchange, new List<string> { "stackexchange.com", "superuser.com", "stackoverflow.com", "serverfault.com", "mathoverflow.net", "askubuntu.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Docusign, new List<string> { "docusign.com", "docusign.net" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Envato, new List<string> { "envato.com", "themeforest.net", "codecanyon.net", "videohive.net", "audiojungle.net", "graphicriver.net", "photodune.net", "3docean.net" });
 
             #endregion
 
