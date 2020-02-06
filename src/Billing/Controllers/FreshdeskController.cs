@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -90,10 +89,12 @@ namespace Bit.Billing.Controllers
                     {
                         foreach(var org in orgs)
                         {
-                            tags.Add("Org:" + GetAttribute<DisplayAttribute>(org.PlanType).Name);
+                            tags.Add(string.Format("Org: {0}",
+                                GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault()));
                         }
                     }
-                    var hasPaidOrg = orgs.Any(o => o.PlanType != Core.Enums.PlanType.Free);
+                    var hasPaidOrg = orgs.Any(o => o.PlanType != Core.Enums.PlanType.Free &&
+                        o.PlanType != Core.Enums.PlanType.Custom);
                     if(user.Premium || hasPaidOrg)
                     {
                         updateBody.Add("priority", 3);
@@ -138,7 +139,7 @@ namespace Bit.Billing.Controllers
                     throw;
                 }
             }
-            await Task.Delay(60000 * (retriedCount + 1));
+            await Task.Delay(30000 * (retriedCount + 1));
             return await CallFreshdeskApiAsync(request, retriedCount++);
         }
 
