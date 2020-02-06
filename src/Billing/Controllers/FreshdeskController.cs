@@ -24,6 +24,7 @@ namespace Bit.Billing.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILogger<AppleController> _logger;
         private readonly HttpClient _httpClient = new HttpClient();
+        private readonly string _freshdeskAuthkey;
 
         public FreshdeskController(
             IUserRepository userRepository,
@@ -37,6 +38,8 @@ namespace Bit.Billing.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
+            _freshdeskAuthkey = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
         }
 
         [HttpPost("webhook")]
@@ -85,12 +88,12 @@ namespace Bit.Billing.Controllers
                         tags.Add("Premium");
                     }
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
-                    if(orgs.Any())
+                    foreach(var org in orgs)
                     {
-                        foreach(var org in orgs)
+                        var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
+                        if(!string.IsNullOrWhiteSpace(planName))
                         {
-                            tags.Add(string.Format("Org: {0}",
-                                GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault()));
+                            tags.Add(string.Format("Org: {0}", planName));
                         }
                     }
                     var hasPaidOrg = orgs.Any(o => o.PlanType != Core.Enums.PlanType.Free &&
@@ -124,8 +127,7 @@ namespace Bit.Billing.Controllers
         {
             try
             {
-                var authKey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
-                request.Headers.Add("Authorization", authKey);
+                request.Headers.Add("Authorization", _freshdeskAuthkey);
                 var response = await _httpClient.SendAsync(request);
                 if(response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
                 {
