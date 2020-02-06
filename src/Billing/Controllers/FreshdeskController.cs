@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core;
 
 namespace Bit.Billing.Controllers
 {
@@ -23,6 +24,7 @@ namespace Bit.Billing.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILogger<AppleController> _logger;
+        private readonly GlobalSettings _globalSettings;
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _freshdeskAuthkey;
 
@@ -31,13 +33,15 @@ namespace Bit.Billing.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOptions<BillingSettings> billingSettings,
-            ILogger<AppleController> logger)
+            ILogger<AppleController> logger,
+            GlobalSettings globalSettings)
         {
             _billingSettings = billingSettings?.Value;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
+            _globalSettings = globalSettings;
             _freshdeskAuthkey = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
         }
@@ -79,9 +83,11 @@ namespace Bit.Billing.Controllers
                 }
 
                 var updateBody = new Dictionary<string, object>();
+                var note = string.Empty;
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if(user != null)
                 {
+                    note += $"User: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
                     var tags = new List<string>();
                     if(user.Premium)
                     {
@@ -90,6 +96,8 @@ namespace Bit.Billing.Controllers
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     foreach(var org in orgs)
                     {
+                        note += $"\n\nOrg, {org.Name}: " +
+                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if(!string.IsNullOrWhiteSpace(planName))
                         {
@@ -106,12 +114,23 @@ namespace Bit.Billing.Controllers
                     {
                         updateBody.Add("tags", tags);
                     }
-
-                    var request = new HttpRequestMessage(HttpMethod.Put,
+                    var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId));
-                    request.Content = new StringContent(JsonConvert.SerializeObject(updateBody),
+                    updateRequest.Content = new StringContent(JsonConvert.SerializeObject(updateBody),
                         Encoding.UTF8, "application/json");
-                    await CallFreshdeskApiAsync(request);
+                    await CallFreshdeskApiAsync(updateRequest);
+
+
+                    var noteBody = new Dictionary<string, object>
+                    {
+                        { "body", note },
+                        { "private", true }
+                    };
+                    var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId));
+                    noteRequest.Content = new StringContent(JsonConvert.SerializeObject(noteBody),
+                        Encoding.UTF8, "application/json");
+                    await CallFreshdeskApiAsync(noteRequest);
                 }
 
                 return new OkResult();
