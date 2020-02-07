@@ -87,8 +87,8 @@ namespace Bit.Billing.Controllers
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if(user != null)
                 {
-                    note += $"User: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
-                    var tags = new List<string>();
+                    note += $"<li>User: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
+                    var tags = new HashSet<string>();
                     if(user.Premium)
                     {
                         tags.Add("Premium");
@@ -96,19 +96,13 @@ namespace Bit.Billing.Controllers
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     foreach(var org in orgs)
                     {
-                        note += $"\n\nOrg, {org.Name}: " +
-                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
+                        note += $"<li>Org, {org.Name}: " +
+                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if(!string.IsNullOrWhiteSpace(planName))
                         {
                             tags.Add(string.Format("Org: {0}", planName));
                         }
-                    }
-                    var hasPaidOrg = orgs.Any(o => o.PlanType != Core.Enums.PlanType.Free &&
-                        o.PlanType != Core.Enums.PlanType.Custom);
-                    if(user.Premium || hasPaidOrg)
-                    {
-                        updateBody.Add("priority", 3);
                     }
                     if(tags.Any())
                     {
@@ -123,7 +117,7 @@ namespace Bit.Billing.Controllers
 
                     var noteBody = new Dictionary<string, object>
                     {
-                        { "body", note },
+                        { "body", $"<ul>{note}</ul>" },
                         { "private", true }
                     };
                     var noteRequest = new HttpRequestMessage(HttpMethod.Post,
