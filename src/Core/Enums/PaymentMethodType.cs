@@ -20,5 +20,7 @@ namespace Bit.Core.Enums
         AppleInApp = 6,
         [Display(Name = "Google In-App Purchase")]
         GoogleInApp = 7,
+        [Display(Name = "Check")]
+        Check = 8,
     }
 }
