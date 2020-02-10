@@ -87,7 +87,7 @@ namespace Bit.Billing.Controllers
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if(user != null)
                 {
-                    note += $"<li>User: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
+                    note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
                     var tags = new HashSet<string>();
                     if(user.Premium)
                     {
