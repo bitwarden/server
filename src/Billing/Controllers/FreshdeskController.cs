@@ -77,6 +77,7 @@ namespace Bit.Billing.Controllers
                 dynamic data = JsonConvert.DeserializeObject(body);
                 string ticketId = data.ticket_id;
                 string ticketContactEmail = data.ticket_contact_email;
+                string ticketTags = data.ticket_tags;
                 if(string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
                 {
                     return new BadRequestResult();
@@ -106,7 +107,16 @@ namespace Bit.Billing.Controllers
                     }
                     if(tags.Any())
                     {
-                        updateBody.Add("tags", tags);
+                        var tagsToUpdate = tags.ToList();
+                        if(!string.IsNullOrWhiteSpace(ticketTags))
+                        {
+                            var splitTicketTags = ticketTags.Split(',');
+                            for(var i = 0; i < splitTicketTags.Length; i++)
+                            {
+                                tagsToUpdate.Insert(i, splitTicketTags[i]);
+                            }
+                        }
+                        updateBody.Add("tags", tagsToUpdate);
                     }
                     var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId));
