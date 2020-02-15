@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core;
@@ -16,13 +17,16 @@ namespace Bit.Admin.Controllers
     {
         private readonly GlobalSettings _globalSettings;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
 
         public ToolsController(
             GlobalSettings globalSettings,
-            ITransactionRepository transactionRepository)
+            ITransactionRepository transactionRepository,
+            IOrganizationUserRepository organizationUserRepository)
         {
             _globalSettings = globalSettings;
             _transactionRepository = transactionRepository;
+            _organizationUserRepository = organizationUserRepository;
         }
 
         public IActionResult ChargeBraintree()
@@ -136,6 +140,41 @@ namespace Bit.Admin.Controllers
             {
                 return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId });
             }
+        }
+
+        public IActionResult PromoteAdmin()
+        {
+            return View("PromoteAdmin");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PromoteAdmin(PromoteAdminModel model)
+        {
+            if(!ModelState.IsValid)
+            {
+                return View("PromoteAdmin", model);
+            }
+
+            var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(
+                model.OrganizationId.Value, null);
+            var user = orgUsers.FirstOrDefault(u => u.UserId == model.UserId.Value);
+            if(user == null)
+            {
+                ModelState.AddModelError(nameof(model.UserId), "User Id not found in this organization.");
+            }
+            else if(user.Type != Core.Enums.OrganizationUserType.Admin)
+            {
+                ModelState.AddModelError(nameof(model.UserId), "User is not an admin of this organization.");
+            }
+
+            if(!ModelState.IsValid)
+            {
+                return View("PromoteAdmin", model);
+            }
+
+            user.Type = Core.Enums.OrganizationUserType.Owner;
+            await _organizationUserRepository.ReplaceAsync(user);
+            return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
         }
     }
 }
