@@ -43,6 +43,7 @@ namespace Bit.Core.Services
         private readonly IEventService _eventService;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IPaymentService _paymentService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IDataProtector _organizationServiceDataProtector;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
@@ -69,6 +70,7 @@ namespace Bit.Core.Services
             IApplicationCacheService applicationCacheService,
             IDataProtectionProvider dataProtectionProvider,
             IPaymentService paymentService,
+            IPolicyRepository policyRepository,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -97,6 +99,7 @@ namespace Bit.Core.Services
             _eventService = eventService;
             _applicationCacheService = applicationCacheService;
             _paymentService = paymentService;
+            _policyRepository = policyRepository;
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
             _currentContext = currentContext;
@@ -638,7 +641,8 @@ namespace Bit.Core.Services
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
         }
 
-        public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
+        public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
+            IOrganizationService organizationService)
         {
             var providers = user.GetTwoFactorProviders();
             if(!providers?.ContainsKey(type) ?? true)
@@ -650,6 +654,25 @@ namespace Bit.Core.Services
             user.SetTwoFactorProviders(providers);
             await SaveUserAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
+
+            if(!await TwoFactorIsEnabledAsync(user))
+            {
+                var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+                var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
+                if(twoFactorPolicies.Any())
+                {
+                    var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                    var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
+                        .Select(o => o.Id).ToHashSet();
+                    foreach(var policy in twoFactorPolicies)
+                    {
+                        if(!ownerOrgs.Contains(policy.OrganizationId))
+                        {
+                            await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
+                        }
+                    }
+                }
+            }
         }
 
         public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode)

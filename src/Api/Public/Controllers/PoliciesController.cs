@@ -18,15 +18,21 @@ namespace Bit.Api.Public.Controllers
     {
         private readonly IPolicyRepository _policyRepository;
         private readonly IPolicyService _policyService;
+        private readonly IUserService _userService;
+        private readonly IOrganizationService _organizationService;
         private readonly CurrentContext _currentContext;
 
         public PoliciesController(
             IPolicyRepository policyRepository,
             IPolicyService policyService,
+            IUserService userService,
+            IOrganizationService organizationService,
             CurrentContext currentContext)
         {
             _policyRepository = policyRepository;
             _policyService = policyService;
+            _userService = userService;
+            _organizationService = organizationService;
             _currentContext = currentContext;
         }
 
@@ -93,7 +99,7 @@ namespace Bit.Api.Public.Controllers
             {
                 policy = model.ToPolicy(policy);
             }
-            await _policyService.SaveAsync(policy);
+            await _policyService.SaveAsync(policy, _userService, _organizationService, null);
             var response = new PolicyResponseModel(policy);
             return new JsonResult(response);
         }

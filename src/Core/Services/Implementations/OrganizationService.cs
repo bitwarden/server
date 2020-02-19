@@ -960,7 +960,8 @@ namespace Bit.Core.Services
             await _mailService.SendOrganizationInviteEmailAsync(org.Name, orgUser, token);
         }
 
-        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
+        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
+            IUserService userService)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null)
@@ -1003,6 +1004,16 @@ namespace Bit.Core.Services
             if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
+            }
+
+            if(!await userService.TwoFactorIsEnabledAsync(user))
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                if(policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                {
+                    throw new BadRequestException("You cannot join this organization until you enable " +
+                        "two-step login on your user account.");
+                }
             }
 
             orgUser.Status = OrganizationUserStatusType.Accepted;

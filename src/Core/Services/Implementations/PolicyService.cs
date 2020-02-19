@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
@@ -25,7 +26,8 @@ namespace Bit.Core.Services
             _policyRepository = policyRepository;
         }
 
-        public async Task SaveAsync(Policy policy)
+        public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
+            Guid? savingUserId)
         {
             var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
             if(org == null)
@@ -42,6 +44,28 @@ namespace Bit.Core.Services
             if(policy.Id == default(Guid))
             {
                 policy.CreationDate = now;
+            }
+            else if(policy.Enabled)
+            {
+                var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
+                if(!currentPolicy?.Enabled ?? true)
+                {
+                    if(currentPolicy.Type == Enums.PolicyType.TwoFactorAuthentication)
+                    {
+                        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+                            policy.OrganizationId);
+                        foreach(var orgUser in orgUsers.Where(ou =>
+                            ou.Status != Enums.OrganizationUserStatusType.Invited &&
+                            ou.Type != Enums.OrganizationUserType.Owner))
+                        {
+                            if(orgUser.UserId != savingUserId && !await userService.TwoFactorIsEnabledAsync(orgUser))
+                            {
+                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                    savingUserId);
+                            }
+                        }
+                    }
+                }
             }
             policy.RevisionDate = DateTime.UtcNow;
             await _policyRepository.UpsertAsync(policy);

@@ -318,7 +318,7 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody]TwoFactorProviderRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, false);
-            await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
+            await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
             var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
             return response;
         }
