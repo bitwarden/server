@@ -21,6 +21,18 @@
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.Organization.TwoFactorIsEnabled() ? "Yes" : "No")</dd>
 
+    <dt class="col-sm-4 col-lg-3">Items</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Collections</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Groups</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.GroupCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Policies</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.PolicyCount</dd>
+
     <dt class="col-sm-4 col-lg-3">Created</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Organization.CreationDate.ToString()</dd>
 
