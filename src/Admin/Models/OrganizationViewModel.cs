@@ -19,8 +19,8 @@ namespace Bit.Admin.Models
             UserCount = orgUsers.Count();
             CipherCount = ciphers.Count();
             CollectionCount = collections.Count();
-            GroupCount = groups.Count();
-            PolicyCount = policies.Count();
+            GroupCount = groups?.Count() ?? 0;
+            PolicyCount = policies?.Count() ?? 0;
             Owners = string.Join(", ", 
                 orgUsers
                 .Where(u => u.Type == OrganizationUserType.Owner && u.Status == OrganizationUserStatusType.Confirmed)
