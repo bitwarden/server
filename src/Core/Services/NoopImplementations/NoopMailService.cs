@@ -47,6 +47,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendTwoFactorEmailAsync(string email, string token)
         {
             return Task.FromResult(0);

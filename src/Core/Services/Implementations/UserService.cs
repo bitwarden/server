@@ -669,6 +669,9 @@ namespace Bit.Core.Services
                         if(!ownerOrgs.Contains(policy.OrganizationId))
                         {
                             await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
+                            var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                organization.Name, user.Email);
                         }
                     }
                 }
