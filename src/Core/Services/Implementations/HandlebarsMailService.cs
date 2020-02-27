@@ -186,6 +186,20 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
+        {
+            var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
+            var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
+            {
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
+            message.Category = "OrganizationUserRemovedForPolicyTwoStep";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendWelcomeEmailAsync(User user)
         {
             var message = CreateDefaultMessage("Welcome", user.Email);
