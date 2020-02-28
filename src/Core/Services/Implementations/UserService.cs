@@ -668,28 +668,12 @@ namespace Bit.Core.Services
 
             if(!await TwoFactorIsEnabledAsync(user))
             {
-                var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-                var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-                if(twoFactorPolicies.Any())
-                {
-                    var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                    var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
-                        .Select(o => o.OrganizationId).ToHashSet();
-                    foreach(var policy in twoFactorPolicies)
-                    {
-                        if(!ownerOrgs.Contains(policy.OrganizationId))
-                        {
-                            await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
-                            var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-                            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                organization.Name, user.Email);
-                        }
-                    }
-                }
+                await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
             }
         }
 
-        public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode)
+        public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
+            IOrganizationService organizationService)
         {
             var user = await _userRepository.GetByEmailAsync(email);
             if(user == null)
@@ -713,6 +697,7 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
             await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+            await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
 
             return true;
         }
@@ -1092,6 +1077,28 @@ namespace Bit.Core.Services
             if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
             {
                 user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+            }
+        }
+
+        private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
+        {
+            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+            var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
+            if(twoFactorPolicies.Any())
+            {
+                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
+                    .Select(o => o.OrganizationId).ToHashSet();
+                foreach(var policy in twoFactorPolicies)
+                {
+                    if(!ownerOrgs.Contains(policy.OrganizationId))
+                    {
+                        await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
+                        var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                        await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                            organization.Name, user.Email);
+                    }
+                }
             }
         }
     }
