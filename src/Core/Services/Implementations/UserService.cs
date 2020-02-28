@@ -261,6 +261,29 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Open registration has been disabled by the system administrator.");
             }
 
+            if(orgUserId.HasValue)
+            {
+                var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
+                if(orgUser != null)
+                {
+                    var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
+                        PolicyType.TwoFactorAuthentication);
+                    if(twoFactorPolicy != null && twoFactorPolicy.Enabled)
+                    {
+                        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                        {
+
+                            [TwoFactorProviderType.Email] = new TwoFactorProvider
+                            {
+                                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                                Enabled = true
+                            }
+                        });
+                        SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+                    }
+                }
+            }
+
             var result = await base.CreateAsync(user, masterPassword);
             if(result == IdentityResult.Success)
             {
@@ -624,19 +647,7 @@ namespace Bit.Core.Services
 
         public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type)
         {
-            var providers = user.GetTwoFactorProviders();
-            if(!providers?.ContainsKey(type) ?? true)
-            {
-                return;
-            }
-
-            providers[type].Enabled = true;
-            user.SetTwoFactorProviders(providers);
-
-            if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
-            {
-                user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            }
+            SetTwoFactorProvider(user, type);
             await SaveUserAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
         }
@@ -663,7 +674,7 @@ namespace Bit.Core.Services
                 {
                     var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
                     var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
-                        .Select(o => o.Id).ToHashSet();
+                        .Select(o => o.OrganizationId).ToHashSet();
                     foreach(var policy in twoFactorPolicies)
                     {
                         if(!ownerOrgs.Contains(policy.OrganizationId))
@@ -1065,6 +1076,23 @@ namespace Bit.Core.Services
             }
 
             return IdentityResult.Success;
+        }
+
+        public void SetTwoFactorProvider(User user, TwoFactorProviderType type)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if(!providers?.ContainsKey(type) ?? true)
+            {
+                return;
+            }
+
+            providers[type].Enabled = true;
+            user.SetTwoFactorProviders(providers);
+
+            if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
+            {
+                user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+            }
         }
     }
 }
