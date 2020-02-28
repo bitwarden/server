@@ -39,7 +39,8 @@ namespace Bit.Core.Services
         Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
             IOrganizationService organizationService);
-        Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
+        Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
+            IOrganizationService organizationService);
         Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
         Task<IdentityResult> DeleteAsync(User user);
         Task<IdentityResult> DeleteAsync(User user, string token);

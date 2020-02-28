@@ -359,7 +359,8 @@ namespace Bit.Api.Controllers
         [AllowAnonymous]
         public async Task PostRecover([FromBody]TwoFactorRecoveryRequestModel model)
         {
-            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
+            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
+                _organizationService))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException(string.Empty, "Invalid information. Try again.");
