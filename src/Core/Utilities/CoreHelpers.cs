@@ -526,8 +526,8 @@ namespace Bit.Core.Utilities
             return string.Concat("Custom_", type.ToString());
         }
 
-        public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail, Guid orgUserId,
-            GlobalSettings globalSettings)
+        public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
+            Guid orgUserId, GlobalSettings globalSettings)
         {
             var invalid = true;
             try
