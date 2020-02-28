@@ -314,7 +314,7 @@ namespace Bit.Core.Repositories.SqlServer
                             using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "#TempCipher";
-                                var dataTable = BuildCiphersTable(ciphers);
+                                var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                                 bulkCopy.WriteToServer(dataTable);
                             }
                         }
@@ -324,7 +324,7 @@ namespace Bit.Core.Repositories.SqlServer
                             using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "#TempFolder";
-                                var dataTable = BuildFoldersTable(folders);
+                                var dataTable = BuildFoldersTable(bulkCopy, folders);
                                 bulkCopy.WriteToServer(dataTable);
                             }
                         }
@@ -420,7 +420,7 @@ namespace Bit.Core.Repositories.SqlServer
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "#TempCipher";
-                            var dataTable = BuildCiphersTable(ciphers);
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -489,7 +489,7 @@ namespace Bit.Core.Repositories.SqlServer
                             using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "[dbo].[Folder]";
-                                var dataTable = BuildFoldersTable(folders);
+                                var dataTable = BuildFoldersTable(bulkCopy, folders);
                                 bulkCopy.WriteToServer(dataTable);
                             }
                         }
@@ -497,7 +497,7 @@ namespace Bit.Core.Repositories.SqlServer
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                            var dataTable = BuildCiphersTable(ciphers);
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -536,7 +536,7 @@ namespace Bit.Core.Repositories.SqlServer
                         using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                            var dataTable = BuildCiphersTable(ciphers);
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
@@ -545,7 +545,7 @@ namespace Bit.Core.Repositories.SqlServer
                             using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "[dbo].[Collection]";
-                                var dataTable = BuildCollectionsTable(collections);
+                                var dataTable = BuildCollectionsTable(bulkCopy, collections);
                                 bulkCopy.WriteToServer(dataTable);
                             }
 
@@ -554,7 +554,7 @@ namespace Bit.Core.Repositories.SqlServer
                                 using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                                 {
                                     bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
-                                    var dataTable = BuildCollectionCiphersTable(collectionCiphers);
+                                    var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
                                     bulkCopy.WriteToServer(dataTable);
                                 }
                             }
@@ -576,7 +576,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        private DataTable BuildCiphersTable(IEnumerable<Cipher> ciphers)
+        private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
         {
             var c = ciphers.FirstOrDefault();
             if(c == null)
@@ -607,6 +607,11 @@ namespace Bit.Core.Repositories.SqlServer
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             ciphersTable.Columns.Add(revisionDateColumn);
 
+            foreach(DataColumn col in ciphersTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
+
             var keys = new DataColumn[1];
             keys[0] = idColumn;
             ciphersTable.PrimaryKey = keys;
@@ -632,7 +637,7 @@ namespace Bit.Core.Repositories.SqlServer
             return ciphersTable;
         }
 
-        private DataTable BuildFoldersTable(IEnumerable<Folder> folders)
+        private DataTable BuildFoldersTable(SqlBulkCopy bulkCopy, IEnumerable<Folder> folders)
         {
             var f = folders.FirstOrDefault();
             if(f == null)
@@ -652,6 +657,11 @@ namespace Bit.Core.Repositories.SqlServer
             foldersTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(f.RevisionDate), f.RevisionDate.GetType());
             foldersTable.Columns.Add(revisionDateColumn);
+
+            foreach(DataColumn col in foldersTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
 
             var keys = new DataColumn[1];
             keys[0] = idColumn;
@@ -673,7 +683,7 @@ namespace Bit.Core.Repositories.SqlServer
             return foldersTable;
         }
 
-        private DataTable BuildCollectionsTable(IEnumerable<Collection> collections)
+        private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections)
         {
             var c = collections.FirstOrDefault();
             if(c == null)
@@ -693,6 +703,11 @@ namespace Bit.Core.Repositories.SqlServer
             collectionsTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             collectionsTable.Columns.Add(revisionDateColumn);
+
+            foreach(DataColumn col in collectionsTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
 
             var keys = new DataColumn[1];
             keys[0] = idColumn;
@@ -714,7 +729,7 @@ namespace Bit.Core.Repositories.SqlServer
             return collectionsTable;
         }
 
-        private DataTable BuildCollectionCiphersTable(IEnumerable<CollectionCipher> collectionCiphers)
+        private DataTable BuildCollectionCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<CollectionCipher> collectionCiphers)
         {
             var cc = collectionCiphers.FirstOrDefault();
             if(cc == null)
@@ -728,6 +743,11 @@ namespace Bit.Core.Repositories.SqlServer
             collectionCiphersTable.Columns.Add(collectionIdColumn);
             var cipherIdColumn = new DataColumn(nameof(cc.CipherId), cc.CipherId.GetType());
             collectionCiphersTable.Columns.Add(cipherIdColumn);
+
+            foreach(DataColumn col in collectionCiphersTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
 
             var keys = new DataColumn[2];
             keys[0] = collectionIdColumn;

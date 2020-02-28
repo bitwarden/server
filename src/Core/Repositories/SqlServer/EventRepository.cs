@@ -92,7 +92,7 @@ namespace Bit.Core.Repositories.SqlServer
                 using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
                 {
                     bulkCopy.DestinationTableName = "[dbo].[Event]";
-                    var dataTable = BuildEventsTable(entities.Select(e => e is Event ? e as Event : new Event(e)));
+                    var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event ? e as Event : new Event(e)));
                     await bulkCopy.WriteToServerAsync(dataTable);
                 }
             }
@@ -131,7 +131,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        private DataTable BuildEventsTable(IEnumerable<Event> events)
+        private DataTable BuildEventsTable(SqlBulkCopy bulkCopy, IEnumerable<Event> events)
         {
             var e = events.FirstOrDefault();
             if(e == null)
@@ -167,6 +167,11 @@ namespace Bit.Core.Repositories.SqlServer
             eventsTable.Columns.Add(ipAddressColumn);
             var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
             eventsTable.Columns.Add(dateColumn);
+
+            foreach(DataColumn col in eventsTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
 
             var keys = new DataColumn[1];
             keys[0] = idColumn;
