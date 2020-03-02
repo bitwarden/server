@@ -81,8 +81,8 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet("token")]
-        public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(string orgId, string email,
-            string token, string organizationUserId)
+        public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(string orgId, [FromQuery]string email,
+            [FromQuery]string token, [FromQuery]string organizationUserId)
         {
             var orgUserId = new Guid(organizationUserId);
             var tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
