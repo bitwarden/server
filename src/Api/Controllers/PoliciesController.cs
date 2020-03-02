@@ -100,7 +100,7 @@ namespace Bit.Api.Controllers
             }
 
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = policies.Select(p => new PolicyResponseModel(p));
+            var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
             return new ListResponseModel<PolicyResponseModel>(responses);
         }
 
