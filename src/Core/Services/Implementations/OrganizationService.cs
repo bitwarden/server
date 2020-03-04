@@ -717,6 +717,7 @@ namespace Bit.Core.Services
             organization.UseTotp = license.UseTotp;
             organization.Use2fa = license.Use2fa;
             organization.UseApi = license.UseApi;
+            organization.UsePolicies = license.UsePolicies;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;
