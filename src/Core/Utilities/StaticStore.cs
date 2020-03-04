@@ -88,7 +88,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.StackExchange, new List<string> { "stackexchange.com", "superuser.com", "stackoverflow.com", "serverfault.com", "mathoverflow.net", "askubuntu.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Docusign, new List<string> { "docusign.com", "docusign.net" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Envato, new List<string> { "envato.com", "themeforest.net", "codecanyon.net", "videohive.net", "audiojungle.net", "graphicriver.net", "photodune.net", "3docean.net" });
-            GlobalDomains.Add(GlobalEquivalentDomainsType.X10Hosting, new List<string> {"infinitysrv.com", "x10hosting.com", "x10premium.com"});
+            GlobalDomains.Add(GlobalEquivalentDomainsType.X10Hosting, new List<string> { "x10hosting.com", "x10premium.com"});
             GlobalDomains.Add(GlobalEquivalentDomainsType.Cisco, new List<string> { "dnsomatic.com", "opendns.com", "umbrella.com"});
             GlobalDomains.Add(GlobalEquivalentDomainsType.CedarFair, new List<string> {"cagreatamerica.com", "canadaswonderland.com", "carowinds.com", "cedarfair.com", "cedarpoint.com", "dorneypark.com", "kingsdominion.com", "knotts.com", "miadventure.com", "schlitterbahn.com", "valleyfair.com", "visitkingsisland.com", "worldsoffun.com"});
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubiquiti, new List<string> {"ubnt.com", "ui.com"});
