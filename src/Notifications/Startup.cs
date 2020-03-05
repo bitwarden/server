@@ -57,9 +57,13 @@ namespace Bit.Notifications
                     MessagePack.Resolvers.ContractlessStandardResolver.Instance
                 };
             });
-            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
+            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.RedisConnectionString))
             {
-                signalRServerBuilder.AddAzureSignalR(globalSettings.Notifications.AzureSignalRConnectionString);
+                signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
+                    options =>
+                    {
+                        options.Configuration.ChannelPrefix = "Notifications";
+                    });
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
             services.AddSingleton<ConnectionCounter>();
@@ -105,25 +109,14 @@ namespace Bit.Notifications
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Add SignlarR
-            var useAzureSignalR = !string.IsNullOrWhiteSpace(
-                globalSettings.Notifications?.AzureSignalRConnectionString);
-            if(useAzureSignalR)
-            {
-                app.UseAzureSignalR(routes => routes.MapHub<NotificationsHub>("/hub"));
-            }
-
             // Add endpoints to the request pipeline.
             app.UseEndpoints(endpoints =>
             {
-                if(!useAzureSignalR)
+                endpoints.MapHub<NotificationsHub>("/hub", options =>
                 {
-                    endpoints.MapHub<NotificationsHub>("/hub", options =>
-                    {
-                        options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
-                        options.TransportMaxBufferSize = 4096;
-                    });
-                }
+                    options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
+                    options.TransportMaxBufferSize = 4096;
+                });
                 endpoints.MapDefaultControllerRoute();
             });
         }

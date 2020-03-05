@@ -157,7 +157,7 @@ namespace Bit.Core
 
         public class NotificationsSettings : ConnectionStringSettings
         {
-            public string AzureSignalRConnectionString { get; set; }
+            public string RedisConnectionString { get; set; }
         }
 
         public class NotificationHubSettings
