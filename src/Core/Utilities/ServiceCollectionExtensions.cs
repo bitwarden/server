@@ -128,11 +128,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             }
 
-            if(CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
-            {
-                services.AddSingleton<IMailDeliveryService, SendGridMailDeliveryService>();
-            }
-            else if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
             {
                 services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
             }

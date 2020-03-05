@@ -43,7 +43,7 @@
     <PackageReference Include="Quartz" Version="3.0.7" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
-    <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />
+    <PackageReference Include="Serilog.Extensions.Logging.File" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.8.0" />
     <PackageReference Include="Serilog.Sinks.Sentry.AspNetCore" Version="2.4.2" />
     <PackageReference Include="IdentityServer4" Version="3.1.2" />
@@ -52,7 +52,6 @@
     <PackageReference Include="System.Text.Json" Version="4.7.1" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.17.0" />
-    <PackageReference Include="Sendgrid" Version="9.12.0" />
     <PackageReference Include="Stripe.net" Version="28.8.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.2" />
