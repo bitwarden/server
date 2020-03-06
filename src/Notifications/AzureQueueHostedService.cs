@@ -73,7 +73,7 @@ namespace Bit.Notifications
                             catch(Exception e)
                             {
                                 _logger.LogError("Error processing dequeued message: " +
-                                    $"{message.MessageId} x{message.DequeueCount}.", e);
+                                    $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
                                 if(message.DequeueCount > 2)
                                 {
                                     await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
