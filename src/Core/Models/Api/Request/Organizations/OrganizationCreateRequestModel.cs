@@ -21,15 +21,16 @@ namespace Bit.Core.Models.Api
         public PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
+        public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
         public short AdditionalSeats { get; set; }
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
+        public bool PremiumAccessAddon { get; set; }
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
-        public string Country { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -39,12 +40,13 @@ namespace Bit.Core.Models.Api
                 OwnerKey = Key,
                 Name = Name,
                 Plan = PlanType,
+                PaymentMethodType = PaymentMethodType,
                 PaymentToken = PaymentToken,
                 AdditionalSeats = AdditionalSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),
+                PremiumAccessAddon = PremiumAccessAddon,
                 BillingEmail = BillingEmail,
                 BusinessName = BusinessName,
-                BusinessCountry = Country,
                 CollectionName = CollectionName
             };
         }
@@ -54,6 +56,11 @@ namespace Bit.Core.Models.Api
             if(PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
             {
                 yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
+            }
+            if(PlanType != PlanType.Free && !PaymentMethodType.HasValue)
+            {
+                yield return new ValidationResult("Payment method type required.",
+                    new string[] { nameof(PaymentMethodType) });
             }
         }
     }

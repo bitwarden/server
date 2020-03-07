@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Repositories.TableStorage
 {
@@ -109,7 +108,7 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task CreateEntityAsync(ITableEntity entity)
         {
-            await _table.ExecuteAsync(TableOperation.Insert(entity));
+            await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
         }
 
         public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,

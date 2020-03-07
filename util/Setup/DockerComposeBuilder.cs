@@ -26,10 +26,10 @@ namespace Bit.Setup
         private void Build()
         {
             Directory.CreateDirectory("/bitwarden/docker/");
-            Console.WriteLine("Building docker-compose.yml.");
+            Helpers.WriteLine(_context, "Building docker-compose.yml.");
             if(!_context.Config.GenerateComposeConfig)
             {
-                Console.WriteLine("...skipped");
+                Helpers.WriteLine(_context, "...skipped");
                 return;
             }
 

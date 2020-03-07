@@ -1,10 +1,10 @@
-﻿using DbUp;
+﻿using Bit.Migrator;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Net.Http;
-using System.Reflection;
 
 namespace Bit.Setup
 {
@@ -14,13 +14,18 @@ namespace Bit.Setup
 
         public static void Main(string[] args)
         {
-            Console.WriteLine();
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+
             _context = new Context
             {
                 Args = args
             };
             ParseParameters();
 
+            if(_context.Parameters.ContainsKey("q"))
+            {
+                _context.Quiet = _context.Parameters["q"] == "true" || _context.Parameters["q"] == "1";
+            }
             if(_context.Parameters.ContainsKey("os"))
             {
                 _context.HostOS = _context.Parameters["os"];
@@ -33,6 +38,13 @@ namespace Bit.Setup
             {
                 _context.WebVersion = _context.Parameters["webv"];
             }
+            if(_context.Parameters.ContainsKey("stub"))
+            {
+                _context.Stub = _context.Parameters["stub"] == "true" ||
+                    _context.Parameters["stub"] == "1";
+            }
+
+            Helpers.WriteLine(_context);
 
             if(_context.Parameters.ContainsKey("install"))
             {
@@ -48,7 +60,7 @@ namespace Bit.Setup
             }
             else
             {
-                Console.WriteLine("No top-level command detected. Exiting...");
+                Helpers.WriteLine(_context, "No top-level command detected. Exiting...");
             }
         }
 
@@ -64,7 +76,12 @@ namespace Bit.Setup
                 _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
             }
 
-            if(!ValidateInstallation())
+            if(_context.Stub)
+            {
+                _context.Install.InstallationId = Guid.Empty;
+                _context.Install.InstallationKey = "SECRET_INSTALLATION_KEY";
+            }
+            else if(!ValidateInstallation())
             {
                 return;
             }
@@ -101,11 +118,11 @@ namespace Bit.Setup
             Console.WriteLine("\nNext steps, run:");
             if(_context.HostOS == "win")
             {
-                Console.WriteLine("`.\\bitwarden.ps1 -start` and then `.\\bitwarden.ps1 -updatedb`");
+                Console.WriteLine("`.\\bitwarden.ps1 -start`");
             }
             else
             {
-                Console.WriteLine("`./bitwarden.sh start` and then `./bitwarden.sh updatedb`");
+                Console.WriteLine("`./bitwarden.sh start`");
             }
             Console.WriteLine(string.Empty);
         }
@@ -125,6 +142,10 @@ namespace Bit.Setup
         private static void PrintEnvironment()
         {
             _context.LoadConfiguration();
+            if(!_context.PrintToScreen())
+            {
+                return;
+            }
             Console.WriteLine("\nBitwarden is up and running!");
             Console.WriteLine("===================================================");
             Console.WriteLine("\nvisit {0}", _context.Config.Url);
@@ -144,45 +165,18 @@ namespace Bit.Setup
         {
             try
             {
-                Console.WriteLine("Migrating database.");
-
-                var dbPass = Helpers.GetValueFromEnvFile("mssql", "SA_PASSWORD");
-                var masterConnectionString = Helpers.MakeSqlConnectionString(
-                    "mssql", "master", "sa", dbPass ?? string.Empty);
-                var vaultConnectionString = Helpers.MakeSqlConnectionString(
-                    "mssql", "vault", "sa", dbPass ?? string.Empty);
-
-                using(var connection = new SqlConnection(masterConnectionString))
+                Helpers.WriteLine(_context, "Migrating database.");
+                var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
+                    "globalSettings__sqlServer__connectionString");
+                var migrator = new DbMigrator(vaultConnectionString, null);
+                var success = migrator.MigrateMsSqlDatabase(false);
+                if(success)
                 {
-                    var command = new SqlCommand(
-                        "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
-                        "CREATE DATABASE [vault];", connection);
-                    command.Connection.Open();
-                    command.ExecuteNonQuery();
-                    command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                        "FROM sys.databases WHERE [name] = 'vault') = 1) " +
-                        "ALTER DATABASE [vault] SET AUTO_CLOSE OFF;";
-                    command.ExecuteNonQuery();
-                }
-
-                var upgrader = DeployChanges.To
-                    .SqlDatabase(vaultConnectionString)
-                    .JournalToSqlTable("dbo", "Migration")
-                    .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                        s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                    .WithTransaction()
-                    .WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                    .LogToConsole()
-                    .Build();
-
-                var result = upgrader.PerformUpgrade();
-                if(result.Successful)
-                {
-                    Console.WriteLine("Migration successful.");
+                    Helpers.WriteLine(_context, "Migration successful.");
                 }
                 else
                 {
-                    Console.WriteLine("Migration failed.");
+                    Helpers.WriteLine(_context, "Migration failed.");
                 }
             }
             catch(SqlException e)
@@ -190,13 +184,12 @@ namespace Bit.Setup
                 if(e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
                 {
                     var nextAttempt = attempt + 1;
-                    Console.WriteLine("Database is in script upgrade mode. " +
+                    Helpers.WriteLine(_context, "Database is in script upgrade mode. " +
                         "Trying again (attempt #{0})...", nextAttempt);
                     System.Threading.Thread.Sleep(20000);
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-
                 throw e;
             }
         }

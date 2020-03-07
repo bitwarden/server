@@ -7,11 +7,11 @@ namespace Bit.Core.Models.Api
     {
         public CipherSecureNoteModel() { }
 
-        public SecureNoteType Type { get; set; }
-
         public CipherSecureNoteModel(CipherSecureNoteData data)
         {
             Type = data.Type;
         }
+
+        public SecureNoteType Type { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,12 @@ namespace Bit.Admin.Jobs
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: UpdateStatisticsAsync");
             await _maintenanceRepository.UpdateStatisticsAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: UpdateStatisticsAsync");
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DisableCipherAutoStatsAsync");
+            await _maintenanceRepository.DisableCipherAutoStatsAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DisableCipherAutoStatsAsync");
         }
     }
 }

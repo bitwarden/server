@@ -10,8 +10,6 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
-using Stripe;
-using Microsoft.Extensions.Options;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
@@ -24,6 +22,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
+        private readonly IPaymentService _paymentService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -32,6 +31,7 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IUserService userService,
+            IPaymentService paymentService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -39,6 +39,7 @@ namespace Bit.Api.Controllers
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _userService = userService;
+            _paymentService = paymentService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -62,7 +63,27 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/billing")]
-        public async Task<OrganizationBillingResponseModel> GetBilling(string id)
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<BillingResponseModel> GetBilling(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var billingInfo = await _paymentService.GetBillingAsync(organization);
+            return new BillingResponseModel(billingInfo);
+        }
+
+        [HttpGet("{id}/subscription")]
+        public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -78,48 +99,17 @@ namespace Bit.Api.Controllers
 
             if(!_globalSettings.SelfHosted && organization.Gateway != null)
             {
-                var paymentService = new StripePaymentService();
-                var billingInfo = await paymentService.GetBillingAsync(organization);
-                if(billingInfo == null)
+                var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
+                if(subscriptionInfo == null)
                 {
                     throw new NotFoundException();
                 }
-                return new OrganizationBillingResponseModel(organization, billingInfo);
+                return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
             }
             else
             {
-                return new OrganizationBillingResponseModel(organization);
+                return new OrganizationSubscriptionResponseModel(organization);
             }
-        }
-
-        [HttpGet("{id}/billing-invoice/{invoiceId}")]
-        [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<IActionResult> GetBillingInvoice(string id, string invoiceId)
-        {
-            var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
-
-            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
-            {
-                throw new NotFoundException();
-            }
-
-            try
-            {
-                var invoice = await new StripeInvoiceService().GetAsync(invoiceId);
-                if(invoice != null && invoice.CustomerId == organization.GatewayCustomerId &&
-                    !string.IsNullOrWhiteSpace(invoice.HostedInvoiceUrl))
-                {
-                    return new RedirectResult(invoice.HostedInvoiceUrl);
-                }
-            }
-            catch(StripeException) { }
-
-            throw new NotFoundException();
         }
 
         [HttpGet("{id}/license")]
@@ -219,12 +209,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken);
+            await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken,
+                model.PaymentMethodType.Value);
         }
 
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -232,12 +223,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpgradePlanAsync(orgIdGuid, model.PlanType, model.AdditionalSeats);
+            var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+            return new PaymentResponseModel
+            {
+                Success = result.Item1,
+                PaymentIntentClientSecret = result.Item2
+            };
         }
 
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -245,12 +241,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostStorage(string id, [FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if(!_currentContext.OrganizationOwner(orgIdGuid))
@@ -258,7 +259,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            return new PaymentResponseModel
+            {
+                Success = true,
+                PaymentIntentClientSecret = result
+            };
         }
 
         [HttpPost("{id}/verify-bank")]
@@ -284,7 +290,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.CancelSubscriptionAsync(orgIdGuid, true);
+            await _organizationService.CancelSubscriptionAsync(orgIdGuid);
         }
 
         [HttpPost("{id}/reinstate")]
@@ -385,7 +391,75 @@ namespace Bit.Api.Controllers
                 userId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
                 model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId));
+                model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
+                model.OverwriteExisting);
+        }
+
+        [HttpPost("{id}/api-key")]
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var response = new ApiKeyResponseModel(organization);
+                return response;
+            }
+        }
+
+        [HttpPost("{id}/rotate-api-key")]
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if(organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if(user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                await _organizationService.RotateApiKeyAsync(organization);
+                var response = new ApiKeyResponseModel(organization);
+                return response;
+            }
         }
     }
 }

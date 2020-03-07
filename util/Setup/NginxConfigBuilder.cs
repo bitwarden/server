@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.IO;
 
 namespace Bit.Setup
@@ -10,7 +10,9 @@ namespace Bit.Setup
             "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-            "connect-src 'self' wss://{0} https://haveibeenpwned.com https://api.pwnedpasswords.com;";
+            "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+            "https://twofactorauth.org; " +
+            "object-src 'self' blob:;";
 
         private readonly Context _context;
 
@@ -53,10 +55,10 @@ namespace Bit.Setup
         private void Build(TemplateModel model)
         {
             Directory.CreateDirectory("/bitwarden/nginx/");
-            Console.WriteLine("Building nginx config.");
+            Helpers.WriteLine(_context, "Building nginx config.");
             if(!_context.Config.GenerateNginxConfig)
             {
-                Console.WriteLine("...skipped");
+                Helpers.WriteLine(_context, "...skipped");
                 return;
             }
 
@@ -76,6 +78,7 @@ namespace Bit.Setup
                 Ssl = context.Config.Ssl;
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
+                RealIps = context.Config.RealIps;
 
                 if(Ssl)
                 {
@@ -127,6 +130,7 @@ namespace Bit.Setup
             public string SslCiphers { get; set; }
             public string SslProtocols { get; set; }
             public string ContentSecurityPolicy => string.Format(NginxConfigBuilder.ContentSecurityPolicy, Domain);
+            public List<string> RealIps { get; set; }
         }
     }
 }

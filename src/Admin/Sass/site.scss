@@ -28,3 +28,11 @@ h2 {
 h3 {
     text-transform: uppercase;
 }
+
+.validation-summary-valid {
+    display: none;
+}
+
+.alert.validation-summary-errors > ul {
+    margin-bottom: 0;
+}

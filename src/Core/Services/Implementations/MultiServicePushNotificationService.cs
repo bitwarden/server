@@ -6,16 +6,21 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
     public class MultiServicePushNotificationService : IPushNotificationService
     {
         private readonly List<IPushNotificationService> _services = new List<IPushNotificationService>();
+        private readonly ILogger<MultiServicePushNotificationService> _logger;
 
         public MultiServicePushNotificationService(
+            IDeviceRepository deviceRepository,
+            IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
+            ILogger<MultiServicePushNotificationService> logger,
             ILogger<RelayPushNotificationService> relayLogger,
             ILogger<NotificationsApiPushNotificationService> hubLogger)
         {
@@ -25,7 +30,8 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
-                    _services.Add(new RelayPushNotificationService(globalSettings, httpContextAccessor, relayLogger));
+                    _services.Add(new RelayPushNotificationService(deviceRepository, globalSettings,
+                        httpContextAccessor, relayLogger));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
@@ -38,13 +44,16 @@ namespace Bit.Core.Services
             {
                 if(CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
                 {
-                    _services.Add(new NotificationHubPushNotificationService(globalSettings, httpContextAccessor));
+                    _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
+                        globalSettings, httpContextAccessor));
                 }
                 if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
                 {
                     _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
                 }
             }
+            
+            _logger = logger;
         }
 
         public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -113,15 +122,17 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
-            PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier));
+            PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId));
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
-            PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier));
+            PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId));
             return Task.FromResult(0);
         }
 

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 namespace Bit.Notifications
 {
     [Authorize("Internal")]
-    [SelfHosted(SelfHostedOnly = true)]
     public class SendController : Controller
     {
         private readonly IHubContext<NotificationsHub> _hubContext;
@@ -19,7 +19,16 @@ namespace Bit.Notifications
             _hubContext = hubContext;
         }
 
+        [HttpGet("~/alive")]
+        [HttpGet("~/now")]
+        [AllowAnonymous]
+        public DateTime GetAlive()
+        {
+            return DateTime.UtcNow;
+        }
+
         [HttpPost("~/send")]
+        [SelfHosted(SelfHostedOnly = true)]
         public async Task PostSend()
         {
             using(var reader = new StreamReader(Request.Body, Encoding.UTF8))

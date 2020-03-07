@@ -61,7 +61,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
     {
         public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-            string obj = "organizationUserUserDetails")
+            bool twoFactorEnabled, string obj = "organizationUserUserDetails")
             : base(organizationUser, obj)
         {
             if(organizationUser == null)
@@ -71,9 +71,11 @@ namespace Bit.Core.Models.Api
 
             Name = organizationUser.Name;
             Email = organizationUser.Email;
+            TwoFactorEnabled = twoFactorEnabled;
         }
 
         public string Name { get; set; }
         public string Email { get; set; }
+        public bool TwoFactorEnabled { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
@@ -14,28 +15,27 @@ namespace Bit.Admin.Models
         public OrganizationEditModel() { }
 
         public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
-            GlobalSettings globalSettings)
-            : base(org, orgUsers)
+            IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
+            IEnumerable<Policy> policies, BillingInfo billingInfo, GlobalSettings globalSettings)
+            : base(org, orgUsers, ciphers, collections, groups, policies)
         {
+            BillingInfo = billingInfo;
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = org.Name;
             BusinessName = org.BusinessName;
-            BusinessAddress1 = org.BusinessAddress1;
-            BusinessAddress2 = org.BusinessAddress2;
-            BusinessAddress3 = org.BusinessAddress3;
-            BusinessCountry = org.BusinessCountry;
-            BusinessTaxNumber = org.BusinessTaxNumber;
             BillingEmail = org.BillingEmail;
             PlanType = org.PlanType;
             Plan = org.Plan;
             Seats = org.Seats;
             MaxCollections = org.MaxCollections;
+            UsePolicies = org.UsePolicies;
             UseGroups = org.UseGroups;
             UseDirectory = org.UseDirectory;
             UseEvents = org.UseEvents;
             UseTotp = org.UseTotp;
             Use2fa = org.Use2fa;
+            UseApi = org.UseApi;
             SelfHost = org.SelfHost;
             UsersGetPremium = org.UsersGetPremium;
             MaxStorageGb = org.MaxStorageGb;
@@ -47,6 +47,7 @@ namespace Bit.Admin.Models
             ExpirationDate = org.ExpirationDate;
         }
 
+        public BillingInfo BillingInfo { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }
@@ -56,16 +57,6 @@ namespace Bit.Admin.Models
         public string Name { get; set; }
         [Display(Name = "Business Name")]
         public string BusinessName { get; set; }
-        [Display(Name = "Business Address 1")]
-        public string BusinessAddress1 { get; set; }
-        [Display(Name = "Business Address 2")]
-        public string BusinessAddress2 { get; set; }
-        [Display(Name = "Business Address 3")]
-        public string BusinessAddress3 { get; set; }
-        [Display(Name = "Business Country")]
-        public string BusinessCountry { get; set; }
-        [Display(Name = "Business Tax Number")]
-        public string BusinessTaxNumber { get; set; }
         [Display(Name = "Billing Email")]
         public string BillingEmail { get; set; }
         [Required]
@@ -78,6 +69,8 @@ namespace Bit.Admin.Models
         public short? Seats { get; set; }
         [Display(Name = "Max. Collections")]
         public short? MaxCollections { get; set; }
+        [Display(Name = "Policies")]
+        public bool UsePolicies { get; set; }
         [Display(Name = "Groups")]
         public bool UseGroups { get; set; }
         [Display(Name = "Directory")]
@@ -88,6 +81,8 @@ namespace Bit.Admin.Models
         public bool UseTotp { get; set; }
         [Display(Name = "2FA")]
         public bool Use2fa { get; set; }
+        [Display(Name = "API")]
+        public bool UseApi{ get; set; }
         [Display(Name = "Self Host")]
         public bool SelfHost { get; set; }
         [Display(Name = "Users Get Premium")]
@@ -111,21 +106,18 @@ namespace Bit.Admin.Models
         {
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BusinessAddress1 = BusinessAddress1;
-            existingOrganization.BusinessAddress2 = BusinessAddress2;
-            existingOrganization.BusinessAddress3 = BusinessAddress3;
-            existingOrganization.BusinessCountry = BusinessCountry;
-            existingOrganization.BusinessTaxNumber = BusinessTaxNumber;
-            existingOrganization.BillingEmail = BillingEmail;
+            existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
             existingOrganization.PlanType = PlanType.Value;
             existingOrganization.Plan = Plan;
             existingOrganization.Seats = Seats;
             existingOrganization.MaxCollections = MaxCollections;
+            existingOrganization.UsePolicies = UsePolicies;
             existingOrganization.UseGroups = UseGroups;
             existingOrganization.UseDirectory = UseDirectory;
             existingOrganization.UseEvents = UseEvents;
             existingOrganization.UseTotp = UseTotp;
             existingOrganization.Use2fa = Use2fa;
+            existingOrganization.UseApi = UseApi;
             existingOrganization.SelfHost = SelfHost;
             existingOrganization.UsersGetPremium = UsersGetPremium;
             existingOrganization.MaxStorageGb = MaxStorageGb;

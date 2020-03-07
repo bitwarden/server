@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core;
 using Bit.Core.Utilities;
+using Bit.Core.Services;
 
 namespace Bit.Admin.Controllers
 {
@@ -16,15 +17,18 @@ namespace Bit.Admin.Controllers
     {
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
+        private readonly IPaymentService _paymentService;
         private readonly GlobalSettings _globalSettings;
 
         public UsersController(
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
+            IPaymentService paymentService,
             GlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
+            _paymentService = paymentService;
             _globalSettings = globalSettings;
         }
 
@@ -74,7 +78,8 @@ namespace Bit.Admin.Controllers
             }
 
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
-            return View(new UserEditModel(user, ciphers, _globalSettings));
+            var billingInfo = await _paymentService.GetBillingAsync(user);
+            return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
         }
 
         [HttpPost]

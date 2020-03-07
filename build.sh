@@ -18,6 +18,7 @@ then
     docker push bitwarden/attachments:$TAG
     docker push bitwarden/icons:$TAG
     docker push bitwarden/notifications:$TAG
+    docker push bitwarden/events:$TAG
     docker push bitwarden/admin:$TAG
     docker push bitwarden/nginx:$TAG
     docker push bitwarden/mssql:$TAG
@@ -34,6 +35,7 @@ then
     docker tag bitwarden/attachments bitwarden/attachments:$TAG
     docker tag bitwarden/icons bitwarden/icons:$TAG
     docker tag bitwarden/notifications bitwarden/notifications:$TAG
+    docker tag bitwarden/events bitwarden/events:$TAG
     docker tag bitwarden/admin bitwarden/admin:$TAG
     docker tag bitwarden/nginx bitwarden/nginx:$TAG
     docker tag bitwarden/mssql bitwarden/mssql:$TAG
@@ -62,6 +64,9 @@ else
 
     chmod u+x $DIR/src/Notifications/build.sh
     $DIR/src/Notifications/build.sh
+
+    chmod u+x $DIR/src/Events/build.sh
+    $DIR/src/Events/build.sh
 
     chmod u+x $DIR/src/Admin/build.sh
     $DIR/src/Admin/build.sh

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Repositories;
 using System.Threading.Tasks;
 using System.Security.Claims;
+using Bit.Core.Utilities;
 
 namespace Bit.Core
 {
@@ -14,18 +15,18 @@ namespace Bit.Core
     {
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
-        private string _ip;
 
         public virtual HttpContext HttpContext { get; set; }
         public virtual Guid? UserId { get; set; }
         public virtual User User { get; set; }
         public virtual string DeviceIdentifier { get; set; }
         public virtual DeviceType? DeviceType { get; set; }
-        public virtual string IpAddress => GetRequestIp();
+        public virtual string IpAddress { get; set; }
         public virtual List<CurrentContentOrganization> Organizations { get; set; }
         public virtual Guid? InstallationId { get; set; }
+        public virtual Guid? OrganizationId { get; set; }
 
-        public void Build(HttpContext httpContext)
+        public void Build(HttpContext httpContext, GlobalSettings globalSettings)
         {
             if(_builtHttpContext)
             {
@@ -34,7 +35,7 @@ namespace Bit.Core
 
             _builtHttpContext = true;
             HttpContext = httpContext;
-            Build(httpContext.User);
+            Build(httpContext.User, globalSettings);
 
             if(DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
             {
@@ -48,7 +49,7 @@ namespace Bit.Core
             }
         }
 
-        public void Build(ClaimsPrincipal user)
+        public void Build(ClaimsPrincipal user, GlobalSettings globalSettings)
         {
             if(_builtClaimsPrincipal)
             {
@@ -56,6 +57,7 @@ namespace Bit.Core
             }
 
             _builtClaimsPrincipal = true;
+            IpAddress = HttpContext.GetIpAddress(globalSettings);
             if(user == null || !user.Claims.Any())
             {
                 return;
@@ -71,11 +73,23 @@ namespace Bit.Core
 
             var clientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
-            if((clientId?.StartsWith("installation.") ?? false) && clientSubject != null)
+            var orgApi = false;
+            if(clientSubject != null)
             {
-                if(Guid.TryParse(clientSubject, out var idGuid))
+                if(clientId?.StartsWith("installation.") ?? false)
                 {
-                    InstallationId = idGuid;
+                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    {
+                        InstallationId = idGuid;
+                    }
+                }
+                else if(clientId?.StartsWith("organization.") ?? false)
+                {
+                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    {
+                        OrganizationId = idGuid;
+                        orgApi = true;
+                    }
                 }
             }
 
@@ -90,6 +104,14 @@ namespace Bit.Core
                         Id = new Guid(c.Value),
                         Type = OrganizationUserType.Owner
                     }));
+            }
+            else if(orgApi && OrganizationId.HasValue)
+            {
+                Organizations.Add(new CurrentContentOrganization
+                {
+                    Id = OrganizationId.Value,
+                    Type = OrganizationUserType.Owner
+                });
             }
 
             if(claimsDict.ContainsKey("orgadmin"))
@@ -156,26 +178,6 @@ namespace Bit.Core
                     .Select(ou => new CurrentContentOrganization(ou)).ToList();
             }
             return Organizations;
-        }
-
-        private string GetRequestIp()
-        {
-            if(!string.IsNullOrWhiteSpace(_ip))
-            {
-                return _ip;
-            }
-
-            if(HttpContext == null)
-            {
-                return null;
-            }
-
-            if(string.IsNullOrWhiteSpace(_ip))
-            {
-                _ip = HttpContext.Connection?.RemoteIpAddress?.ToString();
-            }
-
-            return _ip;
         }
 
         private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

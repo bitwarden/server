@@ -1,21 +1,24 @@
-﻿using Microsoft.Azure.WebJobs;
+﻿using Microsoft.AspNetCore.Hosting;
+using Bit.Core.Utilities;
+using Serilog.Events;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.EventsProcessor
 {
     public class Program
     {
-        private static void Main()
+        public static void Main(string[] args)
         {
-            var config = new JobHostConfiguration();
-            if(config.IsDevelopment)
-            {
-                config.UseDevelopmentSettings();
-            }
-
-            config.Queues.BatchSize = 5;
-
-            var host = new JobHost(config);
-            host.RunAndBlock();
+            Host
+                .CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureLogging((hostingContext, logging) =>
+                        logging.AddSerilog(hostingContext, e => e.Level >= LogEventLevel.Warning));
+                })
+                .Build()
+                .Run();
         }
     }
 }

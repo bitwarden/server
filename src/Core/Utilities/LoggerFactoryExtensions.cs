@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
@@ -9,17 +11,32 @@ namespace Bit.Core.Utilities
 {
     public static class LoggerFactoryExtensions
     {
-        public static ILoggerFactory AddSerilog(
-            this ILoggerFactory factory,
-            IApplicationBuilder appBuilder,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings,
-            Func<LogEvent, bool> filter = null)
+        public static void UseSerilog(
+            this IApplicationBuilder appBuilder,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime applicationLifetime,
+            GlobalSettings globalSettings)
         {
             if(env.IsDevelopment())
             {
-                return factory;
+                return;
+            }
+
+            if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+            {
+                appBuilder.AddSentryContext();
+            }
+            applicationLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
+        }
+
+        public static ILoggingBuilder AddSerilog(
+            this ILoggingBuilder builder,
+            WebHostBuilderContext context,
+            Func<LogEvent, bool> filter = null)
+        {
+            if(context.HostingEnvironment.IsDevelopment())
+            {
+                return builder;
             }
 
             bool inclusionPredicate(LogEvent e)
@@ -35,6 +52,9 @@ namespace Bit.Core.Utilities
                 }
                 return filter(e);
             }
+
+            var globalSettings = new GlobalSettings();
+            ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
 
             var config = new LoggerConfiguration()
                 .Enrich.FromLogContext()
@@ -55,21 +75,28 @@ namespace Bit.Core.Utilities
                     .Enrich.WithProperty("Project", globalSettings.ProjectName)
                     .Destructure.With<HttpContextDestructingPolicy>()
                     .Filter.ByExcluding(e => e.Exception?.CheckIfCaptured() == true);
-
-                appBuilder.AddSentryContext();
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
-                config.WriteTo.RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt")
+                if(globalSettings.LogRollBySizeLimit.HasValue)
+                {
+                    config.WriteTo.File($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
+                        rollOnFileSizeLimit: true, fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                }
+                else
+                {
+                    config.WriteTo
+                        .RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
+                }
+                config
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
 
             var serilog = config.CreateLogger();
-            factory.AddSerilog(serilog);
-            appLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
+            builder.AddSerilog(serilog);
 
-            return factory;
+            return builder;
         }
     }
 }

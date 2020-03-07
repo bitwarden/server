@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Storage;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services
 {
@@ -30,7 +32,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IHostingEnvironment environment,
+            IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
             GlobalSettings globalSettings)
         {
@@ -38,12 +40,28 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
+            _globalSettings = globalSettings;
 
             var certThumbprint = environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-            _globalSettings = globalSettings;
-            _certificate = !_globalSettings.SelfHosted ? CoreHelpers.GetCertificate(certThumbprint)
-                : CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+            if(_globalSettings.SelfHosted)
+            {
+                _certificate = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null)
+                    .GetAwaiter().GetResult();
+            }
+            else if(CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
+                CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                _certificate = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                    "licensing.pfx", _globalSettings.LicenseCertificatePassword)
+                    .GetAwaiter().GetResult();
+            }
+            else
+            {
+                _certificate = CoreHelpers.GetCertificate(certThumbprint);
+            }
+
             if(_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
                 StringComparison.InvariantCultureIgnoreCase))
             {
@@ -80,16 +98,19 @@ namespace Bit.Core.Services
                 if(totalLicensedOrgs > 1)
                 {
                     await DisableOrganizationAsync(org, license, "Multiple organizations.");
+                    continue;
                 }
 
                 if(!license.VerifyData(org, _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
+                    continue;
                 }
 
                 if(!license.VerifySignature(_certificate))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
+                    continue;
                 }
             }
         }

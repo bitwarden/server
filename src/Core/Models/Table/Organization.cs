@@ -1,8 +1,6 @@
 ﻿using System;
 using Bit.Core.Utilities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Bit.Core.Exceptions;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
@@ -26,11 +24,13 @@ namespace Bit.Core.Models.Table
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
+        public bool UseApi { get; set; }
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public long? Storage { get; set; }
@@ -40,6 +40,7 @@ namespace Bit.Core.Models.Table
         public string GatewaySubscriptionId { get; set; }
         public bool Enabled { get; set; } = true;
         public string LicenseKey { get; set; }
+        public string ApiKey { get; set; }
         public string TwoFactorProviders { get; set; }
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
@@ -55,12 +56,32 @@ namespace Bit.Core.Models.Table
 
         public string BillingEmailAddress()
         {
-            return BillingEmail;
+            return BillingEmail?.ToLowerInvariant()?.Trim();
         }
 
         public string BillingName()
         {
             return BusinessName;
+        }
+
+        public string BraintreeCustomerIdPrefix()
+        {
+            return "o";
+        }
+
+        public string BraintreeIdField()
+        {
+            return "organization_id";
+        }
+
+        public string GatewayIdField()
+        {
+            return "organizationId";
+        }
+
+        public bool IsUser()
+        {
+            return false;
         }
 
         public long StorageBytesRemaining()
@@ -82,29 +103,6 @@ namespace Bit.Core.Models.Table
             }
 
             return maxStorageBytes - Storage.Value;
-        }
-
-        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
-        {
-            if(Gateway == null)
-            {
-                throw new BadRequestException("No gateway.");
-            }
-
-            IPaymentService paymentService = null;
-            switch(Gateway)
-            {
-                case GatewayType.Stripe:
-                    paymentService = new StripePaymentService();
-                    break;
-                case GatewayType.Braintree:
-                    paymentService = new BraintreePaymentService(globalSettings);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported gateway.");
-            }
-
-            return paymentService;
         }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()

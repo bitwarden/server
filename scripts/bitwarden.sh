@@ -36,9 +36,9 @@ then
 fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
-GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/core/master"
-COREVERSION="1.25.0"
-WEBVERSION="2.4.0"
+GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
+COREVERSION="1.32.0"
+WEBVERSION="2.12.0"
 
 # Functions
 
@@ -73,6 +73,27 @@ function checkOutputDirNotExists() {
     fi
 }
 
+function listCommands() {
+cat << EOT
+Available commands:
+
+install
+start
+restart
+stop
+update
+updatedb
+updaterun
+updateself
+updateconf
+rebuild
+help
+
+See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
+
+EOT
+}
+
 # Commands
 
 if [ "$1" == "install" ]
@@ -94,6 +115,10 @@ elif [ "$1" == "rebuild" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "updateconf" ]
+then
+    checkOutputDirExists
+    $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updatedb" ]
 then
     checkOutputDirExists
@@ -102,9 +127,18 @@ elif [ "$1" == "stop" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "updaterun" ]
+then
+    checkOutputDirExists
+    downloadRunFile
 elif [ "$1" == "updateself" ]
 then
     downloadSelf && echo "Updated self." && exit
+elif [ "$1" == "help" ]
+then
+    listCommands
 else
     echo "No command found."
+    echo
+    listCommands
 fi

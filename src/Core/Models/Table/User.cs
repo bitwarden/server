@@ -6,11 +6,10 @@ using Newtonsoft.Json;
 using Bit.Core.Services;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
 
 namespace Bit.Core.Models.Table
 {
-    public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
+    public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -51,12 +50,32 @@ namespace Bit.Core.Models.Table
 
         public string BillingEmailAddress()
         {
-            return Email;
+            return Email?.ToLowerInvariant()?.Trim();
         }
 
         public string BillingName()
         {
             return Name;
+        }
+
+        public string BraintreeCustomerIdPrefix()
+        {
+            return "u";
+        }
+
+        public string BraintreeIdField()
+        {
+            return "user_id";
+        }
+
+        public string GatewayIdField()
+        {
+            return "userId";
+        }
+
+        public bool IsUser()
+        {
+            return true;
         }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
@@ -83,6 +102,16 @@ namespace Bit.Core.Models.Table
             }
         }
 
+        public Guid? GetUserId()
+        {
+            return Id;
+        }
+
+        public bool GetPremium()
+        {
+            return Premium;
+        }
+
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
         {
             TwoFactorProviders = JsonConvert.SerializeObject(providers, new JsonSerializerSettings
@@ -90,48 +119,6 @@ namespace Bit.Core.Models.Table
                 ContractResolver = new EnumKeyResolver<byte>()
             });
             _twoFactorProviders = providers;
-        }
-
-        public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider,
-            IUserService userService)
-        {
-            var providers = GetTwoFactorProviders();
-            if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
-            {
-                return false;
-            }
-
-            if(!TwoFactorProvider.RequiresPremium(provider))
-            {
-                return true;
-            }
-
-            return await userService.CanAccessPremium(this);
-        }
-
-        public async Task<bool> TwoFactorIsEnabledAsync(IUserService userService)
-        {
-            var providers = GetTwoFactorProviders();
-            if(providers == null)
-            {
-                return false;
-            }
-
-            foreach(var p in providers)
-            {
-                if(p.Value?.Enabled ?? false)
-                {
-                    if(!TwoFactorProvider.RequiresPremium(p.Key))
-                    {
-                        return true;
-                    }
-                    if(await userService.CanAccessPremium(this))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
@@ -164,29 +151,6 @@ namespace Bit.Core.Models.Table
             }
 
             return maxStorageBytes - Storage.Value;
-        }
-
-        public IPaymentService GetPaymentService(GlobalSettings globalSettings)
-        {
-            if(Gateway == null)
-            {
-                throw new BadRequestException("No gateway.");
-            }
-
-            IPaymentService paymentService = null;
-            switch(Gateway)
-            {
-                case GatewayType.Stripe:
-                    paymentService = new StripePaymentService();
-                    break;
-                case GatewayType.Braintree:
-                    paymentService = new BraintreePaymentService(globalSettings);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported gateway.");
-            }
-
-            return paymentService;
         }
 
         public IdentityUser ToIdentityUser(bool twoFactorEnabled)

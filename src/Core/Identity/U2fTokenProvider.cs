@@ -47,7 +47,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.U2f, userService);
+            return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.U2f, user);
         }
 
         public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

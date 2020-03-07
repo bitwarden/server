@@ -27,7 +27,7 @@ namespace Bit.Admin.Controllers
         }
 
         public async Task<IActionResult> Index(string cursor = null, int count = 50,
-            LogEventLevel? level = null, string project = null)
+            LogEventLevel? level = null, string project = null, DateTime? start = null, DateTime? end = null)
         {
             var collectionLink = UriFactory.CreateDocumentCollectionUri(Database, Collection);
             using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
@@ -48,6 +48,14 @@ namespace Bit.Admin.Controllers
                 {
                     query = query.Where(l => l.Properties != null && l.Properties["Project"] == (object)project);
                 }
+                if(start.HasValue)
+                {
+                    query = query.Where(l => l.Timestamp >= start.Value);
+                }
+                if(end.HasValue)
+                {
+                    query = query.Where(l => l.Timestamp <= end.Value);
+                }
 
                 var docQuery = query.OrderByDescending(l => l.Timestamp).AsDocumentQuery();
                 var response = await docQuery.ExecuteNextAsync<LogModel>();
@@ -56,6 +64,8 @@ namespace Bit.Admin.Controllers
                 {
                     Level = level,
                     Project = project,
+                    Start = start,
+                    End = end,
                     Items = response.ToList(),
                     Count = count,
                     Cursor = cursor,

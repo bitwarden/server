@@ -15,13 +15,16 @@ namespace Bit.Core.IdentityServer
         private static IDictionary<string, Client> _apiClients = StaticClients.GetApiClients();
 
         private readonly IInstallationRepository _installationRepository;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly GlobalSettings _globalSettings;
 
         public ClientStore(
             IInstallationRepository installationRepository,
+            IOrganizationRepository organizationRepository,
             GlobalSettings globalSettings)
         {
             _installationRepository = installationRepository;
+            _organizationRepository = organizationRepository;
             _globalSettings = globalSettings;
         }
 
@@ -68,6 +71,28 @@ namespace Bit.Core.IdentityServer
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = true,
                             Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, id) }
+                        };
+                    }
+                }
+            }
+            else if(clientId.StartsWith("organization."))
+            {
+                var idParts = clientId.Split('.');
+                if(idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
+                {
+                    var org = await _organizationRepository.GetByIdAsync(id);
+                    if(org != null)
+                    {
+                        return new Client
+                        {
+                            ClientId = $"organization.{org.Id}",
+                            RequireClientSecret = true,
+                            ClientSecrets = { new Secret(org.ApiKey.Sha256()) },
+                            AllowedScopes = new string[] { "api.organization" },
+                            AllowedGrantTypes = GrantTypes.ClientCredentials,
+                            AccessTokenLifetime = 3600 * 1,
+                            Enabled = org.Enabled && org.UseApi,
+                            Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, org.Id.ToString()) }
                         };
                     }
                 }

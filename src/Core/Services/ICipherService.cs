@@ -13,10 +13,9 @@ namespace Bit.Core.Services
             bool skipPermissionCheck = false, bool limitCollectionScope = true);
         Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
             bool skipPermissionCheck = false);
-        Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, long requestLength, Guid savingUserId,
-            bool orgAdmin = false);
-        Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, long requestLength,
-            string attachmentId,
+        Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
+            long requestLength, Guid savingUserId, bool orgAdmin = false);
+        Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
             Guid organizationShareId);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);

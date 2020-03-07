@@ -27,11 +27,21 @@ useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
 usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
 mkhomedir_helper $USERNAME
 
+# Read the SA_PASSWORD value from a file for swarm environments.
+# See https://github.com/Microsoft/mssql-docker/issues/326
+if [ ! -z "$SA_PASSWORD" ] && [ ! -z "$SA_PASSWORD_FILE" ]
+then
+    echo "Provided both SA_PASSWORD and SA_PASSWORD_FILE environment variables. Please only use one."
+    exit 1
+fi
+if [ ! -z "$SA_PASSWORD_FILE" ]
+then
+    # It should be exported, so it is available to the env command below.
+    export SA_PASSWORD=$(cat $SA_PASSWORD_FILE)
+fi
+
 # The rest...
 
-# ref: https://stackoverflow.com/a/38850273
-touch /var/log/cron.log /etc/crontab /etc/cron.*/*
-chown $USERNAME:$GROUPNAME /var/log/cron.log
 mkdir -p /etc/bitwarden/mssql/backups
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 mkdir -p /var/opt/mssql/data
@@ -39,8 +49,10 @@ chown -R $USERNAME:$GROUPNAME /var/opt/mssql
 chown $USERNAME:$GROUPNAME /backup-db.sh
 chown $USERNAME:$GROUPNAME /backup-db.sql
 
-# Sounds like gosu keeps env when switching, but of course cron does not
-env > /etc/environment
-cron
+# Launch a loop to backup database on a daily basis
+if [ "$BACKUP_DB" != "0" ]
+then
+    gosu $USERNAME:$GROUPNAME /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
+fi
 
 exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr

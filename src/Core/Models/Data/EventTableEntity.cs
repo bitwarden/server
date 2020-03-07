@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Models.Data
 {
@@ -19,6 +18,7 @@ namespace Bit.Core.Models.Data
             OrganizationId = e.OrganizationId;
             CipherId = e.CipherId;
             CollectionId = e.CollectionId;
+            PolicyId = e.PolicyId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             DeviceType = e.DeviceType;
@@ -32,6 +32,7 @@ namespace Bit.Core.Models.Data
         public Guid? OrganizationId { get; set; }
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }
+        public Guid? PolicyId { get; set; }
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public DeviceType? DeviceType { get; set; }
@@ -65,7 +66,8 @@ namespace Bit.Core.Models.Data
             return result;
         }
 
-        public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
+        public override void ReadEntity(IDictionary<string, EntityProperty> properties,
+            OperationContext operationContext)
         {
             base.ReadEntity(properties, operationContext);
 
@@ -82,9 +84,9 @@ namespace Bit.Core.Models.Data
             }
         }
 
-        public static List<EventTableEntity> IndexEvent(IEvent e)
+        public static List<EventTableEntity> IndexEvent(EventMessage e)
         {
-            var uniquifier = Guid.NewGuid();
+            var uniquifier = e.IdempotencyId.GetValueOrDefault(Guid.NewGuid());
             var pKey = e.OrganizationId.HasValue ? $"OrganizationId={e.OrganizationId}" : $"UserId={e.UserId}";
             var dateKey = CoreHelpers.DateTimeToTableStorageKey(e.Date);
 
@@ -102,7 +104,8 @@ namespace Bit.Core.Models.Data
                 entities.Add(new EventTableEntity(e)
                 {
                     PartitionKey = pKey,
-                    RowKey = string.Format("ActingUserId={0}__Date={1}__Uniquifier={2}", e.ActingUserId, dateKey, uniquifier)
+                    RowKey = string.Format("ActingUserId={0}__Date={1}__Uniquifier={2}",
+                        e.ActingUserId, dateKey, uniquifier)
                 });
             }
 
@@ -111,7 +114,8 @@ namespace Bit.Core.Models.Data
                 entities.Add(new EventTableEntity(e)
                 {
                     PartitionKey = pKey,
-                    RowKey = string.Format("CipherId={0}__Date={1}__Uniquifier={2}", e.CipherId, dateKey, uniquifier)
+                    RowKey = string.Format("CipherId={0}__Date={1}__Uniquifier={2}",
+                        e.CipherId, dateKey, uniquifier)
                 });
             }
 

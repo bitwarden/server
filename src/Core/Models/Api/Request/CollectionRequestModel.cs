@@ -13,6 +13,8 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string Name { get; set; }
+        [StringLength(300)]
+        public string ExternalId { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
 
         public Collection ToCollection(Guid orgId)
@@ -26,6 +28,7 @@ namespace Bit.Core.Models.Api
         public Collection ToCollection(Collection existingCollection)
         {
             existingCollection.Name = Name;
+            existingCollection.ExternalId = ExternalId;
             return existingCollection;
         }
     }

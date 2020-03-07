@@ -31,6 +31,7 @@ namespace Bit.Core.Models.Data
             }
 
             public string FileName { get; set; }
+            public string Key { get; set; }
         }
     }
 }

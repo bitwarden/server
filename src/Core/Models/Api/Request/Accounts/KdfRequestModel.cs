@@ -19,9 +19,9 @@ namespace Bit.Core.Models.Api
                 switch(Kdf.Value)
                 {
                     case KdfType.PBKDF2_SHA256:
-                        if(KdfIterations.Value < 5000 || KdfIterations.Value > 1_000_000)
+                        if(KdfIterations.Value < 5000 || KdfIterations.Value > 2_000_000)
                         {
-                            yield return new ValidationResult("KDF iterations must be between 5000 and 1000000.");
+                            yield return new ValidationResult("KDF iterations must be between 5000 and 2000000.");
                         }
                         break;
                     default:

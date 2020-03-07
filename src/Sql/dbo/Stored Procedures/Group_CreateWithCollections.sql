@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Group_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Name VARCHAR(MAX),
+    @Name NVARCHAR(100),
     @AccessAll BIT,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),

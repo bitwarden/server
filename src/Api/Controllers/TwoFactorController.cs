@@ -11,6 +11,8 @@ using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Bit.Core.Utilities.Duo;
 
 namespace Bit.Api.Controllers
 {
@@ -91,7 +93,8 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.Authenticator.ToString(), model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -141,6 +144,16 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody]UpdateTwoFactorDuoRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
+            try
+            {
+                var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+                duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            }
+            catch(DuoException)
+            {
+                throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
+            }
+
             model.ToUser(user);
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
             var response = new TwoFactorDuoResponseModel(user);
@@ -186,6 +199,16 @@ namespace Bit.Api.Controllers
             if(organization == null)
             {
                 throw new NotFoundException();
+            }
+
+            try
+            {
+                var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+                duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            }
+            catch(DuoException)
+            {
+                throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
             }
 
             model.ToOrganization(organization);
@@ -278,7 +301,8 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userService.VerifyTwoFactorEmailAsync(user, model.Token))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token.");
@@ -294,7 +318,7 @@ namespace Bit.Api.Controllers
         public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody]TwoFactorProviderRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, false);
-            await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
+            await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
             var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
             return response;
         }
@@ -335,7 +359,8 @@ namespace Bit.Api.Controllers
         [AllowAnonymous]
         public async Task PostRecover([FromBody]TwoFactorRecoveryRequestModel model)
         {
-            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
+            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
+                _organizationService))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException(string.Empty, "Invalid information. Try again.");
@@ -371,7 +396,8 @@ namespace Bit.Api.Controllers
                 return;
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user, TwoFactorProviderType.YubiKey.ToString(), value))
+            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException(name, $"{name} is invalid.");

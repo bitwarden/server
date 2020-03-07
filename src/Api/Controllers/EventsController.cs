@@ -52,10 +52,24 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<EventResponseModel>> GetCipher(string id,
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
-            var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            if(cipher == null || (cipher.UserId.HasValue && userId != cipher.UserId) ||
-                (cipher.OrganizationId.HasValue && !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value)))
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if(cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var canView = false;
+            if(cipher.OrganizationId.HasValue)
+            {
+                canView = _currentContext.OrganizationAdmin(cipher.OrganizationId.Value);
+            }
+            else if(cipher.UserId.HasValue)
+            {
+                var userId = _userService.GetProperUserId(User).Value;
+                canView = userId == cipher.UserId.Value;
+            }
+
+            if(!canView)
             {
                 throw new NotFoundException();
             }

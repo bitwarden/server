@@ -1,0 +1,67 @@
+﻿@model BillingInformationModel
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Account @(Model.BillingInfo.Balance <= 0 ? "Credit" : "Balance")</dt>
+    <dd class="col-sm-8 col-lg-9">@Math.Abs(Model.BillingInfo.Balance).ToString("C")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Invoices</dt>
+    <dd class="col-sm-8 col-lg-9">
+        @if(Model.BillingInfo.Invoices?.Any() ?? false)
+        {
+            <table class="table">
+                <tbody>
+                    @foreach(var invoice in Model.BillingInfo.Invoices)
+                    {
+                        <tr>
+                            <td>@invoice.Date</td>
+                            <td><a target="_blank" href="@invoice.Url" title="View Invoice">@invoice.Number</a></td>
+                            <td>@invoice.Amount.ToString("C")</td>
+                            <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
+                            <td>
+                                <a target="_blank" href="@invoice.PdfUrl" title="Download Invoice">
+                                    <i class="fa fa-file-pdf-o"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            @: No invoices.
+        }
+    </dd>
+
+    <dt class="col-sm-4 col-lg-3">Transactions</dt>
+    <dd class="col-sm-8 col-lg-9">
+        @if(Model.BillingInfo.Transactions?.Any() ?? false)
+        {
+            <table class="table">
+                <tbody>
+                    @foreach(var transaction in Model.BillingInfo.Transactions)
+                    {
+                        <tr>
+                            <td>@transaction.CreatedDate</td>
+                            <td>@transaction.Type.ToString()</td>
+                            <td>@transaction.PaymentMethodType.ToString()</td>
+                            <td>@transaction.Details</td>
+                            <td>@transaction.Amount.ToString("C")</td>
+                            <td>
+                                <a title="Edit Transaction" asp-controller="Tools" asp-action="EditTransaction"
+                                   asp-route-id="@transaction.Id"><i class="fa fa-edit"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No transactions.</p>
+        }
+        <a asp-action="CreateTransaction" asp-controller="Tools" asp-route-organizationId="@Model.OrganizationId"
+           asp-route-userId="@Model.UserId" class="btn btn-sm btn-outline-primary">
+            <i class="fa fa-plus"></i> New Transaction
+        </a>
+    </dd>
+</dl>

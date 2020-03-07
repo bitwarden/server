@@ -1,0 +1,44 @@
+﻿@model ChargeBraintreeModel
+@{
+    ViewData["Title"] = "Charge Braintree Customer";
+}
+
+<h1>Charge Braintree Customer</h1>
+
+@if(!string.IsNullOrWhiteSpace(Model.TransactionId))
+{
+    <div class="alert alert-success" role="alert">
+        <p>Charged customer "@Model.Id" for @Model.Amount.Value.ToString("C").</p>
+        <strong>btTransactionId:</strong> @Model.TransactionId<br />
+        <strong>btPayPalTransactionId:</strong> @Model.PayPalTransactionId
+    </div>
+    <a asp-action="ChargeBraintree" class="btn btn-secondary">Charge Another Customer</a>
+}
+else
+{
+    <form method="post">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="Id"></label>
+                    <input type="text" class="form-control" asp-for="Id" required
+                           placeholder="ex. u298ccf9240b64f7f8b5da9e0003ba287cpz">
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="Amount"></label>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">$</span>
+                        </div>
+                        <input type="number" min="0.01" max="10000.00" step="0.01" class="form-control"
+                               asp-for="Amount" required placeholder="ex. 10.00">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Charge Customer</button>
+    </form>
+}

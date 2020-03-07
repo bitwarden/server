@@ -64,7 +64,9 @@ namespace Bit.Api.Controllers
             }
 
             var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId);
-            var responses = organizationUsers.Select(o => new OrganizationUserUserDetailsResponseModel(o));
+            var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
+                await _userService.TwoFactorIsEnabledAsync(o)));
+            var responses = await Task.WhenAll(responseTasks);
             return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
         }
 
@@ -118,7 +120,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token);
+            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
         }
 
         [HttpPost("{id}/confirm")]
@@ -171,11 +173,6 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if(organizationUser.Type == Core.Enums.OrganizationUserType.Owner && !_currentContext.OrganizationOwner(orgGuidId))
-            {
-                throw new BadRequestException("Only owners can update other owners.");
-            }
-            
             await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)));
         }
 

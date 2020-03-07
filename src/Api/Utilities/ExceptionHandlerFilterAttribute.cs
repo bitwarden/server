@@ -1,5 +1,6 @@
 ﻿using System;
-using Bit.Core.Models.Api;
+using InternalApi = Bit.Core.Models.Api;
+using PublicApi = Bit.Core.Models.Api.Public;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -8,14 +9,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Utilities
 {
     public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
     {
+        private readonly bool _publicApi;
+
+        public ExceptionHandlerFilterAttribute(bool publicApi)
+        {
+            _publicApi = publicApi;
+        }
+
         public override void OnException(ExceptionContext context)
         {
-            var errorModel = new ErrorResponseModel("An error has occurred.");
+            var errorMessage = "An error has occurred.";
 
             var exception = context.Exception;
             if(exception == null)
@@ -24,34 +33,50 @@ namespace Bit.Api.Utilities
                 return;
             }
 
-            var badRequestException = exception as BadRequestException;
-            var stripeException = exception as StripeException;
-            if(badRequestException != null)
+            PublicApi.ErrorResponseModel publicErrorModel = null;
+            InternalApi.ErrorResponseModel internalErrorModel = null;
+            if(exception is BadRequestException badRequestException)
             {
                 context.HttpContext.Response.StatusCode = 400;
-
                 if(badRequestException.ModelState != null)
                 {
-                    errorModel = new ErrorResponseModel(badRequestException.ModelState);
+                    if(_publicApi)
+                    {
+                        publicErrorModel = new PublicApi.ErrorResponseModel(badRequestException.ModelState);
+                    }
+                    else
+                    {
+                        internalErrorModel = new InternalApi.ErrorResponseModel(badRequestException.ModelState);
+                    }
                 }
                 else
                 {
-                    errorModel.Message = badRequestException.Message;
+                    errorMessage = badRequestException.Message;
                 }
             }
-            else if(stripeException != null && stripeException?.StripeError?.ErrorType == "card_error")
+            else if(exception is StripeException stripeException &&
+                stripeException?.StripeError?.ErrorType == "card_error")
             {
                 context.HttpContext.Response.StatusCode = 400;
-                errorModel = new ErrorResponseModel(stripeException.StripeError.Parameter, stripeException.Message);
+                if(_publicApi)
+                {
+                    publicErrorModel = new PublicApi.ErrorResponseModel(stripeException.StripeError.Parameter,
+                        stripeException.Message);
+                }
+                else
+                {
+                    internalErrorModel = new InternalApi.ErrorResponseModel(stripeException.StripeError.Parameter,
+                        stripeException.Message);
+                }
             }
             else if(exception is GatewayException)
             {
-                errorModel.Message = exception.Message;
+                errorMessage = exception.Message;
                 context.HttpContext.Response.StatusCode = 400;
             }
             else if(exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
             {
-                errorModel.Message = exception.Message;
+                errorMessage = exception.Message;
                 context.HttpContext.Response.StatusCode = 400;
             }
             else if(exception is ApplicationException)
@@ -60,37 +85,44 @@ namespace Bit.Api.Utilities
             }
             else if(exception is NotFoundException)
             {
-                errorModel.Message = "Resource not found.";
+                errorMessage = "Resource not found.";
                 context.HttpContext.Response.StatusCode = 404;
             }
             else if(exception is SecurityTokenValidationException)
             {
-                errorModel.Message = "Invalid token.";
+                errorMessage = "Invalid token.";
                 context.HttpContext.Response.StatusCode = 403;
             }
             else if(exception is UnauthorizedAccessException)
             {
-                errorModel.Message = "Unauthorized.";
+                errorMessage = "Unauthorized.";
                 context.HttpContext.Response.StatusCode = 401;
             }
             else
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
                 logger.LogError(0, exception, exception.Message);
-
-                errorModel.Message = "An unhandled server error has occurred.";
+                errorMessage = "An unhandled server error has occurred.";
                 context.HttpContext.Response.StatusCode = 500;
             }
 
-            var env = context.HttpContext.RequestServices.GetRequiredService<IHostingEnvironment>();
-            if(env.IsDevelopment())
+            if(_publicApi)
             {
-                errorModel.ExceptionMessage = exception.Message;
-                errorModel.ExceptionStackTrace = exception.StackTrace;
-                errorModel.InnerExceptionMessage = exception?.InnerException?.Message;
+                var errorModel = publicErrorModel ?? new PublicApi.ErrorResponseModel(errorMessage);
+                context.Result = new ObjectResult(errorModel);
             }
-
-            context.Result = new ObjectResult(errorModel);
+            else
+            {
+                var errorModel = internalErrorModel ?? new InternalApi.ErrorResponseModel(errorMessage);
+                var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+                if(env.IsDevelopment())
+                {
+                    errorModel.ExceptionMessage = exception.Message;
+                    errorModel.ExceptionStackTrace = exception.StackTrace;
+                    errorModel.InnerExceptionMessage = exception?.InnerException?.Message;
+                }
+                context.Result = new ObjectResult(errorModel);
+            }
         }
     }
 }

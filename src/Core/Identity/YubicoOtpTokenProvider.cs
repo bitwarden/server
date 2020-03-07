@@ -37,7 +37,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            return await user.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, userService);
+            return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
         }
 
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -53,7 +53,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
+            if(string.IsNullOrWhiteSpace(token) || token.Length < 32 || token.Length > 48)
             {
                 return false;
             }
@@ -67,6 +67,10 @@ namespace Bit.Core.Identity
             }
 
             var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
+            if(_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
+            {
+                client.SetUrls(_globalSettings.Yubico.ValidationUrls);
+            }
             var response = await client.VerifyAsync(token);
             return response.Status == YubicoResponseStatus.Ok;
         }

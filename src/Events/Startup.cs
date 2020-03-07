@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -6,21 +7,21 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Serilog.Events;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Events
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
 
         public IConfiguration Configuration { get; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -48,6 +49,16 @@ namespace Bit.Events
             });
 
             // Services
+            var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
+            if(usingServiceBusAppCache)
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            }
+            else
+            {
+                services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            }
             services.AddScoped<IEventService, EventService>();
             if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {
@@ -59,27 +70,24 @@ namespace Bit.Events
             }
 
             // Mvc
-            services.AddMvc();
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+            });
+
+            if(usingServiceBusAppCache)
+            {
+                services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+            }
         }
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(env.IsDevelopment())
             {
@@ -87,19 +95,24 @@ namespace Bit.Events
             }
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
+
+            // Add routing
+            app.UseRouting();
 
             // Add Cors
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+            app.UseCors(policy => policy.SetIsOriginAllowed(h => true)
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
-            // Add authentication to the request pipeline.
+            // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
+            app.UseAuthorization();
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add MVC to the request pipeline.
-            app.UseMvc();
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }
 }

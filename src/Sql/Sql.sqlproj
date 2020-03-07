@@ -36,6 +36,7 @@
     <DefineTrace>true</DefineTrace>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>bin\Debug\</OutputPath>
@@ -48,6 +49,7 @@
     <DefineTrace>true</DefineTrace>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
   </PropertyGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
@@ -207,7 +209,7 @@
     <Build Include="dbo\Views\InstallationView.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByEnabled.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadByPremium.sql" />
-    <Build Include="dbo\Stored Procedures\CipherDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\CipherOrganizationDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCipherId.sql" />
@@ -224,7 +226,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadWithoutOrganizationsByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
-    <Build Include="dbo\Stored Procedures\User_ReadByPremiumRenewal.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteExpired.sql" />
     <Build Include="dbo\Stored Procedures\U2f_DeleteOld.sql" />
@@ -240,5 +241,25 @@
     <Build Include="dbo\Stored Procedures\Cipher_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_CreateWithCollections.sql" />
+    <Build Include="dbo\Tables\Transaction.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_Update.sql" />
+    <Build Include="dbo\Views\TransactionView.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Transaction_ReadByGatewayId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserUserDetails_ReadWithCollectionsById.sql" />
+    <Build Include="dbo\Tables\Policy.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_Update.sql" />
+    <Build Include="dbo\Views\PolicyView.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationIdType.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByUserId.sql" />
   </ItemGroup>
 </Project>

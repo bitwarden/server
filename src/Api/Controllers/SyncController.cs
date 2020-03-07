@@ -25,6 +25,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public SyncController(
@@ -34,6 +35,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IPolicyRepository policyRepository,
             GlobalSettings globalSettings)
         {
             _userService = userService;
@@ -42,6 +44,7 @@ namespace Bit.Api.Controllers
             _collectionRepository = collectionRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _organizationUserRepository = organizationUserRepository;
+            _policyRepository = policyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -62,16 +65,18 @@ namespace Bit.Api.Controllers
 
             IEnumerable<CollectionDetails> collections = null;
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
+            IEnumerable<Policy> policies = null;
             if(hasEnabledOrgs)
             {
                 collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
                 collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+                policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
             }
 
-            var userTwoFactorEnabled = await user.TwoFactorIsEnabledAsync(_userService);
+            var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
             var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, organizationUserDetails,
-                folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains);
+                folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies);
             return response;
         }
     }

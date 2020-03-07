@@ -2,6 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Groups AS [dbo].[SelectionReadOnlyArray] READONLY
@@ -9,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @CreationDate, @RevisionDate
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
 
     ;WITH [AvailableGroupsCTE] AS(
         SELECT

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 
@@ -67,8 +68,20 @@ namespace Bit.Setup
 
         private void Init()
         {
-            var dbPassword = Helpers.SecureRandomString(32);
-            var dbConnectionString = Helpers.MakeSqlConnectionString("mssql", "vault", "sa", dbPassword);
+            var dbPassword = _context.Stub ? "RANDOM_DATABASE_PASSWORD" : Helpers.SecureRandomString(32);
+            var dbConnectionString = new SqlConnectionStringBuilder
+            {
+                DataSource = "tcp:mssql,1433",
+                InitialCatalog = "vault",
+                UserID = "sa",
+                Password = dbPassword,
+                MultipleActiveResultSets = false,
+                Encrypt = true,
+                ConnectTimeout = 30,
+                TrustServerCertificate = true,
+                PersistSecurityInfo = false
+            }.ConnectionString;
+
             _globalOverrideValues = new Dictionary<string, string>
             {
                 ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
@@ -83,20 +96,22 @@ namespace Bit.Setup
                 ["globalSettings__dataProtection__directory"] = $"{_context.OutputDir}/core/aspnet-dataprotection",
                 ["globalSettings__logDirectory"] = $"{_context.OutputDir}/logs",
                 ["globalSettings__licenseDirectory"] = $"{_context.OutputDir}/core/licenses",
-                ["globalSettings__internalIdentityKey"] = Helpers.SecureRandomString(64, alpha: true, numeric: true),
-                ["globalSettings__duo__aKey"] = Helpers.SecureRandomString(64, alpha: true, numeric: true),
+                ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
+                    Helpers.SecureRandomString(64, alpha: true, numeric: true),
+                ["globalSettings__duo__aKey"] = _context.Stub ? "RANDOM_DUO_AKEY" :
+                    Helpers.SecureRandomString(64, alpha: true, numeric: true),
                 ["globalSettings__installation__id"] = _context.Install?.InstallationId.ToString(),
                 ["globalSettings__installation__key"] = _context.Install?.InstallationKey,
                 ["globalSettings__yubico__clientId"] = "REPLACE",
                 ["globalSettings__yubico__key"] = "REPLACE",
                 ["globalSettings__mail__replyToEmail"] = $"no-reply@{_context.Config.Domain}",
                 ["globalSettings__mail__smtp__host"] = "REPLACE",
+                ["globalSettings__mail__smtp__port"] = "587",
+                ["globalSettings__mail__smtp__ssl"] = "false",
                 ["globalSettings__mail__smtp__username"] = "REPLACE",
                 ["globalSettings__mail__smtp__password"] = "REPLACE",
-                ["globalSettings__mail__smtp__ssl"] = "true",
-                ["globalSettings__mail__smtp__port"] = "587",
-                ["globalSettings__mail__smtp__useDefaultCredentials"] = "false",
                 ["globalSettings__disableUserRegistration"] = "false",
+                ["globalSettings__hibpApiKey"] = "REPLACE",
                 ["adminSettings__admins"] = string.Empty,
             };
 
@@ -155,7 +170,7 @@ namespace Bit.Setup
         {
             var template = Helpers.ReadTemplate("EnvironmentFile");
 
-            Console.WriteLine("Building docker environment files.");
+            Helpers.WriteLine(_context, "Building docker environment files.");
             Directory.CreateDirectory("/bitwarden/docker/");
             using(var sw = File.CreateText("/bitwarden/docker/global.env"))
             {
@@ -169,7 +184,7 @@ namespace Bit.Setup
             }
             Helpers.Exec("chmod 600 /bitwarden/docker/mssql.env");
 
-            Console.WriteLine("Building docker environment override files.");
+            Helpers.WriteLine(_context, "Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/env/");
             using(var sw = File.CreateText("/bitwarden/env/global.override.env"))
             {

@@ -14,6 +14,10 @@ using Dapper;
 using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
+using Bit.Core.Enums;
+using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Utilities
 {
@@ -30,6 +34,8 @@ namespace Bit.Core.Utilities
             "RL?+AOEUIDHTNS_:QJKXBMWVZ";
         private static readonly string _qwertyColemakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
         private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
+        private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
+        private static readonly string RealIp = "X-Real-IP";
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -60,6 +66,32 @@ namespace Bit.Core.Utilities
             Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
             return new Guid(guidArray);
+        }
+
+        public static IEnumerable<IEnumerable<T>> Batch<T>(this IEnumerable<T> source, int size)
+        {
+            T[] bucket = null;
+            var count = 0;
+            foreach(var item in source)
+            {
+                if(bucket == null)
+                {
+                    bucket = new T[size];
+                }
+                bucket[count++] = item;
+                if(count != size)
+                {
+                    continue;
+                }
+                yield return bucket.Select(x => x);
+                bucket = null;
+                count = 0;
+            }
+            // Return the last bucket with all remaining elements
+            if(bucket != null && count > 0)
+            {
+                yield return bucket.Take(count);
+            }
         }
 
         public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
@@ -137,15 +169,33 @@ namespace Bit.Core.Utilities
             return new X509Certificate2(file, password);
         }
 
-        public static X509Certificate2 GetEmbeddedCertificate(string file, string password)
+        public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
         {
             var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
             using(var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
             using(var ms = new MemoryStream())
             {
-                s.CopyTo(ms);
+                await s.CopyToAsync(ms);
                 return new X509Certificate2(ms.ToArray(), password);
             }
+        }
+
+        public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
+            string container, string file, string password)
+        {
+            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+            var containerRef = blobClient.GetContainerReference(container);
+            if(await containerRef.ExistsAsync())
+            {
+                var blobRef = containerRef.GetBlobReference(file);
+                if(await blobRef.ExistsAsync())
+                {
+                    var blobBytes = new byte[blobRef.Properties.Length];
+                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0);
+                    return new X509Certificate2(blobBytes, password);
+                }
+            }
+            return null;
         }
 
         public static long ToEpocMilliseconds(DateTime date)
@@ -316,6 +366,26 @@ namespace Bit.Core.Utilities
                 !normalizedSetting.Equals("replace");
         }
 
+        public static string Base64EncodeString(string input)
+        {
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(input));
+        }
+
+        public static string Base64DecodeString(string input)
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(input));
+        }
+
+        public static string Base64UrlEncodeString(string input)
+        {
+            return Base64UrlEncode(Encoding.UTF8.GetBytes(input));
+        }
+
+        public static string Base64UrlDecodeString(string input)
+        {
+            return Encoding.UTF8.GetString(Base64UrlDecode(input));
+        }
+
         public static string Base64UrlEncode(byte[] input)
         {
             var output = Convert.ToBase64String(input)
@@ -451,8 +521,13 @@ namespace Bit.Core.Utilities
             return new Uri(string.Format("{0}?{1}", baseUri, queryCollection), uriKind);
         }
 
-        public static bool UserInviteTokenIsValid(IDataProtector protector, string token,
-            string userEmail, Guid orgUserId)
+        public static string CustomProviderName(TwoFactorProviderType type)
+        {
+            return string.Concat("Custom_", type.ToString());
+        }
+
+        public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
+            Guid orgUserId, GlobalSettings globalSettings)
         {
             var invalid = true;
             try
@@ -464,7 +539,8 @@ namespace Bit.Core.Utilities
                     dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
                     var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
-                    invalid = creationTime.AddDays(5) < DateTime.UtcNow;
+                    var expTime = creationTime.AddHours(globalSettings.OrganizationInviteExpirationHours);
+                    invalid = expTime < DateTime.UtcNow;
                 }
             }
             catch
@@ -473,6 +549,48 @@ namespace Bit.Core.Utilities
             }
 
             return !invalid;
+        }
+
+        public static string GetApplicationCacheServiceBusSubcriptionName(GlobalSettings globalSettings)
+        {
+            var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
+            if(string.IsNullOrWhiteSpace(subName))
+            {
+                var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+                if(string.IsNullOrWhiteSpace(websiteInstanceId))
+                {
+                    throw new Exception("No service bus subscription name available.");
+                }
+                else
+                {
+                    subName = $"{globalSettings.ProjectName.ToLower()}_{websiteInstanceId}";
+                    if(subName.Length > 50)
+                    {
+                        subName = subName.Substring(0, 50);
+                    }
+                }
+            }
+            return subName;
+        }
+
+        public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
+            GlobalSettings globalSettings)
+        {
+            if(httpContext == null)
+            {
+                return null;
+            }
+
+            if(!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+            {
+                return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            }
+            if(globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
+            {
+                return httpContext.Request.Headers[RealIp].ToString();
+            }
+
+            return httpContext.Connection?.RemoteIpAddress?.ToString();
         }
     }
 }

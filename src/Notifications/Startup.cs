@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -7,22 +8,22 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
-using Serilog.Events;
 
 namespace Bit.Notifications
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
 
         public IConfiguration Configuration { get; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -56,9 +57,13 @@ namespace Bit.Notifications
                     MessagePack.Resolvers.ContractlessStandardResolver.Instance
                 };
             });
-            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
+            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.RedisConnectionString))
             {
-                signalRServerBuilder.AddAzureSignalR(globalSettings.Notifications.AzureSignalRConnectionString);
+                signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
+                    options =>
+                    {
+                        options.Configuration.ChannelPrefix = "Notifications";
+                    });
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
             services.AddSingleton<ConnectionCounter>();
@@ -66,6 +71,7 @@ namespace Bit.Notifications
             // Mvc
             services.AddMvc();
 
+            services.AddHostedService<HeartbeatHostedService>();
             if(!globalSettings.SelfHosted)
             {
                 // Hosted Services
@@ -80,56 +86,39 @@ namespace Bit.Notifications
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             IdentityModelEventSource.ShowPII = true;
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                if(e.Level == LogEventLevel.Error && e.MessageTemplate.Text == "Failed connection handshake.")
-                {
-                    return false;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
+            // Add routing
+            app.UseRouting();
+
             // Add Cors
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+            app.UseCors(policy => policy.SetIsOriginAllowed(h => true)
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
             app.UseAuthentication();
+            app.UseAuthorization();
 
-            // Add SignlarR
-            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.AzureSignalRConnectionString))
+            // Add endpoints to the request pipeline.
+            app.UseEndpoints(endpoints =>
             {
-                app.UseAzureSignalR(routes => routes.MapHub<NotificationsHub>("/hub"));
-            }
-            else
-            {
-                app.UseSignalR(routes => routes.MapHub<NotificationsHub>("/hub", options =>
+                endpoints.MapHub<NotificationsHub>("/hub", options =>
                 {
                     options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
                     options.TransportMaxBufferSize = 4096;
-                }));
-            }
-
-            // Add MVC to the request pipeline.
-            app.UseMvc();
+                });
+                endpoints.MapDefaultControllerRoute();
+            });
         }
     }
 }

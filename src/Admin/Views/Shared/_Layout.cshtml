@@ -5,6 +5,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
     <title>@ViewData["Title"] - Bitwarden Admin Portal</title>
 
     <link rel="stylesheet" href="~/css/webfonts.css" />
@@ -39,6 +40,23 @@
                         </li>
                         @if(!GlobalSettings.SelfHosted)
                         {
+                            <li class="nav-item dropdown" active-controller="tools">
+                                <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Tools
+                                </a>
+                                <div class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                    <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
+                                        Charge Braintree Customer
+                                    </a>
+                                    <a class="dropdown-item" asp-controller="Tools" asp-action="CreateTransaction">
+                                        Create Transaction
+                                    </a>
+                                    <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
+                                        Promote Admin
+                                    </a>
+                                </div>
+                            </li>
                             <li class="nav-item" active-controller="Logs">
                                 <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
                             </li>
@@ -71,7 +89,7 @@
 
     <footer class="container mb-4">
         <hr />
-        &copy; @DateTime.Now.Year, 8bit Solutions LLC
+        &copy; @DateTime.Now.Year, Bitwarden Inc.
     </footer>
 
     <environment include="Development">

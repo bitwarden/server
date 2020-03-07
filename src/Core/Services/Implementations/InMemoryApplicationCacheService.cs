@@ -21,13 +21,13 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
         }
 
-        public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+        public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
         {
             await InitOrganizationAbilitiesAsync();
             return _orgAbilities;
         }
 
-        public async Task UpsertOrganizationAbilityAsync(Organization organization)
+        public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
         {
             await InitOrganizationAbilitiesAsync();
             var newAbility = new OrganizationAbility(organization);
@@ -42,7 +42,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public Task DeleteOrganizationAbilityAsync(Guid organizationId)
+        public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
         {
             if(_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
             {

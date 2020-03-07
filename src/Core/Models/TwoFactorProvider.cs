@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Enums;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using U2F.Core.Utils;
 

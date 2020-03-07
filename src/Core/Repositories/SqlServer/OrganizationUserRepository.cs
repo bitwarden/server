@@ -130,6 +130,34 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<OrganizationUserUserDetails> GetDetailsByIdAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUserUserDetails_ReadById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+        public async Task<Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>>
+            GetDetailsByIdWithCollectionsAsync(Guid id)
+        {
+            using(var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryMultipleAsync(
+                    "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
+                var collections = (await results.ReadAsync<SelectionReadOnly>()).ToList();
+                return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(user, collections);
+            }
+        }
+
         public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
         {
             using(var connection = new SqlConnection(ConnectionString))

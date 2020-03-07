@@ -47,6 +47,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendTwoFactorEmailAsync(string email, string token)
         {
             return Task.FromResult(0);
@@ -69,6 +74,26 @@ namespace Bit.Core.Services
 
         public Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
             List<string> items, bool mentionInvoices)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendAddedCreditAsync(string email, decimal amount)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
         {
             return Task.FromResult(0);
         }

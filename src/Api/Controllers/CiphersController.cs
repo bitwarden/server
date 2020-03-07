@@ -56,16 +56,16 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/admin")]
-        public async Task<CipherResponseModel> GetAdmin(string id)
+        public async Task<CipherMiniResponseModel> GetAdmin(string id)
         {
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
-            return new CipherResponseModel(cipher, _globalSettings);
+            return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
         }
 
         [HttpGet("{id}/full-details")]
@@ -179,7 +179,7 @@ namespace Bit.Api.Controllers
         public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody]CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
@@ -219,8 +219,8 @@ namespace Bit.Api.Controllers
         public async Task PostImport([FromBody]ImportCiphersRequestModel model)
         {
             if(!_globalSettings.SelfHosted &&
-                (model.Ciphers.Count() > 5000 || model.FolderRelationships.Count() > 5000 ||
-                    model.Folders.Count() > 200))
+                (model.Ciphers.Count() > 6000 || model.FolderRelationships.Count() > 6000 ||
+                    model.Folders.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
@@ -236,8 +236,8 @@ namespace Bit.Api.Controllers
             [FromBody]ImportOrganizationCiphersRequestModel model)
         {
             if(!_globalSettings.SelfHosted &&
-                (model.Ciphers.Count() > 5000 || model.CollectionRelationships.Count() > 5000 ||
-                    model.Collections.Count() > 200))
+                (model.Ciphers.Count() > 6000 || model.CollectionRelationships.Count() > 12000 ||
+                    model.Collections.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
@@ -265,10 +265,11 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/share")]
         [HttpPost("{id}/share")]
-        public async Task PutShare(string id, [FromBody]CipherShareRequestModel model)
+        public async Task<CipherResponseModel> PutShare(string id, [FromBody]CipherShareRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var cipherId = new Guid(id);
+            var cipher = await _cipherRepository.GetByIdAsync(cipherId);
             if(cipher == null || cipher.UserId != userId ||
                 !_currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
             {
@@ -278,6 +279,10 @@ namespace Bit.Api.Controllers
             var original = CoreHelpers.CloneObject(cipher);
             await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), 
                 new Guid(model.Cipher.OrganizationId), model.CollectionIds.Select(c => new Guid(c)), userId);
+
+            var sharedCipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+            var response = new CipherResponseModel(sharedCipher, _globalSettings);
+            return response;
         }
 
         [HttpPut("{id}/collections")]
@@ -386,13 +391,12 @@ namespace Bit.Api.Controllers
             var shareCiphers = new List<Cipher>();
             foreach(var cipher in model.Ciphers)
             {
-                var cipherGuid = new Guid(cipher.Id);
-                if(!ciphersDict.ContainsKey(cipherGuid))
+                if(!ciphersDict.ContainsKey(cipher.Id.Value))
                 {
                     throw new BadRequestException("Trying to share ciphers that you do not own.");
                 }
 
-                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipherGuid]));
+                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipher.Id.Value]));
             }
 
             await _cipherService.ShareManyAsync(shareCiphers, organizationId,
@@ -445,9 +449,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
                         Request.ContentLength.GetValueOrDefault(0), userId);
             });
 
@@ -457,26 +461,26 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/attachment-admin")]
         [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
-        public async Task<CipherResponseModel> PostAttachmentAdmin(string id)
+        public async Task<CipherMiniResponseModel> PostAttachmentAdmin(string id)
         {
             ValidateAttachment();
 
             var idGuid = new Guid(id);
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetDetailsByIdAsync(idGuid);
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid);
             if(cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName,
-                        Request.ContentLength.GetValueOrDefault(0), userId);
+                await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
+                        Request.ContentLength.GetValueOrDefault(0), userId, true);
             });
 
-            return new CipherResponseModel(cipher, _globalSettings);
+            return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
@@ -493,9 +497,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await Request.GetFileAsync(async (stream, fileName) =>
+            await Request.GetFileAsync(async (stream, fileName, key) =>
             {
-                await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName,
+                await _cipherService.CreateAttachmentShareAsync(cipher, stream,
                     Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
             });
         }
@@ -528,7 +532,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+            await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
         }
 
         private void ValidateAttachment()

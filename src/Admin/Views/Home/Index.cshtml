@@ -22,7 +22,7 @@
             fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "api" })').then((response) => {
                 return response.json();
             }).then((version) => {
-                document.getElementById('core-latest').innerText = version;
+                document.getElementById('server-latest').innerText = version;
                 checkVersions('core', '@Model.CurrentVersion', version);
             });
 
@@ -60,17 +60,17 @@
 <div class="row">
     <div class="col-md">
         <dl class="row">
-            <dt class="col-sm-5">Core Installed</dt>
+            <dt class="col-sm-5">Server Installed</dt>
             <dd class="col-sm-7">
-                <span id="core-installed">@Model.CurrentVersion</span>
+                <span id="server-installed">@Model.CurrentVersion</span>
                 <i class="fa fa-check text-success d-none" id="core-success" title="You are up to date!"></i>
                 <i class="fa fa-warning text-warning d-none" id="core-warning"
                    title="This version is not the latest. You should update."></i>
             </dd>
 
-            <dt class="col-sm-5">Core Latest</dt>
+            <dt class="col-sm-5">Server Latest</dt>
             <dd class="col-sm-7">
-                <span id="core-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
+                <span id="server-latest" title="Checking version..."><i class="fa fa-spinner fa-spin"></i></span>
             </dd>
 
             <dt class="col-sm-5">Web Installed</dt>
@@ -89,7 +89,7 @@
     </div>
     <div class="col-md">
         <ul class="list-unstyled">
-            <li><a href="https://github.com/bitwarden/core/releases" target="_blank">Check for Core updates</a></li>
+            <li><a href="https://github.com/bitwarden/server/releases" target="_blank">Check for Server updates</a></li>
             <li><a href="https://github.com/bitwarden/web/releases" target="_blank">Check for Web updates</a></li>
             <li><a href="https://help.bitwarden.com/article/updating-on-premise/" target="_blank">How do I update?</a></li>
         </ul>
@@ -117,8 +117,10 @@ else
         <dt class="col-sm-4 col-lg-3">SSL</dt>
         <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.Ssl ? "Yes" : "No")</dd>
 
-        <dt class="col-sm-4 col-lg-3">Credentials</dt>
-        <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.Mail.Smtp.UseDefaultCredentials ? "Default" : "Provided")</dd>
+        <dt class="col-sm-4 col-lg-3">StartTLS</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @(Model.GlobalSettings.Mail.Smtp.StartTls ? "Yes" : Model.GlobalSettings.Mail.Smtp.Port == 25 ? "No" : "Discover")
+        </dd>
 
         <dt class="col-sm-4 col-lg-3">Username</dt>
         <dd class="col-sm-8 col-lg-9">
@@ -142,7 +144,7 @@ else
         }
     </dd>
 
-    <dt class="col-sm-4 col-lg-3">User Registraion</dt>
+    <dt class="col-sm-4 col-lg-3">User Registration</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.GlobalSettings.DisableUserRegistration ? "Disabled" : "Enabled")</dd>
 
     <dt class="col-sm-4 col-lg-3">Push Notifications</dt>

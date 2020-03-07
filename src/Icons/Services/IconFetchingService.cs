@@ -6,10 +6,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
-using AngleSharp.Parser.Html;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 using System.Text;
+using AngleSharp.Html.Parser;
 
 namespace Bit.Icons.Services
 {
@@ -17,6 +17,8 @@ namespace Bit.Icons.Services
     {
         private readonly HashSet<string> _iconRels =
             new HashSet<string> { "icon", "apple-touch-icon", "shortcut icon" };
+        private readonly HashSet<string> _blacklistedRels =
+            new HashSet<string> { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
         private readonly HashSet<string> _iconExtensions =
             new HashSet<string> { ".ico", ".png", ".jpg", ".jpeg" };
 
@@ -114,7 +116,7 @@ namespace Bit.Icons.Services
             var parser = new HtmlParser();
             using(response)
             using(var htmlStream = await response.Content.ReadAsStreamAsync())
-            using(var document = await parser.ParseAsync(htmlStream))
+            using(var document = await parser.ParseDocumentAsync(htmlStream))
             {
                 uri = response.RequestMessage.RequestUri;
                 if(document.DocumentElement == null)
@@ -155,7 +157,7 @@ namespace Bit.Icons.Services
                         {
                             icons.Add(new IconResult(hrefAttr.Value, sizesAttr?.Value));
                         }
-                        else
+                        else if(relAttr == null || !_blacklistedRels.Contains(relAttr.Value.ToLower()))
                         {
                             try
                             {

@@ -2,25 +2,27 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Utilities;
-using Serilog.Events;
 using AspNetCoreRateLimit;
+using System.Globalization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Identity
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
             Environment = env;
         }
 
         public IConfiguration Configuration { get; private set; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -63,39 +65,34 @@ namespace Bit.Identity
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
+
+            if(CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
+            {
+                services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+            }
         }
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
-            IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
+            GlobalSettings globalSettings,
+            ILogger<Startup> logger)
         {
-            loggerFactory.AddSerilog(app, env, appLifetime, globalSettings, (e) =>
-            {
-                var context = e.Properties["SourceContext"].ToString();
-                if(context.Contains(typeof(IpRateLimitMiddleware).FullName) && e.Level == LogEventLevel.Information)
-                {
-                    return true;
-                }
-
-                if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                    context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
-                {
-                    return e.Level > LogEventLevel.Error;
-                }
-
-                return e.Level >= LogEventLevel.Error;
-            });
+            app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
 
             if(!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
+            }
+            else
+            {
+                app.UseForwardedHeaders(globalSettings);
             }
 
             // Add current context
@@ -103,6 +100,9 @@ namespace Bit.Identity
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
+
+            // Log startup
+            logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
         }
     }
 }

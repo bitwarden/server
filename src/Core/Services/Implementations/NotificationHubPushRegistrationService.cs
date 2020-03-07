@@ -4,20 +4,27 @@ using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Enums;
 using System.Linq;
 using System;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
     public class NotificationHubPushRegistrationService : IPushRegistrationService
     {
+        private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
-        
+
         private NotificationHubClient _client = null;
-        private DateTime? _clientExpires = null;
 
         public NotificationHubPushRegistrationService(
+            IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings)
         {
+            _installationDeviceRepository = installationDeviceRepository;
             _globalSettings = globalSettings;
+            _client = NotificationHubClient.CreateClientFromConnectionString(
+                _globalSettings.NotificationHub.ConnectionString,
+                _globalSettings.NotificationHub.HubName);
         }
 
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -53,7 +60,7 @@ namespace Bit.Core.Services
                     messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                         "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
 
-                    installation.Platform = NotificationPlatform.Gcm;
+                    installation.Platform = NotificationPlatform.Fcm;
                     break;
                 case DeviceType.iOS:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
@@ -80,8 +87,11 @@ namespace Bit.Core.Services
             BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
                 userId, identifier);
 
-            await RenewClientAndExecuteAsync(async client =>
-                await client.CreateOrUpdateInstallationAsync(installation));
+            await _client.CreateOrUpdateInstallationAsync(installation);
+            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            {
+                await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+            }
         }
 
         private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
@@ -116,7 +126,11 @@ namespace Bit.Core.Services
         {
             try
             {
-                await RenewClientAndExecuteAsync(async client => await client.DeleteInstallationAsync(deviceId));
+                await _client.DeleteInstallationAsync(deviceId);
+                if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+                {
+                    await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
+                }
             }
             catch(Exception e)
             {
@@ -130,12 +144,22 @@ namespace Bit.Core.Services
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
+            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            {
+                var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+                await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
+            }
         }
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
                 $"organizationId:{organizationId}");
+            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            {
+                var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+                await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
+            }
         }
 
         private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
@@ -165,8 +189,7 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    await RenewClientAndExecuteAsync(async client =>
-                        await client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation }));
+                    await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
                 }
                 catch(Exception e)
                 {
@@ -176,19 +199,6 @@ namespace Bit.Core.Services
                     }
                 }
             }
-        }
-
-        private async Task RenewClientAndExecuteAsync(Func<NotificationHubClient, Task> task)
-        {
-            var now = DateTime.UtcNow;
-            if(_client == null || !_clientExpires.HasValue || _clientExpires.Value < now)
-            {
-                _clientExpires = now.Add(TimeSpan.FromMinutes(30));
-                _client = NotificationHubClient.CreateClientFromConnectionString(
-                    _globalSettings.NotificationHub.ConnectionString,
-                    _globalSettings.NotificationHub.HubName);
-            }
-            await task(_client);
         }
     }
 }

@@ -1,15 +1,13 @@
-FROM mcr.microsoft.com/mssql/server:2017-CU12
+FROM mcr.microsoft.com/mssql/server:2017-CU18-ubuntu-16.04
 
 LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        cron \
         gosu \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-COPY crontab /etc/cron.d/bitwarden-cron
-RUN chmod 0644 /etc/cron.d/bitwarden-cron
 COPY backup-db.sql /
 COPY backup-db.sh /
 COPY entrypoint.sh /
@@ -21,9 +19,10 @@ RUN chmod +x /entrypoint.sh \
 # Ref: https://support.microsoft.com/en-us/help/4468101/optional-replacement-for-string-or-binary-data-would-be-truncated
 RUN /opt/mssql/bin/mssql-conf traceflag 460 on
 
+# Does not work unfortunately (https://github.com/bitwarden/server/issues/286)
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
-# As the setting above does not work, let's use the workaround below
-RUN echo 127.0.0.1 settings-win.data.microsoft.com >> /etc/hosts
-RUN echo 127.0.0.1 vortex.data.microsoft.com >> /etc/hosts
+
+HEALTHCHECK --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
+    -S localhost -U sa -P ${SA_PASSWORD} -Q "SELECT 1" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

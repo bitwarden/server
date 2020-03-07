@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Server
 {
@@ -14,7 +15,12 @@ namespace Bit.Server
             var builder = new WebHostBuilder()
                 .UseConfiguration(config)
                 .UseKestrel()
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.AddConsole().AddDebug();
+                })
+                .ConfigureKestrel((context, options) => { });
 
             var contentRoot = config.GetValue<string>("contentRoot");
             if(string.IsNullOrWhiteSpace(contentRoot))
