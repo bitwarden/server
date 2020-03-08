@@ -16,7 +16,8 @@ using System.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Bit.Core.Enums;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Utilities
 {
@@ -33,6 +34,8 @@ namespace Bit.Core.Utilities
             "RL?+AOEUIDHTNS_:QJKXBMWVZ";
         private static readonly string _qwertyColemakMap = "qwertyuiopasdfghjkl;zxcvbnmQWERTYUIOPASDFGHJKL:ZXCVBNM";
         private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
+        private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
+        private static readonly string RealIp = "X-Real-IP";
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -166,13 +169,13 @@ namespace Bit.Core.Utilities
             return new X509Certificate2(file, password);
         }
 
-        public static X509Certificate2 GetEmbeddedCertificate(string file, string password)
+        public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
         {
             var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
             using(var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
             using(var ms = new MemoryStream())
             {
-                s.CopyTo(ms);
+                await s.CopyToAsync(ms);
                 return new X509Certificate2(ms.ToArray(), password);
             }
         }
@@ -523,8 +526,8 @@ namespace Bit.Core.Utilities
             return string.Concat("Custom_", type.ToString());
         }
 
-        public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail, Guid orgUserId,
-            GlobalSettings globalSettings)
+        public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
+            Guid orgUserId, GlobalSettings globalSettings)
         {
             var invalid = true;
             try
@@ -568,6 +571,26 @@ namespace Bit.Core.Utilities
                 }
             }
             return subName;
+        }
+
+        public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
+            GlobalSettings globalSettings)
+        {
+            if(httpContext == null)
+            {
+                return null;
+            }
+
+            if(!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+            {
+                return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            }
+            if(globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
+            {
+                return httpContext.Request.Headers[RealIp].ToString();
+            }
+
+            return httpContext.Connection?.RemoteIpAddress?.ToString();
         }
     }
 }

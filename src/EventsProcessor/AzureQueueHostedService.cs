@@ -9,8 +9,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -23,7 +22,7 @@ namespace Bit.EventsProcessor
 
         private Task _executingTask;
         private CancellationTokenSource _cts;
-        private CloudQueue _queue;
+        private QueueClient _queueClient;
         private IEventWriteService _eventWriteService;
 
         public AzureQueueHostedService(
@@ -67,23 +66,19 @@ namespace Bit.EventsProcessor
 
             var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
             _eventWriteService = new RepositoryEventWriteService(repo);
-
-            var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("event");
+            _queueClient = new QueueClient(storageConnectionString, "event");
 
             while(!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                        null, null, cancellationToken);
-                    if(messages.Any())
+                    var messages = await _queueClient.ReceiveMessagesAsync(32);
+                    if(messages.Value?.Any() ?? false)
                     {
-                        foreach(var message in messages)
+                        foreach(var message in messages.Value)
                         {
-                            await ProcessQueueMessageAsync(message.AsString, cancellationToken);
-                            await _queue.DeleteMessageAsync(message);
+                            await ProcessQueueMessageAsync(message.MessageText, cancellationToken);
+                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                         }
                     }
                     else

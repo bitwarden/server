@@ -5,8 +5,11 @@ param (
     [switch] $stop,
     [switch] $update,
     [switch] $rebuild,
+    [switch] $updateconf,
     [switch] $updatedb,
+    [switch] $updaterun,
     [switch] $updateself,
+    [switch] $help,
     [string] $output = ""
 )
 
@@ -20,8 +23,8 @@ if ($output -eq "") {
 
 $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
-$coreVersion = "1.31.1"
-$webVersion = "2.11.0"
+$coreVersion = "1.32.0"
+$webVersion = "2.12.0"
 
 # Functions
 
@@ -46,6 +49,26 @@ function Check-Output-Dir-Not-Exists {
     if (Test-Path -Path "$output\docker") {
         throw "Looks like Bitwarden is already installed at $output."
     }
+}
+
+function List-Commands {
+    Write-Line "
+Available commands:
+
+-install
+-start
+-restart
+-stop
+-update
+-updatedb
+-updaterun
+-updateself
+-updateconf
+-rebuild
+-help
+
+See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
+"
 }
 
 function Write-Line($str) {
@@ -102,6 +125,10 @@ elseif ($rebuild) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -rebuild -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
+elseif ($updateconf) {
+    Check-Output-Dir-Exists
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -updateconf -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
+}
 elseif ($updatedb) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -updatedb -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
@@ -110,10 +137,19 @@ elseif ($stop) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -stop -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
+elseif ($updaterun) {
+    Check-Output-Dir-Exists
+    Download-Run-File
+}
 elseif ($updateself) {
     Download-Self
     Write-Line "Updated self."
 }
+elseif ($help) {
+    List-Commands
+}
 else {
     Write-Line "No command found."
+    Write-Line ""
+    List-Commands
 }

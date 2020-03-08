@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,15 +13,26 @@ namespace Bit.Billing.Jobs
 {
     public class JobsHostedService : BaseJobsHostedService
     {
+        private readonly GlobalSettings _globalSettings;
+
         public JobsHostedService(
+            GlobalSettings globalSettings,
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
             ILogger<JobListener> listenerLogger)
-            : base(serviceProvider, logger, listenerLogger) { }
+            : base(serviceProvider, logger, listenerLogger) {
+            _globalSettings = globalSettings;
+        }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var timeZone = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                   TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
+                   TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            if(_globalSettings.SelfHosted)
+            {
+                timeZone = TimeZoneInfo.Utc;
+            }
 
             var everyDayAtNinePmTrigger = TriggerBuilder.Create()
                 .StartNow()

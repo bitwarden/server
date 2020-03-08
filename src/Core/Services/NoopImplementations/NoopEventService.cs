@@ -23,6 +23,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null)
         {
             return Task.FromResult(0);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -12,18 +12,24 @@ namespace Bit.Core.Test.Services
         private readonly StripePaymentService _sut;
 
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IAppleIapService _appleIapService;
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<StripePaymentService> _logger;
 
         public StripePaymentServiceTests()
         {
             _transactionRepository = Substitute.For<ITransactionRepository>();
+            _userRepository = Substitute.For<IUserRepository>();
+            _appleIapService = Substitute.For<IAppleIapService>();
             _globalSettings = new GlobalSettings();
             _logger = Substitute.For<ILogger<StripePaymentService>>();
 
             _sut = new StripePaymentService(
                 _transactionRepository,
+                _userRepository,
                 _globalSettings,
+                _appleIapService,
                 _logger
             );
         }

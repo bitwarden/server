@@ -4,7 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services
 {
@@ -31,7 +32,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IHostingEnvironment environment,
+            IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
             GlobalSettings globalSettings)
         {
@@ -45,7 +46,8 @@ namespace Bit.Core.Services
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
             if(_globalSettings.SelfHosted)
             {
-                _certificate = CoreHelpers.GetEmbeddedCertificate("licensing.cer", null);
+                _certificate = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null)
+                    .GetAwaiter().GetResult();
             }
             else if(CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
                 CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))

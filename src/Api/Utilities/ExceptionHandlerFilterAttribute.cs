@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Utilities
 {
@@ -113,7 +114,7 @@ namespace Bit.Api.Utilities
             else
             {
                 var errorModel = internalErrorModel ?? new InternalApi.ErrorResponseModel(errorMessage);
-                var env = context.HttpContext.RequestServices.GetRequiredService<IHostingEnvironment>();
+                var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
                 if(env.IsDevelopment())
                 {
                     errorModel.ExceptionMessage = exception.Message;

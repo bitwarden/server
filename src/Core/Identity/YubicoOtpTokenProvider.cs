@@ -67,6 +67,10 @@ namespace Bit.Core.Identity
             }
 
             var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
+            if(_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
+            {
+                client.SetUrls(_globalSettings.Yubico.ValidationUrls);
+            }
             var response = await client.VerifyAsync(token);
             return response.Status == YubicoResponseStatus.Ok;
         }

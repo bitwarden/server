@@ -43,12 +43,12 @@ namespace Bit.Setup
                     _context.Config.Ssl = true;
                     _context.Install.Trusted = false;
                     _context.Install.SelfSignedCert = true;
-                    Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 " +
+                    Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 36500 " +
                         $"-keyout /bitwarden/ssl/self/{_context.Install.Domain}/private.key " +
                         $"-out /bitwarden/ssl/self/{_context.Install.Domain}/certificate.crt " +
                         $"-reqexts SAN -extensions SAN " +
                         $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true')) " +
-                        $"-subj \"/C=US/ST=Florida/L=Jacksonville/O=8bit Solutions LLC/OU=Bitwarden/CN={_context.Install.Domain}\"");
+                        $"-subj \"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}\"");
                 }
             }
 
@@ -70,7 +70,7 @@ namespace Bit.Setup
             _context.Install.IdentityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
             Directory.CreateDirectory("/bitwarden/identity/");
             Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
-                "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 10950");
+                "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 36500");
             Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -certfile identity.crt -passout pass:{_context.Install.IdentityCertPassword}");
 

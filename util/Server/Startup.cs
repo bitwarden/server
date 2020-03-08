@@ -25,7 +25,9 @@ namespace Bit.Server
         }
 
         public void ConfigureServices(IServiceCollection services)
-        { }
+        {
+            services.AddRouting();
+        }
 
         public void Configure(
             IApplicationBuilder app,
@@ -33,11 +35,16 @@ namespace Bit.Server
         {
             if(configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
-                app.Map("/alive", HandleMapAlive);
                 app.UseStaticFiles(new StaticFileOptions
                 {
                     ServeUnknownFileTypes = true,
                     DefaultContentType = "application/octet-stream"
+                });
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/alive",
+                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
                 });
             }
             else if(configuration.GetValue<bool?>("webVault") ?? false)
@@ -71,14 +78,14 @@ namespace Bit.Server
             }
             else
             {
-                app.Map("/alive", HandleMapAlive);
                 app.UseFileServer();
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/alive",
+                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+                });
             }
-        }
-
-        private static void HandleMapAlive(IApplicationBuilder app)
-        {
-            app.Run(async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
         }
     }
 }

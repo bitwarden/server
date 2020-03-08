@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Bit.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities
 {
@@ -12,47 +13,62 @@ namespace Bit.Api.Utilities
         {
             services.AddSwaggerGen(config =>
             {
-                config.SwaggerDoc("public", new Info
+                config.SwaggerDoc("public", new OpenApiInfo
                 {
                     Title = "Bitwarden Public API",
                     Version = "latest",
-                    Contact = new Contact
+                    Contact = new OpenApiContact
                     {
                         Name = "Bitwarden Support",
-                        Url = "https://bitwarden.com",
+                        Url = new Uri("https://bitwarden.com"),
                         Email = "support@bitwarden.com"
                     },
                     Description = "The Bitwarden public APIs.",
-                    License = new License
+                    License = new OpenApiLicense
                     {
                         Name = "GNU Affero General Public License v3.0",
-                        Url = "https://github.com/bitwarden/server/blob/master/LICENSE.txt"
+                        Url = new Uri("https://github.com/bitwarden/server/blob/master/LICENSE.txt")
                     }
                 });
-                // config.SwaggerDoc("internal", new Info { Title = "Bitwarden Internal API", Version = "latest" });
+                config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-                config.AddSecurityDefinition("OAuth2 Client Credentials", new OAuth2Scheme
+                config.AddSecurityDefinition("OAuth2 Client Credentials", new OpenApiSecurityScheme
                 {
-                    Type = "oauth2",
-                    Flow = "application",
-                    TokenUrl = $"{globalSettings.BaseServiceUri.Identity}/connect/token",
-                    Scopes = new Dictionary<string, string>
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows
                     {
-                        { "api.organization", "Organization APIs" },
+                        ClientCredentials = new OpenApiOAuthFlow
+                        {
+                            TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
+                            Scopes = new Dictionary<string, string>
+                            {
+                                { "api.organization", "Organization APIs" },
+                            },
+                        }
                     },
                 });
 
-                config.AddSecurityRequirement(new Dictionary<string, IEnumerable<string>>
+                config.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                    { "OAuth2 Client Credentials", new[] { "api.organization" } }
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference 
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "OAuth2 Client Credentials"
+                            },
+                        },
+                        new[] { "api.organization" }
+                    }
                 });
 
                 config.DescribeAllParametersInCamelCase();
                 // config.UseReferencedDefinitionsForEnums();
 
-                var apiFilePath = Path.Combine(System.AppContext.BaseDirectory, "Api.xml");
+                var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
                 config.IncludeXmlComments(apiFilePath, true);
-                var coreFilePath = Path.Combine(System.AppContext.BaseDirectory, "Core.xml");
+                var coreFilePath = Path.Combine(AppContext.BaseDirectory, "Core.xml");
                 config.IncludeXmlComments(coreFilePath);
             });
         }

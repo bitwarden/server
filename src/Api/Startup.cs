@@ -13,12 +13,15 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using System.Collections.Generic;
 
 namespace Bit.Api
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
@@ -26,7 +29,7 @@ namespace Bit.Api
         }
 
         public IConfiguration Configuration { get; private set; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -113,7 +116,7 @@ namespace Bit.Api
             {
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
-            }).AddJsonOptions(options =>
+            }).AddNewtonsoftJson(options =>
             {
                 if(Environment.IsProduction() && Configuration["swaggerGen"] != "true")
                 {
@@ -138,15 +141,16 @@ namespace Bit.Api
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
+            GlobalSettings globalSettings,
+            ILogger<Startup> logger)
         {
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
 
             if(!globalSettings.SelfHosted)
             {
@@ -161,19 +165,22 @@ namespace Bit.Api
             // Add static files to the request pipeline.
             app.UseStaticFiles();
 
+            // Add routing
+            app.UseRouting();
+
             // Add Cors
-            app.UseCors(policy => policy
-                .WithOrigins(globalSettings.BaseServiceUri.Vault)
+            app.UseCors(policy => policy.SetIsOriginAllowed(h => true)
                 .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
-            // Add authentication to the request pipeline.
+            // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
+            app.UseAuthorization();
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
-            // Add MVC to the request pipeline.
-            app.UseMvc();
+            // Add endpoints to the request pipeline.
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
             // Add Swagger
             if(Environment.IsDevelopment() || globalSettings.SelfHosted)
@@ -183,7 +190,11 @@ namespace Bit.Api
                     config.RouteTemplate = "specs/{documentName}/swagger.json";
                     var host = globalSettings.BaseServiceUri.Api.Replace("https://", string.Empty)
                         .Replace("http://", string.Empty);
-                    config.PreSerializeFilters.Add((swaggerDoc, httpReq) => swaggerDoc.Host = host);
+                    config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
+                        swaggerDoc.Servers = new List<OpenApiServer>
+                        {
+                            new OpenApiServer { Url = $"{httpReq.Scheme}://{host}" }
+                        });
                 });
                 app.UseSwaggerUI(config =>
                 {
@@ -195,6 +206,9 @@ namespace Bit.Api
                     config.OAuthClientSecret("secretKey");
                 });
             }
+
+            // Log startup
+            logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
         }
     }
 }

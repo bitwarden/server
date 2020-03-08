@@ -120,7 +120,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token);
+            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
         }
 
         [HttpPost("{id}/confirm")]

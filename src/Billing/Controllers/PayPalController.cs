@@ -182,7 +182,7 @@ namespace Bit.Billing.Controllers
                 // Catch foreign key violations because user/org could have been deleted.
                 catch(SqlException e) when(e.Number == 547) { }
             }
-            else if(ipnTransaction.PaymentStatus == "Refunded")
+            else if(ipnTransaction.PaymentStatus == "Refunded" || ipnTransaction.PaymentStatus == "Reversed")
             {
                 var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.TxnId);

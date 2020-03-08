@@ -203,5 +203,27 @@ namespace Bit.Api.Public.Controllers
             await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
             return new OkResult();
         }
+
+        /// <summary>
+        /// Re-invite a member.
+        /// </summary>
+        /// <remarks>
+        /// Re-sends the invitation email to an organization member.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to re-invite.</param>
+        [HttpPost("{id}/reinvite")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> PostReinvite(Guid id)
+        {
+            var existingUser = await _organizationUserRepository.GetByIdAsync(id);
+            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+            return new OkResult();
+        }
     }
 }

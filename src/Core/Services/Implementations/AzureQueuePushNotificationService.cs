@@ -4,8 +4,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using Bit.Core.Models;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage;
+using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 
@@ -13,7 +12,7 @@ namespace Bit.Core.Services
 {
     public class AzureQueuePushNotificationService : IPushNotificationService
     {
-        private readonly CloudQueue _queue;
+        private readonly QueueClient _queueClient;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -26,9 +25,7 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Notifications.ConnectionString);
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("notifications");
+            _queueClient = new QueueClient(globalSettings.Notifications.ConnectionString, "notifications");
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -143,8 +140,7 @@ namespace Bit.Core.Services
             var contextId = GetContextIdentifier(excludeCurrentContext);
             var message = JsonConvert.SerializeObject(new PushNotificationData<T>(type, payload, contextId),
                 _jsonSettings);
-            var queueMessage = new CloudQueueMessage(message);
-            await _queue.AddMessageAsync(queueMessage);
+            await _queueClient.SendMessageAsync(message);
         }
 
         private string GetContextIdentifier(bool excludeCurrentContext)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bit.Migrator</RootNamespace>
   </PropertyGroup>
 
@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="dbup-sqlserver" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.2" />
   </ItemGroup>
 
   <ItemGroup>

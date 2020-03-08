@@ -7,14 +7,12 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Repositories;
 using System.Threading.Tasks;
 using System.Security.Claims;
+using Bit.Core.Utilities;
 
 namespace Bit.Core
 {
     public class CurrentContext
     {
-        private const string CloudFlareConnectingIp = "CF-Connecting-IP";
-        private const string RealIp = "X-Real-IP";
-
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
 
@@ -59,7 +57,7 @@ namespace Bit.Core
             }
 
             _builtClaimsPrincipal = true;
-            IpAddress = GetRequestIp(globalSettings);
+            IpAddress = HttpContext.GetIpAddress(globalSettings);
             if(user == null || !user.Claims.Any())
             {
                 return;
@@ -75,6 +73,7 @@ namespace Bit.Core
 
             var clientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
+            var orgApi = false;
             if(clientSubject != null)
             {
                 if(clientId?.StartsWith("installation.") ?? false)
@@ -89,6 +88,7 @@ namespace Bit.Core
                     if(Guid.TryParse(clientSubject, out var idGuid))
                     {
                         OrganizationId = idGuid;
+                        orgApi = true;
                     }
                 }
             }
@@ -104,6 +104,14 @@ namespace Bit.Core
                         Id = new Guid(c.Value),
                         Type = OrganizationUserType.Owner
                     }));
+            }
+            else if(orgApi && OrganizationId.HasValue)
+            {
+                Organizations.Add(new CurrentContentOrganization
+                {
+                    Id = OrganizationId.Value,
+                    Type = OrganizationUserType.Owner
+                });
             }
 
             if(claimsDict.ContainsKey("orgadmin"))
@@ -170,25 +178,6 @@ namespace Bit.Core
                     .Select(ou => new CurrentContentOrganization(ou)).ToList();
             }
             return Organizations;
-        }
-
-        private string GetRequestIp(GlobalSettings globalSettings)
-        {
-            if(HttpContext == null)
-            {
-                return null;
-            }
-
-            if(!globalSettings.SelfHosted && HttpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
-            {
-                return HttpContext.Request.Headers[CloudFlareConnectingIp].ToString();
-            }
-            if(globalSettings.SelfHosted && HttpContext.Request.Headers.ContainsKey(RealIp))
-            {
-                return HttpContext.Request.Headers[RealIp].ToString();
-            }
-
-            return HttpContext.Connection?.RemoteIpAddress?.ToString();
         }
 
         private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

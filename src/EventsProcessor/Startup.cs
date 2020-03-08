@@ -6,13 +6,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
 
 namespace Bit.EventsProcessor
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
@@ -20,7 +21,7 @@ namespace Bit.EventsProcessor
         }
 
         public IConfiguration Configuration { get; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -36,18 +37,18 @@ namespace Bit.EventsProcessor
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
-            app.Map("/alive", HandleMapAlive);
-        }
-
-        private static void HandleMapAlive(IApplicationBuilder app)
-        {
-            app.Run(async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/alive", 
+                    async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+            });
         }
     }
 }

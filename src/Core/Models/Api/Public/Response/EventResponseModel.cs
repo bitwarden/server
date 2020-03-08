@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Api.Public
             ItemId = ev.CipherId;
             CollectionId = ev.CollectionId;
             GroupId = ev.GroupId;
+            PolicyId = ev.PolicyId;
             MemberId = ev.OrganizationUserId;
             ActingUserId = ev.ActingUserId;
             Date = ev.Date;
@@ -54,6 +55,11 @@ namespace Bit.Core.Models.Api.Public
         /// </summary>
         /// <example>f29a2515-91d2-4452-b49b-5e8040e6b0f4</example>
         public Guid? GroupId { get; set; }
+        /// <summary>
+        /// The unique identifier of the related policy that the event describes.
+        /// </summary>
+        /// <example>f29a2515-91d2-4452-b49b-5e8040e6b0f4</example>
+        public Guid? PolicyId { get; set; }
         /// <summary>
         /// The unique identifier of the related member that the event describes.
         /// </summary>

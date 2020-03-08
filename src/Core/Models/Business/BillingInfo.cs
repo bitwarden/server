@@ -15,6 +15,8 @@ namespace Bit.Core.Models.Business
 
         public class BillingSource
         {
+            public BillingSource() { }
+
             public BillingSource(PaymentMethod method)
             {
                 if(method.Card != null)

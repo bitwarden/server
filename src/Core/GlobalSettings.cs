@@ -10,6 +10,7 @@ namespace Bit.Core
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
+        public virtual long? LogRollBySizeLimit { get; set; }
         public virtual string LicenseDirectory { get; set; }
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
@@ -38,6 +39,7 @@ namespace Bit.Core
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
+        public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
 
         public class BaseServiceUriSettings
         {
@@ -112,7 +114,6 @@ namespace Bit.Core
         public class MailSettings
         {
             public string ReplyToEmail { get; set; }
-            public string SendGridApiKey { get; set; }
             public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
 
@@ -125,10 +126,6 @@ namespace Bit.Core
                 public bool SslOverride { get; set; } = false;
                 public string Username { get; set; }
                 public string Password { get; set; }
-                [Obsolete]
-                public bool UseDefaultCredentials { get; set; } = false;
-                [Obsolete]
-                public string AuthType { get; set; }
                 public bool TrustServer { get; set; } = false;
             }
         }
@@ -159,7 +156,7 @@ namespace Bit.Core
 
         public class NotificationsSettings : ConnectionStringSettings
         {
-            public string AzureSignalRConnectionString { get; set; }
+            public string RedisConnectionString { get; set; }
         }
 
         public class NotificationHubSettings
@@ -181,6 +178,7 @@ namespace Bit.Core
         {
             public string ClientId { get; set; }
             public string Key { get; set; }
+            public string[] ValidationUrls { get; set; }
         }
 
         public class DuoSettings
@@ -199,7 +197,7 @@ namespace Bit.Core
         public class BitPaySettings
         {
             public bool Production { get; set; }
-            public string Base58Secret { get; set; }
+            public string Token { get; set; }
             public string NotificationUrl { get; set; }
         }
 
@@ -221,6 +219,12 @@ namespace Bit.Core
         {
             public string ApplicationCacheTopicName { get; set; }
             public string ApplicationCacheSubscriptionName { get; set; }
+        }
+
+        public class AppleIapSettings
+        {
+            public string Password { get; set; }
+            public bool AppInReview { get; set; }
         }
     }
 }

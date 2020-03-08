@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Data
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }
         public Guid? GroupId { get; set; }
+        public Guid? PolicyId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ActingUserId { get; set; }
         public DeviceType? DeviceType { get; set; }

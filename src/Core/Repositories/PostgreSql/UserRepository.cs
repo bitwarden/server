@@ -31,7 +31,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<User>(
                     "user_read_by_email",
-                    new { email = email },
+                    ToParam(new { Email = email }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -44,7 +44,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<UserKdfInformation>(
                     "user_read_kdf_by_email",
-                    new { email = email },
+                    ToParam(new { Email = email }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -57,7 +57,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<User>(
                     "user_search",
-                    new { email = email, skip = skip, take = take },
+                    ToParam(new { Email = email, Skip = skip, Take = take }),
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 120);
 
@@ -71,7 +71,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<User>(
                     "user_read_by_premium",
-                    new { premium = premium },
+                    ToParam(new { Premium = premium }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -96,7 +96,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<string>(
                     "user_read_public_key_by_id",
-                    new { id = id },
+                    ToParam(new { Id = id }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -109,7 +109,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 var results = await connection.QueryAsync<DateTime>(
                     "user_read_account_revision_date_by_id",
-                    new { id = id },
+                    ToParam(new { Id = id }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -127,7 +127,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 await connection.ExecuteAsync(
                     $"user_delete_by_id",
-                    new { id = user.Id },
+                    ToParam(new { Id = user.Id }),
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 180);
             }
@@ -139,7 +139,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 await connection.ExecuteAsync(
                     "user_update_storage",
-                    new { id = id },
+                    ToParam(new { Id = id }),
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 180);
             }
@@ -151,7 +151,7 @@ namespace Bit.Core.Repositories.PostgreSql
             {
                 await connection.ExecuteAsync(
                     "user_update_renewal_reminder_date",
-                    new { id = id, renewal_reminder_date = renewalReminderDate },
+                    ToParam(new { Id = id, RenewalReminderDate = renewalReminderDate }),
                     commandType: CommandType.StoredProcedure);
             }
         }

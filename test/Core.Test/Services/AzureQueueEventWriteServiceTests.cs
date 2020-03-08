@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
@@ -19,7 +19,6 @@ namespace Bit.Core.Test.Services
             _eventRepository = Substitute.For<IEventRepository>();
 
             _sut = new AzureQueueEventWriteService(
-                _eventRepository,
                 _globalSettings
             );
         }

@@ -14,7 +14,7 @@ namespace Bit.Core.Services
     public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
     {
         private readonly GlobalSettings _globalSettings;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<AmazonSesMailDeliveryService> _logger;
         private readonly AmazonSimpleEmailServiceClient _client;
         private readonly string _source;
@@ -23,7 +23,7 @@ namespace Bit.Core.Services
 
         public AmazonSesMailDeliveryService(
             GlobalSettings globalSettings,
-            IHostingEnvironment hostingEnvironment,
+            IWebHostEnvironment hostingEnvironment,
             ILogger<AmazonSesMailDeliveryService> logger)
         {
             if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))

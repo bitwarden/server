@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
             ILicensingService licenseService)
         {
-            Version = 5;
+            Version = 5; // TODO: bump to version 6
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -31,6 +31,7 @@ namespace Bit.Core.Models.Business
             PlanType = org.PlanType;
             Seats = org.Seats;
             MaxCollections = org.MaxCollections;
+            UsePolicies = org.UsePolicies;
             UseGroups = org.UseGroups;
             UseEvents = org.UseEvents;
             UseDirectory = org.UseDirectory;
@@ -98,6 +99,7 @@ namespace Bit.Core.Models.Business
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseEvents { get; set; }
         public bool UseDirectory { get; set; }
@@ -120,7 +122,7 @@ namespace Bit.Core.Models.Business
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if(Version >= 1 && Version <= 5)
+            if(Version >= 1 && Version <= 6)
             {
                 var props = typeof(OrganizationLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -135,6 +137,8 @@ namespace Bit.Core.Models.Business
                         (Version >= 4 || !p.Name.Equals(nameof(Use2fa))) &&
                         // UseApi was added in Version 5
                         (Version >= 5 || !p.Name.Equals(nameof(UseApi))) &&
+                        // UsePolicies was added in Version 6
+                        (Version >= 6 || !p.Name.Equals(nameof(UsePolicies))) &&
                         (
                             !forHash ||
                             (
@@ -171,7 +175,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version >= 1 && Version <= 5)
+            if(Version >= 1 && Version <= 6)
             {
                 return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
@@ -188,7 +192,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if(Version >= 1 && Version <= 5)
+            if(Version >= 1 && Version <= 6)
             {
                 var valid =
                     globalSettings.Installation.Id == InstallationId &&
@@ -221,6 +225,11 @@ namespace Bit.Core.Models.Business
                 if(valid && Version >= 5)
                 {
                     valid = organization.UseApi == UseApi;
+                }
+
+                if(valid && Version >= 6)
+                {
+                    valid = organization.UsePolicies == UsePolicies;
                 }
 
                 return valid;

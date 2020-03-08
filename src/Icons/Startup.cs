@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 
 namespace Bit.Icons
@@ -49,8 +50,8 @@ namespace Bit.Icons
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             app.UseSerilog(env, appLifetime, globalSettings);
@@ -70,7 +71,8 @@ namespace Bit.Icons
                 await next();
             });
 
-            app.UseMvc();
+            app.UseRouting();
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }
 }

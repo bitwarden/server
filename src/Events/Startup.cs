@@ -7,12 +7,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Events
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env, IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
@@ -20,7 +21,7 @@ namespace Bit.Events
         }
 
         public IConfiguration Configuration { get; }
-        public IHostingEnvironment Environment { get; set; }
+        public IWebHostEnvironment Environment { get; set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -69,7 +70,10 @@ namespace Bit.Events
             }
 
             // Mvc
-            services.AddMvc();
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+            });
 
             if(usingServiceBusAppCache)
             {
@@ -79,8 +83,8 @@ namespace Bit.Events
 
         public void Configure(
             IApplicationBuilder app,
-            IHostingEnvironment env,
-            IApplicationLifetime appLifetime,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
             GlobalSettings globalSettings)
         {
             app.UseSerilog(env, appLifetime, globalSettings);
@@ -91,21 +95,24 @@ namespace Bit.Events
             }
 
             // Default Middleware
-            app.UseDefaultMiddleware(env);
+            app.UseDefaultMiddleware(env, globalSettings);
+
+            // Add routing
+            app.UseRouting();
 
             // Add Cors
-            app.UseCors(policy => policy
-                .WithOrigins(globalSettings.BaseServiceUri.Vault)
+            app.UseCors(policy => policy.SetIsOriginAllowed(h => true)
                 .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
-            // Add authentication to the request pipeline.
+            // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
+            app.UseAuthorization();
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add MVC to the request pipeline.
-            app.UseMvc();
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }
 }

@@ -5,15 +5,14 @@ using System.Threading.Tasks;
 using Bit.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Azure.Storage.Queues;
 
 namespace Bit.Admin.HostedServices
 {
     public class AzureQueueBlockIpHostedService : BlockIpHostedService
     {
-        private CloudQueue _blockQueue;
-        private CloudQueue _unblockQueue;
+        private QueueClient _blockIpQueueClient;
+        private QueueClient _unblockIpQueueClient;
 
         public AzureQueueBlockIpHostedService(
             ILogger<AzureQueueBlockIpHostedService> logger,
@@ -24,46 +23,42 @@ namespace Bit.Admin.HostedServices
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var storageAccount = CloudStorageAccount.Parse(_globalSettings.Storage.ConnectionString);
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            _blockQueue = queueClient.GetQueueReference("blockip");
-            _unblockQueue = queueClient.GetQueueReference("unblockip");
+            _blockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "blockip");
+            _unblockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "unblockip");
 
             while(!cancellationToken.IsCancellationRequested)
             {
-                var blockMessages = await _blockQueue.GetMessagesAsync(32, TimeSpan.FromSeconds(15),
-                    null, null, cancellationToken);
-                if(blockMessages.Any())
+                var blockMessages = await _blockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
+                if(blockMessages.Value?.Any() ?? false)
                 {
-                    foreach(var message in blockMessages)
+                    foreach(var message in blockMessages.Value)
                     {
                         try
                         {
-                            await BlockIpAsync(message.AsString, cancellationToken);
+                            await BlockIpAsync(message.MessageText, cancellationToken);
                         }
                         catch(Exception e)
                         {
                             _logger.LogError(e, "Failed to block IP.");
                         }
-                        await _blockQueue.DeleteMessageAsync(message);
+                        await _blockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                     }
                 }
 
-                var unblockMessages = await _unblockQueue.GetMessagesAsync(32, TimeSpan.FromSeconds(15),
-                    null, null, cancellationToken);
-                if(unblockMessages.Any())
+                var unblockMessages = await _unblockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
+                if(unblockMessages.Value?.Any() ?? false)
                 {
-                    foreach(var message in unblockMessages)
+                    foreach(var message in unblockMessages.Value)
                     {
                         try
                         {
-                            await UnblockIpAsync(message.AsString, cancellationToken);
+                            await UnblockIpAsync(message.MessageText, cancellationToken);
                         }
                         catch(Exception e)
                         {
                             _logger.LogError(e, "Failed to unblock IP.");
                         }
-                        await _unblockQueue.DeleteMessageAsync(message);
+                        await _unblockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                     }
                 }
 

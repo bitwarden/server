@@ -25,6 +25,8 @@
         <option asp-selected="@(Model.Project == "Notifications")" value="Notifications">Notifications</option>
         <option asp-selected="@(Model.Project == "Icons")" value="Icons">Icons</option>
     </select>
+    <input class="form-control mb-2 mr-2" type="datetime-local" asp-for="Start" name="start" placeholder="Start Date">
+    <input class="form-control mb-2 mr-2" type="datetime-local" asp-for="End" name="end" placeholder="End Date">
     <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
 </form>
 

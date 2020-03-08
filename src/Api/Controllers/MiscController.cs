@@ -50,7 +50,7 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<string> PostBitPayInvoice([FromBody]BitPayInvoiceRequestModel model)
         {
-            var invoice = await _bitPayClient.CreateInvoiceAsync(model.ToBitpayClientInvoice(_globalSettings));
+            var invoice = await _bitPayClient.CreateInvoiceAsync(model.ToBitpayInvoice(_globalSettings));
             return invoice.Url;
         }
 

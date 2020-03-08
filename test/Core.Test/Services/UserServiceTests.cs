@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -37,6 +37,7 @@ namespace Bit.Core.Test.Services
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IDataProtectionProvider _dataProtectionProvider;
         private readonly IPaymentService _paymentService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -63,6 +64,7 @@ namespace Bit.Core.Test.Services
             _applicationCacheService = Substitute.For<IApplicationCacheService>();
             _dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
             _paymentService = Substitute.For<IPaymentService>();
+            _policyRepository = Substitute.For<IPolicyRepository>();
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
 
@@ -88,6 +90,7 @@ namespace Bit.Core.Test.Services
                 _applicationCacheService,
                 _dataProtectionProvider,
                 _paymentService,
+                _policyRepository,
                 _currentContext,
                 _globalSettings
             );

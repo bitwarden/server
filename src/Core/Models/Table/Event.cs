@@ -17,6 +17,7 @@ namespace Bit.Core.Models.Table
             OrganizationId = e.OrganizationId;
             CipherId = e.CipherId;
             CollectionId = e.CollectionId;
+            PolicyId = e.PolicyId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             DeviceType = e.DeviceType;
@@ -31,6 +32,7 @@ namespace Bit.Core.Models.Table
         public Guid? OrganizationId { get; set; }
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }
+        public Guid? PolicyId { get; set; }
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public DeviceType? DeviceType { get; set; }

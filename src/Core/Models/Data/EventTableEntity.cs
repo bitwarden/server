@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Models.Data
 {
@@ -19,6 +18,7 @@ namespace Bit.Core.Models.Data
             OrganizationId = e.OrganizationId;
             CipherId = e.CipherId;
             CollectionId = e.CollectionId;
+            PolicyId = e.PolicyId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             DeviceType = e.DeviceType;
@@ -32,6 +32,7 @@ namespace Bit.Core.Models.Data
         public Guid? OrganizationId { get; set; }
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }
+        public Guid? PolicyId { get; set; }
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public DeviceType? DeviceType { get; set; }

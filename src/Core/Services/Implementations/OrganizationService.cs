@@ -33,6 +33,7 @@ namespace Bit.Core.Services
         private readonly IInstallationRepository _installationRepository;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IPaymentService _paymentService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationService(
@@ -51,6 +52,7 @@ namespace Bit.Core.Services
             IInstallationRepository installationRepository,
             IApplicationCacheService applicationCacheService,
             IPaymentService paymentService,
+            IPolicyRepository policyRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -68,6 +70,7 @@ namespace Bit.Core.Services
             _installationRepository = installationRepository;
             _applicationCacheService = applicationCacheService;
             _paymentService = paymentService;
+            _policyRepository = policyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -190,6 +193,16 @@ namespace Bit.Core.Services
                 {
                     throw new BadRequestException($"Your new plan does not allow the groups feature. " +
                         $"Remove your groups.");
+                }
+            }
+
+            if(!newPlan.UsePolicies && organization.UsePolicies)
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(policies.Any(p => p.Enabled))
+                {
+                    throw new BadRequestException($"Your new plan does not allow the policies feature. " +
+                        $"Disable your policies.");
                 }
             }
 
@@ -453,6 +466,7 @@ namespace Bit.Core.Services
                 MaxCollections = plan.MaxCollections,
                 MaxStorageGb = !plan.MaxStorageGb.HasValue ?
                     (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
+                UsePolicies = plan.UsePolicies,
                 UseGroups = plan.UseGroups,
                 UseEvents = plan.UseEvents,
                 UseDirectory = plan.UseDirectory,
@@ -524,6 +538,7 @@ namespace Bit.Core.Services
                 Seats = license.Seats,
                 MaxCollections = license.MaxCollections,
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
+                UsePolicies = license.UsePolicies,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -675,6 +690,16 @@ namespace Bit.Core.Services
                 }
             }
 
+            if(!license.UsePolicies && organization.UsePolicies)
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
+                if(policies.Any(p => p.Enabled))
+                {
+                    throw new BadRequestException($"Your organization currently has {policies.Count} enabled " +
+                        $"policies. Your new license does not allow for the use of policies. Disable all policies.");
+                }
+            }
+
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
             System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
@@ -692,6 +717,7 @@ namespace Bit.Core.Services
             organization.UseTotp = license.UseTotp;
             organization.Use2fa = license.Use2fa;
             organization.UseApi = license.UseApi;
+            organization.UsePolicies = license.UsePolicies;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;
@@ -722,7 +748,7 @@ namespace Bit.Core.Services
         public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
         {
             var org = await GetOrgById(organizationId);
-            if(org != null && !org.Enabled)
+            if(org != null && !org.Enabled && org.Gateway.HasValue)
             {
                 org.Enabled = true;
                 org.ExpirationDate = expirationDate;
@@ -914,7 +940,7 @@ namespace Bit.Core.Services
             return orgUsers;
         }
 
-        public async Task ResendInviteAsync(Guid organizationId, Guid invitingUserId, Guid organizationUserId)
+        public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.OrganizationId != organizationId ||
@@ -935,7 +961,8 @@ namespace Bit.Core.Services
             await _mailService.SendOrganizationInviteEmailAsync(org.Name, orgUser, token);
         }
 
-        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
+        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
+            IUserService userService)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null)
@@ -978,6 +1005,16 @@ namespace Bit.Core.Services
             if(!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
+            }
+
+            if(!await userService.TwoFactorIsEnabledAsync(user))
+            {
+                var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                if(policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                {
+                    throw new BadRequestException("You cannot join this organization until you enable " +
+                        "two-step login on your user account.");
+                }
             }
 
             orgUser.Status = OrganizationUserStatusType.Accepted;

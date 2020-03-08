@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>1.31.1</Version>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <Version>1.33.0</Version>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bit.Admin</RootNamespace>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
-    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
   </PropertyGroup>
   
   <ItemGroup>
@@ -14,8 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.1" />
   </ItemGroup>
 
 </Project>

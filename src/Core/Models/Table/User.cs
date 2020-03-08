@@ -73,6 +73,11 @@ namespace Bit.Core.Models.Table
             return "userId";
         }
 
+        public bool IsUser()
+        {
+            return true;
+        }
+
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {
             if(string.IsNullOrWhiteSpace(TwoFactorProviders))

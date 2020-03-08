@@ -6,6 +6,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -21,12 +22,15 @@ namespace Bit.Billing.Controllers
     [Route("stripe")]
     public class StripeController : Controller
     {
+        private const decimal PremiumPlanAppleIapPrice = 14.99M;
+
         private readonly BillingSettings _billingSettings;
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
+        private readonly IAppleIapService _appleIapService;
         private readonly IMailService _mailService;
         private readonly ILogger<StripeController> _logger;
         private readonly Braintree.BraintreeGateway _btGateway;
@@ -34,11 +38,12 @@ namespace Bit.Billing.Controllers
         public StripeController(
             GlobalSettings globalSettings,
             IOptions<BillingSettings> billingSettings,
-            IHostingEnvironment hostingEnvironment,
+            IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
+            IAppleIapService appleIapService,
             IMailService mailService,
             ILogger<StripeController> logger)
         {
@@ -48,6 +53,7 @@ namespace Bit.Billing.Controllers
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
+            _appleIapService = appleIapService;
             _mailService = mailService;
             _logger = logger;
             _btGateway = new Braintree.BraintreeGateway
@@ -93,11 +99,7 @@ namespace Bit.Billing.Controllers
 
             if(subDeleted || subUpdated)
             {
-                if(!(parsedEvent.Data.Object is Subscription subscription))
-                {
-                    throw new Exception("Subscription is null. " + parsedEvent.Id);
-                }
-
+                var subscription = await GetSubscriptionAsync(parsedEvent, true);
                 var ids = GetIdsFromMetaData(subscription.Metadata);
 
                 var subCanceled = subDeleted && subscription.Status == "canceled";
@@ -136,11 +138,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.upcoming"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 if(subscription == null)
@@ -178,11 +176,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.succeeded"))
             {
-                if(!(parsedEvent.Data.Object is Charge charge))
-                {
-                    throw new Exception("Charge is null. " + parsedEvent.Id);
-                }
-
+                var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction != null)
@@ -243,17 +237,17 @@ namespace Bit.Billing.Controllers
                     GatewayId = charge.Id
                 };
 
-                if(charge.Source is Card card)
+                if(charge.Source != null && charge.Source is Card card)
                 {
                     tx.PaymentMethodType = PaymentMethodType.Card;
                     tx.Details = $"{card.Brand}, *{card.Last4}";
                 }
-                else if(charge.Source is BankAccount bankAccount)
+                else if(charge.Source != null && charge.Source is BankAccount bankAccount)
                 {
                     tx.PaymentMethodType = PaymentMethodType.BankAccount;
                     tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
                 }
-                else if(charge.Source is Source source)
+                else if(charge.Source != null && charge.Source is Source source)
                 {
                     if(source.Card != null)
                     {
@@ -272,10 +266,31 @@ namespace Bit.Billing.Controllers
                             $"{source.AchCreditTransfer.AccountNumber}";
                     }
                 }
+                else if(charge.PaymentMethodDetails != null)
+                {
+                    if(charge.PaymentMethodDetails.Card != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.Card;
+                        tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
+                            $"*{charge.PaymentMethodDetails.Card.Last4}";
+                    }
+                    else if(charge.PaymentMethodDetails.AchDebit != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
+                            $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
+                    }
+                    else if(charge.PaymentMethodDetails.AchCreditTransfer != null)
+                    {
+                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                        tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
+                            $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
+                    }
+                }
 
                 if(!tx.PaymentMethodType.HasValue)
                 {
-                    _logger.LogWarning("Charge success from unsupported source. " + charge.Id);
+                    _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
                     return new OkResult();
                 }
 
@@ -288,11 +303,7 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("charge.refunded"))
             {
-                if(!(parsedEvent.Data.Object is Charge charge))
-                {
-                    throw new Exception("Charge is null. " + parsedEvent.Id);
-                }
-
+                var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
                 if(chargeTransaction == null)
@@ -342,17 +353,18 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.payment_succeeded"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(invoice.Paid && invoice.BillingReason == "subscription_create")
                 {
                     var subscriptionService = new SubscriptionService();
                     var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                     if(subscription?.Status == "active")
                     {
+                        if(DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                        {
+                            await Task.Delay(5000);
+                        }
+
                         var ids = GetIdsFromMetaData(subscription.Metadata);
                         // org
                         if(ids.Item1.HasValue)
@@ -375,26 +387,18 @@ namespace Bit.Billing.Controllers
             }
             else if(parsedEvent.Type.Equals("invoice.payment_failed"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
-                    await AttemptToPayInvoiceWithBraintreeAsync(invoice);
+                    await AttemptToPayInvoiceAsync(invoice);
                 }
             }
             else if(parsedEvent.Type.Equals("invoice.created"))
             {
-                if(!(parsedEvent.Data.Object is Invoice invoice))
-                {
-                    throw new Exception("Invoice is null. " + parsedEvent.Id);
-                }
-
+                var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if(!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
-                    await AttemptToPayInvoiceWithBraintreeAsync(invoice);
+                    await AttemptToPayInvoiceAsync(invoice);
                 }
             }
             else
@@ -457,10 +461,116 @@ namespace Bit.Billing.Controllers
             }
         }
 
-        private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice)
+        private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice)
         {
             var customerService = new CustomerService();
             var customer = await customerService.GetAsync(invoice.CustomerId);
+            if(customer?.Metadata?.ContainsKey("appleReceipt") ?? false)
+            {
+                return await AttemptToPayInvoiceWithAppleReceiptAsync(invoice, customer);
+            }
+            else if(customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+            {
+                return await AttemptToPayInvoiceWithBraintreeAsync(invoice, customer);
+            }
+            return false;
+        }
+
+        private async Task<bool> AttemptToPayInvoiceWithAppleReceiptAsync(Invoice invoice, Customer customer)
+        {
+            if(!customer?.Metadata?.ContainsKey("appleReceipt") ?? true)
+            {
+                return false;
+            }
+
+            var originalAppleReceiptTransactionId = customer.Metadata["appleReceipt"];
+            var appleReceiptRecord = await _appleIapService.GetReceiptAsync(originalAppleReceiptTransactionId);
+            if(string.IsNullOrWhiteSpace(appleReceiptRecord?.Item1) || !appleReceiptRecord.Item2.HasValue)
+            {
+                return false;
+            }
+
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+            var ids = GetIdsFromMetaData(subscription?.Metadata);
+            if(!ids.Item2.HasValue)
+            {
+                // Apple receipt is only for user subscriptions
+                return false;
+            }
+
+            if(appleReceiptRecord.Item2.Value != ids.Item2.Value)
+            {
+                _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
+                    appleReceiptRecord.Item2.Value, ids.Item2.Value);
+                return false;
+            }
+
+            var appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(appleReceiptRecord.Item1);
+            if(appleReceiptStatus == null)
+            {
+                // TODO: cancel sub if receipt is cancelled?
+                return false;
+            }
+
+            var receiptExpiration = appleReceiptStatus.GetLastExpiresDate().GetValueOrDefault(DateTime.MinValue);
+            var invoiceDue = invoice.DueDate.GetValueOrDefault(DateTime.MinValue);
+            if(receiptExpiration <= invoiceDue)
+            {
+                _logger.LogWarning("Apple receipt expiration is before invoice due date. {0} <= {1}",
+                    receiptExpiration, invoiceDue);
+                return false;
+            }
+
+            var receiptLastTransactionId = appleReceiptStatus.GetLastTransactionId();
+            var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                GatewayType.AppStore, receiptLastTransactionId);
+            if(existingTransaction != null)
+            {
+                _logger.LogWarning("There is already an existing transaction for this Apple receipt.",
+                    receiptLastTransactionId);
+                return false;
+            }
+
+            var appleTransaction = appleReceiptStatus.BuildTransactionFromLastTransaction(
+                PremiumPlanAppleIapPrice, ids.Item2.Value);
+            appleTransaction.Type = TransactionType.Charge;
+
+            var invoiceService = new InvoiceService();
+            try
+            {
+                await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["appleReceipt"] = appleReceiptStatus.GetOriginalTransactionId(),
+                        ["appleReceiptTransactionId"] = receiptLastTransactionId
+                    }
+                });
+
+                await _transactionRepository.CreateAsync(appleTransaction);
+                await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+            }
+            catch(Exception e)
+            {
+                if(e.Message.Contains("Invoice is already paid"))
+                {
+                    await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                    {
+                        Metadata = invoice.Metadata
+                    });
+                }
+                else
+                {
+                    throw e;
+                }
+            }
+
+            return true;
+        }
+
+        private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
+        {
             if(!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
             {
                 return false;
@@ -474,9 +584,24 @@ namespace Bit.Billing.Controllers
                 return false;
             }
 
-            var btObjIdField = ids.Item1.HasValue ? "organization_id" : "user_id";
+            var orgTransaction = ids.Item1.HasValue;
+            var btObjIdField = orgTransaction ? "organization_id" : "user_id";
             var btObjId = ids.Item1 ?? ids.Item2.Value;
             var btInvoiceAmount = (invoice.AmountDue / 100M);
+
+            var existingTransactions = orgTransaction ?
+                await _transactionRepository.GetManyByOrganizationIdAsync(ids.Item1.Value) :
+                await _transactionRepository.GetManyByUserIdAsync(ids.Item2.Value);
+            var duplicateTimeSpan = TimeSpan.FromHours(24);
+            var now = DateTime.UtcNow;
+            var duplicateTransaction = existingTransactions?
+                .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
+            if(duplicateTransaction != null)
+            {
+                _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
+                    "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+                return false;
+            }
 
             var transactionResult = await _btGateway.Transaction.SaleAsync(
                 new Braintree.TransactionRequest
@@ -543,6 +668,63 @@ namespace Bit.Billing.Controllers
         {
             return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
                 invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
+        }
+
+        private async Task<Charge> GetChargeAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Charge eventCharge))
+            {
+                throw new Exception("Charge is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventCharge;
+            }
+            var chargeService = new ChargeService();
+            var charge = await chargeService.GetAsync(eventCharge.Id);
+            if(charge == null)
+            {
+                throw new Exception("Charge is null. " + eventCharge.Id);
+            }
+            return charge;
+        }
+
+        private async Task<Invoice> GetInvoiceAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Invoice eventInvoice))
+            {
+                throw new Exception("Invoice is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventInvoice;
+            }
+            var invoiceService = new InvoiceService();
+            var invoice = await invoiceService.GetAsync(eventInvoice.Id);
+            if(invoice == null)
+            {
+                throw new Exception("Invoice is null. " + eventInvoice.Id);
+            }
+            return invoice;
+        }
+
+        private async Task<Subscription> GetSubscriptionAsync(Stripe.Event parsedEvent, bool fresh = false)
+        {
+            if(!(parsedEvent.Data.Object is Subscription eventSubscription))
+            {
+                throw new Exception("Subscription is null (from parsed event). " + parsedEvent.Id);
+            }
+            if(!fresh)
+            {
+                return eventSubscription;
+            }
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(eventSubscription.Id);
+            if(subscription == null)
+            {
+                throw new Exception("Subscription is null. " + eventSubscription.Id);
+            }
+            return subscription;
         }
     }
 }
