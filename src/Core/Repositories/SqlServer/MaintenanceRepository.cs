@@ -23,7 +23,7 @@ namespace Bit.Core.Repositories.SqlServer
                     "[dbo].[AzureSQLMaintenance]",
                     new { operation = "statistics", mode = "smart", LogToTable = true },
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
 
@@ -46,7 +46,7 @@ namespace Bit.Core.Repositories.SqlServer
                     "[dbo].[AzureSQLMaintenance]",
                     new { operation = "index", mode = "smart", LogToTable = true },
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
 
@@ -57,7 +57,7 @@ namespace Bit.Core.Repositories.SqlServer
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteExpired]",
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
     }
