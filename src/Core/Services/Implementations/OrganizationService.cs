@@ -1028,7 +1028,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-            Guid confirmingUserId)
+            Guid confirmingUserId, IUserService userService)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
             if(orgUser == null || orgUser.Status != OrganizationUserStatusType.Accepted ||
@@ -1049,13 +1049,19 @@ namespace Bit.Core.Services
                 }
             }
 
+            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
+            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
+            var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
+            if(usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
+            {
+                throw new BadRequestException("User does not have two-step login enabled.");
+            }
+
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
             orgUser.Email = null;
             await _organizationUserRepository.ReplaceAsync(orgUser);
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-
-            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
             await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
 
             // push

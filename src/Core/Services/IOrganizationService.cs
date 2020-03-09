@@ -38,7 +38,7 @@ namespace Bit.Core.Services
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
             IUserService userService);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-            Guid confirmingUserId);
+            Guid confirmingUserId, IUserService userService);
         Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
