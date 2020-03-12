@@ -28,7 +28,7 @@ namespace Bit.Core.Models.Api
             Collections = collections?.Select(
                 c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
             Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
-            Policies = policies?.Select(p => new PolicyResponseModel(p));
+            Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         }
 
         public ProfileResponseModel Profile { get; set; }
