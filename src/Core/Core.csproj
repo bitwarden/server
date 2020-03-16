@@ -45,7 +45,7 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.AzureDocumentDB" Version="3.8.0" />
-    <PackageReference Include="Serilog.Sinks.Sentry.AspNetCore" Version="2.4.2" />
+    <PackageReference Include="Sentry.Serilog" Version="2.1.0" />
     <PackageReference Include="IdentityServer4" Version="3.1.2" />
     <PackageReference Include="Dapper" Version="2.0.30" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
