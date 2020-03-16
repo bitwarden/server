@@ -22,10 +22,6 @@ namespace Bit.Core.Utilities
                 return;
             }
 
-            if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
-            {
-                appBuilder.AddSentryContext();
-            }
             applicationLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
         }
 
@@ -72,9 +68,7 @@ namespace Bit.Core.Utilities
             {
                 config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                     .Enrich.FromLogContext()
-                    .Enrich.WithProperty("Project", globalSettings.ProjectName)
-                    .Destructure.With<HttpContextDestructingPolicy>()
-                    .Filter.ByExcluding(e => e.Exception?.CheckIfCaptured() == true);
+                    .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
             else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
