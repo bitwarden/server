@@ -42,7 +42,7 @@ namespace Bit.Core.Utilities
     {
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            var usePostgreSql = !string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString);
+            var usePostgreSql = CoreHelpers.SettingHasValue(globalSettings.PostgreSql?.ConnectionString);
             var useEf = usePostgreSql;
 
             if(useEf)
@@ -354,16 +354,17 @@ namespace Bit.Core.Utilities
                 identityServerBuilder.AddDeveloperSigningCredential(false);
             }
             else if(globalSettings.SelfHosted &&
-                !string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificatePassword)
+                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
                 && File.Exists("identity.pfx"))
             {
                 var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
                     globalSettings.IdentityServer.CertificatePassword);
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
-            else if(!string.IsNullOrWhiteSpace(globalSettings.IdentityServer.CertificateThumbprint))
+            else if(CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
             {
-                var identityServerCert = CoreHelpers.GetCertificate(globalSettings.IdentityServer.CertificateThumbprint);
+                var identityServerCert = CoreHelpers.GetCertificate(
+                    globalSettings.IdentityServer.CertificateThumbprint);
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
             else if(!globalSettings.SelfHosted &&
