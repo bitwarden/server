@@ -57,7 +57,7 @@ namespace Bit.Notifications
                     MessagePack.Resolvers.ContractlessStandardResolver.Instance
                 };
             });
-            if(!string.IsNullOrWhiteSpace(globalSettings.Notifications?.RedisConnectionString))
+            if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
             {
                 signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
                     options =>
