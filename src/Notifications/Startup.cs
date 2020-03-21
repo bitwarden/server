@@ -62,7 +62,7 @@ namespace Bit.Notifications
                 signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
                     options =>
                     {
-                        options.Configuration.ChannelPrefix = "Notifications";
+                        options.Configuration.ClientName = "Notifications";
                     });
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
