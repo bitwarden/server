@@ -63,6 +63,7 @@ namespace Bit.Notifications
                     options =>
                     {
                         options.Configuration.ClientName = "Notifications";
+                        options.Configuration.ChannelPrefix = "Notifications";
                     });
             }
             services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
