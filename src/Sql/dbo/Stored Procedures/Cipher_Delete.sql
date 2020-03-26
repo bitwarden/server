@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_Delete]
     @Ids AS [dbo].[GuidIdArray] READONLY,
-    @UserId AS UNIQUEIDENTIFIER
+    @UserId AS UNIQUEIDENTIFIER,
+    @Permanent AS BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,11 +27,23 @@ BEGIN
         AND [Id] IN (SELECT * FROM @Ids)
 
     -- Delete ciphers
-    DELETE
-    FROM
-        [dbo].[Cipher]
-    WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+    IF @Permanent = 1
+    BEGIN
+        DELETE
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [Id] IN (SELECT [Id] FROM #Temp)
+    END
+    ELSE
+    BEGIN
+        UPDATE
+            [dbo].[Cipher]
+        SET
+            [DeletedDate] = SYSUTCDATETIME()
+        WHERE
+            [Id] IN (SELECT [Id] FROM #Temp)
+    END
 
     -- Cleanup orgs
     DECLARE @OrgId UNIQUEIDENTIFIER
@@ -46,7 +59,11 @@ BEGIN
     OPEN [OrgCursor]
     FETCH NEXT FROM [OrgCursor] INTO @OrgId
     WHILE @@FETCH_STATUS = 0 BEGIN
-        EXEC [dbo].[Organization_UpdateStorage] @OrgId
+        -- Storage cleanup for groups only matters if we're permanently deleting
+        IF @Permanent = 1
+        BEGIN
+            EXEC [dbo].[Organization_UpdateStorage] @OrgId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
         FETCH NEXT FROM [OrgCursor] INTO @OrgId
     END
@@ -54,18 +71,22 @@ BEGIN
     DEALLOCATE [OrgCursor]
 
     -- Cleanup user
-    DECLARE @UserCiphersWithStorageCount INT
-    SELECT
-        @UserCiphersWithStorageCount = COUNT(1)
-    FROM
-        #Temp
-    WHERE
-        [UserId] IS NOT NULL
-        AND [Attachments] = 1
-
-    IF @UserCiphersWithStorageCount > 0
+    IF @Permanent = 1
     BEGIN
-        EXEC [dbo].[User_UpdateStorage] @UserId
+        -- Storage cleanup for users only matters if we're permanently deleting
+        DECLARE @UserCiphersWithStorageCount INT
+        SELECT
+            @UserCiphersWithStorageCount = COUNT(1)
+        FROM
+            #Temp
+        WHERE
+            [UserId] IS NOT NULL
+            AND [Attachments] = 1
+
+        IF @UserCiphersWithStorageCount > 0
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
     END
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 

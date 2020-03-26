@@ -9,6 +9,7 @@
     [Attachments]    NVARCHAR (MAX)   NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,
     [RevisionDate]   DATETIME2 (7)    NOT NULL,
+    [DeletedDate]    DATETIME2 (7)    NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Cipher_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Cipher_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

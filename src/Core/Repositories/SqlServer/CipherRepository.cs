@@ -36,13 +36,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
+        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id, bool deleted = false)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     $"[{Schema}].[CipherOrganizationDetails_ReadById]",
-                    new { Id = id },
+                    new { Id = id, Deleted = deleted },
                     commandType: CommandType.StoredProcedure);
 
                 return results.FirstOrDefault();
@@ -62,7 +62,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true, bool deleted = false)
         {
             string sprocName = null;
             if(withOrganizations)
@@ -78,7 +78,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     sprocName,
-                    new { UserId = userId },
+                    new { UserId = userId, Deleted = deleted },
                     commandType: CommandType.StoredProcedure);
 
                 return results
@@ -88,13 +88,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId, bool deleted = false)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Cipher>(
                     $"[{Schema}].[Cipher_ReadByOrganizationId]",
-                    new { OrganizationId = organizationId },
+                    new { OrganizationId = organizationId, Deleted = deleted },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -215,13 +215,24 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        public async Task DeleteAsync(Cipher obj, bool permanent = false)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_DeleteById]",
+                    new { obj.Id, Permanent = permanent },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = false)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_Delete]",
-                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId, Permanent = permanent },
                     commandType: CommandType.StoredProcedure);
             }
         }
