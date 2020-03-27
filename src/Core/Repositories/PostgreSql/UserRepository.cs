@@ -27,7 +27,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<User> GetByEmailAsync(string email)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     "user_read_by_email",
@@ -40,7 +40,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<UserKdfInformation>(
                     "user_read_kdf_by_email",
@@ -53,7 +53,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
         {
-            using(var connection = new NpgsqlConnection(ReadOnlyConnectionString))
+            using (var connection = new NpgsqlConnection(ReadOnlyConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     "user_search",
@@ -67,7 +67,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     "user_read_by_premium",
@@ -80,7 +80,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<ICollection<User>> GetManyByPremiumRenewalAsync()
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     "user_read_by_premium_renewal",
@@ -92,7 +92,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<string> GetPublicKeyAsync(Guid id)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<string>(
                     "user_read_public_key_by_id",
@@ -105,7 +105,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<DateTime>(
                     "user_read_account_revision_date_by_id",
@@ -123,7 +123,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public override async Task DeleteAsync(User user)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"user_delete_by_id",
@@ -135,7 +135,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task UpdateStorageAsync(Guid id)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "user_update_storage",
@@ -147,7 +147,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "user_update_renewal_reminder_date",

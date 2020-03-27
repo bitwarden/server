@@ -53,23 +53,23 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
-            if(cipher == null)
+            if (cipher == null)
             {
                 throw new NotFoundException();
             }
 
             var canView = false;
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 canView = _currentContext.OrganizationAdmin(cipher.OrganizationId.Value);
             }
-            else if(cipher.UserId.HasValue)
+            else if (cipher.UserId.HasValue)
             {
                 var userId = _userService.GetProperUserId(User).Value;
                 canView = userId == cipher.UserId.Value;
             }
 
-            if(!canView)
+            if (!canView)
             {
                 throw new NotFoundException();
             }
@@ -86,7 +86,7 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var orgId = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgId))
+            if (!_currentContext.OrganizationAdmin(orgId))
             {
                 throw new NotFoundException();
             }
@@ -103,7 +103,7 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-            if(organizationUser == null || !organizationUser.UserId.HasValue ||
+            if (organizationUser == null || !organizationUser.UserId.HasValue ||
                 !_currentContext.OrganizationAdmin(organizationUser.OrganizationId))
             {
                 throw new NotFoundException();
@@ -119,19 +119,19 @@ namespace Bit.Api.Controllers
 
         private Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
         {
-            if(!end.HasValue || !start.HasValue)
+            if (!end.HasValue || !start.HasValue)
             {
                 end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
                 start = DateTime.UtcNow.Date.AddDays(-30);
             }
-            else if(start.Value > end.Value)
+            else if (start.Value > end.Value)
             {
                 var newEnd = start;
                 start = end;
                 end = newEnd;
             }
 
-            if((end.Value - start.Value) > TimeSpan.FromDays(367))
+            if ((end.Value - start.Value) > TimeSpan.FromDays(367))
             {
                 throw new BadRequestException("Range too large.");
             }

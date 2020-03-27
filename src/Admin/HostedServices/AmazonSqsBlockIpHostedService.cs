@@ -36,7 +36,7 @@ namespace Bit.Admin.HostedServices
             var unblockIpQueue = await _client.GetQueueUrlAsync("unblock-ip", cancellationToken);
             var unblockIpQueueUrl = unblockIpQueue.QueueUrl;
 
-            while(!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 var blockMessageResponse = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
                 {
@@ -44,15 +44,15 @@ namespace Bit.Admin.HostedServices
                     MaxNumberOfMessages = 10,
                     WaitTimeSeconds = 15
                 }, cancellationToken);
-                if(blockMessageResponse.Messages.Any())
+                if (blockMessageResponse.Messages.Any())
                 {
-                    foreach(var message in blockMessageResponse.Messages)
+                    foreach (var message in blockMessageResponse.Messages)
                     {
                         try
                         {
                             await BlockIpAsync(message.Body, cancellationToken);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             _logger.LogError(e, "Failed to block IP.");
                         }
@@ -66,15 +66,15 @@ namespace Bit.Admin.HostedServices
                     MaxNumberOfMessages = 10,
                     WaitTimeSeconds = 15
                 }, cancellationToken);
-                if(unblockMessageResponse.Messages.Any())
+                if (unblockMessageResponse.Messages.Any())
                 {
-                    foreach(var message in unblockMessageResponse.Messages)
+                    foreach (var message in unblockMessageResponse.Messages)
                     {
                         try
                         {
                             await UnblockIpAsync(message.Body, cancellationToken);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             _logger.LogError(e, "Failed to unblock IP.");
                         }

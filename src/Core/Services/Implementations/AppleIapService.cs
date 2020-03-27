@@ -37,7 +37,7 @@ namespace Bit.Core.Services
         public async Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData)
         {
             var receiptStatus = await GetReceiptStatusAsync(receiptData);
-            if(receiptStatus?.Status != 0)
+            if (receiptStatus?.Status != 0)
             {
                 return null;
             }
@@ -51,7 +51,7 @@ namespace Bit.Core.Services
                 receiptStatus.GetLastTransactionId() != null;
             var validTransaction = receiptStatus.GetLastExpiresDate()
                 .GetValueOrDefault(DateTime.MinValue) > DateTime.UtcNow;
-            if(validEnvironment && validProductBundle && validProduct && validIds && validTransaction)
+            if (validEnvironment && validProductBundle && validProduct && validIds && validTransaction)
             {
                 return receiptStatus;
             }
@@ -61,7 +61,7 @@ namespace Bit.Core.Services
         public async Task SaveReceiptAsync(AppleReceiptStatus receiptStatus, Guid userId)
         {
             var originalTransactionId = receiptStatus.GetOriginalTransactionId();
-            if(string.IsNullOrWhiteSpace(originalTransactionId))
+            if (string.IsNullOrWhiteSpace(originalTransactionId))
             {
                 throw new Exception("OriginalTransactionId is null");
             }
@@ -76,7 +76,7 @@ namespace Bit.Core.Services
         public async Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId)
         {
             var receipt = await _metaDataRespository.GetAsync("AppleReceipt", originalTransactionId);
-            if(receipt == null)
+            if (receipt == null)
             {
                 return null;
             }
@@ -89,7 +89,7 @@ namespace Bit.Core.Services
         {
             try
             {
-                if(attempt > 4)
+                if (attempt > 4)
                 {
                     throw new Exception("Failed verifying Apple IAP after too many attempts. Last attempt status: " +
                         lastReceiptStatus?.Status ?? "null");
@@ -100,15 +100,15 @@ namespace Bit.Core.Services
                    new JProperty("password", _globalSettings.AppleIap.Password)).ToString();
 
                 var response = await _httpClient.PostAsync(url, new StringContent(json));
-                if(response.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
                     var responseJson = await response.Content.ReadAsStringAsync();
                     var receiptStatus = JsonConvert.DeserializeObject<AppleReceiptStatus>(responseJson);
-                    if(receiptStatus.Status == 21007)
+                    if (receiptStatus.Status == 21007)
                     {
                         return await GetReceiptStatusAsync(receiptData, false, attempt + 1, receiptStatus);
                     }
-                    else if(receiptStatus.Status == 21005)
+                    else if (receiptStatus.Status == 21005)
                     {
                         await Task.Delay(2000);
                         return await GetReceiptStatusAsync(receiptData, prod, attempt + 1, receiptStatus);
@@ -116,7 +116,7 @@ namespace Bit.Core.Services
                     return receiptStatus;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogWarning(e, "Error verifying Apple IAP receipt.");
             }

@@ -38,7 +38,7 @@ namespace Bit.Core.IdentityServer
                 AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;
 
-                if(scopes == null)
+                if (scopes == null)
                 {
                     scopes = new string[] { "api" };
                 }

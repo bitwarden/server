@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.SqlServer
         { }
         public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Policy>(
                     $"[{Schema}].[{Table}_ReadByOrganizationIdType]",
@@ -34,7 +34,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Policy>(
                     $"[{Schema}].[{Table}_ReadByOrganizationId]",
@@ -47,7 +47,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Policy>(
                     $"[{Schema}].[{Table}_ReadByUserId]",

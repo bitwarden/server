@@ -41,13 +41,13 @@ namespace Bit.Icons.Controllers
         [HttpGet("{hostname}/icon.png")]
         public async Task<IActionResult> Get(string hostname)
         {
-            if(string.IsNullOrWhiteSpace(hostname) || !hostname.Contains("."))
+            if (string.IsNullOrWhiteSpace(hostname) || !hostname.Contains("."))
             {
                 return new BadRequestResult();
             }
 
             var url = $"http://{hostname}";
-            if(!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 return new BadRequestResult();
             }
@@ -60,10 +60,10 @@ namespace Bit.Icons.Controllers
             //}
 
             var mappedDomain = _domainMappingService.MapDomain(domain);
-            if(!_iconsSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out Icon icon))
+            if (!_iconsSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out Icon icon))
             {
                 var result = await _iconFetchingService.GetIconAsync(domain);
-                if(result == null)
+                if (result == null)
                 {
                     _logger.LogWarning("Null result returned for {0}.", domain);
                     icon = null;
@@ -74,7 +74,7 @@ namespace Bit.Icons.Controllers
                 }
 
                 // Only cache not found and smaller images (<= 50kb)
-                if(_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
+                if (_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
                 {
                     _logger.LogInformation("Cache icon for {0}.", domain);
                     _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
@@ -86,7 +86,7 @@ namespace Bit.Icons.Controllers
                 }
             }
 
-            if(icon == null)
+            if (icon == null)
             {
                 return new NotFoundResult();
             }

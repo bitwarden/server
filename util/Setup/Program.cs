@@ -22,23 +22,23 @@ namespace Bit.Setup
             };
             ParseParameters();
 
-            if(_context.Parameters.ContainsKey("q"))
+            if (_context.Parameters.ContainsKey("q"))
             {
                 _context.Quiet = _context.Parameters["q"] == "true" || _context.Parameters["q"] == "1";
             }
-            if(_context.Parameters.ContainsKey("os"))
+            if (_context.Parameters.ContainsKey("os"))
             {
                 _context.HostOS = _context.Parameters["os"];
             }
-            if(_context.Parameters.ContainsKey("corev"))
+            if (_context.Parameters.ContainsKey("corev"))
             {
                 _context.CoreVersion = _context.Parameters["corev"];
             }
-            if(_context.Parameters.ContainsKey("webv"))
+            if (_context.Parameters.ContainsKey("webv"))
             {
                 _context.WebVersion = _context.Parameters["webv"];
             }
-            if(_context.Parameters.ContainsKey("stub"))
+            if (_context.Parameters.ContainsKey("stub"))
             {
                 _context.Stub = _context.Parameters["stub"] == "true" ||
                     _context.Parameters["stub"] == "1";
@@ -46,15 +46,15 @@ namespace Bit.Setup
 
             Helpers.WriteLine(_context);
 
-            if(_context.Parameters.ContainsKey("install"))
+            if (_context.Parameters.ContainsKey("install"))
             {
                 Install();
             }
-            else if(_context.Parameters.ContainsKey("update"))
+            else if (_context.Parameters.ContainsKey("update"))
             {
                 Update();
             }
-            else if(_context.Parameters.ContainsKey("printenv"))
+            else if (_context.Parameters.ContainsKey("printenv"))
             {
                 PrintEnvironment();
             }
@@ -66,22 +66,22 @@ namespace Bit.Setup
 
         private static void Install()
         {
-            if(_context.Parameters.ContainsKey("letsencrypt"))
+            if (_context.Parameters.ContainsKey("letsencrypt"))
             {
                 _context.Config.SslManagedLetsEncrypt =
                     _context.Parameters["letsencrypt"].ToLowerInvariant() == "y";
             }
-            if(_context.Parameters.ContainsKey("domain"))
+            if (_context.Parameters.ContainsKey("domain"))
             {
                 _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
             }
 
-            if(_context.Stub)
+            if (_context.Stub)
             {
                 _context.Install.InstallationId = Guid.Empty;
                 _context.Install.InstallationKey = "SECRET_INSTALLATION_KEY";
             }
-            else if(!ValidateInstallation())
+            else if (!ValidateInstallation())
             {
                 return;
             }
@@ -116,7 +116,7 @@ namespace Bit.Setup
                     "`./bitwarden.sh rebuild` or `./bitwarden.sh update`");
 
             Console.WriteLine("\nNext steps, run:");
-            if(_context.HostOS == "win")
+            if (_context.HostOS == "win")
             {
                 Console.WriteLine("`.\\bitwarden.ps1 -start`");
             }
@@ -129,7 +129,7 @@ namespace Bit.Setup
 
         private static void Update()
         {
-            if(_context.Parameters.ContainsKey("db"))
+            if (_context.Parameters.ContainsKey("db"))
             {
                 MigrateDatabase();
             }
@@ -142,7 +142,7 @@ namespace Bit.Setup
         private static void PrintEnvironment()
         {
             _context.LoadConfiguration();
-            if(!_context.PrintToScreen())
+            if (!_context.PrintToScreen())
             {
                 return;
             }
@@ -150,7 +150,7 @@ namespace Bit.Setup
             Console.WriteLine("===================================================");
             Console.WriteLine("\nvisit {0}", _context.Config.Url);
             Console.Write("to update, run ");
-            if(_context.HostOS == "win")
+            if (_context.HostOS == "win")
             {
                 Console.Write("`.\\bitwarden.ps1 -updateself` and then `.\\bitwarden.ps1 -update`");
             }
@@ -170,7 +170,7 @@ namespace Bit.Setup
                     "globalSettings__sqlServer__connectionString");
                 var migrator = new DbMigrator(vaultConnectionString, null);
                 var success = migrator.MigrateMsSqlDatabase(false);
-                if(success)
+                if (success)
                 {
                     Helpers.WriteLine(_context, "Migration successful.");
                 }
@@ -179,9 +179,9 @@ namespace Bit.Setup
                     Helpers.WriteLine(_context, "Migration failed.");
                 }
             }
-            catch(SqlException e)
+            catch (SqlException e)
             {
-                if(e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
+                if (e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
                 {
                     var nextAttempt = attempt + 1;
                     Helpers.WriteLine(_context, "Database is in script upgrade mode. " +
@@ -197,7 +197,7 @@ namespace Bit.Setup
         private static bool ValidateInstallation()
         {
             var installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");
-            if(!Guid.TryParse(installationId.Trim(), out var installationidGuid))
+            if (!Guid.TryParse(installationId.Trim(), out var installationidGuid))
             {
                 Console.WriteLine("Invalid installation id.");
                 return false;
@@ -211,9 +211,9 @@ namespace Bit.Setup
                 var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" +
                     _context.Install.InstallationId).GetAwaiter().GetResult();
 
-                if(!response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
                         Console.WriteLine("Invalid installation id.");
                     }
@@ -227,7 +227,7 @@ namespace Bit.Setup
 
                 var resultString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 var result = JsonConvert.DeserializeObject<dynamic>(resultString);
-                if(!(bool)result.Enabled)
+                if (!(bool)result.Enabled)
                 {
                     Console.WriteLine("Installation id has been disabled.");
                     return false;
@@ -265,9 +265,9 @@ namespace Bit.Setup
         private static void ParseParameters()
         {
             _context.Parameters = new Dictionary<string, string>();
-            for(var i = 0; i < _context.Args.Length; i = i + 2)
+            for (var i = 0; i < _context.Args.Length; i = i + 2)
             {
-                if(!_context.Args[i].StartsWith("-"))
+                if (!_context.Args[i].StartsWith("-"))
                 {
                     continue;
                 }

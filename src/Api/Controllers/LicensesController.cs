@@ -43,11 +43,11 @@ namespace Bit.Api.Controllers
         public async Task<UserLicense> GetUser(string id, [FromQuery]string key)
         {
             var user = await _userRepository.GetByIdAsync(new Guid(id));
-            if(user == null)
+            if (user == null)
             {
                 return null;
             }
-            else if(!user.LicenseKey.Equals(key))
+            else if (!user.LicenseKey.Equals(key))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Invalid license key.");
@@ -61,11 +61,11 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationLicense> GetOrganization(string id, [FromQuery]string key)
         {
             var org = await _organizationRepository.GetByIdAsync(new Guid(id));
-            if(org == null)
+            if (org == null)
             {
                 return null;
             }
-            else if(!org.LicenseKey.Equals(key))
+            else if (!org.LicenseKey.Equals(key))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Invalid license key.");

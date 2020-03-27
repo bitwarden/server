@@ -27,7 +27,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<User> GetByEmailAsync(string email)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_ReadByEmail]",
@@ -40,7 +40,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<UserKdfInformation>(
                     $"[{Schema}].[{Table}_ReadKdfByEmail]",
@@ -53,7 +53,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
         {
-            using(var connection = new SqlConnection(ReadOnlyConnectionString))
+            using (var connection = new SqlConnection(ReadOnlyConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     $"[{Schema}].[{Table}_Search]",
@@ -67,7 +67,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<User>(
                     "[dbo].[User_ReadByPremium]",
@@ -80,7 +80,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<string> GetPublicKeyAsync(Guid id)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<string>(
                     $"[{Schema}].[{Table}_ReadPublicKeyById]",
@@ -93,7 +93,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<DateTime>(
                     $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
@@ -111,7 +111,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public override async Task DeleteAsync(User user)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_DeleteById]",
@@ -123,7 +123,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateStorageAsync(Guid id)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateStorage]",
@@ -135,7 +135,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[User_UpdateRenewalReminderDate]",

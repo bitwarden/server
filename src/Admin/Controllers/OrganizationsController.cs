@@ -50,12 +50,12 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
             int page = 1, int count = 25)
         {
-            if(page < 1)
+            if (page < 1)
             {
                 page = 1;
             }
 
-            if(count < 1)
+            if (count < 1)
             {
                 count = 1;
             }
@@ -78,7 +78,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> View(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
-            if(organization == null)
+            if (organization == null)
             {
                 return RedirectToAction("Index");
             }
@@ -86,12 +86,12 @@ namespace Bit.Admin.Controllers
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(id);
             var collections = await _collectionRepository.GetManyByOrganizationIdAsync(id);
             IEnumerable<Group> groups = null;
-            if(organization.UseGroups)
+            if (organization.UseGroups)
             {
                 groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
             }
             IEnumerable<Policy> policies = null;
-            if(organization.UsePolicies)
+            if (organization.UsePolicies)
             {
                 policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
             }
@@ -103,7 +103,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Edit(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
-            if(organization == null)
+            if (organization == null)
             {
                 return RedirectToAction("Index");
             }
@@ -111,12 +111,12 @@ namespace Bit.Admin.Controllers
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(id);
             var collections = await _collectionRepository.GetManyByOrganizationIdAsync(id);
             IEnumerable<Group> groups = null;
-            if(organization.UseGroups)
+            if (organization.UseGroups)
             {
                 groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
             }
             IEnumerable<Policy> policies = null;
-            if(organization.UsePolicies)
+            if (organization.UsePolicies)
             {
                 policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
             }
@@ -132,7 +132,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
-            if(organization == null)
+            if (organization == null)
             {
                 return RedirectToAction("Index");
             }
@@ -148,7 +148,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
-            if(organization != null)
+            if (organization != null)
             {
                 await _organizationRepository.DeleteAsync(organization);
                 await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);

@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Api.Public
     {
         public PolicyResponseModel(Policy policy)
         {
-            if(policy == null)
+            if (policy == null)
             {
                 throw new ArgumentNullException(nameof(policy));
             }
@@ -21,7 +21,7 @@ namespace Bit.Core.Models.Api.Public
             Id = policy.Id;
             Type = policy.Type;
             Enabled = policy.Enabled;
-            if(!string.IsNullOrWhiteSpace(policy.Data))
+            if (!string.IsNullOrWhiteSpace(policy.Data))
             {
                 Data = JsonConvert.DeserializeObject<Dictionary<string, object>>(policy.Data);
             }

@@ -31,10 +31,10 @@ namespace Bit.Notifications
         [SelfHosted(SelfHostedOnly = true)]
         public async Task PostSend()
         {
-            using(var reader = new StreamReader(Request.Body, Encoding.UTF8))
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
             {
                 var notificationJson = await reader.ReadToEndAsync();
-                if(!string.IsNullOrWhiteSpace(notificationJson))
+                if (!string.IsNullOrWhiteSpace(notificationJson))
                 {
                     await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
                 }

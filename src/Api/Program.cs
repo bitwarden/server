@@ -20,20 +20,20 @@ namespace Bit.Api
                         logging.AddSerilog(hostingContext, e =>
                         {
                             var context = e.Properties["SourceContext"].ToString();
-                            if(e.Exception != null &&
+                            if (e.Exception != null &&
                                 (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
                                     e.Exception.Message == "Bad security stamp."))
                             {
                                 return false;
                             }
 
-                            if(e.Level == LogEventLevel.Information &&
+                            if (e.Level == LogEventLevel.Information &&
                                 context.Contains(typeof(IpRateLimitMiddleware).FullName))
                             {
                                 return true;
                             }
 
-                            if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
+                            if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
                                 context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                             {
                                 return e.Level > LogEventLevel.Error;

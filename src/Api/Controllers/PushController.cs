@@ -74,12 +74,12 @@ namespace Bit.Api.Controllers
         {
             CheckUsage();
 
-            if(!string.IsNullOrWhiteSpace(model.UserId))
+            if (!string.IsNullOrWhiteSpace(model.UserId))
             {
                 await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
                        model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
             }
-            else if(!string.IsNullOrWhiteSpace(model.OrganizationId))
+            else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
             {
                 await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
                     model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
@@ -88,7 +88,7 @@ namespace Bit.Api.Controllers
 
         private string Prefix(string value)
         {
-            if(string.IsNullOrWhiteSpace(value))
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return null;
             }
@@ -98,7 +98,7 @@ namespace Bit.Api.Controllers
 
         private void CheckUsage()
         {
-            if(CanUse())
+            if (CanUse())
             {
                 return;
             }
@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
 
         private bool CanUse()
         {
-            if(_environment.IsDevelopment())
+            if (_environment.IsDevelopment())
             {
                 return true;
             }

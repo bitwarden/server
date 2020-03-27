@@ -11,12 +11,12 @@ namespace Bit.Core.Models.Api
 
         public User ToUser(User existingUser)
         {
-            if(string.IsNullOrWhiteSpace(existingUser.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+            if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
             {
                 existingUser.PublicKey = PublicKey;
             }
 
-            if(string.IsNullOrWhiteSpace(existingUser.PrivateKey))
+            if (string.IsNullOrWhiteSpace(existingUser.PrivateKey))
             {
                 existingUser.PrivateKey = EncryptedPrivateKey;
             }

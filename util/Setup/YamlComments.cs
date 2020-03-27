@@ -97,10 +97,10 @@ namespace Bit.Setup
 
         public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context)
         {
-            if(value is CommentsObjectDescriptor commentsDescriptor && commentsDescriptor.Comment != null)
+            if (value is CommentsObjectDescriptor commentsDescriptor && commentsDescriptor.Comment != null)
             {
                 context.Emit(new Comment(string.Empty, false));
-                foreach(var comment in commentsDescriptor.Comment.Split(Environment.NewLine))
+                foreach (var comment in commentsDescriptor.Comment.Split(Environment.NewLine))
                 {
                     context.Emit(new Comment(comment, false));
                 }

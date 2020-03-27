@@ -17,7 +17,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(string.IsNullOrWhiteSpace(UserId) && string.IsNullOrWhiteSpace(OrganizationId))
+            if (string.IsNullOrWhiteSpace(UserId) && string.IsNullOrWhiteSpace(OrganizationId))
             {
                 yield return new ValidationResult($"{nameof(UserId)} or {nameof(OrganizationId)} is required.");
             }

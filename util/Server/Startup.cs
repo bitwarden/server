@@ -33,7 +33,7 @@ namespace Bit.Server
             IApplicationBuilder app,
             IConfiguration configuration)
         {
-            if(configuration.GetValue<bool?>("serveUnknown") ?? false)
+            if (configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
                 app.UseStaticFiles(new StaticFileOptions
                 {
@@ -47,7 +47,7 @@ namespace Bit.Server
                         async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
                 });
             }
-            else if(configuration.GetValue<bool?>("webVault") ?? false)
+            else if (configuration.GetValue<bool?>("webVault") ?? false)
             {
                 var options = new DefaultFilesOptions();
                 options.DefaultFileNames.Clear();
@@ -57,18 +57,18 @@ namespace Bit.Server
                 {
                     OnPrepareResponse = ctx =>
                     {
-                        if(!ctx.Context.Request.Path.HasValue ||
+                        if (!ctx.Context.Request.Path.HasValue ||
                             ctx.Context.Response.Headers.ContainsKey("Cache-Control"))
                         {
                             return;
                         }
                         var path = ctx.Context.Request.Path.Value;
-                        if(_longCachedPaths.Any(ext => path.StartsWith(ext)))
+                        if (_longCachedPaths.Any(ext => path.StartsWith(ext)))
                         {
                             // 14 days
                             ctx.Context.Response.Headers.Append("Cache-Control", "max-age=1209600");
                         }
-                        if(_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
+                        if (_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
                         {
                             // 7 days
                             ctx.Context.Response.Headers.Append("Cache-Control", "max-age=604800");

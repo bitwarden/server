@@ -52,7 +52,7 @@ namespace Bit.Api.Controllers
         public async Task<SyncResponseModel> Get([FromQuery]bool excludeDomains = false)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new BadRequestException("User not found.");
             }
@@ -66,7 +66,7 @@ namespace Bit.Api.Controllers
             IEnumerable<CollectionDetails> collections = null;
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
             IEnumerable<Policy> policies = null;
-            if(hasEnabledOrgs)
+            if (hasEnabledOrgs)
             {
                 collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);

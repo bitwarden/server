@@ -25,7 +25,7 @@ namespace Bit.Billing.Utilities
 
         public async Task<bool> VerifyIpnAsync(string ipnBody)
         {
-            if(ipnBody == null)
+            if (ipnBody == null)
             {
                 throw new ArgumentException("No IPN body.");
             }
@@ -38,16 +38,16 @@ namespace Bit.Billing.Utilities
             var cmdIpnBody = string.Concat("cmd=_notify-validate&", ipnBody);
             request.Content = new StringContent(cmdIpnBody, Encoding.UTF8, "application/x-www-form-urlencoded");
             var response = await _httpClient.SendAsync(request);
-            if(!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
                 throw new Exception("Failed to verify IPN, status: " + response.StatusCode);
             }
             var responseContent = await response.Content.ReadAsStringAsync();
-            if(responseContent.Equals("VERIFIED"))
+            if (responseContent.Equals("VERIFIED"))
             {
                 return true;
             }
-            else if(responseContent.Equals("INVALID"))
+            else if (responseContent.Equals("INVALID"))
             {
                 return false;
             }
@@ -67,7 +67,7 @@ namespace Bit.Billing.Utilities
 
             public IpnTransaction(string ipnFormData)
             {
-                if(string.IsNullOrWhiteSpace(ipnFormData))
+                if (string.IsNullOrWhiteSpace(ipnFormData))
                 {
                     return;
                 }
@@ -92,12 +92,12 @@ namespace Bit.Billing.Utilities
                 PaymentDate = ConvertDate(GetDictValue(dataDict, "payment_date"));
 
                 var mcGrossString = GetDictValue(dataDict, "mc_gross");
-                if(!string.IsNullOrWhiteSpace(mcGrossString) && decimal.TryParse(mcGrossString, out var mcGross))
+                if (!string.IsNullOrWhiteSpace(mcGrossString) && decimal.TryParse(mcGrossString, out var mcGross))
                 {
                     McGross = mcGross;
                 }
                 var mcFeeString = GetDictValue(dataDict, "mc_fee");
-                if(!string.IsNullOrWhiteSpace(mcFeeString) && decimal.TryParse(mcFeeString, out var mcFee))
+                if (!string.IsNullOrWhiteSpace(mcFeeString) && decimal.TryParse(mcFeeString, out var mcFee))
                 {
                     McFee = mcFee;
                 }
@@ -125,19 +125,19 @@ namespace Bit.Billing.Utilities
                 Guid? orgId = null;
                 Guid? userId = null;
 
-                if(!string.IsNullOrWhiteSpace(Custom) && Custom.Contains(":"))
+                if (!string.IsNullOrWhiteSpace(Custom) && Custom.Contains(":"))
                 {
                     var mainParts = Custom.Split(',');
-                    foreach(var mainPart in mainParts)
+                    foreach (var mainPart in mainParts)
                     {
                         var parts = mainPart.Split(':');
-                        if(parts.Length > 1 && Guid.TryParse(parts[1], out var id))
+                        if (parts.Length > 1 && Guid.TryParse(parts[1], out var id))
                         {
-                            if(parts[0] == "user_id")
+                            if (parts[0] == "user_id")
                             {
                                 userId = id;
                             }
-                            else if(parts[0] == "organization_id")
+                            else if (parts[0] == "organization_id")
                             {
                                 orgId = id;
                             }
@@ -160,11 +160,11 @@ namespace Bit.Billing.Utilities
 
             private DateTime ConvertDate(string dateString)
             {
-                if(!string.IsNullOrWhiteSpace(dateString))
+                if (!string.IsNullOrWhiteSpace(dateString))
                 {
                     var parsed = DateTime.TryParseExact(dateString, _dateFormats,
                         CultureInfo.InvariantCulture, DateTimeStyles.None, out var paymentDate);
-                    if(parsed)
+                    if (parsed)
                     {
                         var pacificTime = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                             TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time") :

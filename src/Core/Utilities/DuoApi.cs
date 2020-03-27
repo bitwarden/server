@@ -40,7 +40,7 @@ namespace Bit.Core.Utilities.Duo
         public static string CanonicalizeParams(Dictionary<string, string> parameters)
         {
             var ret = new List<string>();
-            foreach(var pair in parameters)
+            foreach (var pair in parameters)
             {
                 var p = string.Format("{0}={1}", HttpUtility.UrlEncode(pair.Key), HttpUtility.UrlEncode(pair.Value));
                 // Signatures require upper-case hex digits.
@@ -94,16 +94,16 @@ namespace Bit.Core.Utilities.Duo
         public string ApiCall(string method, string path, Dictionary<string, string> parameters, int timeout,
             out HttpStatusCode statusCode)
         {
-            if(parameters == null)
+            if (parameters == null)
             {
                 parameters = new Dictionary<string, string>();
             }
 
             var canonParams = CanonicalizeParams(parameters);
             var query = string.Empty;
-            if(!method.Equals("POST") && !method.Equals("PUT"))
+            if (!method.Equals("POST") && !method.Equals("PUT"))
             {
-                if(parameters.Count > 0)
+                if (parameters.Count > 0)
                 {
                     query = "?" + canonParams;
                 }
@@ -120,17 +120,17 @@ namespace Bit.Core.Utilities.Duo
             request.Headers.Add("X-Duo-Date", dateString);
             request.UserAgent = UserAgent;
 
-            if(method.Equals("POST") || method.Equals("PUT"))
+            if (method.Equals("POST") || method.Equals("PUT"))
             {
                 var data = Encoding.UTF8.GetBytes(canonParams);
                 request.ContentType = "application/x-www-form-urlencoded";
                 request.ContentLength = data.Length;
-                using(var requestStream = request.GetRequestStream())
+                using (var requestStream = request.GetRequestStream())
                 {
                     requestStream.Write(data, 0, data.Length);
                 }
             }
-            if(timeout > 0)
+            if (timeout > 0)
             {
                 request.Timeout = timeout;
             }
@@ -141,15 +141,15 @@ namespace Bit.Core.Utilities.Duo
             {
                 response = (HttpWebResponse)request.GetResponse();
             }
-            catch(WebException ex)
+            catch (WebException ex)
             {
                 response = (HttpWebResponse)ex.Response;
-                if(response == null)
+                if (response == null)
                 {
                     throw;
                 }
             }
-            using(var reader = new StreamReader(response.GetResponseStream()))
+            using (var reader = new StreamReader(response.GetResponseStream()))
             {
                 statusCode = response.StatusCode;
                 return reader.ReadToEnd();
@@ -176,7 +176,7 @@ namespace Bit.Core.Utilities.Duo
             try
             {
                 var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(res);
-                if(dict["stat"] as string == "OK")
+                if (dict["stat"] as string == "OK")
                 {
                     return dict["response"] as T;
                 }
@@ -185,18 +185,18 @@ namespace Bit.Core.Utilities.Duo
                     var check = dict["code"] as int?;
                     var code = check.GetValueOrDefault(0);
                     var messageDetail = string.Empty;
-                    if(dict.ContainsKey("message_detail"))
+                    if (dict.ContainsKey("message_detail"))
                     {
                         messageDetail = dict["message_detail"] as string;
                     }
                     throw new ApiException(code, (int)statusCode, dict["message"] as string, messageDetail);
                 }
             }
-            catch(ApiException)
+            catch (ApiException)
             {
                 throw;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw new BadResponseException((int)statusCode, e);
             }
@@ -207,7 +207,7 @@ namespace Bit.Core.Utilities.Duo
             var keyBytes = Encoding.ASCII.GetBytes(_skey);
             var dataBytes = Encoding.ASCII.GetBytes(data);
 
-            using(var hmac = new HMACSHA1(keyBytes))
+            using (var hmac = new HMACSHA1(keyBytes))
             {
                 var hash = hmac.ComputeHash(dataBytes);
                 var hex = BitConverter.ToString(hash);
@@ -273,7 +273,7 @@ namespace Bit.Core.Utilities.Duo
         private static string FormatMessage(int httpStatus, Exception inner)
         {
             var innerMessage = "(null)";
-            if(inner != null)
+            if (inner != null)
             {
                 innerMessage = string.Format("'{0}'", inner.Message);
             }

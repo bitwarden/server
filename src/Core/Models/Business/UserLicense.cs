@@ -71,7 +71,7 @@ namespace Bit.Core.Models.Business
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if(Version == 1)
+            if (Version == 1)
             {
                 var props = typeof(UserLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -101,7 +101,7 @@ namespace Bit.Core.Models.Business
 
         public byte[] ComputeHash()
         {
-            using(var alg = SHA256.Create())
+            using (var alg = SHA256.Create())
             {
                 return alg.ComputeHash(GetDataBytes(true));
             }
@@ -109,12 +109,12 @@ namespace Bit.Core.Models.Business
 
         public bool CanUse(User user)
         {
-            if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+            if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }
 
-            if(Version == 1)
+            if (Version == 1)
             {
                 return user.EmailVerified && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
             }
@@ -126,12 +126,12 @@ namespace Bit.Core.Models.Business
 
         public bool VerifyData(User user)
         {
-            if(Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+            if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
                 return false;
             }
 
-            if(Version == 1)
+            if (Version == 1)
             {
                 return
                     user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
@@ -146,7 +146,7 @@ namespace Bit.Core.Models.Business
 
         public bool VerifySignature(X509Certificate2 certificate)
         {
-            using(var rsa = certificate.GetRSAPublicKey())
+            using (var rsa = certificate.GetRSAPublicKey())
             {
                 return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
@@ -154,12 +154,12 @@ namespace Bit.Core.Models.Business
 
         public byte[] Sign(X509Certificate2 certificate)
         {
-            if(!certificate.HasPrivateKey)
+            if (!certificate.HasPrivateKey)
             {
                 throw new InvalidOperationException("You don't have the private key!");
             }
 
-            using(var rsa = certificate.GetRSAPrivateKey())
+            using (var rsa = certificate.GetRSAPrivateKey())
             {
                 return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }

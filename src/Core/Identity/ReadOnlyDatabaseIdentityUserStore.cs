@@ -30,7 +30,7 @@ namespace Bit.Core.Identity
         public override async Task<IdentityUser> FindByIdAsync(string userId,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(!Guid.TryParse(userId, out var userIdGuid))
+            if (!Guid.TryParse(userId, out var userIdGuid))
             {
                 return null;
             }

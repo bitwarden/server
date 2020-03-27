@@ -50,7 +50,7 @@ namespace Bit.Core.HostedServices
                     EnableDeadLetteringOnMessageExpiration = true,
                 }, new RuleDescription("default", new SqlFilter($"sys.Label != '{_subName}'")));
             }
-            catch(MessagingEntityAlreadyExistsException) { }
+            catch (MessagingEntityAlreadyExistsException) { }
             _subscriptionClient.RegisterMessageHandler(ProcessMessageAsync,
                 new MessageHandlerOptions(ExceptionReceivedHandlerAsync)
                 {
@@ -74,14 +74,14 @@ namespace Bit.Core.HostedServices
 
         private async Task ProcessMessageAsync(Message message, CancellationToken cancellationToken)
         {
-            if(message.Label != _subName && _applicationCacheService != null)
+            if (message.Label != _subName && _applicationCacheService != null)
             {
-                switch((ApplicationCacheMessageType)message.UserProperties["type"])
+                switch ((ApplicationCacheMessageType)message.UserProperties["type"])
                 {
                     case ApplicationCacheMessageType.UpsertOrganizationAbility:
                         var upsertedOrgId = (Guid)message.UserProperties["id"];
                         var upsertedOrg = await _organizationRepository.GetByIdAsync(upsertedOrgId);
-                        if(upsertedOrg != null)
+                        if (upsertedOrg != null)
                         {
                             await _applicationCacheService.BaseUpsertOrganizationAbilityAsync(upsertedOrg);
                         }
@@ -94,7 +94,7 @@ namespace Bit.Core.HostedServices
                         break;
                 }
             }
-            if(!cancellationToken.IsCancellationRequested)
+            if (!cancellationToken.IsCancellationRequested)
             {
                 await _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
             }

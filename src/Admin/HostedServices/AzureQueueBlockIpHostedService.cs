@@ -26,18 +26,18 @@ namespace Bit.Admin.HostedServices
             _blockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "blockip");
             _unblockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "unblockip");
 
-            while(!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 var blockMessages = await _blockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
-                if(blockMessages.Value?.Any() ?? false)
+                if (blockMessages.Value?.Any() ?? false)
                 {
-                    foreach(var message in blockMessages.Value)
+                    foreach (var message in blockMessages.Value)
                     {
                         try
                         {
                             await BlockIpAsync(message.MessageText, cancellationToken);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             _logger.LogError(e, "Failed to block IP.");
                         }
@@ -46,15 +46,15 @@ namespace Bit.Admin.HostedServices
                 }
 
                 var unblockMessages = await _unblockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
-                if(unblockMessages.Value?.Any() ?? false)
+                if (unblockMessages.Value?.Any() ?? false)
                 {
-                    foreach(var message in unblockMessages.Value)
+                    foreach (var message in unblockMessages.Value)
                     {
                         try
                         {
                             await UnblockIpAsync(message.MessageText, cancellationToken);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             _logger.LogError(e, "Failed to unblock IP.");
                         }

@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api.Public
     {
         public AssociationWithPermissionsResponseModel(SelectionReadOnly selection)
         {
-            if(selection == null)
+            if (selection == null)
             {
                 throw new ArgumentNullException(nameof(selection));
             }

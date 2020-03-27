@@ -17,7 +17,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateStatisticsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[AzureSQLMaintenance]",
@@ -29,7 +29,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DisableCipherAutoStatsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "sp_autostats",
@@ -40,7 +40,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task RebuildIndexesAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[AzureSQLMaintenance]",
@@ -52,7 +52,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteExpiredGrantsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteExpired]",

@@ -18,11 +18,11 @@ namespace Bit.Core.Models.Api
         public User ToUser(User extistingUser)
         {
             var providers = extistingUser.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.Authenticator))
+            else if (providers.ContainsKey(TwoFactorProviderType.Authenticator))
             {
                 providers.Remove(TwoFactorProviderType.Authenticator);
             }
@@ -52,11 +52,11 @@ namespace Bit.Core.Models.Api
         public User ToUser(User extistingUser)
         {
             var providers = extistingUser.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.Duo))
+            else if (providers.ContainsKey(TwoFactorProviderType.Duo))
             {
                 providers.Remove(TwoFactorProviderType.Duo);
             }
@@ -78,11 +78,11 @@ namespace Bit.Core.Models.Api
         public Organization ToOrganization(Organization extistingOrg)
         {
             var providers = extistingOrg.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
+            else if (providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
             {
                 providers.Remove(TwoFactorProviderType.OrganizationDuo);
             }
@@ -103,7 +103,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!Host.StartsWith("api-") || !Host.EndsWith(".duosecurity.com"))
+            if (!Host.StartsWith("api-") || !Host.EndsWith(".duosecurity.com"))
             {
                 yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
             }
@@ -123,11 +123,11 @@ namespace Bit.Core.Models.Api
         public User ToUser(User extistingUser)
         {
             var providers = extistingUser.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.YubiKey))
+            else if (providers.ContainsKey(TwoFactorProviderType.YubiKey))
             {
                 providers.Remove(TwoFactorProviderType.YubiKey);
             }
@@ -151,7 +151,7 @@ namespace Bit.Core.Models.Api
 
         private string FormatKey(string keyValue)
         {
-            if(string.IsNullOrWhiteSpace(keyValue))
+            if (string.IsNullOrWhiteSpace(keyValue))
             {
                 return null;
             }
@@ -161,33 +161,33 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
+            if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
                 string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
             {
                 yield return new ValidationResult("A key is required.", new string[] { nameof(Key1) });
             }
 
-            if(!string.IsNullOrWhiteSpace(Key1) && Key1.Length < 12)
+            if (!string.IsNullOrWhiteSpace(Key1) && Key1.Length < 12)
             {
                 yield return new ValidationResult("Key 1 in invalid.", new string[] { nameof(Key1) });
             }
 
-            if(!string.IsNullOrWhiteSpace(Key2) && Key2.Length < 12)
+            if (!string.IsNullOrWhiteSpace(Key2) && Key2.Length < 12)
             {
                 yield return new ValidationResult("Key 2 in invalid.", new string[] { nameof(Key2) });
             }
 
-            if(!string.IsNullOrWhiteSpace(Key3) && Key3.Length < 12)
+            if (!string.IsNullOrWhiteSpace(Key3) && Key3.Length < 12)
             {
                 yield return new ValidationResult("Key 3 in invalid.", new string[] { nameof(Key3) });
             }
 
-            if(!string.IsNullOrWhiteSpace(Key4) && Key4.Length < 12)
+            if (!string.IsNullOrWhiteSpace(Key4) && Key4.Length < 12)
             {
                 yield return new ValidationResult("Key 4 in invalid.", new string[] { nameof(Key4) });
             }
 
-            if(!string.IsNullOrWhiteSpace(Key5) && Key5.Length < 12)
+            if (!string.IsNullOrWhiteSpace(Key5) && Key5.Length < 12)
             {
                 yield return new ValidationResult("Key 5 in invalid.", new string[] { nameof(Key5) });
             }
@@ -204,11 +204,11 @@ namespace Bit.Core.Models.Api
         public User ToUser(User extistingUser)
         {
             var providers = extistingUser.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
             }
-            else if(providers.ContainsKey(TwoFactorProviderType.Email))
+            else if (providers.ContainsKey(TwoFactorProviderType.Email))
             {
                 providers.Remove(TwoFactorProviderType.Email);
             }
@@ -237,7 +237,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!Id.HasValue || Id < 0 || Id > 5)
+            if (!Id.HasValue || Id < 0 || Id > 5)
             {
                 yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
             }

@@ -69,26 +69,26 @@ namespace Bit.Billing.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PostWebhook([FromQuery] string key)
         {
-            if(key != _billingSettings.StripeWebhookKey)
+            if (key != _billingSettings.StripeWebhookKey)
             {
                 return new BadRequestResult();
             }
 
             Stripe.Event parsedEvent;
-            using(var sr = new StreamReader(HttpContext.Request.Body))
+            using (var sr = new StreamReader(HttpContext.Request.Body))
             {
                 var json = await sr.ReadToEndAsync();
                 parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
                     _billingSettings.StripeWebhookSecret);
             }
 
-            if(string.IsNullOrWhiteSpace(parsedEvent?.Id))
+            if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
             {
                 _logger.LogWarning("No event id.");
                 return new BadRequestResult();
             }
 
-            if(_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
+            if (_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
             {
                 _logger.LogWarning("Getting test events in production.");
                 return new BadRequestResult();
@@ -97,7 +97,7 @@ namespace Bit.Billing.Controllers
             var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
             var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");
 
-            if(subDeleted || subUpdated)
+            if (subDeleted || subUpdated)
             {
                 var subscription = await GetSubscriptionAsync(parsedEvent, true);
                 var ids = GetIdsFromMetaData(subscription.Metadata);
@@ -106,42 +106,42 @@ namespace Bit.Billing.Controllers
                 var subUnpaid = subUpdated && subscription.Status == "unpaid";
                 var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
-                if(subCanceled || subUnpaid || subIncompleteExpired)
+                if (subCanceled || subUnpaid || subIncompleteExpired)
                 {
                     // org
-                    if(ids.Item1.HasValue)
+                    if (ids.Item1.HasValue)
                     {
                         await _organizationService.DisableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
                     }
                     // user
-                    else if(ids.Item2.HasValue)
+                    else if (ids.Item2.HasValue)
                     {
                         await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
                     }
                 }
 
-                if(subUpdated)
+                if (subUpdated)
                 {
                     // org
-                    if(ids.Item1.HasValue)
+                    if (ids.Item1.HasValue)
                     {
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
                     }
                     // user
-                    else if(ids.Item2.HasValue)
+                    else if (ids.Item2.HasValue)
                     {
                         await _userService.UpdatePremiumExpirationAsync(ids.Item2.Value,
                             subscription.CurrentPeriodEnd);
                     }
                 }
             }
-            else if(parsedEvent.Type.Equals("invoice.upcoming"))
+            else if (parsedEvent.Type.Equals("invoice.upcoming"))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                if(subscription == null)
+                if (subscription == null)
                 {
                     throw new Exception("Invoice subscription is null. " + invoice.Id);
                 }
@@ -149,37 +149,37 @@ namespace Bit.Billing.Controllers
                 string email = null;
                 var ids = GetIdsFromMetaData(subscription.Metadata);
                 // org
-                if(ids.Item1.HasValue)
+                if (ids.Item1.HasValue)
                 {
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                    if(org != null && OrgPlanForInvoiceNotifications(org))
+                    if (org != null && OrgPlanForInvoiceNotifications(org))
                     {
                         email = org.BillingEmail;
                     }
                 }
                 // user
-                else if(ids.Item2.HasValue)
+                else if (ids.Item2.HasValue)
                 {
                     var user = await _userService.GetUserByIdAsync(ids.Item2.Value);
-                    if(user.Premium)
+                    if (user.Premium)
                     {
                         email = user.Email;
                     }
                 }
 
-                if(!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
+                if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
                 {
                     var items = invoice.Lines.Select(i => i.Description).ToList();
                     await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
                         invoice.NextPaymentAttempt.Value, items, true);
                 }
             }
-            else if(parsedEvent.Type.Equals("charge.succeeded"))
+            else if (parsedEvent.Type.Equals("charge.succeeded"))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
-                if(chargeTransaction != null)
+                if (chargeTransaction != null)
                 {
                     _logger.LogWarning("Charge success already processed. " + charge.Id);
                     return new OkResult();
@@ -189,29 +189,29 @@ namespace Bit.Billing.Controllers
                 Subscription subscription = null;
                 var subscriptionService = new SubscriptionService();
 
-                if(charge.InvoiceId != null)
+                if (charge.InvoiceId != null)
                 {
                     var invoiceService = new InvoiceService();
                     var invoice = await invoiceService.GetAsync(charge.InvoiceId);
-                    if(invoice?.SubscriptionId != null)
+                    if (invoice?.SubscriptionId != null)
                     {
                         subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                         ids = GetIdsFromMetaData(subscription?.Metadata);
                     }
                 }
 
-                if(subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
+                if (subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
                 {
                     var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
                     {
                         CustomerId = charge.CustomerId
                     });
-                    foreach(var sub in subscriptions)
+                    foreach (var sub in subscriptions)
                     {
-                        if(sub.Status != "canceled" && sub.Status != "incomplete_expired")
+                        if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
                         {
                             ids = GetIdsFromMetaData(sub.Metadata);
-                            if(ids.Item1.HasValue || ids.Item2.HasValue)
+                            if (ids.Item1.HasValue || ids.Item2.HasValue)
                             {
                                 subscription = sub;
                                 break;
@@ -220,7 +220,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
 
-                if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+                if (!ids.Item1.HasValue && !ids.Item2.HasValue)
                 {
                     _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
                     return new BadRequestResult();
@@ -237,50 +237,50 @@ namespace Bit.Billing.Controllers
                     GatewayId = charge.Id
                 };
 
-                if(charge.Source != null && charge.Source is Card card)
+                if (charge.Source != null && charge.Source is Card card)
                 {
                     tx.PaymentMethodType = PaymentMethodType.Card;
                     tx.Details = $"{card.Brand}, *{card.Last4}";
                 }
-                else if(charge.Source != null && charge.Source is BankAccount bankAccount)
+                else if (charge.Source != null && charge.Source is BankAccount bankAccount)
                 {
                     tx.PaymentMethodType = PaymentMethodType.BankAccount;
                     tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
                 }
-                else if(charge.Source != null && charge.Source is Source source)
+                else if (charge.Source != null && charge.Source is Source source)
                 {
-                    if(source.Card != null)
+                    if (source.Card != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.Card;
                         tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
                     }
-                    else if(source.AchDebit != null)
+                    else if (source.AchDebit != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.BankAccount;
                         tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
                     }
-                    else if(source.AchCreditTransfer != null)
+                    else if (source.AchCreditTransfer != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.BankAccount;
                         tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
                             $"{source.AchCreditTransfer.AccountNumber}";
                     }
                 }
-                else if(charge.PaymentMethodDetails != null)
+                else if (charge.PaymentMethodDetails != null)
                 {
-                    if(charge.PaymentMethodDetails.Card != null)
+                    if (charge.PaymentMethodDetails.Card != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.Card;
                         tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
                             $"*{charge.PaymentMethodDetails.Card.Last4}";
                     }
-                    else if(charge.PaymentMethodDetails.AchDebit != null)
+                    else if (charge.PaymentMethodDetails.AchDebit != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.BankAccount;
                         tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
                             $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
                     }
-                    else if(charge.PaymentMethodDetails.AchCreditTransfer != null)
+                    else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
                     {
                         tx.PaymentMethodType = PaymentMethodType.BankAccount;
                         tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
@@ -288,7 +288,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
 
-                if(!tx.PaymentMethodType.HasValue)
+                if (!tx.PaymentMethodType.HasValue)
                 {
                     _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
                     return new OkResult();
@@ -299,35 +299,35 @@ namespace Bit.Billing.Controllers
                     await _transactionRepository.CreateAsync(tx);
                 }
                 // Catch foreign key violations because user/org could have been deleted.
-                catch(SqlException e) when(e.Number == 547) { }
+                catch (SqlException e) when(e.Number == 547) { }
             }
-            else if(parsedEvent.Type.Equals("charge.refunded"))
+            else if (parsedEvent.Type.Equals("charge.refunded"))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.Stripe, charge.Id);
-                if(chargeTransaction == null)
+                if (chargeTransaction == null)
                 {
                     throw new Exception("Cannot find refunded charge. " + charge.Id);
                 }
 
                 var amountRefunded = charge.AmountRefunded / 100M;
 
-                if(!chargeTransaction.Refunded.GetValueOrDefault() &&
+                if (!chargeTransaction.Refunded.GetValueOrDefault() &&
                     chargeTransaction.RefundedAmount.GetValueOrDefault() < amountRefunded)
                 {
                     chargeTransaction.RefundedAmount = amountRefunded;
-                    if(charge.Refunded)
+                    if (charge.Refunded)
                     {
                         chargeTransaction.Refunded = true;
                     }
                     await _transactionRepository.ReplaceAsync(chargeTransaction);
 
-                    foreach(var refund in charge.Refunds)
+                    foreach (var refund in charge.Refunds)
                     {
                         var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
                             GatewayType.Stripe, refund.Id);
-                        if(refundTransaction != null)
+                        if (refundTransaction != null)
                         {
                             continue;
                         }
@@ -351,33 +351,33 @@ namespace Bit.Billing.Controllers
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
                 }
             }
-            else if(parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            else if (parsedEvent.Type.Equals("invoice.payment_succeeded"))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if(invoice.Paid && invoice.BillingReason == "subscription_create")
+                if (invoice.Paid && invoice.BillingReason == "subscription_create")
                 {
                     var subscriptionService = new SubscriptionService();
                     var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                    if(subscription?.Status == "active")
+                    if (subscription?.Status == "active")
                     {
-                        if(DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                        if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
                         {
                             await Task.Delay(5000);
                         }
 
                         var ids = GetIdsFromMetaData(subscription.Metadata);
                         // org
-                        if(ids.Item1.HasValue)
+                        if (ids.Item1.HasValue)
                         {
-                            if(subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
+                            if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
                             {
                                 await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
                             }
                         }
                         // user
-                        else if(ids.Item2.HasValue)
+                        else if (ids.Item2.HasValue)
                         {
-                            if(subscription.Items.Any(i => i.Plan.Id == "premium-annually"))
+                            if (subscription.Items.Any(i => i.Plan.Id == "premium-annually"))
                             {
                                 await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
                             }
@@ -385,18 +385,18 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if(parsedEvent.Type.Equals("invoice.payment_failed"))
+            else if (parsedEvent.Type.Equals("invoice.payment_failed"))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if(!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceAsync(invoice);
                 }
             }
-            else if(parsedEvent.Type.Equals("invoice.created"))
+            else if (parsedEvent.Type.Equals("invoice.created"))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if(!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
                 {
                     await AttemptToPayInvoiceAsync(invoice);
                 }
@@ -411,7 +411,7 @@ namespace Bit.Billing.Controllers
 
         private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
         {
-            if(metaData == null || !metaData.Any())
+            if (metaData == null || !metaData.Any())
             {
                 return new Tuple<Guid?, Guid?>(null, null);
             }
@@ -419,26 +419,26 @@ namespace Bit.Billing.Controllers
             Guid? orgId = null;
             Guid? userId = null;
 
-            if(metaData.ContainsKey("organizationId"))
+            if (metaData.ContainsKey("organizationId"))
             {
                 orgId = new Guid(metaData["organizationId"]);
             }
-            else if(metaData.ContainsKey("userId"))
+            else if (metaData.ContainsKey("userId"))
             {
                 userId = new Guid(metaData["userId"]);
             }
 
-            if(userId == null && orgId == null)
+            if (userId == null && orgId == null)
             {
                 var orgIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "organizationid");
-                if(!string.IsNullOrWhiteSpace(orgIdKey))
+                if (!string.IsNullOrWhiteSpace(orgIdKey))
                 {
                     orgId = new Guid(metaData[orgIdKey]);
                 }
                 else
                 {
                     var userIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "userid");
-                    if(!string.IsNullOrWhiteSpace(userIdKey))
+                    if (!string.IsNullOrWhiteSpace(userIdKey))
                     {
                         userId = new Guid(metaData[userIdKey]);
                     }
@@ -450,7 +450,7 @@ namespace Bit.Billing.Controllers
 
         private bool OrgPlanForInvoiceNotifications(Organization org)
         {
-            switch(org.PlanType)
+            switch (org.PlanType)
             {
                 case PlanType.FamiliesAnnually:
                 case PlanType.TeamsAnnually:
@@ -465,11 +465,11 @@ namespace Bit.Billing.Controllers
         {
             var customerService = new CustomerService();
             var customer = await customerService.GetAsync(invoice.CustomerId);
-            if(customer?.Metadata?.ContainsKey("appleReceipt") ?? false)
+            if (customer?.Metadata?.ContainsKey("appleReceipt") ?? false)
             {
                 return await AttemptToPayInvoiceWithAppleReceiptAsync(invoice, customer);
             }
-            else if(customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+            else if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
             {
                 return await AttemptToPayInvoiceWithBraintreeAsync(invoice, customer);
             }
@@ -478,14 +478,14 @@ namespace Bit.Billing.Controllers
 
         private async Task<bool> AttemptToPayInvoiceWithAppleReceiptAsync(Invoice invoice, Customer customer)
         {
-            if(!customer?.Metadata?.ContainsKey("appleReceipt") ?? true)
+            if (!customer?.Metadata?.ContainsKey("appleReceipt") ?? true)
             {
                 return false;
             }
 
             var originalAppleReceiptTransactionId = customer.Metadata["appleReceipt"];
             var appleReceiptRecord = await _appleIapService.GetReceiptAsync(originalAppleReceiptTransactionId);
-            if(string.IsNullOrWhiteSpace(appleReceiptRecord?.Item1) || !appleReceiptRecord.Item2.HasValue)
+            if (string.IsNullOrWhiteSpace(appleReceiptRecord?.Item1) || !appleReceiptRecord.Item2.HasValue)
             {
                 return false;
             }
@@ -493,13 +493,13 @@ namespace Bit.Billing.Controllers
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if(!ids.Item2.HasValue)
+            if (!ids.Item2.HasValue)
             {
                 // Apple receipt is only for user subscriptions
                 return false;
             }
 
-            if(appleReceiptRecord.Item2.Value != ids.Item2.Value)
+            if (appleReceiptRecord.Item2.Value != ids.Item2.Value)
             {
                 _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
                     appleReceiptRecord.Item2.Value, ids.Item2.Value);
@@ -507,7 +507,7 @@ namespace Bit.Billing.Controllers
             }
 
             var appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(appleReceiptRecord.Item1);
-            if(appleReceiptStatus == null)
+            if (appleReceiptStatus == null)
             {
                 // TODO: cancel sub if receipt is cancelled?
                 return false;
@@ -515,7 +515,7 @@ namespace Bit.Billing.Controllers
 
             var receiptExpiration = appleReceiptStatus.GetLastExpiresDate().GetValueOrDefault(DateTime.MinValue);
             var invoiceDue = invoice.DueDate.GetValueOrDefault(DateTime.MinValue);
-            if(receiptExpiration <= invoiceDue)
+            if (receiptExpiration <= invoiceDue)
             {
                 _logger.LogWarning("Apple receipt expiration is before invoice due date. {0} <= {1}",
                     receiptExpiration, invoiceDue);
@@ -525,7 +525,7 @@ namespace Bit.Billing.Controllers
             var receiptLastTransactionId = appleReceiptStatus.GetLastTransactionId();
             var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
                 GatewayType.AppStore, receiptLastTransactionId);
-            if(existingTransaction != null)
+            if (existingTransaction != null)
             {
                 _logger.LogWarning("There is already an existing transaction for this Apple receipt.",
                     receiptLastTransactionId);
@@ -551,9 +551,9 @@ namespace Bit.Billing.Controllers
                 await _transactionRepository.CreateAsync(appleTransaction);
                 await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                if(e.Message.Contains("Invoice is already paid"))
+                if (e.Message.Contains("Invoice is already paid"))
                 {
                     await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                     {
@@ -571,7 +571,7 @@ namespace Bit.Billing.Controllers
 
         private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
         {
-            if(!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
+            if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
             {
                 return false;
             }
@@ -579,7 +579,7 @@ namespace Bit.Billing.Controllers
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
             {
                 return false;
             }
@@ -596,7 +596,7 @@ namespace Bit.Billing.Controllers
             var now = DateTime.UtcNow;
             var duplicateTransaction = existingTransactions?
                 .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
-            if(duplicateTransaction != null)
+            if (duplicateTransaction != null)
             {
                 _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
                     "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
@@ -622,9 +622,9 @@ namespace Bit.Billing.Controllers
                     }
                 });
 
-            if(!transactionResult.IsSuccess())
+            if (!transactionResult.IsSuccess())
             {
-                if(invoice.AttemptCount < 4)
+                if (invoice.AttemptCount < 4)
                 {
                     await _mailService.SendPaymentFailedAsync(customer.Email, btInvoiceAmount, true);
                 }
@@ -645,10 +645,10 @@ namespace Bit.Billing.Controllers
                 });
                 await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
-                if(e.Message.Contains("Invoice is already paid"))
+                if (e.Message.Contains("Invoice is already paid"))
                 {
                     await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                     {
@@ -672,17 +672,17 @@ namespace Bit.Billing.Controllers
 
         private async Task<Charge> GetChargeAsync(Stripe.Event parsedEvent, bool fresh = false)
         {
-            if(!(parsedEvent.Data.Object is Charge eventCharge))
+            if (!(parsedEvent.Data.Object is Charge eventCharge))
             {
                 throw new Exception("Charge is null (from parsed event). " + parsedEvent.Id);
             }
-            if(!fresh)
+            if (!fresh)
             {
                 return eventCharge;
             }
             var chargeService = new ChargeService();
             var charge = await chargeService.GetAsync(eventCharge.Id);
-            if(charge == null)
+            if (charge == null)
             {
                 throw new Exception("Charge is null. " + eventCharge.Id);
             }
@@ -691,17 +691,17 @@ namespace Bit.Billing.Controllers
 
         private async Task<Invoice> GetInvoiceAsync(Stripe.Event parsedEvent, bool fresh = false)
         {
-            if(!(parsedEvent.Data.Object is Invoice eventInvoice))
+            if (!(parsedEvent.Data.Object is Invoice eventInvoice))
             {
                 throw new Exception("Invoice is null (from parsed event). " + parsedEvent.Id);
             }
-            if(!fresh)
+            if (!fresh)
             {
                 return eventInvoice;
             }
             var invoiceService = new InvoiceService();
             var invoice = await invoiceService.GetAsync(eventInvoice.Id);
-            if(invoice == null)
+            if (invoice == null)
             {
                 throw new Exception("Invoice is null. " + eventInvoice.Id);
             }
@@ -710,17 +710,17 @@ namespace Bit.Billing.Controllers
 
         private async Task<Subscription> GetSubscriptionAsync(Stripe.Event parsedEvent, bool fresh = false)
         {
-            if(!(parsedEvent.Data.Object is Subscription eventSubscription))
+            if (!(parsedEvent.Data.Object is Subscription eventSubscription))
             {
                 throw new Exception("Subscription is null (from parsed event). " + parsedEvent.Id);
             }
-            if(!fresh)
+            if (!fresh)
             {
                 return eventSubscription;
             }
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(eventSubscription.Id);
-            if(subscription == null)
+            if (subscription == null)
             {
                 throw new Exception("Subscription is null. " + eventSubscription.Id);
             }

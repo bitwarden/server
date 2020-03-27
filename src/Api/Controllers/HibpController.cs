@@ -50,7 +50,7 @@ namespace Bit.Api.Controllers
 
         private async Task<IActionResult> SendAsync(string username, bool retry)
         {
-            if(!CoreHelpers.SettingHasValue(_globalSettings.HibpApiKey))
+            if (!CoreHelpers.SettingHasValue(_globalSettings.HibpApiKey))
             {
                 throw new BadRequestException("HaveIBeenPwned API key not set.");
             }
@@ -59,22 +59,22 @@ namespace Bit.Api.Controllers
             request.Headers.Add("hibp-client-id", GetClientId());
             request.Headers.Add("User-Agent", _userAgent);
             var response = await _httpClient.SendAsync(request);
-            if(response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
                 var data = await response.Content.ReadAsStringAsync();
                 return Content(data, "application/json");
             }
-            else if(response.StatusCode == HttpStatusCode.NotFound)
+            else if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new NotFoundResult();
             }
-            else if(response.StatusCode == HttpStatusCode.TooManyRequests && retry)
+            else if (response.StatusCode == HttpStatusCode.TooManyRequests && retry)
             {
                 var delay = 2000;
-                if(response.Headers.Contains("retry-after"))
+                if (response.Headers.Contains("retry-after"))
                 {
                     var vals = response.Headers.GetValues("retry-after");
-                    if(vals.Any() && int.TryParse(vals.FirstOrDefault(), out var secDelay))
+                    if (vals.Any() && int.TryParse(vals.FirstOrDefault(), out var secDelay))
                     {
                         delay = (secDelay * 1000) + 200;
                     }
@@ -91,7 +91,7 @@ namespace Bit.Api.Controllers
         private string GetClientId()
         {
             var userId = _userService.GetProperUserId(User).Value;
-            using(var sha256 = SHA256.Create())
+            using (var sha256 = SHA256.Create())
             {
                 var hash = sha256.ComputeHash(userId.ToByteArray());
                 return Convert.ToBase64String(hash);

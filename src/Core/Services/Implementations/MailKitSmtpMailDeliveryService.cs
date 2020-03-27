@@ -17,11 +17,11 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             ILogger<MailKitSmtpMailDeliveryService> logger)
         {
-            if(globalSettings.Mail?.Smtp?.Host == null)
+            if (globalSettings.Mail?.Smtp?.Host == null)
             {
                 throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
             }
-            if(globalSettings.Mail?.ReplyToEmail?.Contains("@") ?? false)
+            if (globalSettings.Mail?.ReplyToEmail?.Contains("@") ?? false)
             {
                 _replyDomain = globalSettings.Mail.ReplyToEmail.Split('@')[1];
             }
@@ -35,40 +35,40 @@ namespace Bit.Core.Services
             var mimeMessage = new MimeMessage();
             mimeMessage.From.Add(new MailboxAddress(_globalSettings.SiteName, _globalSettings.Mail.ReplyToEmail));
             mimeMessage.Subject = message.Subject;
-            if(!string.IsNullOrWhiteSpace(_replyDomain))
+            if (!string.IsNullOrWhiteSpace(_replyDomain))
             {
                 mimeMessage.MessageId = $"<{Guid.NewGuid()}@{_replyDomain}>";
             }
 
-            foreach(var address in message.ToEmails)
+            foreach (var address in message.ToEmails)
             {
                 mimeMessage.To.Add(new MailboxAddress(address));
             }
 
-            if(message.BccEmails != null)
+            if (message.BccEmails != null)
             {
-                foreach(var address in message.BccEmails)
+                foreach (var address in message.BccEmails)
                 {
                     mimeMessage.Bcc.Add(new MailboxAddress(address));
                 }
             }
 
             var builder = new BodyBuilder();
-            if(!string.IsNullOrWhiteSpace(message.TextContent))
+            if (!string.IsNullOrWhiteSpace(message.TextContent))
             {
                 builder.TextBody = message.TextContent;
             }
             builder.HtmlBody = message.HtmlContent;
             mimeMessage.Body = builder.ToMessageBody();
 
-            using(var client = new SmtpClient())
+            using (var client = new SmtpClient())
             {
-                if(_globalSettings.Mail.Smtp.TrustServer)
+                if (_globalSettings.Mail.Smtp.TrustServer)
                 {
                     client.ServerCertificateValidationCallback = (s, c, h, e) => true;
                 }
 
-                if(!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
+                if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
                     _globalSettings.Mail.Smtp.Port == 25)
                 {
                     await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
@@ -81,7 +81,7 @@ namespace Bit.Core.Services
                     await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
                 }
 
-                if(CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
+                if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
                     CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
                 {
                     await client.AuthenticateAsync(_globalSettings.Mail.Smtp.Username,

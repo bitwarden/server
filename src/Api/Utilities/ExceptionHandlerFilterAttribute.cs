@@ -27,7 +27,7 @@ namespace Bit.Api.Utilities
             var errorMessage = "An error has occurred.";
 
             var exception = context.Exception;
-            if(exception == null)
+            if (exception == null)
             {
                 // Should never happen.
                 return;
@@ -35,12 +35,12 @@ namespace Bit.Api.Utilities
 
             PublicApi.ErrorResponseModel publicErrorModel = null;
             InternalApi.ErrorResponseModel internalErrorModel = null;
-            if(exception is BadRequestException badRequestException)
+            if (exception is BadRequestException badRequestException)
             {
                 context.HttpContext.Response.StatusCode = 400;
-                if(badRequestException.ModelState != null)
+                if (badRequestException.ModelState != null)
                 {
-                    if(_publicApi)
+                    if (_publicApi)
                     {
                         publicErrorModel = new PublicApi.ErrorResponseModel(badRequestException.ModelState);
                     }
@@ -54,11 +54,11 @@ namespace Bit.Api.Utilities
                     errorMessage = badRequestException.Message;
                 }
             }
-            else if(exception is StripeException stripeException &&
+            else if (exception is StripeException stripeException &&
                 stripeException?.StripeError?.ErrorType == "card_error")
             {
                 context.HttpContext.Response.StatusCode = 400;
-                if(_publicApi)
+                if (_publicApi)
                 {
                     publicErrorModel = new PublicApi.ErrorResponseModel(stripeException.StripeError.Parameter,
                         stripeException.Message);
@@ -69,31 +69,31 @@ namespace Bit.Api.Utilities
                         stripeException.Message);
                 }
             }
-            else if(exception is GatewayException)
+            else if (exception is GatewayException)
             {
                 errorMessage = exception.Message;
                 context.HttpContext.Response.StatusCode = 400;
             }
-            else if(exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
+            else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
             {
                 errorMessage = exception.Message;
                 context.HttpContext.Response.StatusCode = 400;
             }
-            else if(exception is ApplicationException)
+            else if (exception is ApplicationException)
             {
                 context.HttpContext.Response.StatusCode = 402;
             }
-            else if(exception is NotFoundException)
+            else if (exception is NotFoundException)
             {
                 errorMessage = "Resource not found.";
                 context.HttpContext.Response.StatusCode = 404;
             }
-            else if(exception is SecurityTokenValidationException)
+            else if (exception is SecurityTokenValidationException)
             {
                 errorMessage = "Invalid token.";
                 context.HttpContext.Response.StatusCode = 403;
             }
-            else if(exception is UnauthorizedAccessException)
+            else if (exception is UnauthorizedAccessException)
             {
                 errorMessage = "Unauthorized.";
                 context.HttpContext.Response.StatusCode = 401;
@@ -106,7 +106,7 @@ namespace Bit.Api.Utilities
                 context.HttpContext.Response.StatusCode = 500;
             }
 
-            if(_publicApi)
+            if (_publicApi)
             {
                 var errorModel = publicErrorModel ?? new PublicApi.ErrorResponseModel(errorMessage);
                 context.Result = new ObjectResult(errorModel);
@@ -115,7 +115,7 @@ namespace Bit.Api.Utilities
             {
                 var errorModel = internalErrorModel ?? new InternalApi.ErrorResponseModel(errorMessage);
                 var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
-                if(env.IsDevelopment())
+                if (env.IsDevelopment())
                 {
                     errorModel.ExceptionMessage = exception.Message;
                     errorModel.ExceptionStackTrace = exception.StackTrace;

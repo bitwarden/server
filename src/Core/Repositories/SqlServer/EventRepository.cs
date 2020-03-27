@@ -65,7 +65,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateAsync(IEvent e)
         {
-            if(!(e is Event ev))
+            if (!(e is Event ev))
             {
                 ev = new Event(e);
             }
@@ -75,21 +75,21 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateManyAsync(IList<IEvent> entities)
         {
-            if(!entities?.Any() ?? true)
+            if (!entities?.Any() ?? true)
             {
                 return;
             }
 
-            if(entities.Count == 1)
+            if (entities.Count == 1)
             {
                 await CreateAsync(entities.First());
                 return;
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
-                using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
+                using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
                 {
                     bulkCopy.DestinationTableName = "[dbo].[Event]";
                     var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event ? e as Event : new Event(e)));
@@ -102,7 +102,7 @@ namespace Bit.Core.Repositories.SqlServer
             IDictionary<string, object> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             DateTime? beforeDate = null;
-            if(!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
+            if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
                 long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
             {
                 beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
@@ -116,13 +116,13 @@ namespace Bit.Core.Repositories.SqlServer
             parameters.Add("@EndDate", endDate.ToUniversalTime(), DbType.DateTime2, null, 7);
             parameters.Add("@BeforeDate", beforeDate, DbType.DateTime2, null, 7);
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var events = (await connection.QueryAsync<Event>(sprocName, parameters,
                     commandType: CommandType.StoredProcedure)).ToList();
 
                 var result = new PagedResult<IEvent>();
-                if(events.Any() && events.Count >= pageOptions.PageSize)
+                if (events.Any() && events.Count >= pageOptions.PageSize)
                 {
                     result.ContinuationToken = events.Last().Date.ToBinary().ToString();
                 }
@@ -134,7 +134,7 @@ namespace Bit.Core.Repositories.SqlServer
         private DataTable BuildEventsTable(SqlBulkCopy bulkCopy, IEnumerable<Event> events)
         {
             var e = events.FirstOrDefault();
-            if(e == null)
+            if (e == null)
             {
                 throw new ApplicationException("Must have some events to bulk import.");
             }
@@ -168,7 +168,7 @@ namespace Bit.Core.Repositories.SqlServer
             var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
             eventsTable.Columns.Add(dateColumn);
 
-            foreach(DataColumn col in eventsTable.Columns)
+            foreach (DataColumn col in eventsTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
             }
@@ -177,7 +177,7 @@ namespace Bit.Core.Repositories.SqlServer
             keys[0] = idColumn;
             eventsTable.PrimaryKey = keys;
 
-            foreach(var ev in events)
+            foreach (var ev in events)
             {
                 ev.SetNewId();
 

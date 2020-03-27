@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api
         public EventResponseModel(IEvent ev)
             : base("event")
         {
-            if(ev == null)
+            if (ev == null)
             {
                 throw new ArgumentNullException(nameof(ev));
             }

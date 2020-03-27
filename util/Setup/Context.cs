@@ -28,13 +28,13 @@ namespace Bit.Setup
 
         public void LoadConfiguration()
         {
-            if(!File.Exists(ConfigPath))
+            if (!File.Exists(ConfigPath))
             {
                 Helpers.WriteLine(this, "No existing `config.yml` detected. Let's generate one.");
 
                 // Looks like updating from older version. Try to create config file.
                 var url = Helpers.GetValueFromEnvFile("global", "globalSettings__baseServiceUri__vault");
-                if(!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 {
                     Helpers.WriteLine(this, "Unable to determine existing installation url.");
                     return;
@@ -45,36 +45,36 @@ namespace Bit.Setup
                 Config.PushNotifications = push != "REPLACE";
 
                 var composeFile = "/bitwarden/docker/docker-compose.yml";
-                if(File.Exists(composeFile))
+                if (File.Exists(composeFile))
                 {
                     var fileLines = File.ReadAllLines(composeFile);
-                    foreach(var line in fileLines)
+                    foreach (var line in fileLines)
                     {
-                        if(!line.StartsWith("# Parameter:"))
+                        if (!line.StartsWith("# Parameter:"))
                         {
                             continue;
                         }
 
                         var paramParts = line.Split("=");
-                        if(paramParts.Length < 2)
+                        if (paramParts.Length < 2)
                         {
                             continue;
                         }
 
-                        if(paramParts[0] == "# Parameter:MssqlDataDockerVolume" &&
+                        if (paramParts[0] == "# Parameter:MssqlDataDockerVolume" &&
                             bool.TryParse(paramParts[1], out var mssqlDataDockerVolume))
                         {
                             Config.DatabaseDockerVolume = mssqlDataDockerVolume;
                             continue;
                         }
 
-                        if(paramParts[0] == "# Parameter:HttpPort" && int.TryParse(paramParts[1], out var httpPort))
+                        if (paramParts[0] == "# Parameter:HttpPort" && int.TryParse(paramParts[1], out var httpPort))
                         {
                             Config.HttpPort = httpPort == 0 ? null : httpPort.ToString();
                             continue;
                         }
 
-                        if(paramParts[0] == "# Parameter:HttpsPort" && int.TryParse(paramParts[1], out var httpsPort))
+                        if (paramParts[0] == "# Parameter:HttpsPort" && int.TryParse(paramParts[1], out var httpsPort))
                         {
                             Config.HttpsPort = httpsPort == 0 ? null : httpsPort.ToString();
                             continue;
@@ -83,7 +83,7 @@ namespace Bit.Setup
                 }
 
                 var nginxFile = "/bitwarden/nginx/default.conf";
-                if(File.Exists(nginxFile))
+                if (File.Exists(nginxFile))
                 {
                     var confContent = File.ReadAllText(nginxFile);
                     var selfSigned = confContent.Contains("/etc/ssl/self/");
@@ -91,20 +91,20 @@ namespace Bit.Setup
                     Config.SslManagedLetsEncrypt = !selfSigned && confContent.Contains("/etc/letsencrypt/live/");
                     var diffieHellman = confContent.Contains("/dhparam.pem;");
                     var trusted = confContent.Contains("ssl_trusted_certificate ");
-                    if(Config.SslManagedLetsEncrypt)
+                    if (Config.SslManagedLetsEncrypt)
                     {
                         Config.Ssl = true;
                     }
-                    else if(Config.Ssl)
+                    else if (Config.Ssl)
                     {
                         var sslPath = selfSigned ? $"/etc/ssl/self/{Config.Domain}" : $"/etc/ssl/{Config.Domain}";
                         Config.SslCertificatePath = string.Concat(sslPath, "/", "certificate.crt");
                         Config.SslKeyPath = string.Concat(sslPath, "/", "private.key");
-                        if(trusted)
+                        if (trusted)
                         {
                             Config.SslCaPath = string.Concat(sslPath, "/", "ca.crt");
                         }
-                        if(diffieHellman)
+                        if (diffieHellman)
                         {
                             Config.SslDiffieHellmanPath = string.Concat(sslPath, "/", "dhparam.pem");
                         }
@@ -123,7 +123,7 @@ namespace Bit.Setup
 
         public void SaveConfiguration()
         {
-            if(Config == null)
+            if (Config == null)
             {
                 throw new Exception("Config is null.");
             }
@@ -134,7 +134,7 @@ namespace Bit.Setup
                 .Build();
             var yaml = serializer.Serialize(Config);
             Directory.CreateDirectory("/bitwarden/");
-            using(var sw = File.CreateText(ConfigPath))
+            using (var sw = File.CreateText(ConfigPath))
             {
                 sw.Write(yaml);
             }

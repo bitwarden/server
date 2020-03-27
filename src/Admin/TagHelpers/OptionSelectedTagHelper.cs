@@ -21,17 +21,17 @@ namespace Bit.Admin.TagHelpers
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            if(context == null)
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            if(output == null)
+            if (output == null)
             {
                 throw new ArgumentNullException(nameof(output));
             }
 
-            if(Selected)
+            if (Selected)
             {
                 output.Attributes.Add("selected", "selected");
             }

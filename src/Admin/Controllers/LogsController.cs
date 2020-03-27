@@ -30,7 +30,7 @@ namespace Bit.Admin.Controllers
             LogEventLevel? level = null, string project = null, DateTime? start = null, DateTime? end = null)
         {
             var collectionLink = UriFactory.CreateDocumentCollectionUri(Database, Collection);
-            using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
+            using (var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
                 _globalSettings.DocumentDb.Key))
             {
                 var options = new FeedOptions
@@ -40,19 +40,19 @@ namespace Bit.Admin.Controllers
                 };
 
                 var query = client.CreateDocumentQuery<LogModel>(collectionLink, options).AsQueryable();
-                if(level.HasValue)
+                if (level.HasValue)
                 {
                     query = query.Where(l => l.Level == level.Value.ToString());
                 }
-                if(!string.IsNullOrWhiteSpace(project))
+                if (!string.IsNullOrWhiteSpace(project))
                 {
                     query = query.Where(l => l.Properties != null && l.Properties["Project"] == (object)project);
                 }
-                if(start.HasValue)
+                if (start.HasValue)
                 {
                     query = query.Where(l => l.Timestamp >= start.Value);
                 }
-                if(end.HasValue)
+                if (end.HasValue)
                 {
                     query = query.Where(l => l.Timestamp <= end.Value);
                 }
@@ -76,12 +76,12 @@ namespace Bit.Admin.Controllers
 
         public async Task<IActionResult> View(Guid id)
         {
-            using(var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
+            using (var client = new DocumentClient(new Uri(_globalSettings.DocumentDb.Uri),
                 _globalSettings.DocumentDb.Key))
             {
                 var uri = UriFactory.CreateDocumentUri(Database, Collection, id.ToString());
                 var response = await client.ReadDocumentAsync<LogDetailsModel>(uri);
-                if(response?.Document == null)
+                if (response?.Document == null)
                 {
                     return RedirectToAction("Index");
                 }

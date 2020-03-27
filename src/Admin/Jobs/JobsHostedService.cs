@@ -30,7 +30,7 @@ namespace Bit.Admin.Jobs
             var timeZone = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                 TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
                 TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
-            if(_globalSettings.SelfHosted)
+            if (_globalSettings.SelfHosted)
             {
                 timeZone = TimeZoneInfo.Utc;
             }
@@ -59,7 +59,7 @@ namespace Bit.Admin.Jobs
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger)
             };
 
-            if(!_globalSettings.SelfHosted)
+            if (!_globalSettings.SelfHosted)
             {
                 jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
             }
@@ -70,7 +70,7 @@ namespace Bit.Admin.Jobs
 
         public static void AddJobsServices(IServiceCollection services, bool selfHosted)
         {
-            if(!selfHosted)
+            if (!selfHosted)
             {
                 services.AddTransient<AliveJob>();
             }

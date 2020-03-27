@@ -16,15 +16,15 @@ namespace Bit.Core.Services
         public AmazonSqsBlockIpService(
             GlobalSettings globalSettings)
         {
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeyId));
             }
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeySecret))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeySecret))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeySecret));
             }
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.Region))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.Region))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.Region));
             }
@@ -40,7 +40,7 @@ namespace Bit.Core.Services
         public async Task BlockIpAsync(string ipAddress, bool permanentBlock)
         {
             var now = DateTime.UtcNow;
-            if(_lastBlock != null && _lastBlock.Item1 == ipAddress && _lastBlock.Item2 == permanentBlock &&
+            if (_lastBlock != null && _lastBlock.Item1 == ipAddress && _lastBlock.Item2 == permanentBlock &&
                 (now - _lastBlock.Item3) < TimeSpan.FromMinutes(1))
             {
                 // Already blocked this IP recently.
@@ -49,7 +49,7 @@ namespace Bit.Core.Services
 
             _lastBlock = new Tuple<string, bool, DateTime>(ipAddress, permanentBlock, now);
             await _client.SendMessageAsync(_blockIpQueueUrl, ipAddress);
-            if(!permanentBlock)
+            if (!permanentBlock)
             {
                 await _client.SendMessageAsync(_unblockIpQueueUrl, ipAddress);
             }
@@ -57,7 +57,7 @@ namespace Bit.Core.Services
 
         private async Task InitAsync()
         {
-            if(_didInit)
+            if (_didInit)
             {
                 return;
             }

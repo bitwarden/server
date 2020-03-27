@@ -58,7 +58,7 @@ namespace Bit.Billing.Models
         {
             var cancellationDate = GetLastCancellationDate();
             var expiresDate = GetLastCancellationDate();
-            if(cancellationDate.HasValue && expiresDate.HasValue)
+            if (cancellationDate.HasValue && expiresDate.HasValue)
             {
                 return cancellationDate.Value <= expiresDate.Value;
             }

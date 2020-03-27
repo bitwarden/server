@@ -53,11 +53,11 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
+            if (PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
             {
                 yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
             }
-            if(PlanType != PlanType.Free && !PaymentMethodType.HasValue)
+            if (PlanType != PlanType.Free && !PaymentMethodType.HasValue)
             {
                 yield return new ValidationResult("Payment method type required.",
                     new string[] { nameof(PaymentMethodType) });

@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<Grant> GetByKeyAsync(string key)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Grant>(
                     "[dbo].[Grant_ReadByKey]",
@@ -34,7 +34,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Grant>> GetManyAsync(string subjectId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Grant>(
                     "[dbo].[Grant_ReadBySubjectId]",
@@ -47,7 +47,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task SaveAsync(Grant obj)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     "[dbo].[Grant_Save]",
@@ -58,7 +58,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAsync(string key)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteByKey]",
@@ -69,7 +69,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAsync(string subjectId, string clientId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteBySubjectIdClientId]",
@@ -80,7 +80,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAsync(string subjectId, string clientId, string type)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteBySubjectIdClientIdType]",

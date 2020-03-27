@@ -27,25 +27,25 @@ namespace Bit.Billing.Controllers
         [HttpPost("iap")]
         public async Task<IActionResult> PostIap()
         {
-            if(HttpContext?.Request?.Query == null)
+            if (HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
             }
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if(key != _billingSettings.AppleWebhookKey)
+            if (key != _billingSettings.AppleWebhookKey)
             {
                 return new BadRequestResult();
             }
 
             string body = null;
-            using(var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
             {
                 body = await reader.ReadToEndAsync();
             }
 
-            if(string.IsNullOrWhiteSpace(body))
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return new BadRequestResult();
             }
@@ -56,7 +56,7 @@ namespace Bit.Billing.Controllers
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
                 return new OkResult();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(e, "Error processing IAP status notification.");
                 return new BadRequestResult();

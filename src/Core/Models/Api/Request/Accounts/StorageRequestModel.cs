@@ -10,7 +10,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(StorageGbAdjustment == 0)
+            if (StorageGbAdjustment == 0)
             {
                 yield return new ValidationResult("Storage adjustment cannot be 0.",
                     new string[] { nameof(StorageGbAdjustment) });

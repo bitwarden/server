@@ -26,7 +26,7 @@ namespace Bit.Core.Services
             await InitAsync();
             var blob = _attachmentsContainer.GetBlockBlobReference($"{cipher.Id}/{attachmentId}");
             blob.Metadata.Add("cipherId", cipher.Id.ToString());
-            if(cipher.UserId.HasValue)
+            if (cipher.UserId.HasValue)
             {
                 blob.Metadata.Add("userId", cipher.UserId.Value.ToString());
             }
@@ -52,13 +52,13 @@ namespace Bit.Core.Services
         {
             await InitAsync();
             var source = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentId}");
-            if(!(await source.ExistsAsync()))
+            if (!(await source.ExistsAsync()))
             {
                 return;
             }
 
             var dest = _attachmentsContainer.GetBlockBlobReference($"{cipherId}/{attachmentId}");
-            if(!(await dest.ExistsAsync()))
+            if (!(await dest.ExistsAsync()))
             {
                 return;
             }
@@ -78,7 +78,7 @@ namespace Bit.Core.Services
             await source.DeleteIfExistsAsync();
 
             var original = _attachmentsContainer.GetBlockBlobReference($"temp/{cipherId}/{attachmentId}");
-            if(!(await original.ExistsAsync()))
+            if (!(await original.ExistsAsync()))
             {
                 return;
             }
@@ -103,17 +103,17 @@ namespace Bit.Core.Services
             var segment = await _attachmentsContainer.ListBlobsSegmentedAsync($"temp/{cipherId}", true,
                 BlobListingDetails.None, 100, null, null, null);
 
-            while(true)
+            while (true)
             {
-                foreach(var blob in segment.Results)
+                foreach (var blob in segment.Results)
                 {
-                    if(blob is CloudBlockBlob blockBlob)
+                    if (blob is CloudBlockBlob blockBlob)
                     {
                         await blockBlob.DeleteIfExistsAsync();
                     }
                 }
 
-                if(segment.ContinuationToken == null)
+                if (segment.ContinuationToken == null)
                 {
                     break;
                 }
@@ -128,17 +128,17 @@ namespace Bit.Core.Services
             var segment = await _attachmentsContainer.ListBlobsSegmentedAsync(cipherId.ToString(), true,
                 BlobListingDetails.None, 100, null, null, null);
 
-            while(true)
+            while (true)
             {
-                foreach(var blob in segment.Results)
+                foreach (var blob in segment.Results)
                 {
-                    if(blob is CloudBlockBlob blockBlob)
+                    if (blob is CloudBlockBlob blockBlob)
                     {
                         await blockBlob.DeleteIfExistsAsync();
                     }
                 }
 
-                if(segment.ContinuationToken == null)
+                if (segment.ContinuationToken == null)
                 {
                     break;
                 }
@@ -159,7 +159,7 @@ namespace Bit.Core.Services
 
         private async Task InitAsync()
         {
-            if(_attachmentsContainer == null)
+            if (_attachmentsContainer == null)
             {
                 _attachmentsContainer = _blobClient.GetContainerReference(AttchmentContainerName);
                 await _attachmentsContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);

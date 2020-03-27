@@ -19,7 +19,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<ICollection<TableModel.Organization>> GetManyByEnabledAsync()
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
@@ -36,7 +36,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail, bool? paid,
             int skip, int take)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 // TODO: more filters
@@ -51,7 +51,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task UpdateStorageAsync(Guid id)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
@@ -75,7 +75,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<ICollection<DataModel.OrganizationAbility>> GetManyAbilitiesAsync()
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 return await GetDbSet(dbContext)

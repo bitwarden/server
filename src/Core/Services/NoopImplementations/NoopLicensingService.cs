@@ -13,7 +13,7 @@ namespace Bit.Core.Services
             IWebHostEnvironment environment,
             GlobalSettings globalSettings)
         {
-            if(!environment.IsDevelopment() && globalSettings.SelfHosted)
+            if (!environment.IsDevelopment() && globalSettings.SelfHosted)
             {
                 throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
             }

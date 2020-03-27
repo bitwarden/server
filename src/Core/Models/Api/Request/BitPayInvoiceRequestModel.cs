@@ -33,16 +33,16 @@ namespace Bit.Core.Models.Api
             };
 
             var posData = string.Empty;
-            if(UserId.HasValue)
+            if (UserId.HasValue)
             {
                 posData = "userId:" + UserId.Value;
             }
-            else if(OrganizationId.HasValue)
+            else if (OrganizationId.HasValue)
             {
                 posData = "organizationId:" + OrganizationId.Value;
             }
 
-            if(Credit)
+            if (Credit)
             {
                 posData += ",accountCredit:1";
                 inv.ItemDesc = "Bitwarden Account Credit";
@@ -58,7 +58,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!UserId.HasValue && !OrganizationId.HasValue)
+            if (!UserId.HasValue && !OrganizationId.HasValue)
             {
                 yield return new ValidationResult("User or Ooganization is required.");
             }

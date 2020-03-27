@@ -45,12 +45,12 @@ namespace Bit.Core.Utilities
             var usePostgreSql = CoreHelpers.SettingHasValue(globalSettings.PostgreSql?.ConnectionString);
             var useEf = usePostgreSql;
 
-            if(useEf)
+            if (useEf)
             {
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
                 services.AddDbContext<EntityFrameworkRepos.DatabaseContext>(options =>
                 {
-                    if(usePostgreSql)
+                    if (usePostgreSql)
                     {
                         options.UseNpgsql(globalSettings.PostgreSql.ConnectionString);
                     }
@@ -78,9 +78,9 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
             }
 
-            if(globalSettings.SelfHosted)
+            if (globalSettings.SelfHosted)
             {
-                if(useEf)
+                if (useEf)
                 {
                     // TODO
                 }
@@ -118,7 +118,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
 
-            if(CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
             {
                 services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
@@ -128,11 +128,11 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             }
 
-            if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
             {
                 services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
+            else if (CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
             {
                 services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
             }
@@ -142,14 +142,14 @@ namespace Bit.Core.Utilities
             }
 
             services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-            if(globalSettings.SelfHosted &&
+            if (globalSettings.SelfHosted &&
                 CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
                 globalSettings.Installation?.Id != null &&
                 CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
             {
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
-            else if(!globalSettings.SelfHosted)
+            else if (!globalSettings.SelfHosted)
             {
                 services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             }
@@ -158,11 +158,11 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             }
 
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
             {
                 services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
             }
-            else if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            else if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
             {
                 services.AddSingleton<IBlockIpService, AmazonSqsBlockIpService>();
             }
@@ -171,11 +171,11 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
             }
 
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {
                 services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             }
-            else if(globalSettings.SelfHosted)
+            else if (globalSettings.SelfHosted)
             {
                 services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
             }
@@ -184,11 +184,11 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IEventWriteService, NoopEventWriteService>();
             }
 
-            if(CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
             {
                 services.AddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings.Attachment.BaseDirectory))
+            else if (CoreHelpers.SettingHasValue(globalSettings.Attachment.BaseDirectory))
             {
                 services.AddSingleton<IAttachmentStorageService, LocalAttachmentStorageService>();
             }
@@ -315,7 +315,7 @@ namespace Bit.Core.Utilities
                     options.SupportedTokens = SupportedTokens.Jwt;
                 });
 
-            if(addAuthorization != null)
+            if (addAuthorization != null)
             {
                 services.AddAuthorization(config =>
                 {
@@ -323,7 +323,7 @@ namespace Bit.Core.Utilities
                 });
             }
 
-            if(environment.IsDevelopment())
+            if (environment.IsDevelopment())
             {
                 Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
             }
@@ -349,11 +349,11 @@ namespace Bit.Core.Utilities
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
                 .AddClientStoreCache<ClientStore>();
 
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 identityServerBuilder.AddDeveloperSigningCredential(false);
             }
-            else if(globalSettings.SelfHosted &&
+            else if (globalSettings.SelfHosted &&
                 CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
                 && File.Exists("identity.pfx"))
             {
@@ -361,13 +361,13 @@ namespace Bit.Core.Utilities
                     globalSettings.IdentityServer.CertificatePassword);
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+            else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
             {
                 var identityServerCert = CoreHelpers.GetCertificate(
                     globalSettings.IdentityServer.CertificateThumbprint);
                 identityServerBuilder.AddSigningCredential(identityServerCert);
             }
-            else if(!globalSettings.SelfHosted &&
+            else if (!globalSettings.SelfHosted &&
                 CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
             {
@@ -393,27 +393,27 @@ namespace Bit.Core.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 return;
             }
 
-            if(globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
+            if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
             {
                 services.AddDataProtection()
                     .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
             {
                 var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
                 X509Certificate2 dataProtectionCert = null;
-                if(CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
+                if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
                 {
                     dataProtectionCert = CoreHelpers.GetCertificate(
                         globalSettings.DataProtection.CertificateThumbprint);
                 }
-                else if(CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
+                else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
                 {
                     dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
                         "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
@@ -439,7 +439,7 @@ namespace Bit.Core.Utilities
         {
             string GetHeaderValue(HttpContext httpContext, string header)
             {
-                if(httpContext.Request.Headers.ContainsKey(header))
+                if (httpContext.Request.Headers.ContainsKey(header))
                 {
                     return httpContext.Request.Headers[header];
                 }
@@ -449,10 +449,10 @@ namespace Bit.Core.Utilities
             // Add version information to response headers
             app.Use(async (httpContext, next) =>
             {
-                using(LogContext.PushProperty("IPAddress", httpContext.GetIpAddress(globalSettings)))
-                using(LogContext.PushProperty("UserAgent", GetHeaderValue(httpContext, "user-agent")))
-                using(LogContext.PushProperty("DeviceType", GetHeaderValue(httpContext, "device-type")))
-                using(LogContext.PushProperty("Origin", GetHeaderValue(httpContext, "origin")))
+                using (LogContext.PushProperty("IPAddress", httpContext.GetIpAddress(globalSettings)))
+                using (LogContext.PushProperty("UserAgent", GetHeaderValue(httpContext, "user-agent")))
+                using (LogContext.PushProperty("DeviceType", GetHeaderValue(httpContext, "device-type")))
+                using (LogContext.PushProperty("Origin", GetHeaderValue(httpContext, "origin")))
                 {
                     httpContext.Response.OnStarting((state) =>
                     {
@@ -470,18 +470,18 @@ namespace Bit.Core.Utilities
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             };
-            if(!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
+            if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
             {
                 var proxies = globalSettings.KnownProxies.Split(',');
-                foreach(var proxy in proxies)
+                foreach (var proxy in proxies)
                 {
-                    if(System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
+                    if (System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
                     {
                         options.KnownProxies.Add(ip);
                     }
                 }
             }
-            if(options.KnownProxies.Count > 1)
+            if (options.KnownProxies.Count > 1)
             {
                 options.ForwardLimit = null;
             }

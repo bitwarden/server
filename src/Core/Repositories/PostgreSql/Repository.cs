@@ -15,7 +15,7 @@ namespace Bit.Core.Repositories.PostgreSql
         public Repository(string connectionString, string readOnlyConnectionString, string table = null)
             : base(connectionString, readOnlyConnectionString)
         {
-            if(!string.IsNullOrWhiteSpace(table))
+            if (!string.IsNullOrWhiteSpace(table))
             {
                 Table = table;
             }
@@ -29,7 +29,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task<T> GetByIdAsync(TId id)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<T>(
                     $"{Table}_read_by_id",
@@ -43,7 +43,7 @@ namespace Bit.Core.Repositories.PostgreSql
         public virtual async Task CreateAsync(T obj)
         {
             obj.SetNewId();
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_create",
@@ -54,7 +54,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_update",
@@ -65,7 +65,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(obj.Id.Equals(default(TId)))
+            if (obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
@@ -77,7 +77,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task DeleteAsync(T obj)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"{Table}_delete_by_id",

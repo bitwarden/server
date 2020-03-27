@@ -53,7 +53,7 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task CreateAsync(IEvent e)
         {
-            if(!(e is EventTableEntity entity))
+            if (!(e is EventTableEntity entity))
             {
                 throw new ArgumentException(nameof(e));
             }
@@ -63,12 +63,12 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task CreateManyAsync(IList<IEvent> e)
         {
-            if(!e?.Any() ?? true)
+            if (!e?.Any() ?? true)
             {
                 return;
             }
 
-            if(e.Count == 1)
+            if (e.Count == 1)
             {
                 await CreateAsync(e.First());
                 return;
@@ -76,10 +76,10 @@ namespace Bit.Core.Repositories.TableStorage
 
             var entities = e.Where(ev => ev is EventTableEntity).Select(ev => ev as EventTableEntity);
             var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
-            foreach(var group in entityGroups)
+            foreach (var group in entityGroups)
             {
                 var groupEntities = group.ToList();
-                if(groupEntities.Count == 1)
+                if (groupEntities.Count == 1)
                 {
                     await CreateEntityAsync(groupEntities.First());
                     continue;
@@ -87,16 +87,16 @@ namespace Bit.Core.Repositories.TableStorage
 
                 // A batch insert can only contain 100 entities at a time
                 var iterations = groupEntities.Count / 100;
-                for(var i = 0; i <= iterations; i++)
+                for (var i = 0; i <= iterations; i++)
                 {
                     var batch = new TableBatchOperation();
                     var batchEntities = groupEntities.Skip(i * 100).Take(100);
-                    if(!batchEntities.Any())
+                    if (!batchEntities.Any())
                     {
                         break;
                     }
 
-                    foreach(var entity in batchEntities)
+                    foreach (var entity in batchEntities)
                     {
                         batch.InsertOrReplace(entity);
                     }
@@ -144,7 +144,7 @@ namespace Bit.Core.Repositories.TableStorage
 
         private string SerializeContinuationToken(TableContinuationToken token)
         {
-            if(token == null)
+            if (token == null)
             {
                 return null;
             }
@@ -155,13 +155,13 @@ namespace Bit.Core.Repositories.TableStorage
 
         private TableContinuationToken DeserializeContinuationToken(string token)
         {
-            if(string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(token))
             {
                 return null;
             }
 
             var tokenParts = token.Split(new string[] { "__" }, StringSplitOptions.None);
-            if(tokenParts.Length < 4 || !Enum.TryParse(tokenParts[0], out StorageLocation tLoc))
+            if (tokenParts.Length < 4 || !Enum.TryParse(tokenParts[0], out StorageLocation tLoc))
             {
                 return null;
             }

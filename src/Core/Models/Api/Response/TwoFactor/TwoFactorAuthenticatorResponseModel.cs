@@ -10,13 +10,13 @@ namespace Bit.Core.Models.Api
         public TwoFactorAuthenticatorResponseModel(User user)
             : base("twoFactorAuthenticator")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-            if(provider?.MetaData?.ContainsKey("Key") ?? false)
+            if (provider?.MetaData?.ContainsKey("Key") ?? false)
             {
                 Key = (string)provider.MetaData["Key"];
                 Enabled = provider.Enabled;

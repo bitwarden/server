@@ -43,15 +43,15 @@ namespace Bit.Events.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody]IEnumerable<EventModel> model)
         {
-            if(model == null || !model.Any())
+            if (model == null || !model.Any())
             {
                 return new BadRequestResult();
             }
             var cipherEvents = new List<Tuple<Cipher, EventType, DateTime?>>();
             var ciphersCache = new Dictionary<Guid, Cipher>();
-            foreach(var eventModel in model)
+            foreach (var eventModel in model)
             {
-                switch(eventModel.Type)
+                switch (eventModel.Type)
                 {
                     // User events
                     case EventType.User_ClientExportedVault:
@@ -66,12 +66,12 @@ namespace Bit.Events.Controllers
                     case EventType.Cipher_ClientToggledHiddenFieldVisible:
                     case EventType.Cipher_ClientToggledPasswordVisible:
                     case EventType.Cipher_ClientViewed:
-                        if(!eventModel.CipherId.HasValue)
+                        if (!eventModel.CipherId.HasValue)
                         {
                             continue;
                         }
                         Cipher cipher = null;
-                        if(ciphersCache.ContainsKey(eventModel.CipherId.Value))
+                        if (ciphersCache.ContainsKey(eventModel.CipherId.Value))
                         {
                             cipher = ciphersCache[eventModel.CipherId.Value];
                         }
@@ -80,11 +80,11 @@ namespace Bit.Events.Controllers
                             cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
                                _currentContext.UserId.Value);
                         }
-                        if(cipher == null)
+                        if (cipher == null)
                         {
                             continue;
                         }
-                        if(!ciphersCache.ContainsKey(eventModel.CipherId.Value))
+                        if (!ciphersCache.ContainsKey(eventModel.CipherId.Value))
                         {
                             ciphersCache.Add(eventModel.CipherId.Value, cipher);
                         }
@@ -94,9 +94,9 @@ namespace Bit.Events.Controllers
                         continue;
                 }
             }
-            if(cipherEvents.Any())
+            if (cipherEvents.Any())
             {
-                foreach(var eventsBatch in cipherEvents.Batch(50))
+                foreach (var eventsBatch in cipherEvents.Batch(50))
                 {
                     await _eventService.LogCipherEventsAsync(eventsBatch);
                 }

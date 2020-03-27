@@ -41,7 +41,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddScoped<SignInManager<TUser>>();
             services.TryAddScoped<RoleManager<TRole>>();
 
-            if(setupAction != null)
+            if (setupAction != null)
             {
                 services.Configure(setupAction);
             }

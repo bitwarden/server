@@ -22,7 +22,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<Folder> GetByIdAsync(Guid id, Guid userId)
         {
             var folder = await GetByIdAsync(id);
-            if(folder == null || folder.UserId != userId)
+            if (folder == null || folder.UserId != userId)
             {
                 return null;
             }
@@ -32,7 +32,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Folder>(
                     $"[{Schema}].[Folder_ReadByUserId]",

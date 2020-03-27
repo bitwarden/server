@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
         public KeysResponseModel(User user)
             : base("keys")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }

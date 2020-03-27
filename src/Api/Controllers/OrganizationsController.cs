@@ -48,13 +48,13 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Get(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -67,13 +67,13 @@ namespace Bit.Api.Controllers
         public async Task<BillingResponseModel> GetBilling(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -86,21 +86,21 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
 
-            if(!_globalSettings.SelfHosted && organization.Gateway != null)
+            if (!_globalSettings.SelfHosted && organization.Gateway != null)
             {
                 var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
-                if(subscriptionInfo == null)
+                if (subscriptionInfo == null)
                 {
                     throw new NotFoundException();
                 }
@@ -117,13 +117,13 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationLicense> GetLicense(string id, [FromQuery]Guid installationId)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var license = await _organizationService.GenerateLicenseAsync(orgIdGuid, installationId);
-            if(license == null)
+            if (license == null)
             {
                 throw new NotFoundException();
             }
@@ -145,7 +145,7 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -160,13 +160,13 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
-            if(license == null)
+            if (license == null)
             {
                 throw new BadRequestException("Invalid license");
             }
@@ -181,13 +181,13 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -204,7 +204,7 @@ namespace Bit.Api.Controllers
         public async Task PostPayment(string id, [FromBody]PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -218,7 +218,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -236,7 +236,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -254,7 +254,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostStorage(string id, [FromBody]StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -272,7 +272,7 @@ namespace Bit.Api.Controllers
         public async Task PostVerifyBank(string id, [FromBody]OrganizationVerifyBankRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -285,7 +285,7 @@ namespace Bit.Api.Controllers
         public async Task PostCancel(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -298,7 +298,7 @@ namespace Bit.Api.Controllers
         public async Task PostReinstate(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -310,7 +310,7 @@ namespace Bit.Api.Controllers
         public async Task Leave(string id)
         {
             var orgGuidId = new Guid(id);
-            if(!_currentContext.OrganizationUser(orgGuidId))
+            if (!_currentContext.OrganizationUser(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -324,24 +324,24 @@ namespace Bit.Api.Controllers
         public async Task Delete(string id, [FromBody]OrganizationDeleteRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
 
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -357,13 +357,13 @@ namespace Bit.Api.Controllers
         public async Task PostLicense(string id, LicenseRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
-            if(license == null)
+            if (license == null)
             {
                 throw new BadRequestException("Invalid license");
             }
@@ -374,13 +374,13 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/import")]
         public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
         {
-            if(!_globalSettings.SelfHosted && (model.Groups.Count() > 200 || model.Users.Count() > 1000))
+            if (!_globalSettings.SelfHosted && (model.Groups.Count() > 200 || model.Users.Count() > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
 
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -399,24 +399,24 @@ namespace Bit.Api.Controllers
         public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]ApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
 
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -432,24 +432,24 @@ namespace Bit.Api.Controllers
         public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]ApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationOwner(orgIdGuid))
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
 
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");

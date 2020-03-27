@@ -46,7 +46,7 @@ namespace Bit.Core.Identity
 
         public async Task<User> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(_currentContext?.User != null && _currentContext.User.Email == normalizedEmail)
+            if (_currentContext?.User != null && _currentContext.User.Email == normalizedEmail)
             {
                 return _currentContext.User;
             }
@@ -57,14 +57,14 @@ namespace Bit.Core.Identity
 
         public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(_currentContext?.User != null &&
+            if (_currentContext?.User != null &&
                 string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
             {
                 return _currentContext.User;
             }
 
             Guid userIdGuid;
-            if(!Guid.TryParse(userId, out userIdGuid))
+            if (!Guid.TryParse(userId, out userIdGuid))
             {
                 return null;
             }

@@ -31,33 +31,33 @@ namespace Bit.Admin.TagHelpers
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            if(context == null)
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            if(output == null)
+            if (output == null)
             {
                 throw new ArgumentNullException(nameof(output));
             }
 
-            if(ActiveAction == null && ActiveController == null)
+            if (ActiveAction == null && ActiveController == null)
             {
                 return;
             }
 
             var descriptor = ViewContext.ActionDescriptor as ControllerActionDescriptor;
-            if(descriptor == null)
+            if (descriptor == null)
             {
                 return;
             }
 
             var controllerMatch = ActiveMatch(ActiveController, descriptor.ControllerName);
             var actionMatch = ActiveMatch(ActiveAction, descriptor.ActionName);
-            if(controllerMatch && actionMatch)
+            if (controllerMatch && actionMatch)
             {
                 var classValue = "active";
-                if(output.Attributes["class"] != null)
+                if (output.Attributes["class"] != null)
                 {
                     classValue += " " + output.Attributes["class"].Value;
                     output.Attributes.Remove(output.Attributes["class"]);

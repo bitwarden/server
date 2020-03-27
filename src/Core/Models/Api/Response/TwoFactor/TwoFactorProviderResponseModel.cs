@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorProviderResponseModel(TwoFactorProviderType type, TwoFactorProvider provider)
             : base(ResponseObj)
         {
-            if(provider == null)
+            if (provider == null)
             {
                 throw new ArgumentNullException(nameof(provider));
             }
@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorProviderResponseModel(TwoFactorProviderType type, User user)
             : base(ResponseObj)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
@@ -36,7 +36,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorProviderResponseModel(TwoFactorProviderType type, Organization organization)
             : base(ResponseObj)
         {
-            if(organization == null)
+            if (organization == null)
             {
                 throw new ArgumentNullException(nameof(organization));
             }

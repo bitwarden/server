@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(PaymentMethodType != Enums.PaymentMethodType.AppleInApp)
+            if (PaymentMethodType != Enums.PaymentMethodType.AppleInApp)
             {
                 yield return new ValidationResult("Not a supported in-app purchase payment method.",
                     new string[] { nameof(PaymentMethodType) });

@@ -20,7 +20,7 @@ namespace Bit.Core.Services
 
         public async Task SaveAsync(Device device)
         {
-            if(device.Id == default(Guid))
+            if (device.Id == default(Guid))
             {
                 await _deviceRepository.CreateAsync(device);
             }

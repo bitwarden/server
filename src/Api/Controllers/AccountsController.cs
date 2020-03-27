@@ -53,7 +53,7 @@ namespace Bit.Api.Controllers
         public async Task<PreloginResponseModel> PostPrelogin([FromBody]PreloginRequestModel model)
         {
             var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-            if(kdfInformation == null)
+            if (kdfInformation == null)
             {
                 kdfInformation = new UserKdfInformation
                 {
@@ -70,12 +70,12 @@ namespace Bit.Api.Controllers
         {
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
                 model.Token, model.OrganizationUserId);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+            foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -95,12 +95,12 @@ namespace Bit.Api.Controllers
         public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -113,19 +113,19 @@ namespace Bit.Api.Controllers
         public async Task PostEmail([FromBody]EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
                 model.NewMasterPasswordHash, model.Token, model.Key);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -138,7 +138,7 @@ namespace Bit.Api.Controllers
         public async Task PostVerifyEmail()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -151,17 +151,17 @@ namespace Bit.Api.Controllers
         public async Task PostVerifyEmailToken([FromBody]VerifyEmailRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
             var result = await _userService.ConfirmEmailAsync(user, model.Token);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -174,19 +174,19 @@ namespace Bit.Api.Controllers
         public async Task PostPassword([FromBody]PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
                 model.NewMasterPasswordHash, model.Key);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -199,19 +199,19 @@ namespace Bit.Api.Controllers
         public async Task PostKdf([FromBody]KdfRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
                 model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -224,7 +224,7 @@ namespace Bit.Api.Controllers
         public async Task PostKey([FromBody]UpdateKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -232,9 +232,9 @@ namespace Bit.Api.Controllers
             var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
             var ciphersDict = model.Ciphers?.ToDictionary(c => c.Id.Value);
             var ciphers = new List<Cipher>();
-            if(existingCiphers.Any() && ciphersDict != null)
+            if (existingCiphers.Any() && ciphersDict != null)
             {
-                foreach(var cipher in existingCiphers.Where(c => ciphersDict.ContainsKey(c.Id)))
+                foreach (var cipher in existingCiphers.Where(c => ciphersDict.ContainsKey(c.Id)))
                 {
                     ciphers.Add(ciphersDict[cipher.Id].ToCipher(cipher));
                 }
@@ -243,9 +243,9 @@ namespace Bit.Api.Controllers
             var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var foldersDict = model.Folders?.ToDictionary(f => f.Id);
             var folders = new List<Folder>();
-            if(existingFolders.Any() && foldersDict != null)
+            if (existingFolders.Any() && foldersDict != null)
             {
-                foreach(var folder in existingFolders.Where(f => foldersDict.ContainsKey(f.Id)))
+                foreach (var folder in existingFolders.Where(f => foldersDict.ContainsKey(f.Id)))
                 {
                     folders.Add(foldersDict[folder.Id].ToFolder(folder));
                 }
@@ -259,12 +259,12 @@ namespace Bit.Api.Controllers
                 ciphers,
                 folders);
 
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -277,18 +277,18 @@ namespace Bit.Api.Controllers
         public async Task PostSecurityStamp([FromBody]SecurityStampRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var result = await _userService.RefreshSecurityStampAsync(user, model.MasterPasswordHash);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -301,7 +301,7 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> GetProfile()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -328,7 +328,7 @@ namespace Bit.Api.Controllers
         public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -343,7 +343,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User);
             long? revisionDate = null;
-            if(userId.HasValue)
+            if (userId.HasValue)
             {
                 var date = await _userService.GetAccountRevisionDateByIdAsync(userId.Value);
                 revisionDate = CoreHelpers.ToEpocMilliseconds(date);
@@ -356,7 +356,7 @@ namespace Bit.Api.Controllers
         public async Task<KeysResponseModel> PostKeys([FromBody]KeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -369,7 +369,7 @@ namespace Bit.Api.Controllers
         public async Task<KeysResponseModel> GetKeys()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -382,12 +382,12 @@ namespace Bit.Api.Controllers
         public async Task Delete([FromBody]DeleteAccountRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
                 await Task.Delay(2000);
@@ -395,12 +395,12 @@ namespace Bit.Api.Controllers
             else
             {
                 var result = await _userService.DeleteAsync(user);
-                if(result.Succeeded)
+                if (result.Succeeded)
                 {
                     return;
                 }
 
-                foreach(var error in result.Errors)
+                foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
@@ -421,18 +421,18 @@ namespace Bit.Api.Controllers
         public async Task PostDeleteRecoverToken([FromBody]VerifyDeleteRecoverRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var result = await _userService.DeleteAsync(user, model.Token);
-            if(result.Succeeded)
+            if (result.Succeeded)
             {
                 return;
             }
 
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
@@ -445,7 +445,7 @@ namespace Bit.Api.Controllers
         public async Task PostIapCheck([FromBody]IapCheckRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -456,19 +456,19 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var valid = model.Validate(_globalSettings);
             UserLicense license = null;
-            if(valid && _globalSettings.SelfHosted)
+            if (valid && _globalSettings.SelfHosted)
             {
                 license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
             }
 
-            if(!valid || (_globalSettings.SelfHosted && license == null))
+            if (!valid || (_globalSettings.SelfHosted && license == null))
             {
                 throw new BadRequestException("Invalid license.");
             }
@@ -489,7 +489,7 @@ namespace Bit.Api.Controllers
         public async Task<BillingResponseModel> GetBilling()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -502,18 +502,18 @@ namespace Bit.Api.Controllers
         public async Task<SubscriptionResponseModel> GetSubscription()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!_globalSettings.SelfHosted && user.Gateway != null)
+            if (!_globalSettings.SelfHosted && user.Gateway != null)
             {
                 var subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
                 var license = await _userService.GenerateLicenseAsync(user, subscriptionInfo);
                 return new SubscriptionResponseModel(user, subscriptionInfo, license);
             }
-            else if(!_globalSettings.SelfHosted)
+            else if (!_globalSettings.SelfHosted)
             {
                 var license = await _userService.GenerateLicenseAsync(user);
                 return new SubscriptionResponseModel(user, license);
@@ -529,7 +529,7 @@ namespace Bit.Api.Controllers
         public async Task PostPayment([FromBody]PaymentRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -542,7 +542,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostStorage([FromBody]StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -560,13 +560,13 @@ namespace Bit.Api.Controllers
         public async Task PostLicense(LicenseRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
             var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
-            if(license == null)
+            if (license == null)
             {
                 throw new BadRequestException("Invalid license");
             }
@@ -579,7 +579,7 @@ namespace Bit.Api.Controllers
         public async Task PostCancel()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -592,7 +592,7 @@ namespace Bit.Api.Controllers
         public async Task PostReinstate()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }

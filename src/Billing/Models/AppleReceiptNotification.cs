@@ -29,7 +29,7 @@ namespace Bit.Billing.Models
 
         public string GetOriginalTransactionId()
         {
-            if(LatestReceiptInfo != null)
+            if (LatestReceiptInfo != null)
             {
                 return LatestReceiptInfo.OriginalTransactionId;
             }
@@ -38,7 +38,7 @@ namespace Bit.Billing.Models
 
         public string GetTransactionId()
         {
-            if(LatestReceiptInfo != null)
+            if (LatestReceiptInfo != null)
             {
                 return LatestReceiptInfo.TransactionId;
             }
@@ -47,7 +47,7 @@ namespace Bit.Billing.Models
 
         public DateTime? GetExpiresDate()
         {
-            if(LatestReceiptInfo != null)
+            if (LatestReceiptInfo != null)
             {
                 return LatestReceiptInfo.ExpiresDate;
             }

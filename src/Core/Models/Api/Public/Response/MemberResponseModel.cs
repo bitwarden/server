@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Api.Public
         public MemberResponseModel(OrganizationUser user, IEnumerable<SelectionReadOnly> collections)
             : base(user)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
@@ -32,7 +32,7 @@ namespace Bit.Core.Models.Api.Public
             IEnumerable<SelectionReadOnly> collections)
             : base(user)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }

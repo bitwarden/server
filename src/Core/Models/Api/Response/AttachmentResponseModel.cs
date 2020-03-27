@@ -29,7 +29,7 @@ namespace Bit.Core.Models.Api
         public static IEnumerable<AttachmentResponseModel> FromCipher(Cipher cipher, GlobalSettings globalSettings)
         {
             var attachments = cipher.GetAttachments();
-            if(attachments == null)
+            if (attachments == null)
             {
                 return null;
             }

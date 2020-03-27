@@ -29,22 +29,22 @@ namespace Bit.Core.Repositories.TableStorage
 
         public async Task UpsertManyAsync(IList<InstallationDeviceEntity> entities)
         {
-            if(!entities?.Any() ?? true)
+            if (!entities?.Any() ?? true)
             {
                 return;
             }
 
-            if(entities.Count == 1)
+            if (entities.Count == 1)
             {
                 await UpsertAsync(entities.First());
                 return;
             }
 
             var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
-            foreach(var group in entityGroups)
+            foreach (var group in entityGroups)
             {
                 var groupEntities = group.ToList();
-                if(groupEntities.Count == 1)
+                if (groupEntities.Count == 1)
                 {
                     await UpsertAsync(groupEntities.First());
                     continue;
@@ -52,16 +52,16 @@ namespace Bit.Core.Repositories.TableStorage
 
                 // A batch insert can only contain 100 entities at a time
                 var iterations = groupEntities.Count / 100;
-                for(var i = 0; i <= iterations; i++)
+                for (var i = 0; i <= iterations; i++)
                 {
                     var batch = new TableBatchOperation();
                     var batchEntities = groupEntities.Skip(i * 100).Take(100);
-                    if(!batchEntities.Any())
+                    if (!batchEntities.Any())
                     {
                         break;
                     }
 
-                    foreach(var entity in batchEntities)
+                    foreach (var entity in batchEntities)
                     {
                         batch.InsertOrReplace(entity);
                     }
@@ -78,9 +78,9 @@ namespace Bit.Core.Repositories.TableStorage
                 entity.ETag = "*";
                 await _table.ExecuteAsync(TableOperation.Delete(entity));
             }
-            catch(StorageException e)
+            catch (StorageException e)
             {
-                if(e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
+                if (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
                 {
                     throw e;
                 }
