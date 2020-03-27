@@ -215,9 +215,9 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task DeleteAsync(Cipher obj, bool permanent = false)
+        public async Task DeleteAsync(Cipher obj, bool permanent = true)
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            using(var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteById]",
@@ -226,7 +226,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = false)
+        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = true)
         {
             using(var connection = new SqlConnection(ConnectionString))
             {

@@ -23,8 +23,8 @@ namespace Bit.Core.Repositories
         Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
         Task UpdateAttachmentAsync(CipherAttachment attachment);
         Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
-        Task DeleteAsync(Cipher obj, bool permanent = false);
-        Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = false);
+        Task DeleteAsync(Cipher obj, bool permanent = true);
+        Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = true);
         Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
         Task DeleteByUserIdAsync(Guid userId);
         Task DeleteByOrganizationIdAsync(Guid organizationId);

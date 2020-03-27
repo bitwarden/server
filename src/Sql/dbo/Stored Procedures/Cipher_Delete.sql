@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_Delete]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER,
-    @Permanent AS BIT = 0
+    @Permanent AS BIT
 AS
 BEGIN
     SET NOCOUNT ON

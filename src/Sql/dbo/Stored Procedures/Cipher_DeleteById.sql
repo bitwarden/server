@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @Permanent AS BIT = 0
+    @Permanent AS BIT
 WITH RECOMPILE
 AS
 BEGIN

@@ -67,7 +67,7 @@ GO
 
 CREATE PROCEDURE [dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]
     @UserId UNIQUEIDENTIFIER,
-    @Deleted BIT = 0
+    @Deleted BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -96,7 +96,7 @@ GO
 
 CREATE PROCEDURE [dbo].[Cipher_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Deleted BIT = 0
+    @Deleted BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -124,7 +124,7 @@ GO
 
 CREATE PROCEDURE [dbo].[CipherOrganizationDetails_ReadById]
     @Id UNIQUEIDENTIFIER,
-    @Deleted BIT = 0
+    @Deleted BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -157,7 +157,7 @@ GO
 
 CREATE PROCEDURE [dbo].[CipherDetails_ReadByUserId]
     @UserId UNIQUEIDENTIFIER,
-    @Deleted BIT = 0
+    @Deleted BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -181,7 +181,7 @@ GO
 CREATE PROCEDURE [dbo].[Cipher_Delete]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER,
-    @Permanent AS BIT = 0
+    @Permanent AS BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -282,7 +282,7 @@ GO
 
 CREATE PROCEDURE [dbo].[Cipher_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @Permanent AS BIT = 0
+    @Permanent AS BIT
 WITH RECOMPILE
 AS
 BEGIN
@@ -480,4 +480,12 @@ IF OBJECT_ID('[dbo].[Cipher_UpdateWithCollections]') IS NOT NULL
 BEGIN
     EXECUTE sp_refreshsqlmodule N'[dbo].[Cipher_UpdateWithCollections]';
 END
+GO
+
+DROP INDEX IF EXISTS [IX_Cipher_UserId_OrganizationId_IncludeAll]
+    ON [dbo].[Cipher];
+GO
+CREATE NONCLUSTERED INDEX [IX_Cipher_UserId_OrganizationId_IncludeAll]
+    ON [dbo].[Cipher]([UserId] ASC, [OrganizationId] ASC)
+    INCLUDE([Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate], [DeletedDate]);
 GO
