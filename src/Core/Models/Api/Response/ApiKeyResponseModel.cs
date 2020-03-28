@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
         public ApiKeyResponseModel(Organization organization, string obj = "apiKey")
             : base(obj)
         {
-            if(organization == null)
+            if (organization == null)
             {
                 throw new ArgumentNullException(nameof(organization));
             }

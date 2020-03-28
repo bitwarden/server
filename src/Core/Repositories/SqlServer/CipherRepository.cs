@@ -25,7 +25,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     $"[{Schema}].[CipherDetails_ReadByIdUserId]",
@@ -38,7 +38,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id, bool deleted = false)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     $"[{Schema}].[CipherOrganizationDetails_ReadById]",
@@ -51,7 +51,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.QueryFirstOrDefaultAsync<bool>(
                     $"[{Schema}].[Cipher_ReadCanEditByIdUserId]",
@@ -65,7 +65,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true, bool deleted = false)
         {
             string sprocName = null;
-            if(withOrganizations)
+            if (withOrganizations)
             {
                 sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
             }
@@ -74,7 +74,7 @@ namespace Bit.Core.Repositories.SqlServer
                 sprocName = $"[{Schema}].[CipherDetails_ReadWithoutOrganizationsByUserId]";
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     sprocName,
@@ -90,7 +90,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId, bool deleted = false)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Cipher>(
                     $"[{Schema}].[Cipher_ReadByOrganizationId]",
@@ -107,7 +107,7 @@ namespace Bit.Core.Repositories.SqlServer
             var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(
                 JsonConvert.SerializeObject(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_CreateWithCollections]",
@@ -119,7 +119,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task CreateAsync(CipherDetails cipher)
         {
             cipher.SetNewId();
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[CipherDetails_Create]",
@@ -134,7 +134,7 @@ namespace Bit.Core.Repositories.SqlServer
             var objWithCollections = JsonConvert.DeserializeObject<CipherDetailsWithCollections>(
                 JsonConvert.SerializeObject(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[CipherDetails_CreateWithCollections]",
@@ -145,7 +145,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task ReplaceAsync(CipherDetails obj)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[CipherDetails_Update]",
@@ -156,7 +156,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpsertAsync(CipherDetails cipher)
         {
-            if(cipher.Id.Equals(default(Guid)))
+            if (cipher.Id.Equals(default(Guid)))
             {
                 await CreateAsync(cipher);
             }
@@ -172,7 +172,7 @@ namespace Bit.Core.Repositories.SqlServer
                 JsonConvert.SerializeObject(obj));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.ExecuteScalarAsync<int>(
                     $"[{Schema}].[Cipher_UpdateWithCollections]",
@@ -184,7 +184,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_UpdatePartial]",
@@ -195,7 +195,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateAttachmentAsync(CipherAttachment attachment)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_UpdateAttachment]",
@@ -206,7 +206,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteAttachment]",
@@ -217,7 +217,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAsync(Cipher obj, bool permanent = true)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteById]",
@@ -228,7 +228,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = true)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_Delete]",
@@ -239,7 +239,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_Move]",
@@ -250,7 +250,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteByUserIdAsync(Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteByUserId]",
@@ -261,7 +261,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteByOrganizationIdAsync(Guid organizationId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteByOrganizationId]",
@@ -272,24 +272,24 @@ namespace Bit.Core.Repositories.SqlServer
 
         public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using(var transaction = connection.BeginTransaction())
+                using (var transaction = connection.BeginTransaction())
                 {
                     try
                     {
                         // 1. Update user.
 
-                        using(var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
+                        using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
                             cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
                             cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
                             cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
 
-                            if(string.IsNullOrWhiteSpace(user.PrivateKey))
+                            if (string.IsNullOrWhiteSpace(user.PrivateKey))
                             {
                                 cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
                             }
@@ -313,16 +313,16 @@ namespace Bit.Core.Repositories.SqlServer
                             INTO #TempFolder
                             FROM [dbo].[Folder]";
 
-                        using(var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+                        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
                         {
                             cmd.ExecuteNonQuery();
                         }
 
                         // 3. Bulk copy into temp tables.
 
-                        if(ciphers.Any())
+                        if (ciphers.Any())
                         {
-                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "#TempCipher";
                                 var dataTable = BuildCiphersTable(bulkCopy, ciphers);
@@ -330,9 +330,9 @@ namespace Bit.Core.Repositories.SqlServer
                             }
                         }
 
-                        if(folders.Any())
+                        if (folders.Any())
                         {
-                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "#TempFolder";
                                 var dataTable = BuildFoldersTable(bulkCopy, folders);
@@ -344,7 +344,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                         var sql = string.Empty;
 
-                        if(ciphers.Any())
+                        if (ciphers.Any())
                         {
                             sql += @"
                                 UPDATE
@@ -361,7 +361,7 @@ namespace Bit.Core.Repositories.SqlServer
                                     C.[UserId] = @UserId";
                         }
 
-                        if(folders.Any())
+                        if (folders.Any())
                         {
                             sql += @"
                                 UPDATE
@@ -381,7 +381,7 @@ namespace Bit.Core.Repositories.SqlServer
                             DROP TABLE #TempCipher
                             DROP TABLE #TempFolder";
 
-                        using(var cmd = new SqlCommand(sql, connection, transaction))
+                        using (var cmd = new SqlCommand(sql, connection, transaction))
                         {
                             cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = user.Id;
                             cmd.ExecuteNonQuery();
@@ -402,16 +402,16 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
         {
-            if(!ciphers.Any())
+            if (!ciphers.Any())
             {
                 return;
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using(var transaction = connection.BeginTransaction())
+                using (var transaction = connection.BeginTransaction())
                 {
                     try
                     {
@@ -422,13 +422,13 @@ namespace Bit.Core.Repositories.SqlServer
                             INTO #TempCipher
                             FROM [dbo].[Cipher]";
 
-                        using(var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+                        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
                         {
                             cmd.ExecuteNonQuery();
                         }
 
                         // 2. Bulk copy into temp tables.
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "#TempCipher";
                             var dataTable = BuildCiphersTable(bulkCopy, ciphers);
@@ -458,7 +458,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                             DROP TABLE #TempCipher";
 
-                        using(var cmd = new SqlCommand(sql, connection, transaction))
+                        using (var cmd = new SqlCommand(sql, connection, transaction))
                         {
                             cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
                             cmd.ExecuteNonQuery();
@@ -482,22 +482,22 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            if(!ciphers.Any())
+            if (!ciphers.Any())
             {
                 return;
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using(var transaction = connection.BeginTransaction())
+                using (var transaction = connection.BeginTransaction())
                 {
                     try
                     {
-                        if(folders.Any())
+                        if (folders.Any())
                         {
-                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "[dbo].[Folder]";
                                 var dataTable = BuildFoldersTable(bulkCopy, folders);
@@ -505,7 +505,7 @@ namespace Bit.Core.Repositories.SqlServer
                             }
                         }
 
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
                             var dataTable = BuildCiphersTable(bulkCopy, ciphers);
@@ -531,38 +531,38 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
             IEnumerable<CollectionCipher> collectionCiphers)
         {
-            if(!ciphers.Any())
+            if (!ciphers.Any())
             {
                 return;
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using(var transaction = connection.BeginTransaction())
+                using (var transaction = connection.BeginTransaction())
                 {
                     try
                     {
-                        using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Cipher]";
                             var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                             bulkCopy.WriteToServer(dataTable);
                         }
 
-                        if(collections.Any())
+                        if (collections.Any())
                         {
-                            using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
                                 bulkCopy.DestinationTableName = "[dbo].[Collection]";
                                 var dataTable = BuildCollectionsTable(bulkCopy, collections);
                                 bulkCopy.WriteToServer(dataTable);
                             }
 
-                            if(collectionCiphers.Any())
+                            if (collectionCiphers.Any())
                             {
-                                using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                                using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                                 {
                                     bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
                                     var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
@@ -590,7 +590,7 @@ namespace Bit.Core.Repositories.SqlServer
         private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
         {
             var c = ciphers.FirstOrDefault();
-            if(c == null)
+            if (c == null)
             {
                 throw new ApplicationException("Must have some ciphers to bulk import.");
             }
@@ -618,7 +618,7 @@ namespace Bit.Core.Repositories.SqlServer
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             ciphersTable.Columns.Add(revisionDateColumn);
 
-            foreach(DataColumn col in ciphersTable.Columns)
+            foreach (DataColumn col in ciphersTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
             }
@@ -627,7 +627,7 @@ namespace Bit.Core.Repositories.SqlServer
             keys[0] = idColumn;
             ciphersTable.PrimaryKey = keys;
 
-            foreach(var cipher in ciphers)
+            foreach (var cipher in ciphers)
             {
                 var row = ciphersTable.NewRow();
 
@@ -651,7 +651,7 @@ namespace Bit.Core.Repositories.SqlServer
         private DataTable BuildFoldersTable(SqlBulkCopy bulkCopy, IEnumerable<Folder> folders)
         {
             var f = folders.FirstOrDefault();
-            if(f == null)
+            if (f == null)
             {
                 throw new ApplicationException("Must have some folders to bulk import.");
             }
@@ -669,7 +669,7 @@ namespace Bit.Core.Repositories.SqlServer
             var revisionDateColumn = new DataColumn(nameof(f.RevisionDate), f.RevisionDate.GetType());
             foldersTable.Columns.Add(revisionDateColumn);
 
-            foreach(DataColumn col in foldersTable.Columns)
+            foreach (DataColumn col in foldersTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
             }
@@ -678,7 +678,7 @@ namespace Bit.Core.Repositories.SqlServer
             keys[0] = idColumn;
             foldersTable.PrimaryKey = keys;
 
-            foreach(var folder in folders)
+            foreach (var folder in folders)
             {
                 var row = foldersTable.NewRow();
 
@@ -697,7 +697,7 @@ namespace Bit.Core.Repositories.SqlServer
         private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections)
         {
             var c = collections.FirstOrDefault();
-            if(c == null)
+            if (c == null)
             {
                 throw new ApplicationException("Must have some collections to bulk import.");
             }
@@ -715,7 +715,7 @@ namespace Bit.Core.Repositories.SqlServer
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             collectionsTable.Columns.Add(revisionDateColumn);
 
-            foreach(DataColumn col in collectionsTable.Columns)
+            foreach (DataColumn col in collectionsTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
             }
@@ -724,7 +724,7 @@ namespace Bit.Core.Repositories.SqlServer
             keys[0] = idColumn;
             collectionsTable.PrimaryKey = keys;
 
-            foreach(var collection in collections)
+            foreach (var collection in collections)
             {
                 var row = collectionsTable.NewRow();
 
@@ -743,7 +743,7 @@ namespace Bit.Core.Repositories.SqlServer
         private DataTable BuildCollectionCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<CollectionCipher> collectionCiphers)
         {
             var cc = collectionCiphers.FirstOrDefault();
-            if(cc == null)
+            if (cc == null)
             {
                 throw new ApplicationException("Must have some collectionCiphers to bulk import.");
             }
@@ -755,7 +755,7 @@ namespace Bit.Core.Repositories.SqlServer
             var cipherIdColumn = new DataColumn(nameof(cc.CipherId), cc.CipherId.GetType());
             collectionCiphersTable.Columns.Add(cipherIdColumn);
 
-            foreach(DataColumn col in collectionCiphersTable.Columns)
+            foreach (DataColumn col in collectionCiphersTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
             }
@@ -765,7 +765,7 @@ namespace Bit.Core.Repositories.SqlServer
             keys[1] = cipherIdColumn;
             collectionCiphersTable.PrimaryKey = keys;
 
-            foreach(var collectionCipher in collectionCiphers)
+            foreach (var collectionCipher in collectionCiphers)
             {
                 var row = collectionCiphersTable.NewRow();
 

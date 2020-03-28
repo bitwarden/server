@@ -22,7 +22,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<Device> GetByIdAsync(Guid id, Guid userId)
         {
             var device = await GetByIdAsync(id);
-            if(device == null || device.UserId != userId)
+            if (device == null || device.UserId != userId)
             {
                 return null;
             }
@@ -32,7 +32,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<Device> GetByIdentifierAsync(string identifier)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Device>(
                     $"[{Schema}].[{Table}_ReadByIdentifier]",
@@ -48,7 +48,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<Device> GetByIdentifierAsync(string identifier, Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Device>(
                     $"[{Schema}].[{Table}_ReadByIdentifierUserId]",
@@ -65,7 +65,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<Device>> GetManyByUserIdAsync(Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Device>(
                     $"[{Schema}].[{Table}_ReadByUserId]",
@@ -78,7 +78,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task ClearPushTokenAsync(Guid id)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_ClearPushTokenById]",

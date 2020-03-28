@@ -51,7 +51,7 @@ namespace Bit.Api.Public.Controllers
         {
             var userDetails = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
             var orgUser = userDetails?.Item1;
-            if(orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
+            if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -74,7 +74,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> GetGroupIds(Guid id)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-            if(orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
+            if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -138,7 +138,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Put(Guid id, [FromBody]MemberUpdateRequestModel model)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
-            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -146,7 +146,7 @@ namespace Bit.Api.Public.Controllers
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
             await _organizationService.SaveUserAsync(updatedUser, null, associations);
             MemberResponseModel response = null;
-            if(existingUser.UserId.HasValue)
+            if (existingUser.UserId.HasValue)
             {
                 var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
                 response = new MemberResponseModel(existingUserDetails,
@@ -174,7 +174,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> PutGroupIds(Guid id, [FromBody]UpdateGroupIdsRequestModel model)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
-            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -196,7 +196,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _organizationUserRepository.GetByIdAsync(id);
-            if(user == null || user.OrganizationId != _currentContext.OrganizationId)
+            if (user == null || user.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -218,7 +218,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> PostReinvite(Guid id)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
-            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }

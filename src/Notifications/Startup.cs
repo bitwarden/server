@@ -57,7 +57,7 @@ namespace Bit.Notifications
                     MessagePack.Resolvers.ContractlessStandardResolver.Instance
                 };
             });
-            if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
             {
                 signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
                     options =>
@@ -73,12 +73,12 @@ namespace Bit.Notifications
             services.AddMvc();
 
             services.AddHostedService<HeartbeatHostedService>();
-            if(!globalSettings.SelfHosted)
+            if (!globalSettings.SelfHosted)
             {
                 // Hosted Services
                 Jobs.JobsHostedService.AddJobsServices(services);
                 services.AddHostedService<Jobs.JobsHostedService>();
-                if(CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+                if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
                 {
                     services.AddHostedService<AzureQueueHostedService>();
                 }
@@ -94,7 +94,7 @@ namespace Bit.Notifications
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }

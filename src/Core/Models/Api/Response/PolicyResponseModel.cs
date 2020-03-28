@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public PolicyResponseModel(Policy policy, string obj = "policy")
             : base(obj)
         {
-            if(policy == null)
+            if (policy == null)
             {
                 throw new ArgumentNullException(nameof(policy));
             }
@@ -20,7 +20,7 @@ namespace Bit.Core.Models.Api
             OrganizationId = policy.OrganizationId.ToString();
             Type = policy.Type;
             Enabled = policy.Enabled;
-            if(!string.IsNullOrWhiteSpace(policy.Data))
+            if (!string.IsNullOrWhiteSpace(policy.Data))
             {
                 Data = JsonConvert.DeserializeObject<Dictionary<string, object>>(policy.Data);
             }

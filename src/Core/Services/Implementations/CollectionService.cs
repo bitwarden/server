@@ -37,24 +37,24 @@ namespace Bit.Core.Services
             Guid? assignUserId = null)
         {
             var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
-            if(org == null)
+            if (org == null)
             {
                 throw new BadRequestException("Organization not found");
             }
 
-            if(collection.Id == default(Guid))
+            if (collection.Id == default(Guid))
             {
-                if(org.MaxCollections.HasValue)
+                if (org.MaxCollections.HasValue)
                 {
                     var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if(org.MaxCollections.Value <= collectionCount)
+                    if (org.MaxCollections.Value <= collectionCount)
                     {
                         throw new BadRequestException("You have reached the maximum number of collections " +
                         $"({org.MaxCollections.Value}) for this organization.");
                     }
                 }
 
-                if(groups == null || !org.UseGroups)
+                if (groups == null || !org.UseGroups)
                 {
                     await _collectionRepository.CreateAsync(collection);
                 }
@@ -64,10 +64,10 @@ namespace Bit.Core.Services
                 }
 
                 // Assign a user to the newly created collection.
-                if(assignUserId.HasValue)
+                if (assignUserId.HasValue)
                 {
                     var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
-                    if(orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
+                    if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
                     {
                         await _collectionRepository.UpdateUsersAsync(collection.Id,
                             new List<SelectionReadOnly> {
@@ -79,7 +79,7 @@ namespace Bit.Core.Services
             }
             else
             {
-                if(!org.UseGroups)
+                if (!org.UseGroups)
                 {
                     await _collectionRepository.ReplaceAsync(collection);
                 }
@@ -101,7 +101,7 @@ namespace Bit.Core.Services
         public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if(orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
+            if (orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
             {
                 throw new NotFoundException();
             }

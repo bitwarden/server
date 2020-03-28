@@ -34,12 +34,12 @@ namespace Bit.Admin.Controllers
 
         public async Task<IActionResult> Index(string email, int page = 1, int count = 25)
         {
-            if(page < 1)
+            if (page < 1)
             {
                 page = 1;
             }
 
-            if(count < 1)
+            if (count < 1)
             {
                 count = 1;
             }
@@ -59,7 +59,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> View(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if(user == null)
+            if (user == null)
             {
                 return RedirectToAction("Index");
             }
@@ -72,7 +72,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Edit(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if(user == null)
+            if (user == null)
             {
                 return RedirectToAction("Index");
             }
@@ -88,7 +88,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Edit(Guid id, UserEditModel model)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if(user == null)
+            if (user == null)
             {
                 return RedirectToAction("Index");
             }
@@ -103,7 +103,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if(user != null)
+            if (user != null)
             {
                 await _userRepository.DeleteAsync(user);
             }

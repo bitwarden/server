@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Business
 
             public BillingSource(PaymentMethod method)
             {
-                if(method.Card != null)
+                if (method.Card != null)
                 {
                     Type = PaymentMethodType.Card;
                     Description = $"{method.Card.Brand?.ToUpperInvariant()}, *{method.Card.Last4}, " +
@@ -33,7 +33,7 @@ namespace Bit.Core.Models.Business
 
             public BillingSource(IPaymentSource source)
             {
-                if(source is BankAccount bankAccount)
+                if (source is BankAccount bankAccount)
                 {
                     Type = PaymentMethodType.BankAccount;
                     Description = $"{bankAccount.BankName}, *{bankAccount.Last4} - " +
@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Business
                         bankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
                     NeedsVerification = bankAccount.Status == "new" || bankAccount.Status == "validated";
                 }
-                else if(source is Card card)
+                else if (source is Card card)
                 {
                     Type = PaymentMethodType.Card;
                     Description = $"{card.Brand}, *{card.Last4}, " +
@@ -52,7 +52,7 @@ namespace Bit.Core.Models.Business
                             card.ExpYear);
                     CardBrand = card.Brand;
                 }
-                else if(source is Source src && src.Card != null)
+                else if (source is Source src && src.Card != null)
                 {
                     Type = PaymentMethodType.Card;
                     Description = $"{src.Card.Brand}, *{src.Card.Last4}, " +
@@ -66,12 +66,12 @@ namespace Bit.Core.Models.Business
 
             public BillingSource(Braintree.PaymentMethod method)
             {
-                if(method is Braintree.PayPalAccount paypal)
+                if (method is Braintree.PayPalAccount paypal)
                 {
                     Type = PaymentMethodType.PayPal;
                     Description = paypal.Email;
                 }
-                else if(method is Braintree.CreditCard card)
+                else if (method is Braintree.CreditCard card)
                 {
                     Type = PaymentMethodType.Card;
                     Description = $"{card.CardType.ToString()}, *{card.LastFour}, " +
@@ -81,7 +81,7 @@ namespace Bit.Core.Models.Business
                             card.ExpirationYear);
                     CardBrand = card.CardType.ToString();
                 }
-                else if(method is Braintree.UsBankAccount bank)
+                else if (method is Braintree.UsBankAccount bank)
                 {
                     Type = PaymentMethodType.BankAccount;
                     Description = $"{bank.BankName}, *{bank.Last4}";

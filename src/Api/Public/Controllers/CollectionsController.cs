@@ -44,7 +44,7 @@ namespace Bit.Api.Public.Controllers
         {
             var collectionWithGroups = await _collectionRepository.GetByIdWithGroupsAsync(id);
             var collection = collectionWithGroups?.Item1;
-            if(collection == null || collection.OrganizationId != _currentContext.OrganizationId)
+            if (collection == null || collection.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -87,7 +87,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Put(Guid id, [FromBody]CollectionUpdateRequestModel model)
         {
             var existingCollection = await _collectionRepository.GetByIdAsync(id);
-            if(existingCollection == null || existingCollection.OrganizationId != _currentContext.OrganizationId)
+            if (existingCollection == null || existingCollection.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -111,7 +111,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var collection = await _collectionRepository.GetByIdAsync(id);
-            if(collection == null || collection.OrganizationId != _currentContext.OrganizationId)
+            if (collection == null || collection.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }

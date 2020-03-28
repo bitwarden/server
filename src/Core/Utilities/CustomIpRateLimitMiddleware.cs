@@ -56,7 +56,7 @@ namespace Bit.Core.Utilities
             _memoryCache.TryGetValue(key, out int blockedCount);
 
             blockedCount++;
-            if(blockedCount > 10)
+            if (blockedCount > 10)
             {
                 _blockIpService.BlockIpAsync(identity.ClientIp, false);
                 _logger.LogInformation(Constants.BypassFiltersEventId, null,
@@ -73,18 +73,18 @@ namespace Bit.Core.Utilities
 
         private string GetRequestInfo(HttpContext httpContext)
         {
-            if(httpContext == null || httpContext.Request == null)
+            if (httpContext == null || httpContext.Request == null)
             {
                 return null;
             }
 
             var s = string.Empty;
-            foreach(var header in httpContext.Request.Headers)
+            foreach (var header in httpContext.Request.Headers)
             {
                 s += $"Header \"{header.Key}\": {header.Value} \n";
             }
 
-            foreach(var query in httpContext.Request.Query)
+            foreach (var query in httpContext.Request.Query)
             {
                 s += $"Query \"{query.Key}\": {query.Value} \n";
             }

@@ -53,7 +53,7 @@ namespace Bit.Core.Services
 
         private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
         {
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
                 // to the organization. Potentially we could blindly send to just users that have the access all permission
@@ -62,7 +62,7 @@ namespace Bit.Core.Services
 
                 // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
             }
-            else if(cipher.UserId.HasValue)
+            else if (cipher.UserId.HasValue)
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -169,14 +169,14 @@ namespace Bit.Core.Services
         {
             var currentContext = _httpContextAccessor?.HttpContext?.
                 RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
-            if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
+            if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
                 var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
-                if(device != null)
+                if (device != null)
                 {
                     request.DeviceId = device.Id.ToString();
                 }
-                if(addIdentifier)
+                if (addIdentifier)
                 {
                     request.Identifier = currentContext.DeviceIdentifier;
                 }

@@ -72,14 +72,14 @@ namespace Bit.Core.Utilities
         {
             T[] bucket = null;
             var count = 0;
-            foreach(var item in source)
+            foreach (var item in source)
             {
-                if(bucket == null)
+                if (bucket == null)
                 {
                     bucket = new T[size];
                 }
                 bucket[count++] = item;
-                if(count != size)
+                if (count != size)
                 {
                     continue;
                 }
@@ -88,7 +88,7 @@ namespace Bit.Core.Utilities
                 count = 0;
             }
             // Return the last bucket with all remaining elements
-            if(bucket != null && count > 0)
+            if (bucket != null && count > 0)
             {
                 yield return bucket.Take(count);
             }
@@ -105,9 +105,9 @@ namespace Bit.Core.Utilities
             table.SetTypeName($"[dbo].[{columnName}Array]");
             table.Columns.Add(columnName, typeof(T));
 
-            if(values != null)
+            if (values != null)
             {
-                foreach(var value in values)
+                foreach (var value in values)
                 {
                     table.Rows.Add(value);
                 }
@@ -126,9 +126,9 @@ namespace Bit.Core.Utilities
             var readOnlyColumn = new DataColumn("ReadOnly", typeof(bool));
             table.Columns.Add(readOnlyColumn);
 
-            if(values != null)
+            if (values != null)
             {
-                foreach(var value in values)
+                foreach (var value in values)
                 {
                     var row = table.NewRow();
                     row[idColumn] = value.Id;
@@ -155,7 +155,7 @@ namespace Bit.Core.Utilities
             var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             certStore.Open(OpenFlags.ReadOnly);
             var certCollection = certStore.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
-            if(certCollection.Count > 0)
+            if (certCollection.Count > 0)
             {
                 cert = certCollection[0];
             }
@@ -172,8 +172,8 @@ namespace Bit.Core.Utilities
         public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
         {
             var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
-            using(var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
-            using(var ms = new MemoryStream())
+            using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
+            using (var ms = new MemoryStream())
             {
                 await s.CopyToAsync(ms);
                 return new X509Certificate2(ms.ToArray(), password);
@@ -185,10 +185,10 @@ namespace Bit.Core.Utilities
         {
             var blobClient = cloudStorageAccount.CreateCloudBlobClient();
             var containerRef = blobClient.GetContainerReference(container);
-            if(await containerRef.ExistsAsync())
+            if (await containerRef.ExistsAsync())
             {
                 var blobRef = containerRef.GetBlobReference(file);
-                if(await blobRef.ExistsAsync())
+                if (await blobRef.ExistsAsync())
                 {
                     var blobBytes = new byte[blobRef.Properties.Length];
                     await blobRef.DownloadToByteArrayAsync(blobBytes, 0);
@@ -243,18 +243,18 @@ namespace Bit.Core.Utilities
         // ref https://stackoverflow.com/a/8996788/1090359 with modifications
         public static string SecureRandomString(int length, string characters)
         {
-            if(length < 0)
+            if (length < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(length), "length cannot be less than zero.");
             }
 
-            if((characters?.Length ?? 0) == 0)
+            if ((characters?.Length ?? 0) == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(characters), "characters invalid.");
             }
 
             const int byteSize = 0x100;
-            if(byteSize < characters.Length)
+            if (byteSize < characters.Length)
             {
                 throw new ArgumentException(
                     string.Format("{0} may contain no more than {1} characters.", nameof(characters), byteSize),
@@ -262,19 +262,19 @@ namespace Bit.Core.Utilities
             }
 
             var outOfRangeStart = byteSize - (byteSize % characters.Length);
-            using(var rng = RandomNumberGenerator.Create())
+            using (var rng = RandomNumberGenerator.Create())
             {
                 var sb = new StringBuilder();
                 var buffer = new byte[128];
-                while(sb.Length < length)
+                while (sb.Length < length)
                 {
                     rng.GetBytes(buffer);
-                    for(var i = 0; i < buffer.Length && sb.Length < length; ++i)
+                    for (var i = 0; i < buffer.Length && sb.Length < length; ++i)
                     {
                         // Divide the byte into charSet-sized groups. If the random value falls into the last group and the
                         // last group is too small to choose from the entire allowedCharSet, ignore the value in order to
                         // avoid biasing the result.
-                        if(outOfRangeStart <= buffer[i])
+                        if (outOfRangeStart <= buffer[i])
                         {
                             continue;
                         }
@@ -290,25 +290,25 @@ namespace Bit.Core.Utilities
         private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
         {
             var characters = string.Empty;
-            if(alpha)
+            if (alpha)
             {
-                if(upper)
+                if (upper)
                 {
                     characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 }
 
-                if(lower)
+                if (lower)
                 {
                     characters += "abcdefghijklmnopqrstuvwxyz";
                 }
             }
 
-            if(numeric)
+            if (numeric)
             {
                 characters += "0123456789";
             }
 
-            if(special)
+            if (special)
             {
                 characters += "!@#$%^*&";
             }
@@ -327,17 +327,17 @@ namespace Bit.Core.Utilities
             // Determine the suffix and readable value
             string suffix;
             double readable;
-            if(absoluteSize >= 0x40000000) // 1 Gigabyte
+            if (absoluteSize >= 0x40000000) // 1 Gigabyte
             {
                 suffix = "GB";
                 readable = (size >> 20);
             }
-            else if(absoluteSize >= 0x100000) // 1 Megabyte
+            else if (absoluteSize >= 0x100000) // 1 Megabyte
             {
                 suffix = "MB";
                 readable = (size >> 10);
             }
-            else if(absoluteSize >= 0x400) // 1 Kilobyte
+            else if (absoluteSize >= 0x400) // 1 Kilobyte
             {
                 suffix = "KB";
                 readable = size;
@@ -403,7 +403,7 @@ namespace Bit.Core.Utilities
             // 63rd char of encoding
             output = output.Replace('_', '/');
             // Pad with trailing '='s
-            switch(output.Length % 4)
+            switch (output.Length % 4)
             {
                 case 0:
                     // No pad chars in this case
@@ -424,17 +424,17 @@ namespace Bit.Core.Utilities
 
         public static string FormatLicenseSignatureValue(object val)
         {
-            if(val == null)
+            if (val == null)
             {
                 return string.Empty;
             }
 
-            if(val.GetType() == typeof(DateTime))
+            if (val.GetType() == typeof(DateTime))
             {
                 return ToEpocSeconds((DateTime)val).ToString();
             }
 
-            if(val.GetType() == typeof(bool))
+            if (val.GetType() == typeof(bool))
             {
                 return val.ToString().ToLowerInvariant();
             }
@@ -444,7 +444,7 @@ namespace Bit.Core.Utilities
 
         public static string GetVersion()
         {
-            if(string.IsNullOrWhiteSpace(_version))
+            if (string.IsNullOrWhiteSpace(_version))
             {
                 _version = Assembly.GetEntryAssembly()
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -467,7 +467,7 @@ namespace Bit.Core.Utilities
         private static string Other2Qwerty(string value, string otherMap, string qwertyMap)
         {
             var sb = new StringBuilder();
-            foreach(var c in value)
+            foreach (var c in value)
             {
                 sb.Append(otherMap.IndexOf(c) > -1 ? qwertyMap[otherMap.IndexOf(c)] : c);
             }
@@ -483,7 +483,7 @@ namespace Bit.Core.Utilities
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
         {
-            if(date.HasValue)
+            if (date.HasValue)
             {
                 date = date.Value.ToUniversalTime();
             }
@@ -500,7 +500,7 @@ namespace Bit.Core.Utilities
         {
             var baseUri = uri.ToString();
             var queryString = string.Empty;
-            if(baseUri.Contains("?"))
+            if (baseUri.Contains("?"))
             {
                 var urlSplit = baseUri.Split('?');
                 baseUri = urlSplit[0];
@@ -508,13 +508,13 @@ namespace Bit.Core.Utilities
             }
 
             var queryCollection = HttpUtility.ParseQueryString(queryString);
-            foreach(var kvp in values ?? new Dictionary<string, string>())
+            foreach (var kvp in values ?? new Dictionary<string, string>())
             {
                 queryCollection[kvp.Key] = kvp.Value;
             }
 
             var uriKind = uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative;
-            if(queryCollection.Count == 0)
+            if (queryCollection.Count == 0)
             {
                 return new Uri(baseUri, uriKind);
             }
@@ -534,7 +534,7 @@ namespace Bit.Core.Utilities
             {
                 var unprotectedData = protector.Unprotect(token);
                 var dataParts = unprotectedData.Split(' ');
-                if(dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
+                if (dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
                     new Guid(dataParts[1]) == orgUserId &&
                     dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -554,17 +554,17 @@ namespace Bit.Core.Utilities
         public static string GetApplicationCacheServiceBusSubcriptionName(GlobalSettings globalSettings)
         {
             var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
-            if(string.IsNullOrWhiteSpace(subName))
+            if (string.IsNullOrWhiteSpace(subName))
             {
                 var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
-                if(string.IsNullOrWhiteSpace(websiteInstanceId))
+                if (string.IsNullOrWhiteSpace(websiteInstanceId))
                 {
                     throw new Exception("No service bus subscription name available.");
                 }
                 else
                 {
                     subName = $"{globalSettings.ProjectName.ToLower()}_{websiteInstanceId}";
-                    if(subName.Length > 50)
+                    if (subName.Length > 50)
                     {
                         subName = subName.Substring(0, 50);
                     }
@@ -576,16 +576,16 @@ namespace Bit.Core.Utilities
         public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
             GlobalSettings globalSettings)
         {
-            if(httpContext == null)
+            if (httpContext == null)
             {
                 return null;
             }
 
-            if(!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+            if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
             {
                 return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
             }
-            if(globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
+            if (globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
             {
                 return httpContext.Request.Headers[RealIp].ToString();
             }

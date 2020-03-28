@@ -39,7 +39,7 @@ namespace Bit.Notifications
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if(_executingTask == null)
+            if (_executingTask == null)
             {
                 return;
             }
@@ -55,14 +55,14 @@ namespace Bit.Notifications
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             _queueClient = new QueueClient(_globalSettings.Notifications.ConnectionString, "notifications");
-            while(!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
                     var messages = await _queueClient.ReceiveMessagesAsync(32);
-                    if(messages.Value?.Any() ?? false)
+                    if (messages.Value?.Any() ?? false)
                     {
-                        foreach(var message in messages.Value)
+                        foreach (var message in messages.Value)
                         {
                             try
                             {
@@ -70,11 +70,11 @@ namespace Bit.Notifications
                                     message.MessageText, _hubContext, cancellationToken);
                                 await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                             }
-                            catch(Exception e)
+                            catch (Exception e)
                             {
                                 _logger.LogError("Error processing dequeued message: " +
                                     $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
-                                if(message.DequeueCount > 2)
+                                if (message.DequeueCount > 2)
                                 {
                                     await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                                 }
@@ -86,7 +86,7 @@ namespace Bit.Notifications
                         await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     _logger.LogError("Error processing messages.", e);
                 }

@@ -19,7 +19,7 @@ namespace Bit.Core.Identity
 
         public Task<bool> CanGenerateTwoFactorTokenAsync(Organization organization)
         {
-            if(organization == null || !organization.Enabled || !organization.Use2fa)
+            if (organization == null || !organization.Enabled || !organization.Use2fa)
             {
                 return Task.FromResult(false);
             }
@@ -32,13 +32,13 @@ namespace Bit.Core.Identity
 
         public Task<string> GenerateAsync(Organization organization, User user)
         {
-            if(organization == null || !organization.Enabled || !organization.Use2fa)
+            if (organization == null || !organization.Enabled || !organization.Use2fa)
             {
                 return Task.FromResult<string>(null);
             }
 
             var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-            if(!HasProperMetaData(provider))
+            if (!HasProperMetaData(provider))
             {
                 return Task.FromResult<string>(null);
             }
@@ -50,13 +50,13 @@ namespace Bit.Core.Identity
 
         public Task<bool> ValidateAsync(string token, Organization organization, User user)
         {
-            if(organization == null || !organization.Enabled || !organization.Use2fa)
+            if (organization == null || !organization.Enabled || !organization.Use2fa)
             {
                 return Task.FromResult(false);
             }
 
             var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-            if(!HasProperMetaData(provider))
+            if (!HasProperMetaData(provider))
             {
                 return Task.FromResult(false);
             }

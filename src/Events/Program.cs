@@ -19,13 +19,13 @@ namespace Bit.Events
                         logging.AddSerilog(hostingContext, e =>
                         {
                             var context = e.Properties["SourceContext"].ToString();
-                            if(context.Contains("IdentityServer4.Validation.TokenValidator") ||
+                            if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
                                 context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                             {
                                 return e.Level > LogEventLevel.Error;
                             }
 
-                            if(e.Properties.ContainsKey("RequestPath") &&
+                            if (e.Properties.ContainsKey("RequestPath") &&
                                 !string.IsNullOrWhiteSpace(e.Properties["RequestPath"]?.ToString()) &&
                                 (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
                             {

@@ -19,7 +19,7 @@ namespace Bit.Admin.Controllers
         public IActionResult Index(string returnUrl = null, string error = null, string success = null,
             bool accessDenied = false)
         {
-            if(string.IsNullOrWhiteSpace(error) && accessDenied)
+            if (string.IsNullOrWhiteSpace(error) && accessDenied)
             {
                 error = "Access denied. Please log in.";
             }
@@ -36,7 +36,7 @@ namespace Bit.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(LoginModel model)
         {
-            if(ModelState.IsValid)
+            if (ModelState.IsValid)
             {
                 await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
                 return RedirectToAction("Index", new
@@ -52,7 +52,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
         {
             var result = await _signInManager.PasswordlessSignInAsync(email, token, true);
-            if(!result.Succeeded)
+            if (!result.Succeeded)
             {
                 return RedirectToAction("Index", new
                 {
@@ -60,7 +60,7 @@ namespace Bit.Admin.Controllers
                 });
             }
 
-            if(!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
             }

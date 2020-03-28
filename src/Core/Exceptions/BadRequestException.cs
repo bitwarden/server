@@ -19,7 +19,7 @@ namespace Bit.Core.Exceptions
         public BadRequestException(ModelStateDictionary modelState)
             : base("The model state is invalid.")
         {
-            if(modelState.IsValid || modelState.ErrorCount == 0)
+            if (modelState.IsValid || modelState.ErrorCount == 0)
             {
                 return;
             }

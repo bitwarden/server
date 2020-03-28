@@ -56,7 +56,7 @@ namespace Bit.Core.Services
                     Date = DateTime.UtcNow
                 });
 
-            if(orgEvents.Any())
+            if (orgEvents.Any())
             {
                 events.AddRange(orgEvents);
                 await _eventWriteService.CreateManyAsync(events);
@@ -70,7 +70,7 @@ namespace Bit.Core.Services
         public async Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null)
         {
             var e = await BuildCipherEventMessageAsync(cipher, type, date);
-            if(e != null)
+            if (e != null)
             {
                 await _eventWriteService.CreateAsync(e);
             }
@@ -79,10 +79,10 @@ namespace Bit.Core.Services
         public async Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events)
         {
             var cipherEvents = new List<IEvent>();
-            foreach(var ev in events)
+            foreach (var ev in events)
             {
                 var e = await BuildCipherEventMessageAsync(ev.Item1, ev.Item2, ev.Item3);
-                if(e != null)
+                if (e != null)
                 {
                     cipherEvents.Add(e);
                 }
@@ -93,15 +93,15 @@ namespace Bit.Core.Services
         private async Task<EventMessage> BuildCipherEventMessageAsync(Cipher cipher, EventType type, DateTime? date = null)
         {
             // Only logging organization cipher events for now.
-            if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
+            if (!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
             {
                 return null;
             }
 
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-                if(!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
+                if (!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
                 {
                     return null;
                 }
@@ -121,7 +121,7 @@ namespace Bit.Core.Services
         public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, collection.OrganizationId))
+            if (!CanUseEvents(orgAbilities, collection.OrganizationId))
             {
                 return;
             }
@@ -140,7 +140,7 @@ namespace Bit.Core.Services
         public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, group.OrganizationId))
+            if (!CanUseEvents(orgAbilities, group.OrganizationId))
             {
                 return;
             }
@@ -159,7 +159,7 @@ namespace Bit.Core.Services
         public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, policy.OrganizationId))
+            if (!CanUseEvents(orgAbilities, policy.OrganizationId))
             {
                 return;
             }
@@ -179,7 +179,7 @@ namespace Bit.Core.Services
             DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
             {
                 return;
             }
@@ -198,7 +198,7 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
         {
-            if(!organization.Enabled || !organization.UseEvents)
+            if (!organization.Enabled || !organization.UseEvents)
             {
                 return;
             }

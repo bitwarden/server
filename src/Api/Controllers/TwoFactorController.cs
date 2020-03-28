@@ -47,7 +47,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<TwoFactorProviderResponseModel>> Get()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -61,13 +61,13 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<TwoFactorProviderResponseModel>> GetOrganization(string id)
         {
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -93,7 +93,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+            if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
             {
                 await Task.Delay(2000);
@@ -149,7 +149,7 @@ namespace Bit.Api.Controllers
                 var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
                 duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
             }
-            catch(DuoException)
+            catch (DuoException)
             {
                 throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
             }
@@ -167,13 +167,13 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -190,13 +190,13 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -206,7 +206,7 @@ namespace Bit.Api.Controllers
                 var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
                 duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
             }
-            catch(DuoException)
+            catch (DuoException)
             {
                 throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
             }
@@ -243,7 +243,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, true);
             var success = await _userService.CompleteU2fRegistrationAsync(
                 user, model.Id.Value, model.Name, model.DeviceResponse);
-            if(!success)
+            if (!success)
             {
                 throw new BadRequestException("Unable to complete U2F key registration.");
             }
@@ -281,9 +281,9 @@ namespace Bit.Api.Controllers
         public async Task SendEmailLogin([FromBody]TwoFactorEmailRequestModel model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
-            if(user != null)
+            if (user != null)
             {
-                if(await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+                if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
                 {
                     await _userService.SendTwoFactorEmailAsync(user);
                     return;
@@ -301,7 +301,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
             model.ToUser(user);
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+            if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
             {
                 await Task.Delay(2000);
@@ -331,13 +331,13 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-            if(organization == null)
+            if (organization == null)
             {
                 throw new NotFoundException();
             }
@@ -359,7 +359,7 @@ namespace Bit.Api.Controllers
         [AllowAnonymous]
         public async Task PostRecover([FromBody]TwoFactorRecoveryRequestModel model)
         {
-            if(!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
+            if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
                 _organizationService))
             {
                 await Task.Delay(2000);
@@ -370,18 +370,18 @@ namespace Bit.Api.Controllers
         private async Task<User> CheckAsync(string masterPasswordHash, bool premium)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            if(!await _userService.CheckPasswordAsync(user, masterPasswordHash))
+            if (!await _userService.CheckPasswordAsync(user, masterPasswordHash))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
 
-            if(premium && !(await _userService.CanAccessPremium(user)))
+            if (premium && !(await _userService.CanAccessPremium(user)))
             {
                 throw new BadRequestException("Premium status is required.");
             }
@@ -391,12 +391,12 @@ namespace Bit.Api.Controllers
 
         private async Task ValidateYubiKeyAsync(User user, string name, string value)
         {
-            if(string.IsNullOrWhiteSpace(value) || value.Length == 12)
+            if (string.IsNullOrWhiteSpace(value) || value.Length == 12)
             {
                 return;
             }
 
-            if(!await _userManager.VerifyTwoFactorTokenAsync(user,
+            if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
             {
                 await Task.Delay(2000);

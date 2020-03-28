@@ -22,7 +22,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task<T> GetByIdAsync(TId id)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await GetDbSet(dbContext).FindAsync(id);
@@ -32,7 +32,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task CreateAsync(T obj)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = Mapper.Map<TEntity>(obj);
@@ -44,11 +44,11 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
-                if(entity != null)
+                if (entity != null)
                 {
                     var mappedEntity = Mapper.Map<TEntity>(obj);
                     dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
@@ -59,7 +59,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(obj.Id.Equals(default(T)))
+            if (obj.Id.Equals(default(T)))
             {
                 await CreateAsync(obj);
             }
@@ -71,7 +71,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task DeleteAsync(T obj)
         {
-            using(var scope = ServiceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = Mapper.Map<TEntity>(obj);

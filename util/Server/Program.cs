@@ -23,13 +23,13 @@ namespace Bit.Server
                 .ConfigureKestrel((context, options) => { });
 
             var contentRoot = config.GetValue<string>("contentRoot");
-            if(string.IsNullOrWhiteSpace(contentRoot))
+            if (string.IsNullOrWhiteSpace(contentRoot))
             {
                 builder.UseContentRoot(contentRoot);
             }
 
             var webRoot = config.GetValue<string>("webRoot");
-            if(string.IsNullOrWhiteSpace(webRoot))
+            if (string.IsNullOrWhiteSpace(webRoot))
             {
                 builder.UseWebRoot(webRoot);
             }

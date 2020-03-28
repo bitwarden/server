@@ -15,12 +15,12 @@ namespace Bit.Core.IdentityServer
             return (request) =>
             {
                 var authorization = request.Headers[_authHeader].FirstOrDefault();
-                if(string.IsNullOrWhiteSpace(authorization))
+                if (string.IsNullOrWhiteSpace(authorization))
                 {
                     return request.Query[_queuryScheme].FirstOrDefault();
                 }
 
-                if(authorization.StartsWith(_headerScheme, StringComparison.OrdinalIgnoreCase))
+                if (authorization.StartsWith(_headerScheme, StringComparison.OrdinalIgnoreCase))
                 {
                     return authorization.Substring(_headerScheme.Length).Trim();
                 }

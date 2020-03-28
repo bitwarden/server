@@ -50,7 +50,7 @@ namespace Bit.Core.Services
 
         private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
         {
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
                 // to the organization. Potentially we could blindly send to just users that have the access all permission
@@ -59,7 +59,7 @@ namespace Bit.Core.Services
 
                 // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
             }
-            else if(cipher.UserId.HasValue)
+            else if (cipher.UserId.HasValue)
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -151,7 +151,7 @@ namespace Bit.Core.Services
         {
             var tag = BuildTag($"template:payload_userId:{userId}", identifier);
             await SendPayloadAsync(tag, type, payload);
-            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
             }
@@ -162,7 +162,7 @@ namespace Bit.Core.Services
         {
             var tag = BuildTag($"template:payload && organizationId:{orgId}", identifier);
             await SendPayloadAsync(tag, type, payload);
-            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
             }
@@ -170,7 +170,7 @@ namespace Bit.Core.Services
 
         private string GetContextIdentifier(bool excludeCurrentContext)
         {
-            if(!excludeCurrentContext)
+            if (!excludeCurrentContext)
             {
                 return null;
             }
@@ -182,7 +182,7 @@ namespace Bit.Core.Services
 
         private string BuildTag(string tag, string identifier)
         {
-            if(!string.IsNullOrWhiteSpace(identifier))
+            if (!string.IsNullOrWhiteSpace(identifier))
             {
                 tag += $" && !deviceIdentifier:{identifier}";
             }

@@ -92,7 +92,7 @@ namespace Bit.Setup
         {
             get
             {
-                if(Uri.TryCreate(Url, UriKind.Absolute, out var uri))
+                if (Uri.TryCreate(Url, UriKind.Absolute, out var uri))
                 {
                     return uri.Host;
                 }

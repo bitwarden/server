@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public CollectionResponseModel(Collection collection, string obj = "collection")
             : base(obj)
         {
-            if(collection == null)
+            if (collection == null)
             {
                 throw new ArgumentNullException(nameof(collection));
             }

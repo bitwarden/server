@@ -21,30 +21,30 @@ namespace Bit.Admin.Models
 
         public string ExceptionToString(JObject e)
         {
-            if(e == null)
+            if (e == null)
             {
                 return null;
             }
 
             var val = string.Empty;
-            if(e["Message"] != null && e["Message"].ToObject<string>() != null)
+            if (e["Message"] != null && e["Message"].ToObject<string>() != null)
             {
                 val += "Message:\n";
                 val += e["Message"] + "\n";
             }
 
-            if(e["StackTrace"] != null && e["StackTrace"].ToObject<string>() != null)
+            if (e["StackTrace"] != null && e["StackTrace"].ToObject<string>() != null)
             {
                 val += "\nStack Trace:\n";
                 val += e["StackTrace"];
             }
-            else if(e["StackTraceString"] != null && e["StackTraceString"].ToObject<string>() != null)
+            else if (e["StackTraceString"] != null && e["StackTraceString"].ToObject<string>() != null)
             {
                 val += "\nStack Trace String:\n";
                 val += e["StackTraceString"];
             }
 
-            if(e["InnerException"] != null && e["InnerException"].ToObject<JObject>() != null)
+            if (e["InnerException"] != null && e["InnerException"].ToObject<JObject>() != null)
             {
                 val += "\n\n=== Inner Exception ===\n\n";
                 val += ExceptionToString(e["InnerException"].ToObject<JObject>());

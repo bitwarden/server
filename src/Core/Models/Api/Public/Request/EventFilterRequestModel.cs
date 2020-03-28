@@ -28,19 +28,19 @@ namespace Bit.Core.Models.Api.Public
 
         public Tuple<DateTime, DateTime> ToDateRange()
         {
-            if(!End.HasValue || !Start.HasValue)
+            if (!End.HasValue || !Start.HasValue)
             {
                 End = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
                 Start = DateTime.UtcNow.Date.AddDays(-30);
             }
-            else if(Start.Value > End.Value)
+            else if (Start.Value > End.Value)
             {
                 var newEnd = Start;
                 Start = End;
                 End = newEnd;
             }
 
-            if((End.Value - Start.Value) > TimeSpan.FromDays(367))
+            if ((End.Value - Start.Value) > TimeSpan.FromDays(367))
             {
                 throw new BadRequestException("Date range must be < 367 days.");
             }

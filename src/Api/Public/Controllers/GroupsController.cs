@@ -45,7 +45,7 @@ namespace Bit.Api.Public.Controllers
         {
             var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
             var group = groupDetails?.Item1;
-            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -67,7 +67,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> GetMemberIds(Guid id)
         {
             var group = await _groupRepository.GetByIdAsync(id);
-            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -128,7 +128,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Put(Guid id, [FromBody]GroupCreateUpdateRequestModel model)
         {
             var existingGroup = await _groupRepository.GetByIdAsync(id);
-            if(existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
+            if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -154,7 +154,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> PutMemberIds(Guid id, [FromBody]UpdateMemberIdsRequestModel model)
         {
             var existingGroup = await _groupRepository.GetByIdAsync(id);
-            if(existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
+            if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -175,7 +175,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var group = await _groupRepository.GetByIdAsync(id);
-            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }

@@ -52,12 +52,12 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Get(string orgId, int type)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
-            if(policy == null)
+            if (policy == null)
             {
                 throw new NotFoundException();
             }
@@ -69,7 +69,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationManager(orgIdGuid))
+            if (!_currentContext.OrganizationManager(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -87,14 +87,14 @@ namespace Bit.Api.Controllers
             var orgUserId = new Guid(organizationUserId);
             var tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
                 email, orgUserId, _globalSettings);
-            if(!tokenValid)
+            if (!tokenValid)
             {
                 throw new NotFoundException();
             }
 
             var orgIdGuid = new Guid(orgId);
             var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId);
-            if(orgUser == null || orgUser.OrganizationId != orgIdGuid)
+            if (orgUser == null || orgUser.OrganizationId != orgIdGuid)
             {
                 throw new NotFoundException();
             }
@@ -108,12 +108,12 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody]PolicyRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(new Guid(orgId), (PolicyType)type);
-            if(policy == null)
+            if (policy == null)
             {
                 policy = model.ToPolicy(orgIdGuid);
             }

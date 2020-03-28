@@ -50,7 +50,7 @@ namespace Bit.Api.Public.Controllers
         {
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
                 _currentContext.OrganizationId.Value, type);
-            if(policy == null)
+            if (policy == null)
             {
                 return new NotFoundResult();
             }
@@ -91,7 +91,7 @@ namespace Bit.Api.Public.Controllers
         {
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
                 _currentContext.OrganizationId.Value, type);
-            if(policy == null)
+            if (policy == null)
             {
                 policy = model.ToPolicy(_currentContext.OrganizationId.Value);
             }

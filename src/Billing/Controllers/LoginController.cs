@@ -26,11 +26,11 @@ namespace Billing.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(LoginModel model)
         {
-            if(ModelState.IsValid)
+            if (ModelState.IsValid)
             {
                 var result = await _signInManager.PasswordlessSignInAsync(model.Email,
                     Url.Action("Confirm", "Login", null, Request.Scheme));
-                if(result.Succeeded)
+                if (result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");
                 }
@@ -46,7 +46,7 @@ namespace Billing.Controllers
         public async Task<IActionResult> Confirm(string email, string token)
         {
             var result = await _signInManager.PasswordlessSignInAsync(email, token, false);
-            if(!result.Succeeded)
+            if (!result.Succeeded)
             {
                 return View("Error");
             }

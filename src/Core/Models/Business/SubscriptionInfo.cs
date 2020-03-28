@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Business
                 CancelledDate = sub.CanceledAt;
                 CancelAtEndDate = sub.CancelAtPeriodEnd;
                 Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
-                if(sub.Items?.Data != null)
+                if (sub.Items?.Data != null)
                 {
                     Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
                 }
@@ -44,7 +44,7 @@ namespace Bit.Core.Models.Business
             {
                 public BillingSubscriptionItem(SubscriptionItem item)
                 {
-                    if(item.Plan != null)
+                    if (item.Plan != null)
                     {
                         Name = item.Plan.Nickname;
                         Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
@@ -74,7 +74,7 @@ namespace Bit.Core.Models.Business
             public BillingUpcomingInvoice(Braintree.Subscription sub)
             {
                 Amount = sub.NextBillAmount.GetValueOrDefault() + sub.Balance.GetValueOrDefault();
-                if(Amount < 0)
+                if (Amount < 0)
                 {
                     Amount = 0;
                 }

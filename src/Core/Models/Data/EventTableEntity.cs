@@ -44,7 +44,7 @@ namespace Bit.Core.Models.Data
             var result = base.WriteEntity(operationContext);
 
             var typeName = nameof(Type);
-            if(result.ContainsKey(typeName))
+            if (result.ContainsKey(typeName))
             {
                 result[typeName] = new EntityProperty((int)Type);
             }
@@ -54,7 +54,7 @@ namespace Bit.Core.Models.Data
             }
 
             var deviceTypeName = nameof(DeviceType);
-            if(result.ContainsKey(deviceTypeName))
+            if (result.ContainsKey(deviceTypeName))
             {
                 result[deviceTypeName] = new EntityProperty((int?)DeviceType);
             }
@@ -72,13 +72,13 @@ namespace Bit.Core.Models.Data
             base.ReadEntity(properties, operationContext);
 
             var typeName = nameof(Type);
-            if(properties.ContainsKey(typeName) && properties[typeName].Int32Value.HasValue)
+            if (properties.ContainsKey(typeName) && properties[typeName].Int32Value.HasValue)
             {
                 Type = (EventType)properties[typeName].Int32Value.Value;
             }
 
             var deviceTypeName = nameof(DeviceType);
-            if(properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
+            if (properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
             {
                 DeviceType = (DeviceType)properties[deviceTypeName].Int32Value.Value;
             }
@@ -99,7 +99,7 @@ namespace Bit.Core.Models.Data
                 }
             };
 
-            if(e.OrganizationId.HasValue && e.ActingUserId.HasValue)
+            if (e.OrganizationId.HasValue && e.ActingUserId.HasValue)
             {
                 entities.Add(new EventTableEntity(e)
                 {
@@ -109,7 +109,7 @@ namespace Bit.Core.Models.Data
                 });
             }
 
-            if(e.CipherId.HasValue)
+            if (e.CipherId.HasValue)
             {
                 entities.Add(new EventTableEntity(e)
                 {

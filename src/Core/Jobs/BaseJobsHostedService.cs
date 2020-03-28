@@ -42,9 +42,9 @@ namespace Bit.Core.Jobs
             _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger),
                 GroupMatcher<JobKey>.AnyGroup());
             await _scheduler.Start(cancellationToken);
-            if(Jobs != null)
+            if (Jobs != null)
             {
-                foreach(var job in Jobs)
+                foreach (var job in Jobs)
                 {
                     var builtJob = JobBuilder.Create(job.Item1).Build();
                     await _scheduler.ScheduleJob(builtJob, job.Item2);

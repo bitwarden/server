@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
         public FolderResponseModel(Folder folder)
             : base("folder")
         {
-            if(folder == null)
+            if (folder == null)
             {
                 throw new ArgumentNullException(nameof(folder));
             }

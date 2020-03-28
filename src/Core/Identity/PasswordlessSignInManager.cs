@@ -32,7 +32,7 @@ namespace Bit.Core.Identity
         public async Task<SignInResult> PasswordlessSignInAsync(string email, string returnUrl)
         {
             var user = await UserManager.FindByEmailAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 return SignInResult.Failed;
             }
@@ -45,7 +45,7 @@ namespace Bit.Core.Identity
 
         public async Task<SignInResult> PasswordlessSignInAsync(TUser user, string token, bool isPersistent)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
@@ -58,7 +58,7 @@ namespace Bit.Core.Identity
         public async Task<SignInResult> PasswordlessSignInAsync(string email, string token, bool isPersistent)
         {
             var user = await UserManager.FindByEmailAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 return SignInResult.Failed;
             }
@@ -68,18 +68,18 @@ namespace Bit.Core.Identity
 
         public virtual async Task<SignInResult> CheckPasswordlessSignInAsync(TUser user, string token)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
             var error = await PreSignInCheck(user);
-            if(error != null)
+            if (error != null)
             {
                 return error;
             }
 
-            if(await UserManager.VerifyUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+            if (await UserManager.VerifyUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
                 PasswordlessSignInPurpose, token))
             {
                 return SignInResult.Success;

@@ -24,7 +24,7 @@ namespace Bit.Setup
         public void BuildForInstaller()
         {
             var model = new TemplateModel(_context);
-            if(model.Ssl && !_context.Config.SslManagedLetsEncrypt)
+            if (model.Ssl && !_context.Config.SslManagedLetsEncrypt)
             {
                 var sslPath = _context.Install.SelfSignedCert ?
                     $"/etc/ssl/self/{model.Domain}" : $"/etc/ssl/{model.Domain}";
@@ -32,12 +32,12 @@ namespace Bit.Setup
                     string.Concat(sslPath, "/", "certificate.crt");
                 _context.Config.SslKeyPath = model.KeyPath =
                     string.Concat(sslPath, "/", "private.key");
-                if(_context.Install.Trusted)
+                if (_context.Install.Trusted)
                 {
                     _context.Config.SslCaPath = model.CaPath =
                         string.Concat(sslPath, "/", "ca.crt");
                 }
-                if(_context.Install.DiffieHellman)
+                if (_context.Install.DiffieHellman)
                 {
                     _context.Config.SslDiffieHellmanPath = model.DiffieHellmanPath =
                         string.Concat(sslPath, "/", "dhparam.pem");
@@ -56,14 +56,14 @@ namespace Bit.Setup
         {
             Directory.CreateDirectory("/bitwarden/nginx/");
             Helpers.WriteLine(_context, "Building nginx config.");
-            if(!_context.Config.GenerateNginxConfig)
+            if (!_context.Config.GenerateNginxConfig)
             {
                 Helpers.WriteLine(_context, "...skipped");
                 return;
             }
 
             var template = Helpers.ReadTemplate("NginxConfig");
-            using(var sw = File.CreateText(ConfFile))
+            using (var sw = File.CreateText(ConfFile))
             {
                 sw.WriteLine(template(model));
             }
@@ -80,9 +80,9 @@ namespace Bit.Setup
                 Url = context.Config.Url;
                 RealIps = context.Config.RealIps;
 
-                if(Ssl)
+                if (Ssl)
                 {
-                    if(context.Config.SslManagedLetsEncrypt)
+                    if (context.Config.SslManagedLetsEncrypt)
                     {
                         var sslPath = $"/etc/letsencrypt/live/{Domain}";
                         CertificatePath = CaPath = string.Concat(sslPath, "/", "fullchain.pem");
@@ -98,7 +98,7 @@ namespace Bit.Setup
                     }
                 }
 
-                if(!string.IsNullOrWhiteSpace(context.Config.SslCiphersuites))
+                if (!string.IsNullOrWhiteSpace(context.Config.SslCiphersuites))
                 {
                     SslCiphers = context.Config.SslCiphersuites;
                 }
@@ -110,7 +110,7 @@ namespace Bit.Setup
                         "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
                 }
 
-                if(!string.IsNullOrWhiteSpace(context.Config.SslVersions))
+                if (!string.IsNullOrWhiteSpace(context.Config.SslVersions))
                 {
                     SslProtocols = context.Config.SslVersions;
                 }

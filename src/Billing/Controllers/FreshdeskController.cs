@@ -49,25 +49,25 @@ namespace Bit.Billing.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PostWebhook()
         {
-            if(HttpContext?.Request?.Query == null)
+            if (HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
             }
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if(key != _billingSettings.FreshdeskWebhookKey)
+            if (key != _billingSettings.FreshdeskWebhookKey)
             {
                 return new BadRequestResult();
             }
 
             string body = null;
-            using(var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
             {
                 body = await reader.ReadToEndAsync();
             }
 
-            if(string.IsNullOrWhiteSpace(body))
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return new BadRequestResult();
             }
@@ -78,7 +78,7 @@ namespace Bit.Billing.Controllers
                 string ticketId = data.ticket_id;
                 string ticketContactEmail = data.ticket_contact_email;
                 string ticketTags = data.ticket_tags;
-                if(string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
+                if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
                 {
                     return new BadRequestResult();
                 }
@@ -86,32 +86,32 @@ namespace Bit.Billing.Controllers
                 var updateBody = new Dictionary<string, object>();
                 var note = string.Empty;
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
-                if(user != null)
+                if (user != null)
                 {
                     note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
                     var tags = new HashSet<string>();
-                    if(user.Premium)
+                    if (user.Premium)
                     {
                         tags.Add("Premium");
                     }
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
-                    foreach(var org in orgs)
+                    foreach (var org in orgs)
                     {
                         note += $"<li>Org, {org.Name}: " +
                             $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
-                        if(!string.IsNullOrWhiteSpace(planName))
+                        if (!string.IsNullOrWhiteSpace(planName))
                         {
                             tags.Add(string.Format("Org: {0}", planName));
                         }
                     }
-                    if(tags.Any())
+                    if (tags.Any())
                     {
                         var tagsToUpdate = tags.ToList();
-                        if(!string.IsNullOrWhiteSpace(ticketTags))
+                        if (!string.IsNullOrWhiteSpace(ticketTags))
                         {
                             var splitTicketTags = ticketTags.Split(',');
-                            for(var i = 0; i < splitTicketTags.Length; i++)
+                            for (var i = 0; i < splitTicketTags.Length; i++)
                             {
                                 tagsToUpdate.Insert(i, splitTicketTags[i]);
                             }
@@ -139,7 +139,7 @@ namespace Bit.Billing.Controllers
 
                 return new OkResult();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(e, "Error processing freshdesk webhook.");
                 return new BadRequestResult();
@@ -152,14 +152,14 @@ namespace Bit.Billing.Controllers
             {
                 request.Headers.Add("Authorization", _freshdeskAuthkey);
                 var response = await _httpClient.SendAsync(request);
-                if(response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
+                if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
                 {
                     return response;
                 }
             }
             catch
             {
-                if(retriedCount > 3)
+                if (retriedCount > 3)
                 {
                     throw;
                 }

@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public GroupResponseModel(Group group, string obj = "group")
             : base(obj)
         {
-            if(group == null)
+            if (group == null)
             {
                 throw new ArgumentNullException(nameof(group));
             }

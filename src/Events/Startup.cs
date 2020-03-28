@@ -51,7 +51,7 @@ namespace Bit.Events
             // Services
             var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
-            if(usingServiceBusAppCache)
+            if (usingServiceBusAppCache)
             {
                 services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
             }
@@ -60,7 +60,7 @@ namespace Bit.Events
                 services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             }
             services.AddScoped<IEventService, EventService>();
-            if(!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {
                 services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             }
@@ -75,7 +75,7 @@ namespace Bit.Events
                 config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
 
-            if(usingServiceBusAppCache)
+            if (usingServiceBusAppCache)
             {
                 services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
             }
@@ -89,7 +89,7 @@ namespace Bit.Events
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }

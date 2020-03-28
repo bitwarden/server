@@ -30,13 +30,13 @@ namespace Bit.Core.IdentityServer
 
         public async Task<Client> FindClientByIdAsync(string clientId)
         {
-            if(!_globalSettings.SelfHosted && clientId.StartsWith("installation."))
+            if (!_globalSettings.SelfHosted && clientId.StartsWith("installation."))
             {
                 var idParts = clientId.Split('.');
-                if(idParts.Length > 1 && Guid.TryParse(idParts[1], out Guid id))
+                if (idParts.Length > 1 && Guid.TryParse(idParts[1], out Guid id))
                 {
                     var installation = await _installationRepository.GetByIdAsync(id);
-                    if(installation != null)
+                    if (installation != null)
                     {
                         return new Client
                         {
@@ -52,14 +52,14 @@ namespace Bit.Core.IdentityServer
                     }
                 }
             }
-            else if(_globalSettings.SelfHosted && clientId.StartsWith("internal.") &&
+            else if (_globalSettings.SelfHosted && clientId.StartsWith("internal.") &&
                 CoreHelpers.SettingHasValue(_globalSettings.InternalIdentityKey))
             {
                 var idParts = clientId.Split('.');
-                if(idParts.Length > 1)
+                if (idParts.Length > 1)
                 {
                     var id = idParts[1];
-                    if(!string.IsNullOrWhiteSpace(id))
+                    if (!string.IsNullOrWhiteSpace(id))
                     {
                         return new Client
                         {
@@ -75,13 +75,13 @@ namespace Bit.Core.IdentityServer
                     }
                 }
             }
-            else if(clientId.StartsWith("organization."))
+            else if (clientId.StartsWith("organization."))
             {
                 var idParts = clientId.Split('.');
-                if(idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
+                if (idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
                 {
                     var org = await _organizationRepository.GetByIdAsync(id);
-                    if(org != null)
+                    if (org != null)
                     {
                         return new Client
                         {

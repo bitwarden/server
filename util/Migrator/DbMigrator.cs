@@ -27,12 +27,12 @@ namespace Bit.Migrator
         public bool MigrateMsSqlDatabase(bool enableLogging = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if(enableLogging && _logger != null)
+            if (enableLogging && _logger != null)
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
             }
 
-            using(var connection = new SqlConnection(_masterConnectionString))
+            using (var connection = new SqlConnection(_masterConnectionString))
             {
                 var command = new SqlCommand(
                     "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = 'vault') = 0) " +
@@ -47,7 +47,7 @@ namespace Bit.Migrator
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            using(var connection = new SqlConnection(_connectionString))
+            using (var connection = new SqlConnection(_connectionString))
             {
                 // Rename old migration scripts to new namespace.
                 var command = new SqlCommand(
@@ -67,9 +67,9 @@ namespace Bit.Migrator
                 .WithTransaction()
                 .WithExecutionTimeout(new TimeSpan(0, 5, 0));
 
-            if(enableLogging)
+            if (enableLogging)
             {
-                if(_logger != null)
+                if (_logger != null)
                 {
                     builder.LogTo(new DbUpLogger(_logger));
                 }
@@ -82,9 +82,9 @@ namespace Bit.Migrator
             var upgrader = builder.Build();
             var result = upgrader.PerformUpgrade();
 
-            if(enableLogging && _logger != null)
+            if (enableLogging && _logger != null)
             {
-                if(result.Successful)
+                if (result.Successful)
                 {
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
                 }

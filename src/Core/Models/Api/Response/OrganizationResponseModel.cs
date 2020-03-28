@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public OrganizationResponseModel(Organization organization, string obj = "organization")
             : base(obj)
         {
-            if(organization == null)
+            if (organization == null)
             {
                 throw new ArgumentNullException(nameof(organization));
             }
@@ -71,7 +71,7 @@ namespace Bit.Core.Models.Api
         public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null)
             : base(organization, "organizationSubscription")
         {
-            if(subscription != null)
+            if (subscription != null)
             {
                 Subscription = subscription.Subscription != null ?
                     new BillingSubscription(subscription.Subscription) : null;

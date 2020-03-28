@@ -9,7 +9,7 @@ namespace Bit.Core.Utilities
 
         public BitPayClient(GlobalSettings globalSettings)
         {
-            if(CoreHelpers.SettingHasValue(globalSettings.BitPay.Token))
+            if (CoreHelpers.SettingHasValue(globalSettings.BitPay.Token))
             {
                 _bpClient = new BitPayLight.BitPay(globalSettings.BitPay.Token,
                     globalSettings.BitPay.Production ? BitPayLight.Env.Prod : BitPayLight.Env.Test);

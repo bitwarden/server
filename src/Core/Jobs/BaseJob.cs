@@ -20,7 +20,7 @@ namespace Bit.Core.Jobs
             {
                 await ExecuteJobAsync(context);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(2, e, "Error performing {0}.", GetType().Name);
             }

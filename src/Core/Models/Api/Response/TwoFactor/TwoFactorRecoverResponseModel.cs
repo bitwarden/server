@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorRecoverResponseModel(User user)
             : base("twoFactorRecover")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }

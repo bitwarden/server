@@ -22,12 +22,12 @@ namespace Bit.Core.Models.Api.Public
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(Email.Contains(" ") || Email.Contains("<"))
+            if (Email.Contains(" ") || Email.Contains("<"))
             {
                 yield return new ValidationResult($"Email is not valid.",
                     new string[] { nameof(Email) });
             }
-            else if(Email.Length > 50)
+            else if (Email.Length > 50)
             {
                 yield return new ValidationResult($"Email is longer than 50 characters.",
                     new string[] { nameof(Email) });

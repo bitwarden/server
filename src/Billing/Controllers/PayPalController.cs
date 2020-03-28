@@ -48,64 +48,64 @@ namespace Bit.Billing.Controllers
         [HttpPost("ipn")]
         public async Task<IActionResult> PostIpn()
         {
-            if(HttpContext?.Request?.Query == null)
+            if (HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
             }
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if(key != _billingSettings.PayPal.WebhookKey)
+            if (key != _billingSettings.PayPal.WebhookKey)
             {
                 return new BadRequestResult();
             }
 
             string body = null;
-            using(var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
             {
                 body = await reader.ReadToEndAsync();
             }
 
-            if(string.IsNullOrWhiteSpace(body))
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return new BadRequestResult();
             }
 
             var verified = await _paypalIpnClient.VerifyIpnAsync(body);
-            if(!verified)
+            if (!verified)
             {
                 _logger.LogWarning("Unverified IPN received.");
                 return new BadRequestResult();
             }
 
             var ipnTransaction = new PayPalIpnClient.IpnTransaction(body);
-            if(ipnTransaction.TxnType != "web_accept" && ipnTransaction.TxnType != "merch_pmt" &&
+            if (ipnTransaction.TxnType != "web_accept" && ipnTransaction.TxnType != "merch_pmt" &&
                 ipnTransaction.PaymentStatus != "Refunded")
             {
                 // Only processing billing agreement payments, buy now button payments, and refunds for now.
                 return new OkResult();
             }
 
-            if(ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId)
+            if (ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId)
             {
                 _logger.LogWarning("Receiver was not proper business id. " + ipnTransaction.ReceiverId);
                 return new BadRequestResult();
             }
 
-            if(ipnTransaction.PaymentStatus == "Refunded" && ipnTransaction.ParentTxnId == null)
+            if (ipnTransaction.PaymentStatus == "Refunded" && ipnTransaction.ParentTxnId == null)
             {
                 // Refunds require parent transaction
                 return new OkResult();
             }
 
-            if(ipnTransaction.PaymentType == "echeck" && ipnTransaction.PaymentStatus != "Refunded")
+            if (ipnTransaction.PaymentType == "echeck" && ipnTransaction.PaymentStatus != "Refunded")
             {
                 // Not accepting eChecks, unless it is a refund
                 _logger.LogWarning("Got an eCheck payment. " + ipnTransaction.TxnId);
                 return new OkResult();
             }
 
-            if(ipnTransaction.McCurrency != "USD")
+            if (ipnTransaction.McCurrency != "USD")
             {
                 // Only process USD payments
                 _logger.LogWarning("Received a payment not in USD. " + ipnTransaction.TxnId);
@@ -113,16 +113,16 @@ namespace Bit.Billing.Controllers
             }
 
             var ids = ipnTransaction.GetIdsFromCustom();
-            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
             {
                 return new OkResult();
             }
 
-            if(ipnTransaction.PaymentStatus == "Completed")
+            if (ipnTransaction.PaymentStatus == "Completed")
             {
                 var transaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.TxnId);
-                if(transaction != null)
+                if (transaction != null)
                 {
                     _logger.LogWarning("Already processed this completed transaction. #" + ipnTransaction.TxnId);
                     return new OkResult();
@@ -145,16 +145,16 @@ namespace Bit.Billing.Controllers
                     };
                     await _transactionRepository.CreateAsync(tx);
 
-                    if(isAccountCredit)
+                    if (isAccountCredit)
                     {
                         string billingEmail = null;
-                        if(tx.OrganizationId.HasValue)
+                        if (tx.OrganizationId.HasValue)
                         {
                             var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                            if(org != null)
+                            if (org != null)
                             {
                                 billingEmail = org.BillingEmailAddress();
-                                if(await _paymentService.CreditAccountAsync(org, tx.Amount))
+                                if (await _paymentService.CreditAccountAsync(org, tx.Amount))
                                 {
                                     await _organizationRepository.ReplaceAsync(org);
                                 }
@@ -163,30 +163,30 @@ namespace Bit.Billing.Controllers
                         else
                         {
                             var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
-                            if(user != null)
+                            if (user != null)
                             {
                                 billingEmail = user.BillingEmailAddress();
-                                if(await _paymentService.CreditAccountAsync(user, tx.Amount))
+                                if (await _paymentService.CreditAccountAsync(user, tx.Amount))
                                 {
                                     await _userRepository.ReplaceAsync(user);
                                 }
                             }
                         }
 
-                        if(!string.IsNullOrWhiteSpace(billingEmail))
+                        if (!string.IsNullOrWhiteSpace(billingEmail))
                         {
                             await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
                         }
                     }
                 }
                 // Catch foreign key violations because user/org could have been deleted.
-                catch(SqlException e) when(e.Number == 547) { }
+                catch (SqlException e) when(e.Number == 547) { }
             }
-            else if(ipnTransaction.PaymentStatus == "Refunded" || ipnTransaction.PaymentStatus == "Reversed")
+            else if (ipnTransaction.PaymentStatus == "Refunded" || ipnTransaction.PaymentStatus == "Reversed")
             {
                 var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.TxnId);
-                if(refundTransaction != null)
+                if (refundTransaction != null)
                 {
                     _logger.LogWarning("Already processed this refunded transaction. #" + ipnTransaction.TxnId);
                     return new OkResult();
@@ -194,7 +194,7 @@ namespace Bit.Billing.Controllers
 
                 var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
                     GatewayType.PayPal, ipnTransaction.ParentTxnId);
-                if(parentTransaction == null)
+                if (parentTransaction == null)
                 {
                     _logger.LogWarning("Parent transaction was not found. " + ipnTransaction.TxnId);
                     return new BadRequestResult();
@@ -203,12 +203,12 @@ namespace Bit.Billing.Controllers
                 var refundAmount = System.Math.Abs(ipnTransaction.McGross);
                 var remainingAmount = parentTransaction.Amount -
                     parentTransaction.RefundedAmount.GetValueOrDefault();
-                if(refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
+                if (refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
                     remainingAmount >= refundAmount)
                 {
                     parentTransaction.RefundedAmount =
                         parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
-                    if(parentTransaction.RefundedAmount == parentTransaction.Amount)
+                    if (parentTransaction.RefundedAmount == parentTransaction.Amount)
                     {
                         parentTransaction.Refunded = true;
                     }

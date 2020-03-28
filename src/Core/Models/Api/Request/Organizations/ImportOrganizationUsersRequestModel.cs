@@ -62,7 +62,7 @@ namespace Bit.Core.Models.Api
 
             public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
             {
-                if(string.IsNullOrWhiteSpace(Email) && !Deleted)
+                if (string.IsNullOrWhiteSpace(Email) && !Deleted)
                 {
                     yield return new ValidationResult("Email is required for enabled users.", new string[] { nameof(Email) });
                 }

@@ -26,15 +26,15 @@ namespace Bit.Core.Services
             IWebHostEnvironment hostingEnvironment,
             ILogger<AmazonSesMailDeliveryService> logger)
         {
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeyId));
             }
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeySecret))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeySecret))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeySecret));
             }
-            if(string.IsNullOrWhiteSpace(globalSettings.Amazon?.Region))
+            if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.Region))
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.Region));
             }
@@ -46,7 +46,7 @@ namespace Bit.Core.Services
                 globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region));
             _source = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
             _senderTag = $"Server_{globalSettings.ProjectName}";
-            if(!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
+            if (!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
             {
                 _configSetName = _globalSettings.Mail.AmazonConfigSetName;
             }
@@ -91,12 +91,12 @@ namespace Bit.Core.Services
                 }
             };
 
-            if(message.BccEmails?.Any() ?? false)
+            if (message.BccEmails?.Any() ?? false)
             {
                 request.Destination.BccAddresses = message.BccEmails.ToList();
             }
 
-            if(!string.IsNullOrWhiteSpace(message.Category))
+            if (!string.IsNullOrWhiteSpace(message.Category))
             {
                 request.Tags.Add(new MessageTag { Name = "Category", Value = message.Category });
             }
@@ -105,7 +105,7 @@ namespace Bit.Core.Services
             {
                 await SendAsync(request, false);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogWarning(e, "Failed to send email. Re-retying...");
                 await SendAsync(request, true);
@@ -115,7 +115,7 @@ namespace Bit.Core.Services
 
         private async Task SendAsync(SendEmailRequest request, bool retry)
         {
-            if(retry)
+            if (retry)
             {
                 // wait and try again
                 await Task.Delay(2000);

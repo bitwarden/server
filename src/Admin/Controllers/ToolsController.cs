@@ -37,7 +37,7 @@ namespace Bit.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> ChargeBraintree(ChargeBraintreeModel model)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return View(model);
             }
@@ -73,7 +73,7 @@ namespace Bit.Admin.Controllers
                     }
                 });
 
-            if(!transactionResult.IsSuccess())
+            if (!transactionResult.IsSuccess())
             {
                 ModelState.AddModelError(string.Empty, "Charge failed. " +
                     "Refer to Braintree admin portal for more information.");
@@ -98,13 +98,13 @@ namespace Bit.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateTransaction(CreateUpdateTransactionModel model)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return View("CreateUpdateTransaction", model);
             }
 
             await _transactionRepository.CreateAsync(model.ToTransaction());
-            if(model.UserId.HasValue)
+            if (model.UserId.HasValue)
             {
                 return RedirectToAction("Edit", "Users", new { id = model.UserId });
             }
@@ -117,7 +117,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> EditTransaction(Guid id)
         {
             var transaction = await _transactionRepository.GetByIdAsync(id);
-            if(transaction == null)
+            if (transaction == null)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -127,12 +127,12 @@ namespace Bit.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> EditTransaction(Guid id, CreateUpdateTransactionModel model)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return View("CreateUpdateTransaction", model);
             }
             await _transactionRepository.ReplaceAsync(model.ToTransaction(id));
-            if(model.UserId.HasValue)
+            if (model.UserId.HasValue)
             {
                 return RedirectToAction("Edit", "Users", new { id = model.UserId });
             }
@@ -150,7 +150,7 @@ namespace Bit.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> PromoteAdmin(PromoteAdminModel model)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return View("PromoteAdmin", model);
             }
@@ -158,16 +158,16 @@ namespace Bit.Admin.Controllers
             var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(
                 model.OrganizationId.Value, null);
             var user = orgUsers.FirstOrDefault(u => u.UserId == model.UserId.Value);
-            if(user == null)
+            if (user == null)
             {
                 ModelState.AddModelError(nameof(model.UserId), "User Id not found in this organization.");
             }
-            else if(user.Type != Core.Enums.OrganizationUserType.Admin)
+            else if (user.Type != Core.Enums.OrganizationUserType.Admin)
             {
                 ModelState.AddModelError(nameof(model.UserId), "User is not an admin of this organization.");
             }
 
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return View("PromoteAdmin", model);
             }

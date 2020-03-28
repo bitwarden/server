@@ -16,11 +16,11 @@ namespace Bit.Core.Models.Data
         public InstallationDeviceEntity(string prefixedDeviceId)
         {
             var parts = prefixedDeviceId.Split("_");
-            if(parts.Length < 2)
+            if (parts.Length < 2)
             {
                 throw new ArgumentException("Not enough parts.");
             }
-            if(!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
+            if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
             {
                 throw new ArgumentException("Could not parse parts.");
             }

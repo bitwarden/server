@@ -33,38 +33,38 @@ namespace Bit.Core.Services
             Guid? savingUserId)
         {
             var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-            if(org == null)
+            if (org == null)
             {
                 throw new BadRequestException("Organization not found");
             }
 
-            if(!org.UsePolicies)
+            if (!org.UsePolicies)
             {
                 throw new BadRequestException("This organization cannot use policies.");
             }
 
             var now = DateTime.UtcNow;
-            if(policy.Id == default(Guid))
+            if (policy.Id == default(Guid))
             {
                 policy.CreationDate = now;
             }
-            else if(policy.Enabled)
+            else if (policy.Enabled)
             {
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
-                if(!currentPolicy?.Enabled ?? true)
+                if (!currentPolicy?.Enabled ?? true)
                 {
-                    if(currentPolicy.Type == Enums.PolicyType.TwoFactorAuthentication)
+                    if (currentPolicy.Type == Enums.PolicyType.TwoFactorAuthentication)
                     {
                         Organization organization = null;
                         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                             policy.OrganizationId);
-                        foreach(var orgUser in orgUsers.Where(ou =>
+                        foreach (var orgUser in orgUsers.Where(ou =>
                             ou.Status != Enums.OrganizationUserStatusType.Invited &&
                             ou.Type != Enums.OrganizationUserType.Owner))
                         {
-                            if(orgUser.UserId != savingUserId && !await userService.TwoFactorIsEnabledAsync(orgUser))
+                            if (orgUser.UserId != savingUserId && !await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
-                                if(organization == null)
+                                if (organization == null)
                                 {
                                     organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                                 }

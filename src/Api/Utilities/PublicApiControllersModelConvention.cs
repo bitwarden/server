@@ -8,7 +8,7 @@ namespace Bit.Api.Utilities
         {
             var controllerNamespace = controller.ControllerType.Namespace;
             var publicApi = controllerNamespace.Contains(".Public.");
-            if(publicApi)
+            if (publicApi)
             {
                 controller.Filters.Add(new CamelCaseJsonResultFilterAttribute());
             }

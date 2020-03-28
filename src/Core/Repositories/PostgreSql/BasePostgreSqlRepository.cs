@@ -17,7 +17,7 @@ namespace Bit.Core.Repositories.PostgreSql
 
         protected static string SnakeCase(string input)
         {
-            if(string.IsNullOrWhiteSpace(input))
+            if (string.IsNullOrWhiteSpace(input))
             {
                 return input;
             }
@@ -29,7 +29,7 @@ namespace Bit.Core.Repositories.PostgreSql
         {
             var dp = new DynamicParameters();
             var properties = typeof(T).GetProperties();
-            foreach(var property in properties)
+            foreach (var property in properties)
             {
                 dp.Add($"_{SnakeCase(property.Name)}", property.GetValue(obj));
             }

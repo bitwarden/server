@@ -36,7 +36,7 @@ namespace Bit.Notifications
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if(_executingTask == null)
+            if (_executingTask == null)
             {
                 return;
             }
@@ -51,7 +51,7 @@ namespace Bit.Notifications
 
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            while(!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 await _hubContext.Clients.All.SendAsync("Heartbeat");
                 await Task.Delay(120000);

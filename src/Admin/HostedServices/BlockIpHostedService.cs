@@ -41,7 +41,7 @@ namespace Bit.Admin.HostedServices
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if(_executingTask == null)
+            if (_executingTask == null)
             {
                 return;
             }
@@ -78,14 +78,14 @@ namespace Bit.Admin.HostedServices
             request.Content = new StringContent(bodyContent, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
-            if(!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
                 return;
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
             var accessRuleResponse = JsonConvert.DeserializeObject<AccessRuleResponse>(responseString);
-            if(!accessRuleResponse.Success)
+            if (!accessRuleResponse.Success)
             {
                 return;
             }
@@ -95,12 +95,12 @@ namespace Bit.Admin.HostedServices
 
         protected async Task UnblockIpAsync(string message, CancellationToken cancellationToken)
         {
-            if(string.IsNullOrWhiteSpace(message))
+            if (string.IsNullOrWhiteSpace(message))
             {
                 return;
             }
 
-            if(message.Contains(".") || message.Contains(":"))
+            if (message.Contains(".") || message.Contains(":"))
             {
                 // IP address messages
                 var request = new HttpRequestMessage();
@@ -113,19 +113,19 @@ namespace Bit.Admin.HostedServices
                     $"configuration_target=ip&configuration_value={message}");
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
-                if(!response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
                     return;
                 }
 
                 var responseString = await response.Content.ReadAsStringAsync();
                 var listResponse = JsonConvert.DeserializeObject<ListResponse>(responseString);
-                if(!listResponse.Success)
+                if (!listResponse.Success)
                 {
                     return;
                 }
 
-                foreach(var rule in listResponse.Result)
+                foreach (var rule in listResponse.Result)
                 {
                     await DeleteAccessRuleAsync(rule.Id, cancellationToken);
                 }

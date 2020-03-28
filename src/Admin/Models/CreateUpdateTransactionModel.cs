@@ -52,7 +52,7 @@ namespace Bit.Admin.Models
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if((!UserId.HasValue && !OrganizationId.HasValue) || (UserId.HasValue && OrganizationId.HasValue))
+            if ((!UserId.HasValue && !OrganizationId.HasValue) || (UserId.HasValue && OrganizationId.HasValue))
             {
                 yield return new ValidationResult("Must provide either User Id, or Organization Id.");
             }

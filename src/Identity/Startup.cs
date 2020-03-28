@@ -31,7 +31,7 @@ namespace Bit.Identity
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
-            if(!globalSettings.SelfHosted)
+            if (!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
                 services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
@@ -49,7 +49,7 @@ namespace Bit.Identity
             // Caching
             services.AddMemoryCache();
 
-            if(!globalSettings.SelfHosted)
+            if (!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
@@ -66,7 +66,7 @@ namespace Bit.Identity
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
 
-            if(CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
+            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
             {
                 services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
@@ -85,7 +85,7 @@ namespace Bit.Identity
             // Default Middleware
             app.UseDefaultMiddleware(env, globalSettings);
 
-            if(!globalSettings.SelfHosted)
+            if (!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();

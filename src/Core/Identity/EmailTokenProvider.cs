@@ -21,7 +21,7 @@ namespace Bit.Core.Identity
         public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-            if(!HasProperMetaData(provider))
+            if (!HasProperMetaData(provider))
             {
                 return false;
             }
@@ -33,7 +33,7 @@ namespace Bit.Core.Identity
         public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-            if(!HasProperMetaData(provider))
+            if (!HasProperMetaData(provider))
             {
                 return null;
             }
@@ -57,11 +57,11 @@ namespace Bit.Core.Identity
             var emailParts = email.Split('@');
 
             string shownPart = null;
-            if(emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+            if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
             {
                 shownPart = emailParts[0].Substring(0, 1);
             }
-            else if(emailParts[0].Length > 4)
+            else if (emailParts[0].Length > 4)
             {
                 shownPart = emailParts[0].Substring(0, 2);
             }
@@ -71,7 +71,7 @@ namespace Bit.Core.Identity
             }
 
             string redactedPart = null;
-            if(emailParts[0].Length > 4)
+            if (emailParts[0].Length > 4)
             {
                 redactedPart = new string('*', emailParts[0].Length - 2);
             }

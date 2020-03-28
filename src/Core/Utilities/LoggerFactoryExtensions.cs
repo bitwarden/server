@@ -17,7 +17,7 @@ namespace Bit.Core.Utilities
             IHostApplicationLifetime applicationLifetime,
             GlobalSettings globalSettings)
         {
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 return;
             }
@@ -30,19 +30,19 @@ namespace Bit.Core.Utilities
             WebHostBuilderContext context,
             Func<LogEvent, bool> filter = null)
         {
-            if(context.HostingEnvironment.IsDevelopment())
+            if (context.HostingEnvironment.IsDevelopment())
             {
                 return builder;
             }
 
             bool inclusionPredicate(LogEvent e)
             {
-                if(filter == null)
+                if (filter == null)
                 {
                     return true;
                 }
                 var eventId = e.Properties.ContainsKey("EventId") ? e.Properties["EventId"].ToString() : null;
-                if(eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
+                if (eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
                 {
                     return true;
                 }
@@ -56,7 +56,7 @@ namespace Bit.Core.Utilities
                 .Enrich.FromLogContext()
                 .Filter.ByIncludingOnly(inclusionPredicate);
 
-            if(CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
+            if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
                 CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
             {
                 config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri),
@@ -64,15 +64,15 @@ namespace Bit.Core.Utilities
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+            else if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
             {
                 config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
-            else if(CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
+            else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
-                if(globalSettings.LogRollBySizeLimit.HasValue)
+                if (globalSettings.LogRollBySizeLimit.HasValue)
                 {
                     config.WriteTo.File($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
                         rollOnFileSizeLimit: true, fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);

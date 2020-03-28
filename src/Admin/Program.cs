@@ -22,7 +22,7 @@ namespace Bit.Admin
                     logging.AddSerilog(hostingContext, e =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
-                        if(e.Properties.ContainsKey("RequestPath") &&
+                        if (e.Properties.ContainsKey("RequestPath") &&
                             !string.IsNullOrWhiteSpace(e.Properties["RequestPath"]?.ToString()) &&
                             (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
                         {

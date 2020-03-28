@@ -78,7 +78,7 @@ namespace Bit.Billing
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }

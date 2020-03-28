@@ -34,7 +34,7 @@ namespace Bit.Api.Controllers
         public async Task<DeviceResponseModel> Get(string id)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }
@@ -47,7 +47,7 @@ namespace Bit.Api.Controllers
         public async Task<DeviceResponseModel> GetByIdentifier(string identifier)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }
@@ -79,7 +79,7 @@ namespace Bit.Api.Controllers
         public async Task<DeviceResponseModel> Put(string id, [FromBody]DeviceRequestModel model)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }
@@ -95,7 +95,7 @@ namespace Bit.Api.Controllers
         public async Task PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }
@@ -109,7 +109,7 @@ namespace Bit.Api.Controllers
         public async Task PutClearToken(string identifier)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }
@@ -122,7 +122,7 @@ namespace Bit.Api.Controllers
         public async Task Delete(string id)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
-            if(device == null)
+            if (device == null)
             {
                 throw new NotFoundException();
             }

@@ -14,7 +14,7 @@ namespace Bit.Core.Models.Api.Public
     {
         public CollectionResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
         {
-            if(collection == null)
+            if (collection == null)
             {
                 throw new ArgumentNullException(nameof(collection));
             }

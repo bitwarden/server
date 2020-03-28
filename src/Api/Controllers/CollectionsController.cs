@@ -45,16 +45,16 @@ namespace Bit.Api.Controllers
         public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationManager(orgIdGuid))
+            if (!_currentContext.OrganizationManager(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var idGuid = new Guid(id);
-            if(_currentContext.OrganizationAdmin(orgIdGuid))
+            if (_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid);
-                if(collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
                 {
                     throw new NotFoundException();
                 }
@@ -64,7 +64,7 @@ namespace Bit.Api.Controllers
             {
                 var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid,
                     _currentContext.UserId.Value);
-                if(collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
                 {
                     throw new NotFoundException();
                 }
@@ -76,7 +76,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
         public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if(!_currentContext.OrganizationManager(orgIdGuid))
+            if (!_currentContext.OrganizationManager(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -154,7 +154,7 @@ namespace Bit.Api.Controllers
 
         private async Task<Collection> GetCollectionAsync(Guid id, Guid orgId)
         {
-            if(!_currentContext.OrganizationManager(orgId))
+            if (!_currentContext.OrganizationManager(orgId))
             {
                 throw new NotFoundException();
             }
@@ -162,7 +162,7 @@ namespace Bit.Api.Controllers
             var collection = _currentContext.OrganizationAdmin(orgId) ?
                 await _collectionRepository.GetByIdAsync(id) :
                 await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
-            if(collection == null || collection.OrganizationId != orgId)
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }

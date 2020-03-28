@@ -53,7 +53,7 @@ namespace Bit.Admin
             {
                 options.ValidationInterval = TimeSpan.FromMinutes(5);
             });
-            if(globalSettings.SelfHosted)
+            if (globalSettings.SelfHosted)
             {
                 services.ConfigureApplicationCookie(options =>
                 {
@@ -75,17 +75,17 @@ namespace Bit.Admin
             // Jobs service
             Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if(globalSettings.SelfHosted)
+            if (globalSettings.SelfHosted)
             {
                 services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
             }
             else
             {
-                if(CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
+                if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
                 {
                     services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
                 }
-                else if(CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+                else if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
                 {
                     services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
                 }
@@ -100,13 +100,13 @@ namespace Bit.Admin
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if(globalSettings.SelfHosted)
+            if (globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");
                 app.UseForwardedHeaders(globalSettings);
             }
 
-            if(env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }

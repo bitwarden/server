@@ -30,7 +30,7 @@ namespace Bit.Core.Services
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
             string identifier, DeviceType type)
         {
-            if(string.IsNullOrWhiteSpace(pushToken))
+            if (string.IsNullOrWhiteSpace(pushToken))
             {
                 return;
             }
@@ -47,13 +47,13 @@ namespace Bit.Core.Services
                 $"userId:{userId}"
             };
 
-            if(!string.IsNullOrWhiteSpace(identifier))
+            if (!string.IsNullOrWhiteSpace(identifier))
             {
                 installation.Tags.Add("deviceIdentifier:" + identifier);
             }
 
             string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
-            switch(type)
+            switch (type)
             {
                 case DeviceType.Android:
                     payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
@@ -88,7 +88,7 @@ namespace Bit.Core.Services
                 userId, identifier);
 
             await _client.CreateOrUpdateInstallationAsync(installation);
-            if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+            if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
             }
@@ -97,7 +97,7 @@ namespace Bit.Core.Services
         private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
             string userId, string identifier)
         {
-            if(templateBody == null)
+            if (templateBody == null)
             {
                 return;
             }
@@ -114,7 +114,7 @@ namespace Bit.Core.Services
                 }
             };
 
-            if(!string.IsNullOrWhiteSpace(identifier))
+            if (!string.IsNullOrWhiteSpace(identifier))
             {
                 template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
             }
@@ -127,14 +127,14 @@ namespace Bit.Core.Services
             try
             {
                 await _client.DeleteInstallationAsync(deviceId);
-                if(InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+                if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
                 {
                     await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                if(e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
+                if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                 {
                     throw e;
                 }
@@ -144,7 +144,7 @@ namespace Bit.Core.Services
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
-            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
             {
                 var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
                 await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
@@ -155,7 +155,7 @@ namespace Bit.Core.Services
         {
             await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
                 $"organizationId:{organizationId}");
-            if(deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+            if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
             {
                 var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
                 await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
@@ -165,7 +165,7 @@ namespace Bit.Core.Services
         private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
             string tag)
         {
-            if(!deviceIds.Any())
+            if (!deviceIds.Any())
             {
                 return;
             }
@@ -176,24 +176,24 @@ namespace Bit.Core.Services
                 Path = "/tags"
             };
 
-            if(op == UpdateOperationType.Add)
+            if (op == UpdateOperationType.Add)
             {
                 operation.Value = tag;
             }
-            else if(op == UpdateOperationType.Remove)
+            else if (op == UpdateOperationType.Remove)
             {
                 operation.Path += $"/{tag}";
             }
 
-            foreach(var id in deviceIds)
+            foreach (var id in deviceIds)
             {
                 try
                 {
                     await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    if(e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
+                    if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                     {
                         throw e;
                     }

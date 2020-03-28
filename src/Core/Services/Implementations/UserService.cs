@@ -108,7 +108,7 @@ namespace Bit.Core.Services
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
         {
-            if(!Guid.TryParse(GetUserId(principal), out var userIdGuid))
+            if (!Guid.TryParse(GetUserId(principal), out var userIdGuid))
             {
                 return null;
             }
@@ -118,13 +118,13 @@ namespace Bit.Core.Services
 
         public async Task<User> GetUserByIdAsync(string userId)
         {
-            if(_currentContext?.User != null &&
+            if (_currentContext?.User != null &&
                 string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
             {
                 return _currentContext.User;
             }
 
-            if(!Guid.TryParse(userId, out var userIdGuid))
+            if (!Guid.TryParse(userId, out var userIdGuid))
             {
                 return null;
             }
@@ -135,7 +135,7 @@ namespace Bit.Core.Services
 
         public async Task<User> GetUserByIdAsync(Guid userId)
         {
-            if(_currentContext?.User != null && _currentContext.User.Id == userId)
+            if (_currentContext?.User != null && _currentContext.User.Id == userId)
             {
                 return _currentContext.User;
             }
@@ -147,7 +147,7 @@ namespace Bit.Core.Services
         public async Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal)
         {
             var userId = GetProperUserId(principal);
-            if(!userId.HasValue)
+            if (!userId.HasValue)
             {
                 return null;
             }
@@ -162,7 +162,7 @@ namespace Bit.Core.Services
 
         public async Task SaveUserAsync(User user, bool push = false)
         {
-            if(user.Id == default(Guid))
+            if (user.Id == default(Guid))
             {
                 throw new ApplicationException("Use register method to create a new user.");
             }
@@ -170,7 +170,7 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
-            if(push)
+            if (push)
             {
                 // push
                 await _pushService.PushSyncSettingsAsync(user.Id);
@@ -181,18 +181,18 @@ namespace Bit.Core.Services
         {
             // Check if user is the only owner of any organizations.
             var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
-            if(onlyOwnerCount > 0)
+            if (onlyOwnerCount > 0)
             {
                 var deletedOrg = false;
                 var orgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                     OrganizationUserStatusType.Confirmed);
-                if(orgs.Count == 1)
+                if (orgs.Count == 1)
                 {
                     var org = await _organizationRepository.GetByIdAsync(orgs.First().OrganizationId);
-                    if(org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
+                    if (org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
                     {
                         var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
-                        if(orgCount <= 1)
+                        if (orgCount <= 1)
                         {
                             await _organizationRepository.DeleteAsync(org);
                             deletedOrg = true;
@@ -200,7 +200,7 @@ namespace Bit.Core.Services
                     }
                 }
 
-                if(!deletedOrg)
+                if (!deletedOrg)
                 {
                     return IdentityResult.Failed(new IdentityError
                     {
@@ -209,13 +209,13 @@ namespace Bit.Core.Services
                 }
             }
 
-            if(!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
+            if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
             {
                 try
                 {
                     await CancelPremiumAsync(user, null, true);
                 }
-                catch(GatewayException) { }
+                catch (GatewayException) { }
             }
 
             await _userRepository.DeleteAsync(user);
@@ -225,7 +225,7 @@ namespace Bit.Core.Services
 
         public async Task<IdentityResult> DeleteAsync(User user, string token)
         {
-            if(!(await VerifyUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount", token)))
+            if (!(await VerifyUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount", token)))
             {
                 return IdentityResult.Failed(ErrorDescriber.InvalidToken());
             }
@@ -236,7 +236,7 @@ namespace Bit.Core.Services
         public async Task SendDeleteConfirmationAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 // No user exists.
                 return;
@@ -250,25 +250,25 @@ namespace Bit.Core.Services
             string token, Guid? orgUserId)
         {
             var tokenValid = false;
-            if(_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
+            if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
             {
                 tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
                     user.Email, orgUserId.Value, _globalSettings);
             }
 
-            if(_globalSettings.DisableUserRegistration && !tokenValid)
+            if (_globalSettings.DisableUserRegistration && !tokenValid)
             {
                 throw new BadRequestException("Open registration has been disabled by the system administrator.");
             }
 
-            if(orgUserId.HasValue)
+            if (orgUserId.HasValue)
             {
                 var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-                if(orgUser != null)
+                if (orgUser != null)
                 {
                     var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
                         PolicyType.TwoFactorAuthentication);
-                    if(twoFactorPolicy != null && twoFactorPolicy.Enabled)
+                    if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
                     {
                         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
                         {
@@ -285,7 +285,7 @@ namespace Bit.Core.Services
             }
 
             var result = await base.CreateAsync(user, masterPassword);
-            if(result == IdentityResult.Success)
+            if (result == IdentityResult.Success)
             {
                 await _mailService.SendWelcomeEmailAsync(user);
             }
@@ -296,13 +296,13 @@ namespace Bit.Core.Services
         public async Task SendMasterPasswordHintAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 // No user exists. Do we want to send an email telling them this in the future?
                 return;
             }
 
-            if(string.IsNullOrWhiteSpace(user.MasterPasswordHint))
+            if (string.IsNullOrWhiteSpace(user.MasterPasswordHint))
             {
                 await _mailService.SendNoMasterPasswordHintEmailAsync(email);
                 return;
@@ -314,7 +314,7 @@ namespace Bit.Core.Services
         public async Task SendTwoFactorEmailAsync(User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-            if(provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+            if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
             {
                 throw new ArgumentNullException("No email.");
             }
@@ -328,7 +328,7 @@ namespace Bit.Core.Services
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-            if(provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+            if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
             {
                 throw new ArgumentNullException("No email.");
             }
@@ -361,13 +361,13 @@ namespace Bit.Core.Services
 
         public async Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse)
         {
-            if(string.IsNullOrWhiteSpace(deviceResponse))
+            if (string.IsNullOrWhiteSpace(deviceResponse))
             {
                 return false;
             }
 
             var challenges = await _u2fRepository.GetManyByUserIdAsync(user.Id);
-            if(!challenges?.Any() ?? true)
+            if (!challenges?.Any() ?? true)
             {
                 return false;
             }
@@ -384,28 +384,28 @@ namespace Bit.Core.Services
 
                 // Add device
                 var providers = user.GetTwoFactorProviders();
-                if(providers == null)
+                if (providers == null)
                 {
                     providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
                 }
                 var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-                if(provider == null)
+                if (provider == null)
                 {
                     provider = new TwoFactorProvider();
                 }
-                if(provider.MetaData == null)
+                if (provider.MetaData == null)
                 {
                     provider.MetaData = new Dictionary<string, object>();
                 }
 
-                if(provider.MetaData.Count >= 5)
+                if (provider.MetaData.Count >= 5)
                 {
                     // Can only register up to 5 keys
                     return false;
                 }
 
                 var keyId = $"Key{id}";
-                if(provider.MetaData.ContainsKey(keyId))
+                if (provider.MetaData.ContainsKey(keyId))
                 {
                     provider.MetaData.Remove(keyId);
                 }
@@ -421,7 +421,7 @@ namespace Bit.Core.Services
                     Counter = reg.Counter
                 });
 
-                if(providers.ContainsKey(TwoFactorProviderType.U2f))
+                if (providers.ContainsKey(TwoFactorProviderType.U2f))
                 {
                     providers.Remove(TwoFactorProviderType.U2f);
                 }
@@ -431,7 +431,7 @@ namespace Bit.Core.Services
                 await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
                 return true;
             }
-            catch(U2fException e)
+            catch (U2fException e)
             {
                 Logger.LogError(e, "Complete U2F registration error.");
                 return false;
@@ -441,19 +441,19 @@ namespace Bit.Core.Services
         public async Task<bool> DeleteU2fKeyAsync(User user, int id)
         {
             var providers = user.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 return false;
             }
 
             var keyName = $"Key{id}";
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if(!provider?.MetaData?.ContainsKey(keyName) ?? true)
+            if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
             {
                 return false;
             }
 
-            if(provider.MetaData.Count < 2)
+            if (provider.MetaData.Count < 2)
             {
                 return false;
             }
@@ -467,7 +467,7 @@ namespace Bit.Core.Services
 
         public async Task SendEmailVerificationAsync(User user)
         {
-            if(user.EmailVerified)
+            if (user.EmailVerified)
             {
                 throw new BadRequestException("Email already verified.");
             }
@@ -479,7 +479,7 @@ namespace Bit.Core.Services
         public async Task InitiateEmailChangeAsync(User user, string newEmail)
         {
             var existingUser = await _userRepository.GetByEmailAsync(newEmail);
-            if(existingUser != null)
+            if (existingUser != null)
             {
                 await _mailService.SendChangeEmailAlreadyExistsEmailAsync(user.Email, newEmail);
                 return;
@@ -493,25 +493,25 @@ namespace Bit.Core.Services
             string newMasterPassword, string token, string key)
         {
             var verifyPasswordResult = _passwordHasher.VerifyHashedPassword(user, user.MasterPassword, masterPassword);
-            if(verifyPasswordResult == PasswordVerificationResult.Failed)
+            if (verifyPasswordResult == PasswordVerificationResult.Failed)
             {
                 return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
             }
 
-            if(!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
+            if (!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
                 GetChangeEmailTokenPurpose(newEmail), token))
             {
                 return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
             }
 
             var existingUser = await _userRepository.GetByEmailAsync(newEmail);
-            if(existingUser != null && existingUser.Id != user.Id)
+            if (existingUser != null && existingUser.Id != user.Id)
             {
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
 
             var result = await UpdatePasswordHash(user, newMasterPassword);
-            if(!result.Succeeded)
+            if (!result.Succeeded)
             {
                 return result;
             }
@@ -534,15 +534,15 @@ namespace Bit.Core.Services
         public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword,
             string key)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await CheckPasswordAsync(user, masterPassword))
+            if (await CheckPasswordAsync(user, masterPassword))
             {
                 var result = await UpdatePasswordHash(user, newMasterPassword);
-                if(!result.Succeeded)
+                if (!result.Succeeded)
                 {
                     return result;
                 }
@@ -564,15 +564,15 @@ namespace Bit.Core.Services
         public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
             string key, KdfType kdf, int kdfIterations)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await CheckPasswordAsync(user, masterPassword))
+            if (await CheckPasswordAsync(user, masterPassword))
             {
                 var result = await UpdatePasswordHash(user, newMasterPassword);
-                if(!result.Succeeded)
+                if (!result.Succeeded)
                 {
                     return result;
                 }
@@ -593,18 +593,18 @@ namespace Bit.Core.Services
         public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await CheckPasswordAsync(user, masterPassword))
+            if (await CheckPasswordAsync(user, masterPassword))
             {
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
                 user.PrivateKey = privateKey;
-                if(ciphers.Any() || folders.Any())
+                if (ciphers.Any() || folders.Any())
                 {
                     await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders);
                 }
@@ -623,15 +623,15 @@ namespace Bit.Core.Services
 
         public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPassword)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(await CheckPasswordAsync(user, masterPassword))
+            if (await CheckPasswordAsync(user, masterPassword))
             {
                 var result = await base.UpdateSecurityStampAsync(user);
-                if(!result.Succeeded)
+                if (!result.Succeeded)
                 {
                     return result;
                 }
@@ -656,7 +656,7 @@ namespace Bit.Core.Services
             IOrganizationService organizationService)
         {
             var providers = user.GetTwoFactorProviders();
-            if(!providers?.ContainsKey(type) ?? true)
+            if (!providers?.ContainsKey(type) ?? true)
             {
                 return;
             }
@@ -666,7 +666,7 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-            if(!await TwoFactorIsEnabledAsync(user))
+            if (!await TwoFactorIsEnabledAsync(user))
             {
                 await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
             }
@@ -676,18 +676,18 @@ namespace Bit.Core.Services
             IOrganizationService organizationService)
         {
             var user = await _userRepository.GetByEmailAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 // No user exists. Do we want to send an email telling them this in the future?
                 return false;
             }
 
-            if(!await CheckPasswordAsync(user, masterPassword))
+            if (!await CheckPasswordAsync(user, masterPassword))
             {
                 return false;
             }
 
-            if(string.Compare(user.TwoFactorRecoveryCode, recoveryCode, true) != 0)
+            if (string.Compare(user.TwoFactorRecoveryCode, recoveryCode, true) != 0)
             {
                 return false;
             }
@@ -705,17 +705,17 @@ namespace Bit.Core.Services
         public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
             PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license)
         {
-            if(user.Premium)
+            if (user.Premium)
             {
                 throw new BadRequestException("Already a premium user.");
             }
 
-            if(additionalStorageGb < 0)
+            if (additionalStorageGb < 0)
             {
                 throw new BadRequestException("You can't subtract storage!");
             }
 
-            if((paymentMethodType == PaymentMethodType.GoogleInApp ||
+            if ((paymentMethodType == PaymentMethodType.GoogleInApp ||
                 paymentMethodType == PaymentMethodType.AppleInApp) && additionalStorageGb > 0)
             {
                 throw new BadRequestException("You cannot add storage with this payment method.");
@@ -723,14 +723,14 @@ namespace Bit.Core.Services
 
             string paymentIntentClientSecret = null;
             IPaymentService paymentService = null;
-            if(_globalSettings.SelfHosted)
+            if (_globalSettings.SelfHosted)
             {
-                if(license == null || !_licenseService.VerifyLicense(license))
+                if (license == null || !_licenseService.VerifyLicense(license))
                 {
                     throw new BadRequestException("Invalid license.");
                 }
 
-                if(!license.CanUse(user))
+                if (!license.CanUse(user))
                 {
                     throw new BadRequestException("This license is not valid for this user.");
                 }
@@ -748,7 +748,7 @@ namespace Bit.Core.Services
             user.Premium = true;
             user.RevisionDate = DateTime.UtcNow;
 
-            if(_globalSettings.SelfHosted)
+            if (_globalSettings.SelfHosted)
             {
                 user.MaxStorageGb = 10240; // 10 TB
                 user.LicenseKey = license.LicenseKey;
@@ -776,21 +776,21 @@ namespace Bit.Core.Services
 
         public async Task IapCheckAsync(User user, PaymentMethodType paymentMethodType)
         {
-            if(paymentMethodType != PaymentMethodType.AppleInApp)
+            if (paymentMethodType != PaymentMethodType.AppleInApp)
             {
                 throw new BadRequestException("Payment method not supported for in-app purchases.");
             }
 
-            if(user.Premium)
+            if (user.Premium)
             {
                 throw new BadRequestException("Already a premium user.");
             }
 
-            if(!string.IsNullOrWhiteSpace(user.GatewayCustomerId))
+            if (!string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
                 var customerService = new Stripe.CustomerService();
                 var customer = await customerService.GetAsync(user.GatewayCustomerId);
-                if(customer != null && customer.Balance != 0)
+                if (customer != null && customer.Balance != 0)
                 {
                     throw new BadRequestException("Customer balance cannot exist when using in-app purchases.");
                 }
@@ -799,17 +799,17 @@ namespace Bit.Core.Services
 
         public async Task UpdateLicenseAsync(User user, UserLicense license)
         {
-            if(!_globalSettings.SelfHosted)
+            if (!_globalSettings.SelfHosted)
             {
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
-            if(license == null || !_licenseService.VerifyLicense(license))
+            if (license == null || !_licenseService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
             }
 
-            if(!license.CanUse(user))
+            if (!license.CanUse(user))
             {
                 throw new BadRequestException("This license is not valid for this user.");
             }
@@ -828,12 +828,12 @@ namespace Bit.Core.Services
 
         public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if(!user.Premium)
+            if (!user.Premium)
             {
                 throw new BadRequestException("Not a premium user.");
             }
@@ -846,13 +846,13 @@ namespace Bit.Core.Services
 
         public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType)
         {
-            if(paymentToken.StartsWith("btok_"))
+            if (paymentToken.StartsWith("btok_"))
             {
                 throw new BadRequestException("Invalid token.");
             }
 
             var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
-            if(updated)
+            if (updated)
             {
                 await SaveUserAsync(user);
             }
@@ -861,7 +861,7 @@ namespace Bit.Core.Services
         public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false)
         {
             var eop = endOfPeriod.GetValueOrDefault(true);
-            if(!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
+            if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
                 user.PremiumExpirationDate.Value < DateTime.UtcNow)
             {
                 eop = false;
@@ -882,7 +882,7 @@ namespace Bit.Core.Services
 
         public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
         {
-            if(user != null && !user.Premium && user.Gateway.HasValue)
+            if (user != null && !user.Premium && user.Gateway.HasValue)
             {
                 user.Premium = true;
                 user.PremiumExpirationDate = expirationDate;
@@ -899,7 +899,7 @@ namespace Bit.Core.Services
 
         public async Task DisablePremiumAsync(User user, DateTime? expirationDate)
         {
-            if(user != null && user.Premium)
+            if (user != null && user.Premium)
             {
                 user.Premium = false;
                 user.PremiumExpirationDate = expirationDate;
@@ -911,7 +911,7 @@ namespace Bit.Core.Services
         public async Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate)
         {
             var user = await _userRepository.GetByIdAsync(userId);
-            if(user != null)
+            if (user != null)
             {
                 user.PremiumExpirationDate = expirationDate;
                 user.RevisionDate = DateTime.UtcNow;
@@ -921,12 +921,12 @@ namespace Bit.Core.Services
 
         public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new NotFoundException();
             }
 
-            if(subscriptionInfo == null && user.Gateway != null)
+            if (subscriptionInfo == null && user.Gateway != null)
             {
                 subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
             }
@@ -937,13 +937,13 @@ namespace Bit.Core.Services
 
         public override async Task<bool> CheckPasswordAsync(User user, string password)
         {
-            if(user == null)
+            if (user == null)
             {
                 return false;
             }
 
             var result = await base.VerifyPasswordAsync(Store as IUserPasswordStore<User>, user, password);
-            if(result == PasswordVerificationResult.SuccessRehashNeeded)
+            if (result == PasswordVerificationResult.SuccessRehashNeeded)
             {
                 await UpdatePasswordHash(user, password, false, false);
                 user.RevisionDate = DateTime.UtcNow;
@@ -951,7 +951,7 @@ namespace Bit.Core.Services
             }
 
             var success = result != PasswordVerificationResult.Failed;
-            if(!success)
+            if (!success)
             {
                 Logger.LogWarning(0, "Invalid password for user {userId}.", user.Id);
             }
@@ -961,16 +961,16 @@ namespace Bit.Core.Services
         public async Task<bool> CanAccessPremium(ITwoFactorProvidersUser user)
         {
             var userId = user.GetUserId();
-            if(!userId.HasValue)
+            if (!userId.HasValue)
             {
                 return false;
             }
-            if(user.GetPremium())
+            if (user.GetPremium())
             {
                 return true;
             }
             var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId.Value);
-            if(!orgs.Any())
+            if (!orgs.Any())
             {
                 return false;
             }
@@ -982,20 +982,20 @@ namespace Bit.Core.Services
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
         {
             var providers = user.GetTwoFactorProviders();
-            if(providers == null)
+            if (providers == null)
             {
                 return false;
             }
 
-            foreach(var p in providers)
+            foreach (var p in providers)
             {
-                if(p.Value?.Enabled ?? false)
+                if (p.Value?.Enabled ?? false)
                 {
-                    if(!TwoFactorProvider.RequiresPremium(p.Key))
+                    if (!TwoFactorProvider.RequiresPremium(p.Key))
                     {
                         return true;
                     }
-                    if(await CanAccessPremium(user))
+                    if (await CanAccessPremium(user))
                     {
                         return true;
                     }
@@ -1007,12 +1007,12 @@ namespace Bit.Core.Services
         public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user)
         {
             var providers = user.GetTwoFactorProviders();
-            if(providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
+            if (providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
             {
                 return false;
             }
 
-            if(!TwoFactorProvider.RequiresPremium(provider))
+            if (!TwoFactorProvider.RequiresPremium(provider))
             {
                 return true;
             }
@@ -1023,17 +1023,17 @@ namespace Bit.Core.Services
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {
-            if(validatePassword)
+            if (validatePassword)
             {
                 var validate = await ValidatePasswordInternal(user, newPassword);
-                if(!validate.Succeeded)
+                if (!validate.Succeeded)
                 {
                     return validate;
                 }
             }
 
             user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
-            if(refreshStamp)
+            if (refreshStamp)
             {
                 user.SecurityStamp = Guid.NewGuid().ToString();
             }
@@ -1044,16 +1044,16 @@ namespace Bit.Core.Services
         private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
         {
             var errors = new List<IdentityError>();
-            foreach(var v in _passwordValidators)
+            foreach (var v in _passwordValidators)
             {
                 var result = await v.ValidateAsync(this, user, password);
-                if(!result.Succeeded)
+                if (!result.Succeeded)
                 {
                     errors.AddRange(result.Errors);
                 }
             }
 
-            if(errors.Count > 0)
+            if (errors.Count > 0)
             {
                 Logger.LogWarning("User {userId} password validation failed: {errors}.", await GetUserIdAsync(user),
                     string.Join(";", errors.Select(e => e.Code)));
@@ -1066,7 +1066,7 @@ namespace Bit.Core.Services
         public void SetTwoFactorProvider(User user, TwoFactorProviderType type)
         {
             var providers = user.GetTwoFactorProviders();
-            if(!providers?.ContainsKey(type) ?? true)
+            if (!providers?.ContainsKey(type) ?? true)
             {
                 return;
             }
@@ -1074,7 +1074,7 @@ namespace Bit.Core.Services
             providers[type].Enabled = true;
             user.SetTwoFactorProviders(providers);
 
-            if(string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
+            if (string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))
             {
                 user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
             }
@@ -1084,14 +1084,14 @@ namespace Bit.Core.Services
         {
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
             var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if(twoFactorPolicies.Any())
+            if (twoFactorPolicies.Any())
             {
                 var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
                 var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
                     .Select(o => o.OrganizationId).ToHashSet();
-                foreach(var policy in twoFactorPolicies)
+                foreach (var policy in twoFactorPolicies)
                 {
-                    if(!ownerOrgs.Contains(policy.OrganizationId))
+                    if (!ownerOrgs.Contains(policy.OrganizationId))
                     {
                         await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
                         var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);

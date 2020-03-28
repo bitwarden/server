@@ -63,7 +63,7 @@ namespace Bit.Core.Models.Api
 
         public Cipher ToCipher(Cipher existingCipher)
         {
-            switch(existingCipher.Type)
+            switch (existingCipher.Type)
             {
                 case CipherType.Login:
                     var loginObj = JObject.FromObject(new CipherLoginData(this),
@@ -90,29 +90,29 @@ namespace Bit.Core.Models.Api
             var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
             var hasAttachments = (Attachments?.Count ?? 0) > 0;
 
-            if(!hasAttachments2 && !hasAttachments)
+            if (!hasAttachments2 && !hasAttachments)
             {
                 return existingCipher;
             }
 
             var attachments = existingCipher.GetAttachments();
-            if((attachments?.Count ?? 0) == 0)
+            if ((attachments?.Count ?? 0) == 0)
             {
                 return existingCipher;
             }
 
-            if(hasAttachments2)
+            if (hasAttachments2)
             {
-                foreach(var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
+                foreach (var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
                 {
                     var attachment2 = Attachments2[attachment.Key];
                     attachment.Value.FileName = attachment2.FileName;
                     attachment.Value.Key = attachment2.Key;
                 }
             }
-            else if(hasAttachments)
+            else if (hasAttachments)
             {
-                foreach(var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+                foreach (var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
                 {
                     attachment.Value.FileName = Attachments[attachment.Key];
                     attachment.Value.Key = null;
@@ -125,7 +125,7 @@ namespace Bit.Core.Models.Api
 
         public Cipher ToOrganizationCipher()
         {
-            if(string.IsNullOrWhiteSpace(OrganizationId))
+            if (string.IsNullOrWhiteSpace(OrganizationId))
             {
                 throw new ArgumentNullException(nameof(OrganizationId));
             }
@@ -162,7 +162,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!string.IsNullOrWhiteSpace(Cipher.OrganizationId) && (!CollectionIds?.Any() ?? true))
+            if (!string.IsNullOrWhiteSpace(Cipher.OrganizationId) && (!CollectionIds?.Any() ?? true))
             {
                 yield return new ValidationResult("You must select at least one collection.",
                    new string[] { nameof(CollectionIds) });
@@ -179,13 +179,13 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(string.IsNullOrWhiteSpace(Cipher.OrganizationId))
+            if (string.IsNullOrWhiteSpace(Cipher.OrganizationId))
             {
                 yield return new ValidationResult("Cipher OrganizationId is required.",
                     new string[] { nameof(Cipher.OrganizationId) });
             }
 
-            if(!CollectionIds?.Any() ?? true)
+            if (!CollectionIds?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one collection.",
                     new string[] { nameof(CollectionIds) });
@@ -221,7 +221,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!Ciphers?.Any() ?? true)
+            if (!Ciphers?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one cipher.",
                     new string[] { nameof(Ciphers) });
@@ -230,27 +230,27 @@ namespace Bit.Core.Models.Api
             {
                 var allHaveIds = true;
                 var organizationIds = new HashSet<string>();
-                foreach(var c in Ciphers)
+                foreach (var c in Ciphers)
                 {
                     organizationIds.Add(c.OrganizationId);
-                    if(allHaveIds)
+                    if (allHaveIds)
                     {
                         allHaveIds = !(!c.Id.HasValue || string.IsNullOrWhiteSpace(c.OrganizationId));
                     }
                 }
 
-                if(!allHaveIds)
+                if (!allHaveIds)
                 {
                     yield return new ValidationResult("All Ciphers must have an Id and OrganizationId.",
                         new string[] { nameof(Ciphers) });
                 }
-                else if(organizationIds.Count != 1)
+                else if (organizationIds.Count != 1)
                 {
                     yield return new ValidationResult("All ciphers must be for the same organization.");
                 }
             }
 
-            if(!CollectionIds?.Any() ?? true)
+            if (!CollectionIds?.Any() ?? true)
             {
                 yield return new ValidationResult("You must select at least one collection.",
                     new string[] { nameof(CollectionIds) });

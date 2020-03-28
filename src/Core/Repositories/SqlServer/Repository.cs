@@ -16,12 +16,12 @@ namespace Bit.Core.Repositories.SqlServer
             string schema = null, string table = null)
             : base(connectionString, readOnlyConnectionString)
         {
-            if(!string.IsNullOrWhiteSpace(table))
+            if (!string.IsNullOrWhiteSpace(table))
             {
                 Table = table;
             }
 
-            if(!string.IsNullOrWhiteSpace(schema))
+            if (!string.IsNullOrWhiteSpace(schema))
             {
                 Schema = schema;
             }
@@ -32,7 +32,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task<T> GetByIdAsync(TId id)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<T>(
                     $"[{Schema}].[{Table}_ReadById]",
@@ -46,7 +46,7 @@ namespace Bit.Core.Repositories.SqlServer
         public virtual async Task CreateAsync(T obj)
         {
             obj.SetNewId();
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_Create]",
@@ -57,7 +57,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_Update]",
@@ -68,7 +68,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(obj.Id.Equals(default(TId)))
+            if (obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
@@ -80,7 +80,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public virtual async Task DeleteAsync(T obj)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_DeleteById]",

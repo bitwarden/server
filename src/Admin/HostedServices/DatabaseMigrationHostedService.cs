@@ -33,7 +33,7 @@ namespace Bit.Admin.HostedServices
             await Task.Delay(20000);
 
             var maxMigrationAttempts = 10;
-            for(var i = 1; i <= maxMigrationAttempts; i++)
+            for (var i = 1; i <= maxMigrationAttempts; i++)
             {
                 try
                 {
@@ -41,9 +41,9 @@ namespace Bit.Admin.HostedServices
                     // TODO: Maybe flip a flag somewhere to indicate migration is complete??
                     break;
                 }
-                catch(SqlException e)
+                catch (SqlException e)
                 {
-                    if(i >= maxMigrationAttempts)
+                    if (i >= maxMigrationAttempts)
                     {
                         _logger.LogError(e, "Database failed to migrate.");
                         throw e;

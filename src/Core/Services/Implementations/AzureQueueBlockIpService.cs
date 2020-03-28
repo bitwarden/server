@@ -20,7 +20,7 @@ namespace Bit.Core.Services
         public async Task BlockIpAsync(string ipAddress, bool permanentBlock)
         {
             var now = DateTime.UtcNow;
-            if(_lastBlock != null && _lastBlock.Item1 == ipAddress && _lastBlock.Item2 == permanentBlock &&
+            if (_lastBlock != null && _lastBlock.Item1 == ipAddress && _lastBlock.Item2 == permanentBlock &&
                 (now - _lastBlock.Item3) < TimeSpan.FromMinutes(1))
             {
                 // Already blocked this IP recently.
@@ -29,7 +29,7 @@ namespace Bit.Core.Services
 
             _lastBlock = new Tuple<string, bool, DateTime>(ipAddress, permanentBlock, now);
             await _blockIpQueueClient.SendMessageAsync(ipAddress);
-            if(!permanentBlock)
+            if (!permanentBlock)
             {
                 await _unblockIpQueueClient.SendMessageAsync(ipAddress, new TimeSpan(0, 15, 0));
             }

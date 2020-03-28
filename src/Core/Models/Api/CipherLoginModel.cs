@@ -15,7 +15,7 @@ namespace Bit.Core.Models.Api
         public CipherLoginModel(CipherLoginData data)
         {
             Uris = data.Uris?.Select(u => new CipherLoginUriModel(u))?.ToList();
-            if(!Uris?.Any() ?? true)
+            if (!Uris?.Any() ?? true)
             {
                 Uri = data.Uri;
             }
@@ -33,12 +33,12 @@ namespace Bit.Core.Models.Api
             get => Uris?.FirstOrDefault()?.Uri;
             set
             {
-                if(string.IsNullOrWhiteSpace(value))
+                if (string.IsNullOrWhiteSpace(value))
                 {
                     return;
                 }
 
-                if(Uris == null)
+                if (Uris == null)
                 {
                     Uris = new List<CipherLoginUriModel>();
                 }

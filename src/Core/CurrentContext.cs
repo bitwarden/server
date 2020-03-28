@@ -28,7 +28,7 @@ namespace Bit.Core
 
         public void Build(HttpContext httpContext, GlobalSettings globalSettings)
         {
-            if(_builtHttpContext)
+            if (_builtHttpContext)
             {
                 return;
             }
@@ -37,12 +37,12 @@ namespace Bit.Core
             HttpContext = httpContext;
             Build(httpContext.User, globalSettings);
 
-            if(DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
+            if (DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
             {
                 DeviceIdentifier = httpContext.Request.Headers["Device-Identifier"];
             }
 
-            if(httpContext.Request.Headers.ContainsKey("Device-Type") &&
+            if (httpContext.Request.Headers.ContainsKey("Device-Type") &&
                 Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
             {
                 DeviceType = dType;
@@ -51,14 +51,14 @@ namespace Bit.Core
 
         public void Build(ClaimsPrincipal user, GlobalSettings globalSettings)
         {
-            if(_builtClaimsPrincipal)
+            if (_builtClaimsPrincipal)
             {
                 return;
             }
 
             _builtClaimsPrincipal = true;
             IpAddress = HttpContext.GetIpAddress(globalSettings);
-            if(user == null || !user.Claims.Any())
+            if (user == null || !user.Claims.Any())
             {
                 return;
             }
@@ -66,7 +66,7 @@ namespace Bit.Core
             var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
             var subject = GetClaimValue(claimsDict, "sub");
-            if(Guid.TryParse(subject, out var subIdGuid))
+            if (Guid.TryParse(subject, out var subIdGuid))
             {
                 UserId = subIdGuid;
             }
@@ -74,18 +74,18 @@ namespace Bit.Core
             var clientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
             var orgApi = false;
-            if(clientSubject != null)
+            if (clientSubject != null)
             {
-                if(clientId?.StartsWith("installation.") ?? false)
+                if (clientId?.StartsWith("installation.") ?? false)
                 {
-                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    if (Guid.TryParse(clientSubject, out var idGuid))
                     {
                         InstallationId = idGuid;
                     }
                 }
-                else if(clientId?.StartsWith("organization.") ?? false)
+                else if (clientId?.StartsWith("organization.") ?? false)
                 {
-                    if(Guid.TryParse(clientSubject, out var idGuid))
+                    if (Guid.TryParse(clientSubject, out var idGuid))
                     {
                         OrganizationId = idGuid;
                         orgApi = true;
@@ -96,7 +96,7 @@ namespace Bit.Core
             DeviceIdentifier = GetClaimValue(claimsDict, "device");
 
             Organizations = new List<CurrentContentOrganization>();
-            if(claimsDict.ContainsKey("orgowner"))
+            if (claimsDict.ContainsKey("orgowner"))
             {
                 Organizations.AddRange(claimsDict["orgowner"].Select(c =>
                     new CurrentContentOrganization
@@ -105,7 +105,7 @@ namespace Bit.Core
                         Type = OrganizationUserType.Owner
                     }));
             }
-            else if(orgApi && OrganizationId.HasValue)
+            else if (orgApi && OrganizationId.HasValue)
             {
                 Organizations.Add(new CurrentContentOrganization
                 {
@@ -114,7 +114,7 @@ namespace Bit.Core
                 });
             }
 
-            if(claimsDict.ContainsKey("orgadmin"))
+            if (claimsDict.ContainsKey("orgadmin"))
             {
                 Organizations.AddRange(claimsDict["orgadmin"].Select(c =>
                     new CurrentContentOrganization
@@ -124,7 +124,7 @@ namespace Bit.Core
                     }));
             }
 
-            if(claimsDict.ContainsKey("orguser"))
+            if (claimsDict.ContainsKey("orguser"))
             {
                 Organizations.AddRange(claimsDict["orguser"].Select(c =>
                     new CurrentContentOrganization
@@ -134,7 +134,7 @@ namespace Bit.Core
                     }));
             }
 
-            if(claimsDict.ContainsKey("orgmanager"))
+            if (claimsDict.ContainsKey("orgmanager"))
             {
                 Organizations.AddRange(claimsDict["orgmanager"].Select(c =>
                     new CurrentContentOrganization
@@ -171,7 +171,7 @@ namespace Bit.Core
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId)
         {
-            if(Organizations == null)
+            if (Organizations == null)
             {
                 var userOrgs = await organizationUserRepository.GetManyByUserAsync(userId);
                 Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
@@ -182,7 +182,7 @@ namespace Bit.Core
 
         private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
         {
-            if(!claims.ContainsKey(type))
+            if (!claims.ContainsKey(type))
             {
                 return null;
             }

@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.TableStorage
         public async Task<string> GetAsync(string objectName, string id, string prop)
         {
             var dict = await GetAsync(objectName, id);
-            if(dict != null && dict.ContainsKey(prop))
+            if (dict != null && dict.ContainsKey(prop))
             {
                 return dict[prop];
             }
@@ -46,7 +46,7 @@ namespace Bit.Core.Repositories.TableStorage
                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"{objectName}_{id}"));
             var queryResults = await _table.ExecuteQuerySegmentedAsync(query, null);
             var entity = queryResults.Results.FirstOrDefault();
-            if(entity == null)
+            if (entity == null)
             {
                 entity = new DictionaryEntity
                 {
@@ -54,7 +54,7 @@ namespace Bit.Core.Repositories.TableStorage
                     RowKey = string.Empty
                 };
             }
-            if(entity.ContainsKey(keyValuePair.Key))
+            if (entity.ContainsKey(keyValuePair.Key))
             {
                 entity.Remove(keyValuePair.Key);
             }
@@ -69,7 +69,7 @@ namespace Bit.Core.Repositories.TableStorage
                 PartitionKey = $"{objectName}_{id}",
                 RowKey = string.Empty
             };
-            foreach(var item in dict)
+            foreach (var item in dict)
             {
                 entity.Add(item.Key, item.Value);
             }
@@ -87,9 +87,9 @@ namespace Bit.Core.Repositories.TableStorage
                     ETag = "*"
                 }));
             }
-            catch(StorageException e)
+            catch (StorageException e)
             {
-                if(e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
+                if (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
                 {
                     throw e;
                 }

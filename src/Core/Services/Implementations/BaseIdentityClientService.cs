@@ -55,7 +55,7 @@ namespace Bit.Core.Services
         protected async Task SendAsync(HttpMethod method, string path, object requestModel = null)
         {
             var tokenStateResponse = await HandleTokenStateAsync();
-            if(!tokenStateResponse)
+            if (!tokenStateResponse)
             {
                 return;
             }
@@ -70,7 +70,7 @@ namespace Bit.Core.Services
             {
                 var response = await Client.SendAsync(message);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
             }
@@ -78,13 +78,13 @@ namespace Bit.Core.Services
 
         protected async Task<bool> HandleTokenStateAsync()
         {
-            if(_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
+            if (_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
             {
                 return false;
             }
             _nextAuthAttempt = null;
 
-            if(!string.IsNullOrWhiteSpace(AccessToken) && !TokenNeedsRefresh())
+            if (!string.IsNullOrWhiteSpace(AccessToken) && !TokenNeedsRefresh())
             {
                 return true;
             }
@@ -107,19 +107,19 @@ namespace Bit.Core.Services
             {
                 response = await IdentityClient.SendAsync(requestMessage);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(12339, e, "Unable to authenticate with identity server.");
             }
 
-            if(response == null)
+            if (response == null)
             {
                 return false;
             }
 
-            if(!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                if(response.StatusCode == HttpStatusCode.BadRequest)
+                if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     _nextAuthAttempt = DateTime.UtcNow.AddDays(1);
                 }
@@ -143,7 +143,7 @@ namespace Bit.Core.Services
             public TokenHttpRequestMessage(object requestObject, string token)
                 : this(token)
             {
-                if(requestObject != null)
+                if (requestObject != null)
                 {
                     var stringContent = JsonConvert.SerializeObject(requestObject);
                     Content = new StringContent(stringContent, Encoding.UTF8, "application/json");
@@ -155,7 +155,7 @@ namespace Bit.Core.Services
         {
             var decoded = DecodeToken();
             var exp = decoded?["exp"];
-            if(exp == null)
+            if (exp == null)
             {
                 throw new InvalidOperationException("No exp in token.");
             }
@@ -166,24 +166,24 @@ namespace Bit.Core.Services
 
         protected JObject DecodeToken()
         {
-            if(_decodedToken != null)
+            if (_decodedToken != null)
             {
                 return _decodedToken;
             }
 
-            if(AccessToken == null)
+            if (AccessToken == null)
             {
                 throw new InvalidOperationException($"{nameof(AccessToken)} not found.");
             }
 
             var parts = AccessToken.Split('.');
-            if(parts.Length != 3)
+            if (parts.Length != 3)
             {
                 throw new InvalidOperationException($"{nameof(AccessToken)} must have 3 parts");
             }
 
             var decodedBytes = CoreHelpers.Base64UrlDecode(parts[1]);
-            if(decodedBytes == null || decodedBytes.Length < 1)
+            if (decodedBytes == null || decodedBytes.Length < 1)
             {
                 throw new InvalidOperationException($"{nameof(AccessToken)} must have 3 parts");
             }
