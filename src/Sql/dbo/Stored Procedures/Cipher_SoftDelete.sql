@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_SoftDelete]
-	@Ids AS [dbo].[GuidIdArray] READONLY,
+    @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
 BEGIN

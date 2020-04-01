@@ -94,12 +94,8 @@ namespace Bit.Api.Controllers
             Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
             if (hasOrgs)
             {
-                var keyMatches = ciphers.Select(c => c.Id); // Soft deletes not filtered in tweener "Get" methods
                 var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
-                collectionCiphersGroupDict = collectionCiphers
-                    .Where(c => keyMatches.Contains(c.CipherId))
-                    .GroupBy(c => c.CipherId)
-                    .ToDictionary(s => s.Key);
+                collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
             }
 
             var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, _globalSettings,
