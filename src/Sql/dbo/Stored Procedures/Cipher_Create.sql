@@ -8,7 +8,8 @@
     @Folders NVARCHAR(MAX),
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @DeletedDate DATETIME2(7) -- not used
 AS
 BEGIN
     SET NOCOUNT ON

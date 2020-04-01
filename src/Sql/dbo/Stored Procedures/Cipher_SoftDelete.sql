@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_Delete]
-    @Ids AS [dbo].[GuidIdArray] READONLY,
+﻿CREATE PROCEDURE [dbo].[Cipher_SoftDelete]
+	@Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -9,16 +9,14 @@ BEGIN
     ( 
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [UserId] UNIQUEIDENTIFIER NULL,
-        [OrganizationId] UNIQUEIDENTIFIER NULL,
-        [Attachments] BIT NOT NULL
+        [OrganizationId] UNIQUEIDENTIFIER NULL
     )
 
     INSERT INTO #Temp
     SELECT
         [Id],
         [UserId],
-        [OrganizationId],
-        CASE WHEN [Attachments] IS NULL THEN 0 ELSE 1 END
+        [OrganizationId]
     FROM
         [dbo].[UserCipherDetails](@UserId)
     WHERE
@@ -26,9 +24,11 @@ BEGIN
         AND [Id] IN (SELECT * FROM @Ids)
 
     -- Delete ciphers
-    DELETE
-    FROM
+    UPDATE
         [dbo].[Cipher]
+    SET
+        [DeletedDate] = SYSUTCDATETIME(),
+        [RevisionDate] = GETUTCDATE()
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 
@@ -46,27 +46,12 @@ BEGIN
     OPEN [OrgCursor]
     FETCH NEXT FROM [OrgCursor] INTO @OrgId
     WHILE @@FETCH_STATUS = 0 BEGIN
-        EXEC [dbo].[Organization_UpdateStorage] @OrgId
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
         FETCH NEXT FROM [OrgCursor] INTO @OrgId
     END
     CLOSE [OrgCursor]
     DEALLOCATE [OrgCursor]
 
-    -- Cleanup user
-    DECLARE @UserCiphersWithStorageCount INT
-    SELECT
-        @UserCiphersWithStorageCount = COUNT(1)
-    FROM
-        #Temp
-    WHERE
-        [UserId] IS NOT NULL
-        AND [Attachments] = 1
-
-    IF @UserCiphersWithStorageCount > 0
-    BEGIN
-        EXEC [dbo].[User_UpdateStorage] @UserId
-    END
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
     DROP TABLE #Temp

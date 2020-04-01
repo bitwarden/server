@@ -9,6 +9,7 @@
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
+    @DeletedDate DATETIME2(7), -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -35,6 +36,7 @@ BEGIN
         [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate
         -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
+        -- Do not update DeletedDate because that is a separate atomic action
     WHERE
         [Id] = @Id
 

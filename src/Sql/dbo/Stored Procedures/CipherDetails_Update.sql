@@ -12,7 +12,8 @@
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
     @Edit BIT, -- not used
-    @OrganizationUseTotp BIT -- not used
+    @OrganizationUseTotp BIT, -- not used
+    @DeletedDate DATETIME2(2) -- not used
 AS
 BEGIN
     SET NOCOUNT ON

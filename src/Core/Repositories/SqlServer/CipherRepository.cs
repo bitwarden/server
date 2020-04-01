@@ -36,13 +36,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id, bool deleted = false)
+        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     $"[{Schema}].[CipherOrganizationDetails_ReadById]",
-                    new { Id = id, Deleted = deleted },
+                    new { Id = id },
                     commandType: CommandType.StoredProcedure);
 
                 return results.FirstOrDefault();
@@ -62,7 +62,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true, bool deleted = false)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
         {
             string sprocName = null;
             if (withOrganizations)
@@ -78,7 +78,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<CipherDetails>(
                     sprocName,
-                    new { UserId = userId, Deleted = deleted },
+                    new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
                 return results
@@ -88,13 +88,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId, bool deleted = false)
+        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<Cipher>(
                     $"[{Schema}].[Cipher_ReadByOrganizationId]",
-                    new { OrganizationId = organizationId, Deleted = deleted },
+                    new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -156,7 +156,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpsertAsync(CipherDetails cipher)
         {
-            if (cipher.Id.Equals(default(Guid)))
+            if (cipher.Id.Equals(default))
             {
                 await CreateAsync(cipher);
             }
@@ -215,24 +215,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task DeleteAsync(Cipher obj, bool permanent = true)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Cipher_DeleteById]",
-                    new { obj.Id, Permanent = permanent },
-                    commandType: CommandType.StoredProcedure);
-            }
-        }
-
-        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool permanent = true)
+        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_Delete]",
-                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId, Permanent = permanent },
+                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -448,7 +437,8 @@ namespace Bit.Core.Repositories.SqlServer
                                 [Type] = TC.[Type],
                                 [Data] = TC.[Data],
                                 [Attachments] = TC.[Attachments],
-                                [RevisionDate] = TC.[RevisionDate]
+                                [RevisionDate] = TC.[RevisionDate],
+                                [DeletedDate] = TC.[DeletedDate]
                             FROM
                                 [dbo].[Cipher] C
                             INNER JOIN
@@ -587,6 +577,50 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task SoftDeleteAsync(Cipher obj)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_SoftDeleteById]",
+                    new { obj.Id },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_SoftDelete]",
+                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task RestoreAsync(Cipher obj)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_RestoreById]",
+                    new { obj.Id },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task RestoreAsync(IEnumerable<Guid> ids, Guid userId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_Restore]",
+                    new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
         private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
         {
             var c = ciphers.FirstOrDefault();
@@ -617,6 +651,8 @@ namespace Bit.Core.Repositories.SqlServer
             ciphersTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             ciphersTable.Columns.Add(revisionDateColumn);
+            var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), c.DeletedDate.GetType());
+            ciphersTable.Columns.Add(deletedDateColumn);
 
             foreach (DataColumn col in ciphersTable.Columns)
             {
@@ -641,6 +677,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[attachmentsColumn] = cipher.Attachments;
                 row[creationDateColumn] = cipher.CreationDate;
                 row[revisionDateColumn] = cipher.RevisionDate;
+                row[deletedDateColumn] = cipher.DeletedDate;
 
                 ciphersTable.Rows.Add(row);
             }
