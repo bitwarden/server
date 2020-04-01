@@ -9,7 +9,7 @@
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7) -- not used
+    @DeletedDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -25,7 +25,8 @@ BEGIN
         [Folders],
         [Attachments],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [DeletedDate]
     )
     VALUES
     (
@@ -38,7 +39,8 @@ BEGIN
         @Folders,
         @Attachments,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @DeletedDate
     )
 
     IF @OrganizationId IS NOT NULL

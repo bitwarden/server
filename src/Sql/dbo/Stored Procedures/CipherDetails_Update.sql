@@ -13,7 +13,7 @@
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(2) -- not used
+    @DeletedDate DATETIME2(2)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -47,7 +47,8 @@ BEGIN
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [DeletedDate] = @DeletedDate
     WHERE
         [Id] = @Id
 

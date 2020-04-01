@@ -671,7 +671,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You do not have permissions to soft delete this.");
             }
 
-            await _cipherRepository.SoftDeleteAsync(cipher);
+            if (cipher.DeletedDate.HasValue)
+            {
+                // Already soft-deleted, we can safely ignore this
+                return;
+            }
+
+            cipher.DeletedDate = DateTime.UtcNow;
+            cipher.RevisionDate = DateTime.UtcNow;
+
+            await _cipherRepository.UpsertAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
 
             // push
@@ -704,7 +713,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You do not have permissions to delete this.");
             }
 
-            await _cipherRepository.RestoreAsync(cipher);
+            if (!cipher.DeletedDate.HasValue)
+            {
+                // Already restored, we can safely ignore this
+                return;
+            }
+
+            cipher.DeletedDate = null;
+            cipher.RevisionDate = DateTime.UtcNow;
+
+            await _cipherRepository.UpsertAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Restored);
 
             // push

@@ -262,8 +262,6 @@
     <Build Include="dbo\Stored Procedures\Policy_ReadByOrganizationIdType.sql" />
     <Build Include="dbo\Stored Procedures\Policy_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Restore.sql" />
-    <Build Include="dbo\Stored Procedures\Cipher_RestoreById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_SoftDelete.sql" />
-    <Build Include="dbo\Stored Procedures\Cipher_SoftDeleteById.sql" />
   </ItemGroup>
 </Project>

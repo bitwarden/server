@@ -13,7 +13,7 @@
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(7) -- not used
+    @DeletedDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -31,7 +31,8 @@ BEGIN
         [Favorites],
         [Folders],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [DeletedDate]
     )
     VALUES
     (
@@ -43,7 +44,8 @@ BEGIN
         CASE WHEN @Favorite = 1 THEN CONCAT('{', @UserIdKey, ':true}') ELSE NULL END,
         CASE WHEN @FolderId IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}') ELSE NULL END,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @DeletedDate
     )
 
     IF @OrganizationId IS NOT NULL

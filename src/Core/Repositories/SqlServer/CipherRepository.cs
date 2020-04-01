@@ -577,17 +577,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task SoftDeleteAsync(Cipher obj)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Cipher_SoftDeleteById]",
-                    new { obj.Id },
-                    commandType: CommandType.StoredProcedure);
-            }
-        }
-
         public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -595,17 +584,6 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_SoftDelete]",
                     new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
-                    commandType: CommandType.StoredProcedure);
-            }
-        }
-
-        public async Task RestoreAsync(Cipher obj)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[Cipher_RestoreById]",
-                    new { obj.Id },
                     commandType: CommandType.StoredProcedure);
             }
         }

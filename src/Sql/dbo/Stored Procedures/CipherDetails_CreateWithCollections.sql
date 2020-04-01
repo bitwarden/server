@@ -13,7 +13,7 @@
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(7), -- not used
+    @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

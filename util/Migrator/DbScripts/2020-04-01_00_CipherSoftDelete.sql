@@ -2,8 +2,9 @@
  * Revert [Cipher] deletes/gets to original versions
  * - No longer needs to have the deleted flag on reads (always read all)
  * - No longer needs to have the permanent flag on deletes (they just are)
- * + Added ability to restore a soft-deleted cipher
- * + Added DeletedDate value to updates/create sprocs
+ * + Added ability to bulk soft-delete a cipher
+ * + Added ability to bulk restore a soft-deleted cipher
+ * + Added DeletedDate value to updates/create sprocs (individual records)
  */
 IF OBJECT_ID('[dbo].[Cipher_Restore]') IS NOT NULL
 BEGIN
@@ -73,41 +74,6 @@ GO
 IF OBJECT_ID('[dbo].[Cipher_RestoreById]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Cipher_RestoreById];
-END
-GO
-CREATE PROCEDURE [dbo].[Cipher_RestoreById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DECLARE @UserId UNIQUEIDENTIFIER
-    DECLARE @OrganizationId UNIQUEIDENTIFIER
-
-    SELECT TOP 1
-        @UserId = [UserId],
-        @OrganizationId = [OrganizationId]
-    FROM
-        [dbo].[Cipher]
-    WHERE
-        [Id] = @Id
-	
-    UPDATE
-        [dbo].[Cipher]
-    SET
-        [DeletedDate] = NULL,
-        [RevisionDate] = GETUTCDATE()
-    WHERE
-        [Id] = @Id
-
-    IF @OrganizationId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
-    END
-    ELSE IF @UserId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-    END
 END
 GO
 
@@ -398,42 +364,6 @@ BEGIN
     DROP PROCEDURE [dbo].[Cipher_SoftDeleteById];
 END
 GO
-CREATE PROCEDURE [dbo].[Cipher_SoftDeleteById]
-	@Id UNIQUEIDENTIFIER
-WITH RECOMPILE
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DECLARE @UserId UNIQUEIDENTIFIER
-    DECLARE @OrganizationId UNIQUEIDENTIFIER
-
-    SELECT TOP 1
-        @UserId = [UserId],
-        @OrganizationId = [OrganizationId]
-    FROM
-        [dbo].[Cipher]
-    WHERE
-        [Id] = @Id
-
-    UPDATE
-        [dbo].[Cipher]
-    SET
-        [DeletedDate] = SYSUTCDATETIME(),
-        [RevisionDate] = GETUTCDATE()
-    WHERE
-        [Id] = @Id
-
-    IF @OrganizationId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
-    END
-    ELSE IF @UserId IS NOT NULL
-    BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-    END
-END
-GO
 
 IF OBJECT_ID('[dbo].[Cipher_Create]') IS NOT NULL
 BEGIN
@@ -451,7 +381,7 @@ CREATE PROCEDURE [dbo].[Cipher_Create]
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7) -- not used
+    @DeletedDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -467,7 +397,8 @@ BEGIN
         [Folders],
         [Attachments],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [DeletedDate]
     )
     VALUES
     (
@@ -480,7 +411,8 @@ BEGIN
         @Folders,
         @Attachments,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @DeletedDate
     )
 
     IF @OrganizationId IS NOT NULL
@@ -514,7 +446,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_Create]
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(7) -- not used
+    @DeletedDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -532,7 +464,8 @@ BEGIN
         [Favorites],
         [Folders],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [DeletedDate]
     )
     VALUES
     (
@@ -544,7 +477,8 @@ BEGIN
         CASE WHEN @Favorite = 1 THEN CONCAT('{', @UserIdKey, ':true}') ELSE NULL END,
         CASE WHEN @FolderId IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}') ELSE NULL END,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @DeletedDate
     )
 
     IF @OrganizationId IS NOT NULL
@@ -574,7 +508,7 @@ CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7), -- not used
+    @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -608,7 +542,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(7), -- not used
+    @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -638,7 +572,7 @@ CREATE PROCEDURE [dbo].[Cipher_Update]
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7) -- not used
+    @DeletedDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -654,7 +588,8 @@ BEGIN
         [Folders] = @Folders,
         [Attachments] = @Attachments,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [DeletedDate] = @DeletedDate
     WHERE
         [Id] = @Id
 
@@ -685,7 +620,7 @@ CREATE PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7), -- not used
+    @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -710,9 +645,9 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Data] = @Data,
         [Attachments] = @Attachments,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [DeletedDate] = @DeletedDate
         -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
-        -- Do not update DeletedDate because that is a separate atomic action
     WHERE
         [Id] = @Id
 
@@ -750,7 +685,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_Update]
     @Favorite BIT,
     @Edit BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(2) -- not used
+    @DeletedDate DATETIME2(2)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -784,7 +719,8 @@ BEGIN
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [DeletedDate] = @DeletedDate
     WHERE
         [Id] = @Id
 

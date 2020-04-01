@@ -32,9 +32,7 @@ namespace Bit.Core.Repositories
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
             IEnumerable<CollectionCipher> collectionCiphers);
-        Task SoftDeleteAsync(Cipher obj);
         Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
-        Task RestoreAsync(Cipher obj);
         Task RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     }
 }
