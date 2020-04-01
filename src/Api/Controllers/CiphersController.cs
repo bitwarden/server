@@ -206,13 +206,9 @@ namespace Bit.Api.Controllers
             }
 
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var cipherMatchKeys = ciphers.Select(c => c.Id);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var collectionCiphersGroupDict = collectionCiphers
-                .Where(c => cipherMatchKeys.Contains(c.CipherId))
-                .GroupBy(c => c.CipherId)
-                .ToDictionary(s => s.Key);
+            var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
