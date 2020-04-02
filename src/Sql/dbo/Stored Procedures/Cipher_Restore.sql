@@ -23,11 +23,13 @@ BEGIN
         [Edit] = 1
         AND [Id] IN (SELECT * FROM @Ids)
 	
+    DECLARE @UtcNow DATETIME2(7);
+    SET @UtcNow = GETUTCDATE();
     UPDATE
         [dbo].[Cipher]
     SET
         [DeletedDate] = NULL,
-        [RevisionDate] = GETUTCDATE()
+        [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 
