@@ -1,6 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[CipherOrganizationDetails_ReadById]
-    @Id UNIQUEIDENTIFIER,
-    @Deleted BIT
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -17,9 +16,4 @@ BEGIN
         [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
     WHERE
         C.[Id] = @Id
-        AND
-        (
-            (@Deleted = 1 AND [DeletedDate] IS NOT NULL)
-            OR (@Deleted = 0 AND [DeletedDate] IS NULL)
-        )
 END

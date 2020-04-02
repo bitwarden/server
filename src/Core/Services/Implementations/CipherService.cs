@@ -282,7 +282,7 @@ namespace Bit.Core.Services
 
             await _cipherRepository.DeleteAsync(cipher);
             await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
-            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Deleted);
+            await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Deleted);
 
             // push
             await _pushService.PushSyncCipherDeleteAsync(cipher);
@@ -662,6 +662,89 @@ namespace Bit.Core.Services
 
             // push
             await _pushService.PushSyncVaultAsync(importingUserId);
+        }
+
+        public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
+        {
+            if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to soft delete this.");
+            }
+
+            if (cipher.DeletedDate.HasValue)
+            {
+                // Already soft-deleted, we can safely ignore this
+                return;
+            }
+
+            cipher.DeletedDate = cipher.RevisionDate = DateTime.UtcNow;
+
+            await _cipherRepository.UpsertAsync(cipher);
+            await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
+
+            // push
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        }
+
+        public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
+        {
+            var cipherIdsSet = new HashSet<Guid>(cipherIds);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
+            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+
+            await _cipherRepository.SoftDeleteAsync(cipherIds, deletingUserId);
+
+            var events = deletingCiphers.Select(c =>
+                new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
+            foreach (var eventsBatch in events.Batch(100))
+            {
+                await _eventService.LogCipherEventsAsync(eventsBatch);
+            }
+
+            // push
+            await _pushService.PushSyncCiphersAsync(deletingUserId);
+        }
+
+        public async Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false)
+        {
+            if (!orgAdmin && !(await UserCanEditAsync(cipher, restoringUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to delete this.");
+            }
+
+            if (!cipher.DeletedDate.HasValue)
+            {
+                // Already restored, we can safely ignore this
+                return;
+            }
+
+            cipher.DeletedDate = null;
+            cipher.RevisionDate = DateTime.UtcNow;
+
+            await _cipherRepository.UpsertAsync(cipher);
+            await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Restored);
+
+            // push
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        }
+
+        public async Task RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId)
+        {
+            var cipherIdsSet = new HashSet<Guid>(cipherIds);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
+            var restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+
+            await _cipherRepository.RestoreAsync(cipherIds, restoringUserId);
+
+            var events = restoringCiphers.Select(c =>
+                new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null));
+            foreach (var eventsBatch in events.Batch(100))
+            {
+                await _eventService.LogCipherEventsAsync(eventsBatch);
+            }
+
+            // push
+            await _pushService.PushSyncCiphersAsync(restoringUserId);
         }
 
         private async Task<bool> UserCanEditAsync(Cipher cipher, Guid userId)

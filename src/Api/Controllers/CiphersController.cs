@@ -360,6 +360,83 @@ namespace Bit.Api.Controllers
             await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
         }
 
+        [HttpPut("{id}/delete")]
+        public async Task PutDelete(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if (cipher == null)
+            {
+                throw new NotFoundException();
+            }
+            await _cipherService.SoftDeleteAsync(cipher, userId);
+        }
+
+        [HttpPut("{id}/delete-admin")]
+        public async Task PutDeleteAdmin(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if (cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.SoftDeleteAsync(cipher, userId, true);
+        }
+
+        [HttpPut("delete")]
+        public async Task PutDeleteMany([FromBody]CipherBulkRestoreRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only restore up to 500 items at a time.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+        }
+
+        [HttpPut("{id}/restore")]
+        public async Task PutRestore(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            if (cipher == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.RestoreAsync(cipher, userId);
+        }
+
+        [HttpPut("{id}/restore-admin")]
+        public async Task PutRestoreAdmin(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            if (cipher == null || !cipher.OrganizationId.HasValue ||
+                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            {
+                throw new NotFoundException();
+            }
+
+            await _cipherService.RestoreAsync(cipher, userId, true);
+        }
+
+        [HttpPut("restore")]
+        public async Task PutRestoreMany([FromBody]CipherBulkRestoreRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only restore up to 500 items at a time.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.RestoreManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+        }
+
         [HttpPut("move")]
         [HttpPost("move")]
         public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)

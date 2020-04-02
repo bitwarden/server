@@ -205,6 +205,12 @@ namespace Bit.Core.Models.Api
         public IEnumerable<string> Ids { get; set; }
     }
 
+    public class CipherBulkRestoreRequestModel
+    {
+        [Required]
+        public IEnumerable<string> Ids { get; set; }
+    }
+
     public class CipherBulkMoveRequestModel
     {
         [Required]

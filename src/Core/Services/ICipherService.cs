@@ -33,5 +33,9 @@ namespace Bit.Core.Services
             IEnumerable<KeyValuePair<int, int>> folderRelationships);
         Task ImportCiphersAsync(List<Collection> collections, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
+        Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
+        Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);
+        Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
+        Task RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId);
     }
 }

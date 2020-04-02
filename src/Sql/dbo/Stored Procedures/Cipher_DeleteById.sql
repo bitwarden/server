@@ -1,6 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_DeleteById]
-    @Id UNIQUEIDENTIFIER,
-    @Permanent AS BIT
+    @Id UNIQUEIDENTIFIER
 WITH RECOMPILE
 AS
 BEGIN
@@ -18,28 +17,16 @@ BEGIN
         [dbo].[Cipher]
     WHERE
         [Id] = @Id
-        
-    IF @Permanent = 1
-    BEGIN
-        DELETE
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [Id] = @Id
-    END
-    ELSE
-    BEGIN
-        UPDATE
-            [dbo].[Cipher]
-        SET
-            [DeletedDate] = SYSUTCDATETIME()
-        WHERE
-            [Id] = @Id
-    END
+
+    DELETE
+    FROM
+        [dbo].[Cipher]
+    WHERE
+        [Id] = @Id
 
     IF @OrganizationId IS NOT NULL
     BEGIN
-        IF @Attachments = 1 AND @Permanent = 1
+        IF @Attachments = 1
         BEGIN
             EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
         END
@@ -47,7 +34,7 @@ BEGIN
     END
     ELSE IF @UserId IS NOT NULL
     BEGIN
-        IF @Attachments = 1 AND @Permanent = 1
+        IF @Attachments = 1
         BEGIN
             EXEC [dbo].[User_UpdateStorage] @UserId
         END
