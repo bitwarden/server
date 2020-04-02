@@ -677,8 +677,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            cipher.DeletedDate = DateTime.UtcNow;
-            cipher.RevisionDate = DateTime.UtcNow;
+            cipher.DeletedDate = cipher.RevisionDate = DateTime.UtcNow;
 
             await _cipherRepository.UpsertAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
