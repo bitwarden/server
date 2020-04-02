@@ -31,8 +31,7 @@ BEGIN
         [Edit] = 1
         AND [Id] IN (SELECT * FROM @Ids)
 	
-    DECLARE @UtcNow DATETIME2(7);
-    SET @UtcNow = GETUTCDATE();
+    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     UPDATE
         [dbo].[Cipher]
     SET
@@ -99,8 +98,7 @@ BEGIN
         AND [Id] IN (SELECT * FROM @Ids)
 
     -- Delete ciphers
-    DECLARE @UtcNow DATETIME2(7);
-    SET @UtcNow = GETUTCDATE();
+    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     UPDATE
         [dbo].[Cipher]
     SET
