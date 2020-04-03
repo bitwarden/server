@@ -374,7 +374,8 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/import")]
         public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
         {
-            if (!_globalSettings.SelfHosted && (model.Groups.Count() > 200 || model.Users.Count() > 1000))
+            if (!_globalSettings.SelfHosted &&
+                (model.Groups.Count() > 200 || model.Users.Count(u => !u.Deleted) > 1000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
