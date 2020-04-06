@@ -46,6 +46,21 @@ fi
 # Functions
 
 function install() {
+    mkdir -p $OUTPUT_DIR/ca-certificates/
+    mkdir -p $OUTPUT_DIR/core/attachments
+    mkdir -p $OUTPUT_DIR/identity/
+    mkdir -p $OUTPUT_DIR/logs/admin
+    mkdir -p $OUTPUT_DIR/logs/api
+    mkdir -p $OUTPUT_DIR/logs/events
+    mkdir -p $OUTPUT_DIR/logs/icons
+    mkdir -p $OUTPUT_DIR/logs/identity
+    mkdir -p $OUTPUT_DIR/logs/mssql
+    mkdir -p $OUTPUT_DIR/logs/nginx
+    mkdir -p $OUTPUT_DIR/logs/notifications
+    mkdir -p $OUTPUT_DIR/mssql/backups
+    mkdir -p $OUTPUT_DIR/mssql/data
+    mkdir -p $OUTPUT_DIR/ssl/
+
     LETS_ENCRYPT="n"
     echo -e -n "${CYAN}(!)${NC} Enter the domain name for your Bitwarden instance (ex. bitwarden.example.com): "
     read DOMAIN
