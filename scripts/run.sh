@@ -39,6 +39,7 @@ then
     LGID="LOCAL_GID=`id -g $USER`"
     [ "$LGID" == "LOCAL_GID=0" ] && LGID="LOCAL_GID=65534"
     mkdir -p $ENV_DIR
+    chmod 0755 $ENV_DIR
     echo $LUID >$ENV_DIR/uid.env
     echo $LGID >>$ENV_DIR/uid.env
 fi
@@ -47,18 +48,10 @@ fi
 
 function install() {
     mkdir -p $OUTPUT_DIR/ca-certificates/
-    mkdir -p $OUTPUT_DIR/core/attachments
+    mkdir -p $OUTPUT_DIR/core/attachments/
     mkdir -p $OUTPUT_DIR/identity/
-    mkdir -p $OUTPUT_DIR/logs/admin
-    mkdir -p $OUTPUT_DIR/logs/api
-    mkdir -p $OUTPUT_DIR/logs/events
-    mkdir -p $OUTPUT_DIR/logs/icons
-    mkdir -p $OUTPUT_DIR/logs/identity
-    mkdir -p $OUTPUT_DIR/logs/mssql
-    mkdir -p $OUTPUT_DIR/logs/nginx
-    mkdir -p $OUTPUT_DIR/logs/notifications
-    mkdir -p $OUTPUT_DIR/mssql/backups
-    mkdir -p $OUTPUT_DIR/mssql/data
+    mkdir -p $OUTPUT_DIR/logs/{admin,api,events,icons,identity,mssql,nginx,notifications}/
+    mkdir -p $OUTPUT_DIR/mssql/{backups,data}/
     mkdir -p $OUTPUT_DIR/ssl/
 
     LETS_ENCRYPT="n"
