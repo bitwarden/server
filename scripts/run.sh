@@ -39,7 +39,7 @@ then
     LGID="LOCAL_GID=`id -g $USER`"
     [ "$LGID" == "LOCAL_GID=0" ] && LGID="LOCAL_GID=65534"
     mkdir -p $ENV_DIR
-    chmod 0755 $ENV_DIR
+    chmod 0755 $OUTPUT_DIR
     echo $LUID >$ENV_DIR/uid.env
     echo $LGID >>$ENV_DIR/uid.env
 fi
