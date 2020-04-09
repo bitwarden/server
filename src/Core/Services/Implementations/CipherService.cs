@@ -679,7 +679,14 @@ namespace Bit.Core.Services
 
             cipher.DeletedDate = cipher.RevisionDate = DateTime.UtcNow;
 
-            await _cipherRepository.UpsertAsync(cipher);
+            if (cipher is CipherDetails details)
+            {
+                await _cipherRepository.UpsertAsync(details);
+            }
+            else
+            {
+                await _cipherRepository.UpsertAsync(cipher);
+            }
             await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
 
             // push
@@ -721,7 +728,14 @@ namespace Bit.Core.Services
             cipher.DeletedDate = null;
             cipher.RevisionDate = DateTime.UtcNow;
 
-            await _cipherRepository.UpsertAsync(cipher);
+            if (cipher is CipherDetails details)
+            {
+                await _cipherRepository.UpsertAsync(details);
+            }
+            else
+            {
+                await _cipherRepository.UpsertAsync(cipher);
+            }
             await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Restored);
 
             // push
