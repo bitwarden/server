@@ -39,7 +39,6 @@ then
     LGID="LOCAL_GID=`id -g $USER`"
     [ "$LGID" == "LOCAL_GID=0" ] && LGID="LOCAL_GID=65534"
     mkdir -p $ENV_DIR
-    chmod 0755 $OUTPUT_DIR
     echo $LUID >$ENV_DIR/uid.env
     echo $LGID >>$ENV_DIR/uid.env
 fi
@@ -47,12 +46,15 @@ fi
 # Functions
 
 function install() {
-    mkdir -p $OUTPUT_DIR/ca-certificates/
-    mkdir -p $OUTPUT_DIR/core/attachments/
-    mkdir -p $OUTPUT_DIR/identity/
-    mkdir -p $OUTPUT_DIR/logs/{admin,api,events,icons,identity,mssql,nginx,notifications}/
-    mkdir -p $OUTPUT_DIR/mssql/{backups,data}/
-    mkdir -p $OUTPUT_DIR/ssl/
+    # If synology device ~ https://xpenology.com/forum/topic/12455-bitwarden-self-hosted-password-manager-on-docker/
+    if uname -a | grep -q " synology_"; then
+        mkdir -p $OUTPUT_DIR/ca-certificates/
+        mkdir -p $OUTPUT_DIR/core/attachments/
+        mkdir -p $OUTPUT_DIR/identity/
+        mkdir -p $OUTPUT_DIR/logs/{admin,api,events,icons,identity,mssql,nginx,notifications}/
+        mkdir -p $OUTPUT_DIR/mssql/{backups,data}/
+        mkdir -p $OUTPUT_DIR/ssl/
+    fi
 
     LETS_ENCRYPT="n"
     echo -e -n "${CYAN}(!)${NC} Enter the domain name for your Bitwarden instance (ex. bitwarden.example.com): "
