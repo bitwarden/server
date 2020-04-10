@@ -23,7 +23,7 @@ BEGIN
         [Edit] = 1
         AND [DeletedDate] IS NOT NULL
         AND [Id] IN (SELECT * FROM @Ids)
-    
+
     DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     UPDATE
         [dbo].[Cipher]
