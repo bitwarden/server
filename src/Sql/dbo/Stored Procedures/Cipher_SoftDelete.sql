@@ -21,6 +21,7 @@ BEGIN
         [dbo].[UserCipherDetails](@UserId)
     WHERE
         [Edit] = 1
+        AND [DeletedDate] IS NULL
         AND [Id] IN (SELECT * FROM @Ids)
 
     -- Delete ciphers
