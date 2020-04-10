@@ -629,7 +629,7 @@ namespace Bit.Core.Repositories.SqlServer
             ciphersTable.Columns.Add(creationDateColumn);
             var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
             ciphersTable.Columns.Add(revisionDateColumn);
-            var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), c.DeletedDate.GetType());
+            var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), typeof(DateTime));
             ciphersTable.Columns.Add(deletedDateColumn);
 
             foreach (DataColumn col in ciphersTable.Columns)
@@ -655,7 +655,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[attachmentsColumn] = cipher.Attachments;
                 row[creationDateColumn] = cipher.CreationDate;
                 row[revisionDateColumn] = cipher.RevisionDate;
-                row[deletedDateColumn] = cipher.DeletedDate;
+                row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
 
                 ciphersTable.Rows.Add(row);
             }
