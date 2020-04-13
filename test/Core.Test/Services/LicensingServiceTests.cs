@@ -26,7 +26,7 @@ namespace Bit.Core.Test.Services
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<LicensingService>>();
-            _globalSettings = new GlobalSettings();
+            _globalSettings = new GlobalSettings { SelfHosted = true, LicenseDirectory = "test" };
 
             _sut = new LicensingService(
                 _userRepository,
@@ -40,7 +40,7 @@ namespace Bit.Core.Test.Services
 
         // Remove this test when we add actual tests. It only proves that
         // we've properly constructed the system under test.
-        [Fact(Skip = "Needs additional work")]
+        [Fact]
         public void ServiceExists()
         {
             Assert.NotNull(_sut);
