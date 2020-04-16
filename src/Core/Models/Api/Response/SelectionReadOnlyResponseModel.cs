@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api
     {
         public SelectionReadOnlyResponseModel(SelectionReadOnly selection)
         {
-            if(selection == null)
+            if (selection == null)
             {
                 throw new ArgumentNullException(nameof(selection));
             }

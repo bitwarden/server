@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using YamlDotNet.Serialization;
 
@@ -81,12 +82,17 @@ namespace Bit.Setup
             "Learn more: https://docs.docker.com/storage/volumes/")]
         public bool DatabaseDockerVolume { get; set; }
 
+        [Description("Defines \"real\" IPs in nginx.conf. Useful for defining proxy servers that forward the \n" +
+            "client IP address.\n" +
+            "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html")]
+        public List<string> RealIps { get; set; }
+
         [YamlIgnore]
         public string Domain
         {
             get
             {
-                if(Uri.TryCreate(Url, UriKind.Absolute, out var uri))
+                if (Uri.TryCreate(Url, UriKind.Absolute, out var uri))
                 {
                     return uri.Host;
                 }

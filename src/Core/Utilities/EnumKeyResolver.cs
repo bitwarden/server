@@ -10,7 +10,7 @@ namespace Bit.Core.Utilities
             var contract = base.CreateDictionaryContract(objectType);
             var keyType = contract.DictionaryKeyType;
 
-            if(keyType.BaseType == typeof(Enum))
+            if (keyType.BaseType == typeof(Enum))
             {
                 contract.DictionaryKeyResolver = propName => ((T)Enum.Parse(keyType, propName)).ToString();
             }

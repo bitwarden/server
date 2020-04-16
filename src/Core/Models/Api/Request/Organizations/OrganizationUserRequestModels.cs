@@ -17,27 +17,29 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(!Emails.Any())
+            if (!Emails.Any())
             {
                 yield return new ValidationResult("An email is required.");
             }
 
-            if(Emails.Count() > 20)
+            if (Emails.Count() > 20)
             {
                 yield return new ValidationResult("You can only invite up to 20 users at a time.");
             }
 
             var attr = new EmailAddressAttribute();
-            for(var i = 0; i < Emails.Count(); i++)
+            for (var i = 0; i < Emails.Count(); i++)
             {
                 var email = Emails.ElementAt(i);
-                if(!attr.IsValid(email))
+                if (!attr.IsValid(email) || email.Contains(" ") || email.Contains("<"))
                 {
-                    yield return new ValidationResult($"Email #{i + 1} is not valid.", new string[] { nameof(Emails) });
+                    yield return new ValidationResult($"Email #{i + 1} is not valid.",
+                        new string[] { nameof(Emails) });
                 }
-                else if(email.Length > 50)
+                else if (email.Length > 50)
                 {
-                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.", new string[] { nameof(Emails) });
+                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.",
+                        new string[] { nameof(Emails) });
                 }
             }
         }

@@ -5,6 +5,7 @@ SELECT
     OU.[OrganizationId],
     O.[Name],
     O.[Enabled],
+    O.[UsePolicies],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],

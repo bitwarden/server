@@ -80,23 +80,23 @@ namespace Bit.Core.Utilities.Duo
 
             var currentTimeValue = currentTime ?? DateTime.UtcNow;
 
-            if(username == string.Empty)
+            if (username == string.Empty)
             {
                 return ErrorUser;
             }
-            if(username.Contains("|"))
+            if (username.Contains("|"))
             {
                 return ErrorUser;
             }
-            if(ikey.Length != IKeyLength)
+            if (ikey.Length != IKeyLength)
             {
                 return ErrorIKey;
             }
-            if(skey.Length != SKeyLength)
+            if (skey.Length != SKeyLength)
             {
                 return ErrorSKey;
             }
-            if(akey.Length < AKeyLength)
+            if (akey.Length < AKeyLength)
             {
                 return ErrorAKey;
             }
@@ -145,7 +145,7 @@ namespace Bit.Core.Utilities.Duo
                 return null;
             }
 
-            if(authUser != appUser)
+            if (authUser != appUser)
             {
                 return null;
             }
@@ -169,7 +169,7 @@ namespace Bit.Core.Utilities.Duo
             var ts = (long)(currentTime - _epoc).TotalSeconds;
 
             var parts = val.Split('|');
-            if(parts.Length != 3)
+            if (parts.Length != 3)
             {
                 return null;
             }
@@ -179,19 +179,19 @@ namespace Bit.Core.Utilities.Duo
             var uSig = parts[2];
 
             var sig = Sign(key, $"{uPrefix}|{uB64}");
-            if(Sign(key, sig) != Sign(key, uSig))
+            if (Sign(key, sig) != Sign(key, uSig))
             {
                 return null;
             }
 
-            if(uPrefix != prefix)
+            if (uPrefix != prefix)
             {
                 return null;
             }
 
             var cookie = Decode64(uB64);
             var cookieParts = cookie.Split('|');
-            if(cookieParts.Length != 3)
+            if (cookieParts.Length != 3)
             {
                 return null;
             }
@@ -200,13 +200,13 @@ namespace Bit.Core.Utilities.Duo
             var uIKey = cookieParts[1];
             var expire = cookieParts[2];
 
-            if(uIKey != ikey)
+            if (uIKey != ikey)
             {
                 return null;
             }
 
             var expireTs = Convert.ToInt32(expire);
-            if(ts >= expireTs)
+            if (ts >= expireTs)
             {
                 return null;
             }
@@ -219,7 +219,7 @@ namespace Bit.Core.Utilities.Duo
             var keyBytes = Encoding.ASCII.GetBytes(skey);
             var dataBytes = Encoding.ASCII.GetBytes(data);
 
-            using(var hmac = new HMACSHA1(keyBytes))
+            using (var hmac = new HMACSHA1(keyBytes))
             {
                 var hash = hmac.ComputeHash(dataBytes);
                 var hex = BitConverter.ToString(hash);

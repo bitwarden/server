@@ -10,7 +10,7 @@ namespace Bit.Core.Repositories
     public interface ICipherRepository : IRepository<Cipher, Guid>
     {
         Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
-        Task<CipherDetails> GetDetailsByIdAsync(Guid id);
+        Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
         Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
         Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
         Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
@@ -32,5 +32,7 @@ namespace Bit.Core.Repositories
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
             IEnumerable<CollectionCipher> collectionCiphers);
+        Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
+        Task RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     }
 }

@@ -42,16 +42,16 @@ namespace Bit.Api.Public.Controllers
         {
             var dateRange = request.ToDateRange();
             var result = new PagedResult<IEvent>();
-            if(request.ActingUserId.HasValue)
+            if (request.ActingUserId.HasValue)
             {
                 result = await _eventRepository.GetManyByOrganizationActingUserAsync(
                     _currentContext.OrganizationId.Value, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
-            else if(request.ItemId.HasValue)
+            else if (request.ItemId.HasValue)
             {
                 var cipher = await _cipherRepository.GetByIdAsync(request.ItemId.Value);
-                if(cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
+                if (cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
                 {
                     result = await _eventRepository.GetManyByCipherAsync(
                         cipher, dateRange.Item1, dateRange.Item2,

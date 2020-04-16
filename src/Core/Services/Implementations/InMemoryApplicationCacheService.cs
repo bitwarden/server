@@ -21,18 +21,18 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
         }
 
-        public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+        public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
         {
             await InitOrganizationAbilitiesAsync();
             return _orgAbilities;
         }
 
-        public async Task UpsertOrganizationAbilityAsync(Organization organization)
+        public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
         {
             await InitOrganizationAbilitiesAsync();
             var newAbility = new OrganizationAbility(organization);
 
-            if(_orgAbilities.ContainsKey(organization.Id))
+            if (_orgAbilities.ContainsKey(organization.Id))
             {
                 _orgAbilities[organization.Id] = newAbility;
             }
@@ -42,9 +42,9 @@ namespace Bit.Core.Services
             }
         }
 
-        public Task DeleteOrganizationAbilityAsync(Guid organizationId)
+        public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
         {
-            if(_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
+            if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
             {
                 _orgAbilities.Remove(organizationId);
             }
@@ -55,7 +55,7 @@ namespace Bit.Core.Services
         private async Task InitOrganizationAbilitiesAsync()
         {
             var now = DateTime.UtcNow;
-            if(_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+            if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
             {
                 var abilities = await _organizationRepository.GetManyAbilitiesAsync();
                 _orgAbilities = abilities.ToDictionary(a => a.Id);

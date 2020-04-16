@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Api
         public DomainsResponseModel(User user, bool excluded = true)
             : base("domains")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
@@ -26,7 +26,7 @@ namespace Bit.Core.Models.Api
             var globalDomains = new List<GlobalDomains>();
             var domainsToInclude = excluded ? Core.Utilities.StaticStore.GlobalDomains :
                 Core.Utilities.StaticStore.GlobalDomains.Where(d => !excludedGlobalEquivalentDomains.Contains(d.Key));
-            foreach(var domain in domainsToInclude)
+            foreach (var domain in domainsToInclude)
             {
                 globalDomains.Add(new GlobalDomains(domain.Key, domain.Value, excludedGlobalEquivalentDomains, excluded));
             }

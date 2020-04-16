@@ -8,15 +8,18 @@ using System.Net.Http;
 using Bit.Core.Models.Api;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {
     public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
     {
+        private readonly IDeviceRepository _deviceRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<RelayPushNotificationService> _logger;
 
         public RelayPushNotificationService(
+            IDeviceRepository deviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<RelayPushNotificationService> logger)
@@ -28,6 +31,7 @@ namespace Bit.Core.Services
                   globalSettings.Installation.Key,
                   logger)
         {
+            _deviceRepository = deviceRepository;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
         }
@@ -49,7 +53,7 @@ namespace Bit.Core.Services
 
         private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
         {
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
                 // to the organization. Potentially we could blindly send to just users that have the access all permission
@@ -58,7 +62,7 @@ namespace Bit.Core.Services
 
                 // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
             }
-            else if(cipher.UserId.HasValue)
+            else if (cipher.UserId.HasValue)
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -144,11 +148,7 @@ namespace Bit.Core.Services
                 Payload = payload
             };
 
-            if(excludeCurrentContext)
-            {
-                ExcludeCurrentContext(request);
-            }
-
+            await AddCurrentContextAsync(request, excludeCurrentContext);
             await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
@@ -161,30 +161,36 @@ namespace Bit.Core.Services
                 Payload = payload
             };
 
-            if(excludeCurrentContext)
-            {
-                ExcludeCurrentContext(request);
-            }
-
+            await AddCurrentContextAsync(request, excludeCurrentContext);
             await SendAsync(HttpMethod.Post, "push/send", request);
         }
 
-        private void ExcludeCurrentContext(PushSendRequestModel request)
+        private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
         {
             var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
-            if(!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
+                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+            if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
             {
-                request.Identifier = currentContext.DeviceIdentifier;
+                var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
+                if (device != null)
+                {
+                    request.DeviceId = device.Id.ToString();
+                }
+                if (addIdentifier)
+                {
+                    request.Identifier = currentContext.DeviceIdentifier;
+                }
             }
         }
 
-        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             throw new NotImplementedException();
         }
 
-        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             throw new NotImplementedException();
         }

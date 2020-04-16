@@ -19,7 +19,8 @@ namespace Bit.Core.Services
         Task PushSyncOrgKeysAsync(Guid userId);
         Task PushSyncSettingsAsync(Guid userId);
         Task PushLogOutAsync(Guid userId);
-        Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier);
-        Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier);
+        Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier, string deviceId = null);
+        Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null);
     }
 }

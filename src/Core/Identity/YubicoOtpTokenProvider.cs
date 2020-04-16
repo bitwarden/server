@@ -26,13 +26,13 @@ namespace Bit.Core.Identity
         public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
         {
             var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if(!(await userService.CanAccessPremium(user)))
+            if (!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-            if(!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
+            if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
             {
                 return false;
             }
@@ -48,12 +48,12 @@ namespace Bit.Core.Identity
         public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
         {
             var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if(!(await userService.CanAccessPremium(user)))
+            if (!(await userService.CanAccessPremium(user)))
             {
                 return false;
             }
 
-            if(string.IsNullOrWhiteSpace(token) || token.Length != 44)
+            if (string.IsNullOrWhiteSpace(token) || token.Length < 32 || token.Length > 48)
             {
                 return false;
             }
@@ -61,12 +61,16 @@ namespace Bit.Core.Identity
             var id = token.Substring(0, 12);
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-            if(!provider.MetaData.ContainsValue(id))
+            if (!provider.MetaData.ContainsValue(id))
             {
                 return false;
             }
 
             var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
+            if (_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
+            {
+                client.SetUrls(_globalSettings.Yubico.ValidationUrls);
+            }
             var response = await client.VerifyAsync(token);
             return response.Status == YubicoResponseStatus.Ok;
         }

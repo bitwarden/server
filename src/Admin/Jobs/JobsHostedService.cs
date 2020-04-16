@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core;
@@ -26,9 +27,18 @@ namespace Bit.Admin.Jobs
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            var timeZone = _globalSettings.SelfHosted ? TimeZoneInfo.Utc :
-                TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var timeZone = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
+                TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            if (_globalSettings.SelfHosted)
+            {
+                timeZone = TimeZoneInfo.Utc;
+            }
 
+            var everyTopOfTheHourTrigger = TriggerBuilder.Create()
+                .StartNow()
+                .WithCronSchedule("0 0 * * * ?")
+                .Build();
             var everyFridayAt10pmTrigger = TriggerBuilder.Create()
                 .StartNow()
                 .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
@@ -42,18 +52,28 @@ namespace Bit.Admin.Jobs
                 .WithCronSchedule("0 0 0 ? * SUN", x => x.InTimeZone(timeZone))
                 .Build();
 
-            Jobs = new List<Tuple<Type, ITrigger>>
+            var jobs = new List<Tuple<Type, ITrigger>>
             {
                 new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger)
             };
 
+            if (!_globalSettings.SelfHosted)
+            {
+                jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
+            }
+
+            Jobs = jobs;
             await base.StartAsync(cancellationToken);
         }
 
-        public static void AddJobsServices(IServiceCollection services)
+        public static void AddJobsServices(IServiceCollection services, bool selfHosted)
         {
+            if (!selfHosted)
+            {
+                services.AddTransient<AliveJob>();
+            }
             services.AddTransient<DatabaseUpdateStatisticsJob>();
             services.AddTransient<DatabaseRebuildlIndexesJob>();
             services.AddTransient<DatabaseExpiredGrantsJob>();

@@ -16,12 +16,13 @@ namespace Bit.Core.Models.Api.Public
         public MemberResponseModel(OrganizationUser user, IEnumerable<SelectionReadOnly> collections)
             : base(user)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
             Id = user.Id;
+            UserId = user.UserId;
             Email = user.Email;
             Status = user.Status;
             Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
@@ -31,12 +32,13 @@ namespace Bit.Core.Models.Api.Public
             IEnumerable<SelectionReadOnly> collections)
             : base(user)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
             Id = user.Id;
+            UserId = user.UserId;
             Name = user.Name;
             Email = user.Email;
             TwoFactorEnabled = twoFactorEnabled;
@@ -51,11 +53,17 @@ namespace Bit.Core.Models.Api.Public
         [Required]
         public string Object => "member";
         /// <summary>
-        /// The member's unique identifier.
+        /// The member's unique identifier within the organization.
         /// </summary>
         /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
         [Required]
         public Guid Id { get; set; }
+        /// <summary>
+        /// The member's unique identifier across Bitwarden.
+        /// </summary>
+        /// <example>48b47ee1-493e-4c67-aef7-014996c40eca</example>
+        [Required]
+        public Guid? UserId { get; set; }
         /// <summary>
         /// The member's name, set from their user account profile.
         /// </summary>
@@ -64,7 +72,7 @@ namespace Bit.Core.Models.Api.Public
         /// <summary>
         /// The member's email address.
         /// </summary>
-        /// <example>jsmith@company.com</example>
+        /// <example>jsmith@example.com</example>
         [Required]
         public string Email { get; set; }
         /// <summary>

@@ -54,7 +54,7 @@ namespace Bit.Core.Services
 
         private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
         {
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -66,7 +66,7 @@ namespace Bit.Core.Services
 
                 await SendMessageAsync(type, message, true);
             }
-            else if(cipher.UserId.HasValue)
+            else if (cipher.UserId.HasValue)
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -151,7 +151,7 @@ namespace Bit.Core.Services
 
         private string GetContextIdentifier(bool excludeCurrentContext)
         {
-            if(!excludeCurrentContext)
+            if (!excludeCurrentContext)
             {
                 return null;
             }
@@ -161,13 +161,15 @@ namespace Bit.Core.Services
             return currentContext?.DeviceIdentifier;
         }
 
-        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier)
+        public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             // Noop
             return Task.FromResult(0);
         }
 
-        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier)
+        public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+            string deviceId = null)
         {
             // Noop
             return Task.FromResult(0);

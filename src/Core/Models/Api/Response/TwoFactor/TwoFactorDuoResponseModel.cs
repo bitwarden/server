@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorDuoResponseModel(User user)
             : base(ResponseObj)
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorDuoResponseModel(Organization org)
             : base(ResponseObj)
         {
-            if(org == null)
+            if (org == null)
             {
                 throw new ArgumentNullException(nameof(org));
             }
@@ -39,19 +39,19 @@ namespace Bit.Core.Models.Api
 
         private void Build(TwoFactorProvider provider)
         {
-            if(provider?.MetaData != null && provider.MetaData.Count > 0)
+            if (provider?.MetaData != null && provider.MetaData.Count > 0)
             {
                 Enabled = provider.Enabled;
 
-                if(provider.MetaData.ContainsKey("Host"))
+                if (provider.MetaData.ContainsKey("Host"))
                 {
                     Host = (string)provider.MetaData["Host"];
                 }
-                if(provider.MetaData.ContainsKey("SKey"))
+                if (provider.MetaData.ContainsKey("SKey"))
                 {
                     SecretKey = (string)provider.MetaData["SKey"];
                 }
-                if(provider.MetaData.ContainsKey("IKey"))
+                if (provider.MetaData.ContainsKey("IKey"))
                 {
                     IntegrationKey = (string)provider.MetaData["IKey"];
                 }

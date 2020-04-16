@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -48,31 +49,31 @@ namespace Bit.Billing.Controllers
         [HttpPost("ipn")]
         public async Task<IActionResult> PostIpn([FromBody] BitPayEventModel model, [FromQuery] string key)
         {
-            if(key != _billingSettings.BitPayWebhookKey)
+            if (key != _billingSettings.BitPayWebhookKey)
             {
                 return new BadRequestResult();
             }
-            if(model == null || string.IsNullOrWhiteSpace(model.Data?.Id) ||
+            if (model == null || string.IsNullOrWhiteSpace(model.Data?.Id) ||
                 string.IsNullOrWhiteSpace(model.Event?.Name))
             {
                 return new BadRequestResult();
             }
 
-            if(model.Event.Name != "invoice_confirmed")
+            if (model.Event.Name != "invoice_confirmed")
             {
                 // Only processing confirmed invoice events for now.
                 return new OkResult();
             }
 
             var invoice = await _bitPayClient.GetInvoiceAsync(model.Data.Id);
-            if(invoice == null || invoice.Status != "confirmed")
+            if (invoice == null || invoice.Status != "confirmed")
             {
                 // Request forged...?
                 _logger.LogWarning("Forged invoice detected. #" + model.Data.Id);
                 return new BadRequestResult();
             }
 
-            if(invoice.Currency != "USD")
+            if (invoice.Currency != "USD")
             {
                 // Only process USD payments
                 _logger.LogWarning("Non USD payment received. #" + invoice.Id);
@@ -80,13 +81,13 @@ namespace Bit.Billing.Controllers
             }
 
             var ids = GetIdsFromPosData(invoice);
-            if(!ids.Item1.HasValue && !ids.Item2.HasValue)
+            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
             {
                 return new OkResult();
             }
 
             var isAccountCredit = IsAccountCredit(invoice);
-            if(!isAccountCredit)
+            if (!isAccountCredit)
             {
                 // Only processing credits
                 _logger.LogWarning("Non-credit payment received. #" + invoice.Id);
@@ -94,7 +95,7 @@ namespace Bit.Billing.Controllers
             }
 
             var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
-            if(transaction != null)
+            if (transaction != null)
             {
                 _logger.LogWarning("Already processed this confirmed invoice. #" + invoice.Id);
                 return new OkResult();
@@ -104,7 +105,7 @@ namespace Bit.Billing.Controllers
             {
                 var tx = new Core.Models.Table.Transaction
                 {
-                    Amount = invoice.Price,
+                    Amount = Convert.ToDecimal(invoice.Price),
                     CreationDate = GetTransactionDate(invoice),
                     OrganizationId = ids.Item1,
                     UserId = ids.Item2,
@@ -112,20 +113,20 @@ namespace Bit.Billing.Controllers
                     Gateway = GatewayType.BitPay,
                     GatewayId = invoice.Id,
                     PaymentMethodType = PaymentMethodType.BitPay,
-                    Details = $"{invoice.TransactionCurrency}, BitPay {invoice.Id}"
+                    Details = $"{invoice.Currency}, BitPay {invoice.Id}"
                 };
                 await _transactionRepository.CreateAsync(tx);
 
-                if(isAccountCredit)
+                if (isAccountCredit)
                 {
                     string billingEmail = null;
-                    if(tx.OrganizationId.HasValue)
+                    if (tx.OrganizationId.HasValue)
                     {
                         var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                        if(org != null)
+                        if (org != null)
                         {
                             billingEmail = org.BillingEmailAddress();
-                            if(await _paymentService.CreditAccountAsync(org, tx.Amount))
+                            if (await _paymentService.CreditAccountAsync(org, tx.Amount))
                             {
                                 await _organizationRepository.ReplaceAsync(org);
                             }
@@ -134,62 +135,63 @@ namespace Bit.Billing.Controllers
                     else
                     {
                         var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
-                        if(user != null)
+                        if (user != null)
                         {
                             billingEmail = user.BillingEmailAddress();
-                            if(await _paymentService.CreditAccountAsync(user, tx.Amount))
+                            if (await _paymentService.CreditAccountAsync(user, tx.Amount))
                             {
                                 await _userRepository.ReplaceAsync(user);
                             }
                         }
                     }
 
-                    if(!string.IsNullOrWhiteSpace(billingEmail))
+                    if (!string.IsNullOrWhiteSpace(billingEmail))
                     {
                         await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
                     }
                 }
             }
             // Catch foreign key violations because user/org could have been deleted.
-            catch(SqlException e) when(e.Number == 547) { }
+            catch (SqlException e) when(e.Number == 547) { }
 
             return new OkResult();
         }
 
-        private bool IsAccountCredit(NBitpayClient.Invoice invoice)
+        private bool IsAccountCredit(BitPayLight.Models.Invoice.Invoice invoice)
         {
             return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
         }
 
-        private DateTime GetTransactionDate(NBitpayClient.Invoice invoice)
+        private DateTime GetTransactionDate(BitPayLight.Models.Invoice.Invoice invoice)
         {
             var transactions = invoice.Transactions?.Where(t => t.Type == null &&
                 !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0");
-            if(transactions != null && transactions.Count() == 1)
+            if (transactions != null && transactions.Count() == 1)
             {
-                return transactions.First().ReceivedTime.DateTime;
+                return DateTime.Parse(transactions.First().ReceivedTime, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind);
             }
-            return invoice.CurrentTime.DateTime;
+            return CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
         }
 
-        public Tuple<Guid?, Guid?> GetIdsFromPosData(NBitpayClient.Invoice invoice)
+        public Tuple<Guid?, Guid?> GetIdsFromPosData(BitPayLight.Models.Invoice.Invoice invoice)
         {
             Guid? orgId = null;
             Guid? userId = null;
 
-            if(invoice != null && !string.IsNullOrWhiteSpace(invoice.PosData) && invoice.PosData.Contains(":"))
+            if (invoice != null && !string.IsNullOrWhiteSpace(invoice.PosData) && invoice.PosData.Contains(":"))
             {
                 var mainParts = invoice.PosData.Split(',');
-                foreach(var mainPart in mainParts)
+                foreach (var mainPart in mainParts)
                 {
                     var parts = mainPart.Split(':');
-                    if(parts.Length > 1 && Guid.TryParse(parts[1], out var id))
+                    if (parts.Length > 1 && Guid.TryParse(parts[1], out var id))
                     {
-                        if(parts[0] == "userId")
+                        if (parts[0] == "userId")
                         {
                             userId = id;
                         }
-                        else if(parts[0] == "organizationId")
+                        else if (parts[0] == "organizationId")
                         {
                             orgId = id;
                         }

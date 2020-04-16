@@ -15,7 +15,7 @@ namespace Bit.Core.Repositories.PostgreSql
         public Repository(string connectionString, string readOnlyConnectionString, string table = null)
             : base(connectionString, readOnlyConnectionString)
         {
-            if(!string.IsNullOrWhiteSpace(table))
+            if (!string.IsNullOrWhiteSpace(table))
             {
                 Table = table;
             }
@@ -29,11 +29,11 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task<T> GetByIdAsync(TId id)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<T>(
                     $"{Table}_read_by_id",
-                    new { id = id },
+                    ToParam(new { Id = id }),
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -43,29 +43,29 @@ namespace Bit.Core.Repositories.PostgreSql
         public virtual async Task CreateAsync(T obj)
         {
             obj.SetNewId();
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_create",
-                    obj,
+                    ToParam(obj),
                     commandType: CommandType.StoredProcedure);
             }
         }
 
         public virtual async Task ReplaceAsync(T obj)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"{Table}_update",
-                    obj,
+                    ToParam(obj),
                     commandType: CommandType.StoredProcedure);
             }
         }
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if(obj.Id.Equals(default(TId)))
+            if (obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
@@ -77,11 +77,11 @@ namespace Bit.Core.Repositories.PostgreSql
 
         public virtual async Task DeleteAsync(T obj)
         {
-            using(var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     $"{Table}_delete_by_id",
-                    new { id = obj.Id },
+                    ToParam(new { Id = obj.Id }),
                     commandType: CommandType.StoredProcedure);
             }
         }

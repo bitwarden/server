@@ -39,7 +39,7 @@ namespace Bit.Core.IdentityServer
             var newClaims = new List<Claim>();
 
             var user = await _userService.GetUserByPrincipalAsync(context.Subject);
-            if(user != null)
+            if (user != null)
             {
                 var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
                 newClaims.AddRange(new List<Claim>
@@ -50,39 +50,39 @@ namespace Bit.Core.IdentityServer
                     new Claim("sstamp", user.SecurityStamp)
                 });
 
-                if(!string.IsNullOrWhiteSpace(user.Name))
+                if (!string.IsNullOrWhiteSpace(user.Name))
                 {
                     newClaims.Add(new Claim(JwtClaimTypes.Name, user.Name));
                 }
 
                 // Orgs that this user belongs to
                 var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
-                if(orgs.Any())
+                if (orgs.Any())
                 {
-                    foreach(var group in orgs.GroupBy(o => o.Type))
+                    foreach (var group in orgs.GroupBy(o => o.Type))
                     {
-                        switch(group.Key)
+                        switch (group.Key)
                         {
                             case Enums.OrganizationUserType.Owner:
-                                foreach(var org in group)
+                                foreach (var org in group)
                                 {
                                     newClaims.Add(new Claim("orgowner", org.Id.ToString()));
                                 }
                                 break;
                             case Enums.OrganizationUserType.Admin:
-                                foreach(var org in group)
+                                foreach (var org in group)
                                 {
                                     newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
                                 }
                                 break;
                             case Enums.OrganizationUserType.Manager:
-                                foreach(var org in group)
+                                foreach (var org in group)
                                 {
                                     newClaims.Add(new Claim("orgmanager", org.Id.ToString()));
                                 }
                                 break;
                             case Enums.OrganizationUserType.User:
-                                foreach(var org in group)
+                                foreach (var org in group)
                                 {
                                     newClaims.Add(new Claim("orguser", org.Id.ToString()));
                                 }
@@ -100,7 +100,7 @@ namespace Bit.Core.IdentityServer
                 .ToList();
 
             newClaims.AddRange(existingClaimsToKeep);
-            if(newClaims.Any())
+            if (newClaims.Any())
             {
                 context.AddRequestedClaims(newClaims);
             }
@@ -111,7 +111,7 @@ namespace Bit.Core.IdentityServer
             var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == "sstamp");
             var user = await _userService.GetUserByPrincipalAsync(context.Subject);
 
-            if(user != null && securityTokenClaim != null)
+            if (user != null && securityTokenClaim != null)
             {
                 context.IsActive = string.Equals(user.SecurityStamp, securityTokenClaim.Value,
                     StringComparison.InvariantCultureIgnoreCase);

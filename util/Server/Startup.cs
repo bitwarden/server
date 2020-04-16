@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Server
 {
@@ -19,27 +19,35 @@ namespace Bit.Server
             "/images/"
         };
 
+        public Startup()
+        {
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+        }
+
         public void ConfigureServices(IServiceCollection services)
-        { }
+        {
+            services.AddRouting();
+        }
 
         public void Configure(
             IApplicationBuilder app,
-            ILoggerFactory loggerFactory,
             IConfiguration configuration)
         {
-            loggerFactory
-                .AddConsole()
-                .AddDebug();
-
-            if(configuration.GetValue<bool?>("serveUnknown") ?? false)
+            if (configuration.GetValue<bool?>("serveUnknown") ?? false)
             {
                 app.UseStaticFiles(new StaticFileOptions
                 {
                     ServeUnknownFileTypes = true,
                     DefaultContentType = "application/octet-stream"
                 });
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/alive",
+                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+                });
             }
-            else if(configuration.GetValue<bool?>("webVault") ?? false)
+            else if (configuration.GetValue<bool?>("webVault") ?? false)
             {
                 var options = new DefaultFilesOptions();
                 options.DefaultFileNames.Clear();
@@ -49,18 +57,18 @@ namespace Bit.Server
                 {
                     OnPrepareResponse = ctx =>
                     {
-                        if(!ctx.Context.Request.Path.HasValue ||
+                        if (!ctx.Context.Request.Path.HasValue ||
                             ctx.Context.Response.Headers.ContainsKey("Cache-Control"))
                         {
                             return;
                         }
                         var path = ctx.Context.Request.Path.Value;
-                        if(_longCachedPaths.Any(ext => path.StartsWith(ext)))
+                        if (_longCachedPaths.Any(ext => path.StartsWith(ext)))
                         {
                             // 14 days
                             ctx.Context.Response.Headers.Append("Cache-Control", "max-age=1209600");
                         }
-                        if(_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
+                        if (_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
                         {
                             // 7 days
                             ctx.Context.Response.Headers.Append("Cache-Control", "max-age=604800");
@@ -71,6 +79,12 @@ namespace Bit.Server
             else
             {
                 app.UseFileServer();
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/alive",
+                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+                });
             }
         }
     }

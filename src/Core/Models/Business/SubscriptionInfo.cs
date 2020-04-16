@@ -9,6 +9,7 @@ namespace Bit.Core.Models.Business
     {
         public BillingSubscription Subscription { get; set; }
         public BillingUpcomingInvoice UpcomingInvoice { get; set; }
+        public bool UsingInAppPurchase { get; set; }
 
         public class BillingSubscription
         {
@@ -21,50 +22,10 @@ namespace Bit.Core.Models.Business
                 PeriodEndDate = sub.CurrentPeriodEnd;
                 CancelledDate = sub.CanceledAt;
                 CancelAtEndDate = sub.CancelAtPeriodEnd;
-                Cancelled = sub.Status == "canceled" || sub.Status == "unpaid";
-                if(sub.Items?.Data != null)
+                Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
+                if (sub.Items?.Data != null)
                 {
                     Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
-                }
-            }
-
-            public BillingSubscription(Braintree.Subscription sub, Braintree.Plan plan)
-            {
-                Status = sub.Status.ToString();
-
-                if(sub.HasTrialPeriod.GetValueOrDefault() && sub.CreatedAt.HasValue && sub.TrialDuration.HasValue)
-                {
-                    TrialStartDate = sub.CreatedAt.Value;
-                    if(sub.TrialDurationUnit == Braintree.SubscriptionDurationUnit.DAY)
-                    {
-                        TrialEndDate = TrialStartDate.Value.AddDays(sub.TrialDuration.Value);
-                    }
-                    else
-                    {
-                        TrialEndDate = TrialStartDate.Value.AddMonths(sub.TrialDuration.Value);
-                    }
-                }
-
-                PeriodStartDate = sub.BillingPeriodStartDate;
-                PeriodEndDate = sub.BillingPeriodEndDate;
-
-                CancelAtEndDate = !sub.NeverExpires.GetValueOrDefault();
-                Cancelled = sub.Status == Braintree.SubscriptionStatus.CANCELED;
-                if(Cancelled)
-                {
-                    CancelledDate = sub.UpdatedAt.Value;
-                }
-
-                var items = new List<BillingSubscriptionItem>();
-                items.Add(new BillingSubscriptionItem(plan));
-                if(sub.AddOns != null)
-                {
-                    items.AddRange(sub.AddOns.Select(a => new BillingSubscriptionItem(plan, a)));
-                }
-
-                if(items.Count > 0)
-                {
-                    Items = items;
                 }
             }
 
@@ -83,7 +44,7 @@ namespace Bit.Core.Models.Business
             {
                 public BillingSubscriptionItem(SubscriptionItem item)
                 {
-                    if(item.Plan != null)
+                    if (item.Plan != null)
                     {
                         Name = item.Plan.Nickname;
                         Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
@@ -91,22 +52,6 @@ namespace Bit.Core.Models.Business
                     }
 
                     Quantity = (int)item.Quantity;
-                }
-
-                public BillingSubscriptionItem(Braintree.Plan plan)
-                {
-                    Name = plan.Name;
-                    Amount = plan.Price.GetValueOrDefault();
-                    Interval = plan.BillingFrequency.GetValueOrDefault() == 12 ? "year" : "month";
-                    Quantity = 1;
-                }
-
-                public BillingSubscriptionItem(Braintree.Plan plan, Braintree.AddOn addon)
-                {
-                    Name = addon.Name;
-                    Amount = addon.Amount.GetValueOrDefault();
-                    Interval = plan.BillingFrequency.GetValueOrDefault() == 12 ? "year" : "month";
-                    Quantity = addon.Quantity.GetValueOrDefault();
                 }
 
                 public string Name { get; set; }
@@ -123,13 +68,13 @@ namespace Bit.Core.Models.Business
             public BillingUpcomingInvoice(Invoice inv)
             {
                 Amount = inv.AmountDue / 100M;
-                Date = inv.Date.Value;
+                Date = inv.Created;
             }
 
             public BillingUpcomingInvoice(Braintree.Subscription sub)
             {
                 Amount = sub.NextBillAmount.GetValueOrDefault() + sub.Balance.GetValueOrDefault();
-                if(Amount < 0)
+                if (Amount < 0)
                 {
                     Amount = 0;
                 }

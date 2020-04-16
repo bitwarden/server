@@ -20,7 +20,7 @@ namespace Bit.Api.Utilities
 
         public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
         {
-            if(context.Result is JsonResult jsonResult)
+            if (context.Result is JsonResult jsonResult)
             {
                 context.Result = new JsonResult(jsonResult.Value, _jsonSerializerSettings);
             }

@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if(SeatAdjustment == 0)
+            if (SeatAdjustment == 0)
             {
                 yield return new ValidationResult("Seat adjustment cannot be 0.", new string[] { nameof(SeatAdjustment) });
             }

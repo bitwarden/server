@@ -5,22 +5,27 @@ namespace Bit.Core
     public class GlobalSettings
     {
         public bool SelfHosted { get; set; }
+        public virtual string KnownProxies { get; set; }
         public virtual string SiteName { get; set; }
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory { get; set; }
+        public virtual long? LogRollBySizeLimit { get; set; }
         public virtual string LicenseDirectory { get; set; }
+        public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
         public virtual string InternalIdentityKey { get; set; }
-        public virtual string HibpBreachApiKey { get; set; }
+        public virtual string HibpApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
+        public virtual bool DisableEmailNewDevice { get; set; }
+        public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual StorageSettings Storage { get; set; } = new StorageSettings();
-        public virtual StorageSettings Events { get; set; } = new StorageSettings();
+        public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
+        public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -32,6 +37,9 @@ namespace Bit.Core
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
+        public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
+        public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
+        public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
 
         public class BaseServiceUriSettings
         {
@@ -73,7 +81,7 @@ namespace Bit.Core
             }
         }
 
-        public class StorageSettings
+        public class ConnectionStringSettings
         {
             private string _connectionString;
 
@@ -106,21 +114,18 @@ namespace Bit.Core
         public class MailSettings
         {
             public string ReplyToEmail { get; set; }
-            public string SendGridApiKey { get; set; }
+            public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
 
             public class SmtpSettings
             {
                 public string Host { get; set; }
                 public int Port { get; set; } = 25;
+                public bool StartTls { get; set; } = false;
                 public bool Ssl { get; set; } = false;
                 public bool SslOverride { get; set; } = false;
                 public string Username { get; set; }
                 public string Password { get; set; }
-                [Obsolete]
-                public bool UseDefaultCredentials { get; set; } = false;
-                [Obsolete]
-                public string AuthType { get; set; }
                 public bool TrustServer { get; set; } = false;
             }
         }
@@ -134,6 +139,7 @@ namespace Bit.Core
         public class DataProtectionSettings
         {
             public string CertificateThumbprint { get; set; }
+            public string CertificatePassword { get; set; }
             public string Directory { get; set; }
         }
 
@@ -148,9 +154,9 @@ namespace Bit.Core
             public string Dsn { get; set; }
         }
 
-        public class NotificationsSettings : StorageSettings
+        public class NotificationsSettings : ConnectionStringSettings
         {
-            public string AzureSignalRConnectionString { get; set; }
+            public string RedisConnectionString { get; set; }
         }
 
         public class NotificationHubSettings
@@ -172,6 +178,7 @@ namespace Bit.Core
         {
             public string ClientId { get; set; }
             public string Key { get; set; }
+            public string[] ValidationUrls { get; set; }
         }
 
         public class DuoSettings
@@ -190,7 +197,7 @@ namespace Bit.Core
         public class BitPaySettings
         {
             public bool Production { get; set; }
-            public string Base58Secret { get; set; }
+            public string Token { get; set; }
             public string NotificationUrl { get; set; }
         }
 
@@ -199,6 +206,25 @@ namespace Bit.Core
             public Guid Id { get; set; }
             public string Key { get; set; }
             public string IdentityUri { get; set; }
+        }
+
+        public class AmazonSettings
+        {
+            public string AccessKeyId { get; set; }
+            public string AccessKeySecret { get; set; }
+            public string Region { get; set; }
+        }
+
+        public class ServiceBusSettings : ConnectionStringSettings
+        {
+            public string ApplicationCacheTopicName { get; set; }
+            public string ApplicationCacheSubscriptionName { get; set; }
+        }
+
+        public class AppleIapSettings
+        {
+            public string Password { get; set; }
+            public bool AppInReview { get; set; }
         }
     }
 }

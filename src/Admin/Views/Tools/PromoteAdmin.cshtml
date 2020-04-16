@@ -1,0 +1,25 @@
+﻿@model PromoteAdminModel
+@{
+    ViewData["Title"] = "Promote Organization Admin";
+}
+
+<h1>Promote Organization Admin</h1>
+
+<form method="post">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    <div class="row">
+        <div class="col-md">
+            <div class="form-group">
+                <label asp-for="UserId"></label>
+                <input type="text" class="form-control" asp-for="UserId">
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="form-group">
+                <label asp-for="OrganizationId"></label>
+                <input type="text" class="form-control" asp-for="OrganizationId">
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mb-2">Promote Admin</button>
+</form>

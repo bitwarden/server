@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2003
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
 EndProject
@@ -14,8 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		appveyor.yml = appveyor.yml
-		build-ci.sh = build-ci.sh
 		build.sh = build.sh
+		dotnet-tools.json = dotnet-tools.json
 		LICENSE.txt = LICENSE.txt
 		NuGet.Config = NuGet.Config
 		README.md = README.md
@@ -47,6 +47,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Test", "test\Core.Test\Core.Test.csproj", "{8EF31E6C-400A-4174-8BE3-502B08FB10B5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventsProcessor", "src\EventsProcessor\EventsProcessor.csproj", "{79BB453F-D0D8-4DDF-9809-A405C56692BD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Migrator", "util\Migrator\Migrator.csproj", "{54DED792-A022-417E-9804-21FCC9C7C610}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,6 +110,10 @@ Global
 		{79BB453F-D0D8-4DDF-9809-A405C56692BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79BB453F-D0D8-4DDF-9809-A405C56692BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79BB453F-D0D8-4DDF-9809-A405C56692BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54DED792-A022-417E-9804-21FCC9C7C610}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54DED792-A022-417E-9804-21FCC9C7C610}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54DED792-A022-417E-9804-21FCC9C7C610}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54DED792-A022-417E-9804-21FCC9C7C610}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -126,6 +132,7 @@ Global
 		{28635027-20E5-42FA-B218-B6C878DE5350} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{8EF31E6C-400A-4174-8BE3-502B08FB10B5} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{79BB453F-D0D8-4DDF-9809-A405C56692BD} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
+		{54DED792-A022-417E-9804-21FCC9C7C610} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

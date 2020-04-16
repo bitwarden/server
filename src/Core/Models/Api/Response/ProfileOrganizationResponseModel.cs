@@ -10,6 +10,7 @@ namespace Bit.Core.Models.Api
         {
             Id = organization.OrganizationId.ToString();
             Name = organization.Name;
+            UsePolicies = organization.UsePolicies;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -29,6 +30,7 @@ namespace Bit.Core.Models.Api
 
         public string Id { get; set; }
         public string Name { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

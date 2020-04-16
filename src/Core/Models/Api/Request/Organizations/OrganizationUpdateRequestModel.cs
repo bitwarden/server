@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
         {
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BillingEmail = BillingEmail;
+            existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
             return existingOrganization;
         }
     }

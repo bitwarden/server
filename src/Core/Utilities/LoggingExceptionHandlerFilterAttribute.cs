@@ -9,7 +9,7 @@ namespace Bit.Core.Utilities
         public override void OnException(ExceptionContext context)
         {
             var exception = context.Exception;
-            if(exception == null)
+            if (exception == null)
             {
                 // Should never happen.
                 return;

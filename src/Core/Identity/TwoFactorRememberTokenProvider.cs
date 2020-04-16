@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Identity
 {
@@ -9,8 +10,9 @@ namespace Bit.Core.Identity
     {
         public TwoFactorRememberTokenProvider(
             IDataProtectionProvider dataProtectionProvider,
-            IOptions<TwoFactorRememberTokenProviderOptions> options)
-            : base(dataProtectionProvider, options)
+            IOptions<TwoFactorRememberTokenProviderOptions> options,
+            ILogger<DataProtectorTokenProvider<User>> logger)
+            : base(dataProtectionProvider, options, logger)
         { }
     }
 

@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api
         public EventResponseModel(IEvent ev)
             : base("event")
         {
-            if(ev == null)
+            if (ev == null)
             {
                 throw new ArgumentNullException(nameof(ev));
             }
@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Api
             CipherId = ev.CipherId;
             CollectionId = ev.CollectionId;
             GroupId = ev.GroupId;
+            PolicyId = ev.PolicyId;
             OrganizationUserId = ev.OrganizationUserId;
             ActingUserId = ev.ActingUserId;
             Date = ev.Date;
@@ -33,6 +34,7 @@ namespace Bit.Core.Models.Api
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }
         public Guid? GroupId { get; set; }
+        public Guid? PolicyId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ActingUserId { get; set; }
         public DateTime Date { get; set; }

@@ -25,11 +25,11 @@ namespace Bit.Core.Models.Api
             var keys = modelState.Keys.ToList();
             var values = modelState.Values.ToList();
 
-            for(var i = 0; i < values.Count; i++)
+            for (var i = 0; i < values.Count; i++)
             {
                 var value = values[i];
 
-                if(keys.Count <= i)
+                if (keys.Count <= i)
                 {
                     // Keys not available for some reason.
                     break;
@@ -37,7 +37,7 @@ namespace Bit.Core.Models.Api
 
                 var key = keys[i];
 
-                if(value.ValidationState != ModelValidationState.Invalid || value.Errors.Count == 0)
+                if (value.ValidationState != ModelValidationState.Invalid || value.Errors.Count == 0)
                 {
                     continue;
                 }

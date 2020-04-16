@@ -3,16 +3,17 @@ using Microsoft.AspNetCore.Hosting;
 using System;
 using Bit.Core.Models.Business;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services
 {
     public class NoopLicensingService : ILicensingService
     {
         public NoopLicensingService(
-            IHostingEnvironment environment,
+            IWebHostEnvironment environment,
             GlobalSettings globalSettings)
         {
-            if(!environment.IsDevelopment() && globalSettings.SelfHosted)
+            if (!environment.IsDevelopment() && globalSettings.SelfHosted)
             {
                 throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
             }

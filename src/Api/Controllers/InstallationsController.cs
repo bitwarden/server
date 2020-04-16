@@ -26,7 +26,7 @@ namespace Bit.Api.Controllers
         public async Task<InstallationResponseModel> Get(Guid id)
         {
             var installation = await _installationRepository.GetByIdAsync(id);
-            if(installation == null)
+            if (installation == null)
             {
                 throw new NotFoundException();
             }

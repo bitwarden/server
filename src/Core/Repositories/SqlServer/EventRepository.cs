@@ -65,7 +65,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateAsync(IEvent e)
         {
-            if(!(e is Event ev))
+            if (!(e is Event ev))
             {
                 ev = new Event(e);
             }
@@ -75,24 +75,24 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task CreateManyAsync(IList<IEvent> entities)
         {
-            if(!entities?.Any() ?? true)
+            if (!entities?.Any() ?? true)
             {
                 return;
             }
 
-            if(entities.Count == 1)
+            if (entities.Count == 1)
             {
                 await CreateAsync(entities.First());
                 return;
             }
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
-                using(var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
+                using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
                 {
                     bulkCopy.DestinationTableName = "[dbo].[Event]";
-                    var dataTable = BuildEventsTable(entities.Select(e => e is Event ? e as Event : new Event(e)));
+                    var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event ? e as Event : new Event(e)));
                     await bulkCopy.WriteToServerAsync(dataTable);
                 }
             }
@@ -102,7 +102,7 @@ namespace Bit.Core.Repositories.SqlServer
             IDictionary<string, object> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             DateTime? beforeDate = null;
-            if(!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
+            if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
                 long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
             {
                 beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
@@ -116,13 +116,13 @@ namespace Bit.Core.Repositories.SqlServer
             parameters.Add("@EndDate", endDate.ToUniversalTime(), DbType.DateTime2, null, 7);
             parameters.Add("@BeforeDate", beforeDate, DbType.DateTime2, null, 7);
 
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var events = (await connection.QueryAsync<Event>(sprocName, parameters,
                     commandType: CommandType.StoredProcedure)).ToList();
 
                 var result = new PagedResult<IEvent>();
-                if(events.Any() && events.Count >= pageOptions.PageSize)
+                if (events.Any() && events.Count >= pageOptions.PageSize)
                 {
                     result.ContinuationToken = events.Last().Date.ToBinary().ToString();
                 }
@@ -131,10 +131,10 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        private DataTable BuildEventsTable(IEnumerable<Event> events)
+        private DataTable BuildEventsTable(SqlBulkCopy bulkCopy, IEnumerable<Event> events)
         {
             var e = events.FirstOrDefault();
-            if(e == null)
+            if (e == null)
             {
                 throw new ApplicationException("Must have some events to bulk import.");
             }
@@ -153,6 +153,8 @@ namespace Bit.Core.Repositories.SqlServer
             eventsTable.Columns.Add(cipherIdColumn);
             var collectionIdColumn = new DataColumn(nameof(e.CollectionId), typeof(Guid));
             eventsTable.Columns.Add(collectionIdColumn);
+            var policyIdColumn = new DataColumn(nameof(e.PolicyId), typeof(Guid));
+            eventsTable.Columns.Add(policyIdColumn);
             var groupIdColumn = new DataColumn(nameof(e.GroupId), typeof(Guid));
             eventsTable.Columns.Add(groupIdColumn);
             var organizationUserIdColumn = new DataColumn(nameof(e.OrganizationUserId), typeof(Guid));
@@ -166,11 +168,16 @@ namespace Bit.Core.Repositories.SqlServer
             var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
             eventsTable.Columns.Add(dateColumn);
 
+            foreach (DataColumn col in eventsTable.Columns)
+            {
+                bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+            }
+
             var keys = new DataColumn[1];
             keys[0] = idColumn;
             eventsTable.PrimaryKey = keys;
 
-            foreach(var ev in events)
+            foreach (var ev in events)
             {
                 ev.SetNewId();
 
@@ -182,6 +189,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[organizationIdColumn] = ev.OrganizationId.HasValue ? (object)ev.OrganizationId.Value : DBNull.Value;
                 row[cipherIdColumn] = ev.CipherId.HasValue ? (object)ev.CipherId.Value : DBNull.Value;
                 row[collectionIdColumn] = ev.CollectionId.HasValue ? (object)ev.CollectionId.Value : DBNull.Value;
+                row[policyIdColumn] = ev.PolicyId.HasValue ? (object)ev.PolicyId.Value : DBNull.Value;
                 row[groupIdColumn] = ev.GroupId.HasValue ? (object)ev.GroupId.Value : DBNull.Value;
                 row[organizationUserIdColumn] = ev.OrganizationUserId.HasValue ?
                     (object)ev.OrganizationUserId.Value : DBNull.Value;

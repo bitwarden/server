@@ -6,8 +6,7 @@ using Bit.Core;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Azure.Storage.Queues;
 
 namespace Bit.Notifications
 {
@@ -19,7 +18,7 @@ namespace Bit.Notifications
 
         private Task _executingTask;
         private CancellationTokenSource _cts;
-        private CloudQueue _queue;
+        private QueueClient _queueClient;
 
         public AzureQueueHostedService(
             ILogger<AzureQueueHostedService> logger,
@@ -40,10 +39,11 @@ namespace Bit.Notifications
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if(_executingTask == null)
+            if (_executingTask == null)
             {
                 return;
             }
+            _logger.LogWarning("Stopping service.");
             _cts.Cancel();
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
@@ -54,27 +54,45 @@ namespace Bit.Notifications
 
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var storageAccount = CloudStorageAccount.Parse(_globalSettings.Notifications.ConnectionString);
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("notifications");
-
-            while(!cancellationToken.IsCancellationRequested)
+            _queueClient = new QueueClient(_globalSettings.Notifications.ConnectionString, "notifications");
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                    null, null, cancellationToken);
-                if(messages.Any())
+                try
                 {
-                    foreach(var message in messages)
+                    var messages = await _queueClient.ReceiveMessagesAsync(32);
+                    if (messages.Value?.Any() ?? false)
                     {
-                        await HubHelpers.SendNotificationToHubAsync(message.AsString, _hubContext, cancellationToken);
-                        await _queue.DeleteMessageAsync(message);
+                        foreach (var message in messages.Value)
+                        {
+                            try
+                            {
+                                await HubHelpers.SendNotificationToHubAsync(
+                                    message.MessageText, _hubContext, cancellationToken);
+                                await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError("Error processing dequeued message: " +
+                                    $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
+                                if (message.DequeueCount > 2)
+                                {
+                                    await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    _logger.LogError("Error processing messages.", e);
                 }
             }
+
+            _logger.LogWarning("Done processing.");
         }
     }
 }

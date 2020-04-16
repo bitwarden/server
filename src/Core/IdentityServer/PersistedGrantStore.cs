@@ -29,7 +29,7 @@ namespace Bit.Core.IdentityServer
         public async Task<PersistedGrant> GetAsync(string key)
         {
             var grant = await _grantRepository.GetByKeyAsync(key);
-            if(grant == null)
+            if (grant == null)
             {
                 return null;
             }

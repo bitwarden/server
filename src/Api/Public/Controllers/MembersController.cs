@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,17 +17,20 @@ namespace Bit.Api.Public.Controllers
     public class MembersController : Controller
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly CurrentContext _currentContext;
 
         public MembersController(
             IOrganizationUserRepository organizationUserRepository,
+            IGroupRepository groupRepository,
             IOrganizationService organizationService,
             IUserService userService,
             CurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
+            _groupRepository = groupRepository;
             _organizationService = organizationService;
             _userService = userService;
             _currentContext = currentContext;
@@ -47,13 +51,35 @@ namespace Bit.Api.Public.Controllers
         {
             var userDetails = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
             var orgUser = userDetails?.Item1;
-            if(orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
+            if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
             var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
                 userDetails.Item2);
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Retrieve a member's group ids
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the unique identifiers for all groups that are associated with this member. You need only
+        /// supply the unique member identifier that was returned upon member creation.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to be retrieved.</param>
+        [HttpGet("{id}/group-ids")]
+        [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetGroupIds(Guid id)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(id);
+            return new JsonResult(groupIds);
         }
 
         /// <summary>
@@ -112,7 +138,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Put(Guid id, [FromBody]MemberUpdateRequestModel model)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
-            if(existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -120,7 +146,7 @@ namespace Bit.Api.Public.Controllers
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
             await _organizationService.SaveUserAsync(updatedUser, null, associations);
             MemberResponseModel response = null;
-            if(existingUser.UserId.HasValue)
+            if (existingUser.UserId.HasValue)
             {
                 var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
                 response = new MemberResponseModel(existingUserDetails,
@@ -131,6 +157,29 @@ namespace Bit.Api.Public.Controllers
                 response = new MemberResponseModel(updatedUser, associations);
             }
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Update a member's groups.
+        /// </summary>
+        /// <remarks>
+        /// Updates the specified member's group associations.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to be updated.</param>
+        /// <param name="model">The request model.</param>
+        [HttpPut("{id}/group-ids")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> PutGroupIds(Guid id, [FromBody]UpdateGroupIdsRequestModel model)
+        {
+            var existingUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds);
+            return new OkResult();
         }
 
         /// <summary>
@@ -147,11 +196,33 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _organizationUserRepository.GetByIdAsync(id);
-            if(user == null || user.OrganizationId != _currentContext.OrganizationId)
+            if (user == null || user.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
             await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
+            return new OkResult();
+        }
+
+        /// <summary>
+        /// Re-invite a member.
+        /// </summary>
+        /// <remarks>
+        /// Re-sends the invitation email to an organization member.
+        /// </remarks>
+        /// <param name="id">The identifier of the member to re-invite.</param>
+        [HttpPost("{id}/reinvite")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> PostReinvite(Guid id)
+        {
+            var existingUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
             return new OkResult();
         }
     }

@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Api
             IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails, bool twoFactorEnabled)
             : base("profile")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }

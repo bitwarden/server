@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -22,7 +22,7 @@ namespace Bit.EventsProcessor
 
         private Task _executingTask;
         private CancellationTokenSource _cts;
-        private CloudQueue _queue;
+        private QueueClient _queueClient;
         private IEventWriteService _eventWriteService;
 
         public AzureQueueHostedService(
@@ -35,6 +35,7 @@ namespace Bit.EventsProcessor
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _executingTask = ExecuteAsync(_cts.Token);
             return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
@@ -42,10 +43,11 @@ namespace Bit.EventsProcessor
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if(_executingTask == null)
+            if (_executingTask == null)
             {
                 return;
             }
+            _logger.LogWarning("Stopping service.");
             _cts.Cancel();
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
@@ -57,40 +59,46 @@ namespace Bit.EventsProcessor
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             var storageConnectionString = _configuration["azureStorageConnectionString"];
-            if(string.IsNullOrWhiteSpace(storageConnectionString))
+            if (string.IsNullOrWhiteSpace(storageConnectionString))
             {
                 return;
             }
 
             var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
             _eventWriteService = new RepositoryEventWriteService(repo);
+            _queueClient = new QueueClient(storageConnectionString, "event");
 
-            var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            _queue = queueClient.GetQueueReference("event");
-
-            while(!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var messages = await _queue.GetMessagesAsync(32, TimeSpan.FromMinutes(1),
-                    null, null, cancellationToken);
-                if(messages.Any())
+                try
                 {
-                    foreach(var message in messages)
+                    var messages = await _queueClient.ReceiveMessagesAsync(32);
+                    if (messages.Value?.Any() ?? false)
                     {
-                        await ProcessQueueMessageAsync(message.AsString, cancellationToken);
-                        await _queue.DeleteMessageAsync(message);
+                        foreach (var message in messages.Value)
+                        {
+                            await ProcessQueueMessageAsync(message.MessageText, cancellationToken);
+                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
                 }
-                else
+                catch (Exception e)
                 {
+                    _logger.LogError(e, "Exception occurred: " + e.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+
+            _logger.LogWarning("Done processing.");
         }
 
         public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
         {
-            if(_eventWriteService == null || message == null || message.Length == 0)
+            if (_eventWriteService == null || message == null || message.Length == 0)
             {
                 return;
             }
@@ -101,13 +109,13 @@ namespace Bit.EventsProcessor
                 var events = new List<IEvent>();
 
                 var token = JToken.Parse(message);
-                if(token is JArray)
+                if (token is JArray)
                 {
                     var indexedEntities = token.ToObject<List<EventMessage>>()
                         .SelectMany(e => EventTableEntity.IndexEvent(e));
                     events.AddRange(indexedEntities);
                 }
-                else if(token is JObject)
+                else if (token is JObject)
                 {
                     var eventMessage = token.ToObject<EventMessage>();
                     events.AddRange(EventTableEntity.IndexEvent(eventMessage));
@@ -116,18 +124,13 @@ namespace Bit.EventsProcessor
                 await _eventWriteService.CreateManyAsync(events);
                 _logger.LogInformation("Processed message.");
             }
-            catch(JsonReaderException)
+            catch (JsonReaderException)
             {
                 _logger.LogError("JsonReaderException: Unable to parse message.");
             }
-            catch(JsonSerializationException)
+            catch (JsonSerializationException)
             {
                 _logger.LogError("JsonSerializationException: Unable to serialize token.");
-            }
-            catch(Exception e)
-            {
-                _logger.LogError(e, "Exception occurred. " + e.Message);
-                throw e;
             }
         }
     }

@@ -43,7 +43,7 @@ namespace Bit.Core.Models
 
         public static bool RequiresPremium(TwoFactorProviderType type)
         {
-            switch(type)
+            switch (type)
             {
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:

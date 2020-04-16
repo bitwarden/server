@@ -23,10 +23,10 @@ namespace Bit.Core.Services
             var cipherDirPath = $"{_baseDirPath}/{cipher.Id}";
             CreateDirectoryIfNotExists(cipherDirPath);
 
-            using(var fs = File.Create($"{cipherDirPath}/{attachmentId}"))
+            using (var fs = File.Create($"{cipherDirPath}/{attachmentId}"))
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                stream.CopyTo(fs);
+                await stream.CopyToAsync(fs);
             }
         }
 
@@ -36,10 +36,10 @@ namespace Bit.Core.Services
             var tempCipherOrgDirPath = $"{_baseTempDirPath}/{cipherId}/{organizationId}";
             CreateDirectoryIfNotExists(tempCipherOrgDirPath);
 
-            using(var fs = File.Create($"{tempCipherOrgDirPath}/{attachmentId}"))
+            using (var fs = File.Create($"{tempCipherOrgDirPath}/{attachmentId}"))
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                stream.CopyTo(fs);
+                await stream.CopyToAsync(fs);
             }
         }
 
@@ -47,13 +47,13 @@ namespace Bit.Core.Services
         {
             await InitAsync();
             var sourceFilePath = $"{_baseTempDirPath}/{cipherId}/{organizationId}/{attachmentId}";
-            if(!File.Exists(sourceFilePath))
+            if (!File.Exists(sourceFilePath))
             {
                 return;
             }
 
             var destFilePath = $"{_baseDirPath}/{cipherId}/{attachmentId}";
-            if(!File.Exists(destFilePath))
+            if (!File.Exists(destFilePath))
             {
                 return;
             }
@@ -73,7 +73,7 @@ namespace Bit.Core.Services
             DeleteFileIfExists($"{_baseTempDirPath}/{cipherId}/{organizationId}/{attachmentId}");
 
             var originalFilePath = $"{_baseTempDirPath}/{cipherId}/{attachmentId}";
-            if(!File.Exists(originalFilePath))
+            if (!File.Exists(originalFilePath))
             {
                 return;
             }
@@ -115,7 +115,7 @@ namespace Bit.Core.Services
 
         private void DeleteFileIfExists(string path)
         {
-            if(File.Exists(path))
+            if (File.Exists(path))
             {
                 File.Delete(path);
             }
@@ -123,7 +123,7 @@ namespace Bit.Core.Services
 
         private void DeleteDirectoryIfExists(string path)
         {
-            if(Directory.Exists(path))
+            if (Directory.Exists(path))
             {
                 Directory.Delete(path, true);
             }
@@ -131,7 +131,7 @@ namespace Bit.Core.Services
 
         private void CreateDirectoryIfNotExists(string path)
         {
-            if(!Directory.Exists(path))
+            if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
@@ -139,12 +139,12 @@ namespace Bit.Core.Services
 
         private Task InitAsync()
         {
-            if(!Directory.Exists(_baseDirPath))
+            if (!Directory.Exists(_baseDirPath))
             {
                 Directory.CreateDirectory(_baseDirPath);
             }
 
-            if(!Directory.Exists(_baseTempDirPath))
+            if (!Directory.Exists(_baseTempDirPath))
             {
                 Directory.CreateDirectory(_baseTempDirPath);
             }

@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api
         public DeviceResponseModel(Device device)
             : base("device")
         {
-            if(device == null)
+            if (device == null)
             {
                 throw new ArgumentNullException(nameof(device));
             }

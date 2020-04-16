@@ -33,7 +33,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
-            if(folder == null)
+            if (folder == null)
             {
                 throw new NotFoundException();
             }
@@ -65,7 +65,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
-            if(folder == null)
+            if (folder == null)
             {
                 throw new NotFoundException();
             }
@@ -80,7 +80,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
-            if(folder == null)
+            if (folder == null)
             {
                 throw new NotFoundException();
             }

@@ -17,19 +17,19 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateStatisticsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[AzureSQLMaintenance]",
                     new { operation = "statistics", mode = "smart", LogToTable = true },
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
 
         public async Task DisableCipherAutoStatsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "sp_autostats",
@@ -40,24 +40,24 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task RebuildIndexesAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[AzureSQLMaintenance]",
                     new { operation = "index", mode = "smart", LogToTable = true },
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
 
         public async Task DeleteExpiredGrantsAsync()
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteExpired]",
                     commandType: CommandType.StoredProcedure,
-                    commandTimeout: 86400);
+                    commandTimeout: 172800);
             }
         }
     }

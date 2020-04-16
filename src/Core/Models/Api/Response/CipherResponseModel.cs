@@ -13,7 +13,7 @@ namespace Bit.Core.Models.Api
         public CipherMiniResponseModel(Cipher cipher, GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
             : base(obj)
         {
-            if(cipher == null)
+            if (cipher == null)
             {
                 throw new ArgumentNullException(nameof(cipher));
             }
@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Api
             Type = cipher.Type;
 
             CipherData cipherData;
-            switch(cipher.Type)
+            switch (cipher.Type)
             {
                 case Enums.CipherType.Login:
                     var loginData = JsonConvert.DeserializeObject<CipherLoginData>(cipher.Data);
@@ -60,6 +60,7 @@ namespace Bit.Core.Models.Api
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
             OrganizationUseTotp = orgUseTotp;
+            DeletedDate = cipher.DeletedDate;
         }
 
         public string Id { get; set; }
@@ -77,6 +78,7 @@ namespace Bit.Core.Models.Api
         public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
         public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }
+        public DateTime? DeletedDate { get; set; }
     }
 
     public class CipherResponseModel : CipherMiniResponseModel
@@ -100,7 +102,7 @@ namespace Bit.Core.Models.Api
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
             : base(cipher, globalSettings, obj)
         {
-            if(collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+            if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
             {
                 CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }
@@ -126,7 +128,7 @@ namespace Bit.Core.Models.Api
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
             : base(cipher, globalSettings, false, obj)
         {
-            if(collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+            if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
             {
                 CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
             }

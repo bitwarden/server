@@ -13,9 +13,18 @@ BEGIN
             [dbo].[Collection]
         WHERE
             OrganizationId = @OrganizationId
+    ),
+    [CollectionCiphersCTE] AS(
+        SELECT
+            [CollectionId],
+            [CipherId]
+        FROM
+            [dbo].[CollectionCipher]
+        WHERE
+            [CipherId] = @CipherId
     )
     MERGE
-        [dbo].[CollectionCipher] AS [Target]
+        [CollectionCiphersCTE] AS [Target]
     USING 
         @CollectionIds AS [Source]
     ON

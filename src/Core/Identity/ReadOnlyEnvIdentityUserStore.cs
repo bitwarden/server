@@ -20,17 +20,17 @@ namespace Bit.Core.Identity
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var usersCsv = _configuration["adminSettings:admins"];
-            if(!CoreHelpers.SettingHasValue(usersCsv))
+            if (!CoreHelpers.SettingHasValue(usersCsv))
             {
                 return Task.FromResult<IdentityUser>(null);
             }
 
             var users = usersCsv.ToLowerInvariant().Split(',');
             var usersDict = new Dictionary<string, string>();
-            foreach(var u in users)
+            foreach (var u in users)
             {
                 var parts = u.Split(':');
-                if(parts.Length == 2)
+                if (parts.Length == 2)
                 {
                     var email = parts[0].Trim();
                     var stamp = parts[1].Trim();
@@ -44,7 +44,7 @@ namespace Bit.Core.Identity
             }
 
             var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
-            if(userStamp == null)
+            if (userStamp == null)
             {
                 return Task.FromResult<IdentityUser>(null);
             }

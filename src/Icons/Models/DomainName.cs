@@ -67,7 +67,7 @@ namespace Bit.Icons.Models
 
         public static bool TryParseBaseDomain(string domainString, out string result)
         {
-            if(Regex.IsMatch(domainString, IpRegex))
+            if (Regex.IsMatch(domainString, IpRegex))
             {
                 result = domainString;
                 return true;
@@ -91,7 +91,7 @@ namespace Bit.Icons.Models
             MatchingRule = null;
 
             //  If the fqdn is empty, we have a problem already
-            if(domainString.Trim() == string.Empty)
+            if (domainString.Trim() == string.Empty)
             {
                 throw new ArgumentException("The domain cannot be blank");
             }
@@ -100,7 +100,7 @@ namespace Bit.Icons.Models
             MatchingRule = FindMatchingTLDRule(domainString);
 
             //  At this point, no rules match, we have a problem
-            if(MatchingRule == null)
+            if (MatchingRule == null)
             {
                 throw new FormatException("The domain does not have a recognized TLD");
             }
@@ -110,7 +110,7 @@ namespace Bit.Icons.Models
             var tldIndex = 0;
 
             //  First, determine what type of rule we have, and set the TLD accordingly
-            switch(MatchingRule.Type)
+            switch (MatchingRule.Type)
             {
                 case TLDRule.RuleType.Normal:
                     tldIndex = domainString.LastIndexOf("." + MatchingRule.Name);
@@ -140,13 +140,13 @@ namespace Bit.Icons.Models
             //  If we have 0 parts left, there is just a tld and no domain or subdomain
             //  If we have 1 part, it's the domain, and there is no subdomain
             //  If we have 2+ parts, the last part is the domain, the other parts (combined) are the subdomain
-            if(lstRemainingParts.Count > 0)
+            if (lstRemainingParts.Count > 0)
             {
                 //  Set the domain:
                 SLD = lstRemainingParts[lstRemainingParts.Count - 1];
 
                 //  Set the subdomain, if there is one to set:
-                if(lstRemainingParts.Count > 1)
+                if (lstRemainingParts.Count > 1)
                 {
                     //  We strip off the trailing period, too
                     SubDomain = tempSudomainAndDomain.Substring(0, tempSudomainAndDomain.Length - SLD.Length - 1);
@@ -169,23 +169,23 @@ namespace Bit.Icons.Models
             //  Our 'matches' collection:
             var ruleMatches = new List<TLDRule>();
 
-            foreach(string domainPart in lstDomainParts)
+            foreach (string domainPart in lstDomainParts)
             {
                 //  Add on our next domain part:
                 checkAgainst = string.Format("{0}.{1}", domainPart, checkAgainst);
 
                 //  If we end in a period, strip it off:
-                if(checkAgainst.EndsWith("."))
+                if (checkAgainst.EndsWith("."))
                 {
                     checkAgainst = checkAgainst.Substring(0, checkAgainst.Length - 1);
                 }
 
                 var rules = Enum.GetValues(typeof(TLDRule.RuleType)).Cast<TLDRule.RuleType>();
-                foreach(var rule in rules)
+                foreach (var rule in rules)
                 {
                     //  Try to match rule:
                     TLDRule result;
-                    if(TLDRulesCache.Instance.TLDRuleLists[rule].TryGetValue(checkAgainst, out result))
+                    if (TLDRulesCache.Instance.TLDRuleLists[rule].TryGetValue(checkAgainst, out result))
                     {
                         ruleMatches.Add(result);
                     }
@@ -210,12 +210,12 @@ namespace Bit.Icons.Models
             public TLDRule(string RuleInfo)
             {
                 //  Parse the rule and set properties accordingly:
-                if(RuleInfo.StartsWith("*"))
+                if (RuleInfo.StartsWith("*"))
                 {
                     Type = RuleType.Wildcard;
                     Name = RuleInfo.Substring(2);
                 }
-                else if(RuleInfo.StartsWith("!"))
+                else if (RuleInfo.StartsWith("!"))
                 {
                     Type = RuleType.Exception;
                     Name = RuleInfo.Substring(1);
@@ -229,7 +229,7 @@ namespace Bit.Icons.Models
 
             public int CompareTo(TLDRule other)
             {
-                if(other == null)
+                if (other == null)
                 {
                     return -1;
                 }
@@ -261,11 +261,11 @@ namespace Bit.Icons.Models
             {
                 get
                 {
-                    if(_uniqueInstance == null)
+                    if (_uniqueInstance == null)
                     {
-                        lock(_syncObj)
+                        lock (_syncObj)
                         {
-                            if(_uniqueInstance == null)
+                            if (_uniqueInstance == null)
                             {
                                 _uniqueInstance = new TLDRulesCache();
                             }
@@ -279,7 +279,7 @@ namespace Bit.Icons.Models
 
             public static void Reset()
             {
-                lock(_syncObj)
+                lock (_syncObj)
                 {
                     _uniqueInstance = null;
                 }
@@ -289,7 +289,7 @@ namespace Bit.Icons.Models
             {
                 var results = new Dictionary<TLDRule.RuleType, IDictionary<string, TLDRule>>();
                 var rules = Enum.GetValues(typeof(TLDRule.RuleType)).Cast<TLDRule.RuleType>();
-                foreach(var rule in rules)
+                foreach (var rule in rules)
                 {
                     results[rule] = new Dictionary<string, TLDRule>(StringComparer.CurrentCultureIgnoreCase);
                 }
@@ -301,7 +301,7 @@ namespace Bit.Icons.Models
                 //  b.) Blank
                 var rulesStrings = ruleStrings
                     .Where(ruleString => !ruleString.StartsWith("//") && ruleString.Trim().Length != 0);
-                foreach(var ruleString in rulesStrings)
+                foreach (var ruleString in rulesStrings)
                 {
                     var result = new TLDRule(ruleString);
                     results[result.Type][result.Name] = result;
@@ -318,9 +318,9 @@ namespace Bit.Icons.Models
                 var assembly = typeof(TLDRulesCache).GetTypeInfo().Assembly;
                 var stream = assembly.GetManifestResourceStream("Bit.Icons.Resources.public_suffix_list.dat");
                 string line;
-                using(var reader = new StreamReader(stream))
+                using (var reader = new StreamReader(stream))
                 {
-                    while((line = reader.ReadLine()) != null)
+                    while ((line = reader.ReadLine()) != null)
                     {
                         yield return line;
                     }

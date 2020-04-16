@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorU2fResponseModel(User user)
             : base("twoFactorU2f")
         {
-            if(user == null)
+            if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }

@@ -47,7 +47,7 @@ namespace Bit.Core.Services
 
         public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
-            if(!deviceIds.Any())
+            if (!deviceIds.Any())
             {
                 return;
             }
@@ -58,7 +58,7 @@ namespace Bit.Core.Services
 
         public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
         {
-            if(!deviceIds.Any())
+            if (!deviceIds.Any())
             {
                 return;
             }

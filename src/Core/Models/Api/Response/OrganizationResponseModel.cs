@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
         public OrganizationResponseModel(Organization organization, string obj = "organization")
             : base(obj)
         {
-            if(organization == null)
+            if (organization == null)
             {
                 throw new ArgumentNullException(nameof(organization));
             }
@@ -30,6 +30,7 @@ namespace Bit.Core.Models.Api
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
             MaxStorageGb = organization.MaxStorageGb;
+            UsePolicies = organization.UsePolicies;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -54,6 +55,7 @@ namespace Bit.Core.Models.Api
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
+        public bool UsePolicies { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
@@ -69,7 +71,7 @@ namespace Bit.Core.Models.Api
         public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null)
             : base(organization, "organizationSubscription")
         {
-            if(subscription != null)
+            if (subscription != null)
             {
                 Subscription = subscription.Subscription != null ?
                     new BillingSubscription(subscription.Subscription) : null;

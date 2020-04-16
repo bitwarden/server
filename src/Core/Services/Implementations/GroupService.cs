@@ -30,21 +30,21 @@ namespace Bit.Core.Services
         public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
         {
             var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
-            if(org == null)
+            if (org == null)
             {
                 throw new BadRequestException("Organization not found");
             }
 
-            if(!org.UseGroups)
+            if (!org.UseGroups)
             {
                 throw new BadRequestException("This organization cannot use groups.");
             }
 
-            if(group.Id == default(Guid))
+            if (group.Id == default(Guid))
             {
                 group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
-                if(collections == null)
+                if (collections == null)
                 {
                     await _groupRepository.CreateAsync(group);
                 }
@@ -72,7 +72,7 @@ namespace Bit.Core.Services
         public async Task DeleteUserAsync(Group group, Guid organizationUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if(orgUser == null || orgUser.OrganizationId != group.OrganizationId)
+            if (orgUser == null || orgUser.OrganizationId != group.OrganizationId)
             {
                 throw new NotFoundException();
             }

@@ -5,29 +5,25 @@ namespace Bit.Core.Utilities
 {
     public class BitPayClient
     {
-        private readonly NBitpayClient.Bitpay _bpClient;
+        private readonly BitPayLight.BitPay _bpClient;
 
         public BitPayClient(GlobalSettings globalSettings)
         {
-            var btcSecret = new NBitcoin.BitcoinSecret(globalSettings.BitPay.Base58Secret,
-                globalSettings.BitPay.Production ? null : NBitcoin.Network.TestNet);
-            _bpClient = new NBitpayClient.Bitpay(btcSecret.PrivateKey,
-                new Uri(globalSettings.BitPay.Production ? "https://bitpay.com/" : "https://test.bitpay.com/"));
+            if (CoreHelpers.SettingHasValue(globalSettings.BitPay.Token))
+            {
+                _bpClient = new BitPayLight.BitPay(globalSettings.BitPay.Token,
+                    globalSettings.BitPay.Production ? BitPayLight.Env.Prod : BitPayLight.Env.Test);
+            }
         }
 
-        public Task<bool> TestAccessAsync()
+        public Task<BitPayLight.Models.Invoice.Invoice> GetInvoiceAsync(string id)
         {
-            return _bpClient.TestAccessAsync(NBitpayClient.Facade.Merchant);
+            return _bpClient.GetInvoice(id);
         }
 
-        public Task<NBitpayClient.Invoice> GetInvoiceAsync(string id)
+        public Task<BitPayLight.Models.Invoice.Invoice> CreateInvoiceAsync(BitPayLight.Models.Invoice.Invoice invoice)
         {
-            return _bpClient.GetInvoiceAsync(id);
-        }
-
-        public Task<NBitpayClient.Invoice> CreateInvoiceAsync(NBitpayClient.Invoice invoice)
-        {
-            return _bpClient.CreateInvoiceAsync(invoice);
+            return _bpClient.CreateInvoice(invoice);
         }
     }
 }

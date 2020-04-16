@@ -7,6 +7,7 @@ param (
     [switch] $restart,
     [switch] $stop,
     [switch] $pull,
+    [switch] $updateconf,
     [switch] $updatedb,
     [switch] $update
 )
@@ -14,13 +15,29 @@ param (
 # Setup
 
 $dockerDir = "${outputDir}\docker"
+$setupQuiet = 0
+$qFlag = ""
+$quietPullFlag = ""
+$certbotHttpPort = "80"
+$certbotHttpsPort = "443"
+if($env:BITWARDEN_QUIET -eq "true") {
+    $setupQuiet = 1
+    $qFlag = " -q"
+    $quietPullFlag = " --quiet-pull"
+}
+if("${env:BITWARDEN_CERTBOT_HTTP_PORT}" -ne "") {
+    $certbotHttpPort = $env:BITWARDEN_CERTBOT_HTTP_PORT
+}
+if("${env:BITWARDEN_CERTBOT_HTTPS_PORT}" -ne "") {
+    $certbotHttpsPort = $env:BITWARDEN_CERTBOT_HTTPS_PORT
+}
 
 # Functions
 
 function Install() {
     [string]$letsEncrypt = "n"
     Write-Host "(!) " -f cyan -nonewline
-    [string]$domain = $( Read-Host "Enter the domain name for your Bitwarden instance (ex. bitwarden.company.com)" )
+    [string]$domain = $( Read-Host "Enter the domain name for your Bitwarden instance (ex. bitwarden.example.com)" )
     echo ""
     
     if ($domain -eq "") {
@@ -42,32 +59,34 @@ function Install() {
             if (!(Test-Path -Path $letsEncryptPath )) {
                 New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
             }
-            docker pull certbot/certbot
-            docker run -it --rm --name certbot -p 80:80 -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
-                certonly --standalone --noninteractive --agree-tos --preferred-challenges http `
-                --email $email -d $domain --logs-dir /etc/letsencrypt/logs
+            Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
+            $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
+                "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
+                "certonly{0} --standalone --noninteractive --agree-tos --preferred-challenges http " +`
+                "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs" -f $qFlag
+            Invoke-Expression $certbotExp
         }
     }
     
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion
+        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
 }
 
 function Docker-Compose-Up {
     Docker-Compose-Files
-    docker-compose up -d
+    Invoke-Expression ("docker-compose up -d{0}" -f $quietPullFlag)
 }
 
 function Docker-Compose-Down {
     Docker-Compose-Files
-    docker-compose down
+    Invoke-Expression ("docker-compose down{0}" -f "") #TODO: qFlag
 }
 
 function Docker-Compose-Pull {
     Docker-Compose-Files
-    docker-compose pull
+    Invoke-Expression ("docker-compose pull{0}" -f $qFlag)
 }
 
 function Docker-Compose-Files {
@@ -87,19 +106,22 @@ function Docker-Prune {
 
 function Update-Lets-Encrypt {
     if (Test-Path -Path "${outputDir}\letsencrypt\live") {
-        docker pull certbot/certbot
-        docker run -it --rm --name certbot -p 443:443 -p 80:80 `
-            -v $outputDir/letsencrypt:/etc/letsencrypt/ certbot/certbot `
-            renew --logs-dir /etc/letsencrypt/logs
+        Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
+        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
+            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
+            "renew{0} --logs-dir /etc/letsencrypt/logs" -f $qFlag
+        Invoke-Expression $certbotExp
     }
 }
 
 function Update-Database {
     Pull-Setup
-    docker run -it --rm --name setup --network container:bitwarden-mssql `
+    Docker-Compose-Files
+    $mssqlId = docker-compose ps -q mssql
+    docker run -it --rm --name setup --network container:$mssqlId `
         -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion
-    echo "Database update complete"
+        dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+    Write-Line "Database update complete"
 }
 
 function Update([switch] $withpull) {
@@ -107,13 +129,13 @@ function Update([switch] $withpull) {
         Pull-Setup
     }
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion
+        dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
 }
 
 function Print-Environment {
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -printenv 1 -os win -corev $coreVersion -webv $webVersion
+        dotnet Setup.dll -printenv 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
 }
 
 function Restart {
@@ -121,12 +143,17 @@ function Restart {
     Docker-Compose-Pull
     Update-Lets-Encrypt
     Docker-Compose-Up
-    Docker-Prune
     Print-Environment
 }
 
 function Pull-Setup {
-    docker pull bitwarden/setup:$coreVersion
+    Invoke-Expression ("docker pull{0} bitwarden/setup:${coreVersion}" -f "") #TODO: qFlag
+}
+
+function Write-Line($str) {
+    if($env:BITWARDEN_QUIET -ne "true") {
+        Write-Host $str
+    }
 }
 
 # Commands
@@ -143,6 +170,10 @@ elseif ($pull) {
 elseif ($stop) {
     Docker-Compose-Down
 }
+elseif ($updateconf) {
+    Docker-Compose-Down
+    Update -withpull
+}
 elseif ($updatedb) {
     Update-Database
 }
@@ -150,7 +181,8 @@ elseif ($update) {
     Docker-Compose-Down
     Update -withpull
     Restart
-    echo "Pausing 60 seconds for database to come online. Please wait..."
+    Docker-Prune
+    Write-Line "Pausing 60 seconds for database to come online. Please wait..."
     Start-Sleep -s 60
     Update-Database
 }

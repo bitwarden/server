@@ -15,8 +15,9 @@ namespace Bit.Admin.Models
         public OrganizationEditModel() { }
 
         public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
-            BillingInfo billingInfo, GlobalSettings globalSettings)
-            : base(org, orgUsers)
+            IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
+            IEnumerable<Policy> policies, BillingInfo billingInfo, GlobalSettings globalSettings)
+            : base(org, orgUsers, ciphers, collections, groups, policies)
         {
             BillingInfo = billingInfo;
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -28,6 +29,7 @@ namespace Bit.Admin.Models
             Plan = org.Plan;
             Seats = org.Seats;
             MaxCollections = org.MaxCollections;
+            UsePolicies = org.UsePolicies;
             UseGroups = org.UseGroups;
             UseDirectory = org.UseDirectory;
             UseEvents = org.UseEvents;
@@ -67,6 +69,8 @@ namespace Bit.Admin.Models
         public short? Seats { get; set; }
         [Display(Name = "Max. Collections")]
         public short? MaxCollections { get; set; }
+        [Display(Name = "Policies")]
+        public bool UsePolicies { get; set; }
         [Display(Name = "Groups")]
         public bool UseGroups { get; set; }
         [Display(Name = "Directory")]
@@ -102,11 +106,12 @@ namespace Bit.Admin.Models
         {
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BillingEmail = BillingEmail;
+            existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
             existingOrganization.PlanType = PlanType.Value;
             existingOrganization.Plan = Plan;
             existingOrganization.Seats = Seats;
             existingOrganization.MaxCollections = MaxCollections;
+            existingOrganization.UsePolicies = UsePolicies;
             existingOrganization.UseGroups = UseGroups;
             existingOrganization.UseDirectory = UseDirectory;
             existingOrganization.UseEvents = UseEvents;

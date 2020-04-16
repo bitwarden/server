@@ -9,6 +9,7 @@
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
+    @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -33,7 +34,8 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Data] = @Data,
         [Attachments] = @Attachments,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [DeletedDate] = @DeletedDate
         -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id

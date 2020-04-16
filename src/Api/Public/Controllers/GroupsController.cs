@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -44,12 +45,34 @@ namespace Bit.Api.Public.Controllers
         {
             var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
             var group = groupDetails?.Item1;
-            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
             var response = new GroupResponseModel(group, groupDetails.Item2);
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Retrieve a groups's member ids
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the unique identifiers for all members that are associated with this group. You need only
+        /// supply the unique group identifier that was returned upon group creation.
+        /// </remarks>
+        /// <param name="id">The identifier of the group to be retrieved.</param>
+        [HttpGet("{id}/member-ids")]
+        [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetMemberIds(Guid id)
+        {
+            var group = await _groupRepository.GetByIdAsync(id);
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            var orgUserIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
+            return new JsonResult(orgUserIds);
         }
 
         /// <summary>
@@ -105,7 +128,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Put(Guid id, [FromBody]GroupCreateUpdateRequestModel model)
         {
             var existingGroup = await _groupRepository.GetByIdAsync(id);
-            if(existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
+            if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }
@@ -114,6 +137,29 @@ namespace Bit.Api.Public.Controllers
             await _groupService.SaveAsync(updatedGroup, associations);
             var response = new GroupResponseModel(updatedGroup, associations);
             return new JsonResult(response);
+        }
+
+        /// <summary>
+        /// Update a group's members.
+        /// </summary>
+        /// <remarks>
+        /// Updates the specified group's member associations.
+        /// </remarks>
+        /// <param name="id">The identifier of the group to be updated.</param>
+        /// <param name="model">The request model.</param>
+        [HttpPut("{id}/member-ids")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> PutMemberIds(Guid id, [FromBody]UpdateMemberIdsRequestModel model)
+        {
+            var existingGroup = await _groupRepository.GetByIdAsync(id);
+            if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
+            {
+                return new NotFoundResult();
+            }
+            await _groupRepository.UpdateUsersAsync(existingGroup.Id, model.MemberIds);
+            return new OkResult();
         }
 
         /// <summary>
@@ -129,7 +175,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var group = await _groupRepository.GetByIdAsync(id);
-            if(group == null || group.OrganizationId != _currentContext.OrganizationId)
+            if (group == null || group.OrganizationId != _currentContext.OrganizationId)
             {
                 return new NotFoundResult();
             }

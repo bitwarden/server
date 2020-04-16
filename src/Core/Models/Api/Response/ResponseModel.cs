@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api
     {
         public ResponseModel(string obj)
         {
-            if(string.IsNullOrWhiteSpace(obj))
+            if (string.IsNullOrWhiteSpace(obj))
             {
                 throw new ArgumentNullException(nameof(obj));
             }

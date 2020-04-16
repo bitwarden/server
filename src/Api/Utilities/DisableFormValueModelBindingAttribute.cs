@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System;
-using System.Linq;
 
 namespace Bit.Api.Utilities
 {
@@ -10,17 +9,10 @@ namespace Bit.Api.Utilities
     {
         public void OnResourceExecuting(ResourceExecutingContext context)
         {
-            var formValue = context.ValueProviderFactories.OfType<FormValueProviderFactory>().FirstOrDefault();
-            if(formValue != null)
-            {
-                context.ValueProviderFactories.Remove(formValue);
-            }
-
-            var jqFormValue = context.ValueProviderFactories.OfType<JQueryFormValueProviderFactory>().FirstOrDefault();
-            if(jqFormValue != null)
-            {
-                context.ValueProviderFactories.Remove(jqFormValue);
-            }
+            var factories = context.ValueProviderFactories;
+            factories.RemoveType<FormValueProviderFactory>();
+            factories.RemoveType<FormFileValueProviderFactory>();
+            factories.RemoveType<JQueryFormValueProviderFactory>();
         }
 
         public void OnResourceExecuted(ResourceExecutedContext context)

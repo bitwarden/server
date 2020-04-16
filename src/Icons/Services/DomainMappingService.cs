@@ -15,7 +15,7 @@ namespace Bit.Icons.Services
 
         public string MapDomain(string hostname)
         {
-            if(_map.ContainsKey(hostname))
+            if (_map.ContainsKey(hostname))
             {
                 return _map[hostname];
             }

@@ -19,6 +19,7 @@ namespace Bit.Core.Models.Api
             MaxStorageGb = user.MaxStorageGb;
             License = license;
             Expiration = License.Expires;
+            UsingInAppPurchase = subscription.UsingInAppPurchase;
         }
 
         public SubscriptionResponseModel(User user, UserLicense license = null)
@@ -29,7 +30,7 @@ namespace Bit.Core.Models.Api
             MaxStorageGb = user.MaxStorageGb;
             Expiration = user.PremiumExpirationDate;
 
-            if(license != null)
+            if (license != null)
             {
                 License = license;
             }
@@ -42,6 +43,7 @@ namespace Bit.Core.Models.Api
         public BillingSubscription Subscription { get; set; }
         public UserLicense License { get; set; }
         public DateTime? Expiration { get; set; }
+        public bool UsingInAppPurchase { get; set; }
     }
 
     public class BillingSubscription
@@ -56,7 +58,7 @@ namespace Bit.Core.Models.Api
             CancelledDate = sub.CancelledDate;
             CancelAtEndDate = sub.CancelAtEndDate;
             Cancelled = sub.Cancelled;
-            if(sub.Items != null)
+            if (sub.Items != null)
             {
                 Items = sub.Items.Select(i => new BillingSubscriptionItem(i));
             }

@@ -3,7 +3,7 @@
 </p>
 <p align="center">
   <a href="https://ci.appveyor.com/project/bitwarden/server/branch/master" target="_blank">
-    <img src="https://ci.appveyor.com/api/projects/status/github/bitwarden/server?branch=master&svg=true" alt="appveyor build" />
+    <img src="https://ci.appveyor.com/api/projects/status/n4ntjp7ag1uwxckd/branch/master?svg=true" alt="appveyor build" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
     <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
@@ -23,7 +23,7 @@ The server project is written in C# using .NET Core with ASP.NET Core. The datab
 
 ### Requirements
 
-- [.NET Core 2.x SDK](https://www.microsoft.com/net/download/core)
+- [.NET Core 3.1 SDK](https://www.microsoft.com/net/download/core)
 - [SQL Server 2017](https://docs.microsoft.com/en-us/sql/index)
 
 *These dependencies are free to use.*
@@ -84,7 +84,6 @@ curl -s -o bitwarden.sh \
     && chmod +x bitwarden.sh
 ./bitwarden.sh install
 ./bitwarden.sh start
-./bitwarden.sh updatedb
 ```
 
 ### Windows
@@ -94,7 +93,6 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
     -Uri https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.ps1
 .\bitwarden.ps1 -install
 .\bitwarden.ps1 -start
-.\bitwarden.ps1 -updatedb
 ```
 
 ## Contribute

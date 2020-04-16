@@ -25,7 +25,7 @@ namespace Bit.Api.Controllers
         {
             var guidId = new Guid(id);
             var key = await _userRepository.GetPublicKeyAsync(guidId);
-            if(key == null)
+            if (key == null)
             {
                 throw new NotFoundException();
             }

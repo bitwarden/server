@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Jobs;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace Bit.Notifications.Jobs
         protected override Task ExecuteJobAsync(IJobExecutionContext context)
         {
             _logger.LogInformation(Constants.BypassFiltersEventId,
-                "Connection count: {0}", _connectionCounter.GetCount());
+                "Connection count for server {0}: {1}", Environment.MachineName, _connectionCounter.GetCount());
             return Task.FromResult(0);
         }
     }

@@ -37,9 +37,9 @@ echo -e ''
 #
 
 echo -e '#!/usr/bin/env bash\n/root/bitwarden.sh updateself\n/root/bitwarden.sh update' \
-    > /etc/cron.weekly/bitwarden-update.sh
+    > /etc/cron.weekly/bitwardenupdate
 
-chmod +x /etc/cron.weekly/bitwarden-update.sh
+chmod +x /etc/cron.weekly/bitwardenupdate
 
 #
 # Cleanup .bashrc

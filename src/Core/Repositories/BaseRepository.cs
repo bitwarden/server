@@ -12,11 +12,11 @@ namespace Bit.Core.Repositories
 
         public BaseRepository(string connectionString, string readOnlyConnectionString)
         {
-            if(string.IsNullOrWhiteSpace(connectionString))
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new ArgumentNullException(nameof(connectionString));
             }
-            if(string.IsNullOrWhiteSpace(readOnlyConnectionString))
+            if (string.IsNullOrWhiteSpace(readOnlyConnectionString))
             {
                 throw new ArgumentNullException(nameof(readOnlyConnectionString));
             }

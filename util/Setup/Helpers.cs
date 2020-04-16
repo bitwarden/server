@@ -20,18 +20,18 @@ namespace Bit.Setup
         // ref https://stackoverflow.com/a/8996788/1090359 with modifications
         public static string SecureRandomString(int length, string characters)
         {
-            if(length < 0)
+            if (length < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(length), "length cannot be less than zero.");
             }
 
-            if((characters?.Length ?? 0) == 0)
+            if ((characters?.Length ?? 0) == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(characters), "characters invalid.");
             }
 
             const int byteSize = 0x100;
-            if(byteSize < characters.Length)
+            if (byteSize < characters.Length)
             {
                 throw new ArgumentException(
                     string.Format("{0} may contain no more than {1} characters.", nameof(characters), byteSize),
@@ -39,19 +39,19 @@ namespace Bit.Setup
             }
 
             var outOfRangeStart = byteSize - (byteSize % characters.Length);
-            using(var rng = RandomNumberGenerator.Create())
+            using (var rng = RandomNumberGenerator.Create())
             {
                 var sb = new StringBuilder();
                 var buffer = new byte[128];
-                while(sb.Length < length)
+                while (sb.Length < length)
                 {
                     rng.GetBytes(buffer);
-                    for(var i = 0; i < buffer.Length && sb.Length < length; ++i)
+                    for (var i = 0; i < buffer.Length && sb.Length < length; ++i)
                     {
                         // Divide the byte into charSet-sized groups. If the random value falls into the last group and the
                         // last group is too small to choose from the entire allowedCharSet, ignore the value in order to
                         // avoid biasing the result.
-                        if(outOfRangeStart <= buffer[i])
+                        if (outOfRangeStart <= buffer[i])
                         {
                             continue;
                         }
@@ -67,25 +67,25 @@ namespace Bit.Setup
         private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
         {
             var characters = string.Empty;
-            if(alpha)
+            if (alpha)
             {
-                if(upper)
+                if (upper)
                 {
                     characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 }
 
-                if(lower)
+                if (lower)
                 {
                     characters += "abcdefghijklmnopqrstuvwxyz";
                 }
             }
 
-            if(numeric)
+            if (numeric)
             {
                 characters += "0123456789";
             }
 
-            if(special)
+            if (special)
             {
                 characters += "!@#$%^*&";
             }
@@ -95,15 +95,15 @@ namespace Bit.Setup
 
         public static string GetValueFromEnvFile(string envFile, string key)
         {
-            if(!File.Exists($"/bitwarden/env/{envFile}.override.env"))
+            if (!File.Exists($"/bitwarden/env/{envFile}.override.env"))
             {
                 return null;
             }
 
             var lines = File.ReadAllLines($"/bitwarden/env/{envFile}.override.env");
-            foreach(var line in lines)
+            foreach (var line in lines)
             {
-                if(line.StartsWith($"{key}="))
+                if (line.StartsWith($"{key}="))
                 {
                     return line.Split(new char[] { '=' }, 2)[1].Trim('"');
                 }
@@ -125,7 +125,7 @@ namespace Bit.Setup
                 }
             };
 
-            if(!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var escapedArgs = cmd.Replace("\"", "\\\"");
                 process.StartInfo.FileName = "/bin/bash";
@@ -149,7 +149,7 @@ namespace Bit.Setup
             Console.Write("(!) ");
             Console.ResetColor();
             Console.Write(prompt);
-            if(prompt.EndsWith("?"))
+            if (prompt.EndsWith("?"))
             {
                 Console.Write(" (y/n)");
             }
@@ -167,11 +167,11 @@ namespace Bit.Setup
 
         public static void ShowBanner(Context context, string title, string message, ConsoleColor? color = null)
         {
-            if(!context.PrintToScreen())
+            if (!context.PrintToScreen())
             {
                 return;
             }
-            if(color != null)
+            if (color != null)
             {
                 Console.ForegroundColor = color.Value;
             }
@@ -185,12 +185,12 @@ namespace Bit.Setup
         {
             var assembly = typeof(Helpers).GetTypeInfo().Assembly;
             var fullTemplateName = $"Bit.Setup.Templates.{templateName}.hbs";
-            if(!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
+            if (!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
             {
                 return null;
             }
-            using(var s = assembly.GetManifestResourceStream(fullTemplateName))
-            using(var sr = new StreamReader(s))
+            using (var s = assembly.GetManifestResourceStream(fullTemplateName))
+            using (var sr = new StreamReader(s))
             {
                 var templateText = sr.ReadToEnd();
                 return HandlebarsDotNet.Handlebars.Compile(templateText);
@@ -200,23 +200,23 @@ namespace Bit.Setup
         public static void WriteLine(Context context, string format = null, object arg0 = null, object arg1 = null,
             object arg2 = null)
         {
-            if(!context.PrintToScreen())
+            if (!context.PrintToScreen())
             {
                 return;
             }
-            if(format != null && arg0 != null && arg1 != null && arg2 != null)
+            if (format != null && arg0 != null && arg1 != null && arg2 != null)
             {
                 Console.WriteLine(format, arg0, arg1, arg2);
             }
-            else if(format != null && arg0 != null && arg1 != null)
+            else if (format != null && arg0 != null && arg1 != null)
             {
                 Console.WriteLine(format, arg0, arg1);
             }
-            else if(format != null && arg0 != null)
+            else if (format != null && arg0 != null)
             {
                 Console.WriteLine(format, arg0);
             }
-            else if(format != null)
+            else if (format != null)
             {
                 Console.WriteLine(format);
             }

@@ -12,6 +12,7 @@
     [PlanType]              TINYINT          NOT NULL,
     [Seats]                 SMALLINT         NULL,
     [MaxCollections]        SMALLINT         NULL,
+    [UsePolicies]           BIT              NOT NULL,
     [UseGroups]             BIT              NOT NULL,
     [UseDirectory]          BIT              NOT NULL,
     [UseEvents]             BIT              NOT NULL,

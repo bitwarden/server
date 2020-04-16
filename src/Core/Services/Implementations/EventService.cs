@@ -31,9 +31,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task LogUserEventAsync(Guid userId, EventType type)
+        public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null)
         {
-            var now = DateTime.UtcNow;
             var events = new List<IEvent>
             {
                 new EventMessage(_currentContext)
@@ -41,7 +40,7 @@ namespace Bit.Core.Services
                     UserId = userId,
                     ActingUserId = userId,
                     Type = type,
-                    Date = now
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
                 }
             };
 
@@ -57,7 +56,7 @@ namespace Bit.Core.Services
                     Date = DateTime.UtcNow
                 });
 
-            if(orgEvents.Any())
+            if (orgEvents.Any())
             {
                 events.AddRange(orgEvents);
                 await _eventWriteService.CreateManyAsync(events);
@@ -68,39 +67,61 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task LogCipherEventAsync(Cipher cipher, EventType type)
+        public async Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null)
+        {
+            var e = await BuildCipherEventMessageAsync(cipher, type, date);
+            if (e != null)
+            {
+                await _eventWriteService.CreateAsync(e);
+            }
+        }
+
+        public async Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events)
+        {
+            var cipherEvents = new List<IEvent>();
+            foreach (var ev in events)
+            {
+                var e = await BuildCipherEventMessageAsync(ev.Item1, ev.Item2, ev.Item3);
+                if (e != null)
+                {
+                    cipherEvents.Add(e);
+                }
+            }
+            await _eventWriteService.CreateManyAsync(cipherEvents);
+        }
+
+        private async Task<EventMessage> BuildCipherEventMessageAsync(Cipher cipher, EventType type, DateTime? date = null)
         {
             // Only logging organization cipher events for now.
-            if(!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
+            if (!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
             {
-                return;
+                return null;
             }
 
-            if(cipher.OrganizationId.HasValue)
+            if (cipher.OrganizationId.HasValue)
             {
                 var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-                if(!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
+                if (!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
                 {
-                    return;
+                    return null;
                 }
             }
 
-            var e = new EventMessage(_currentContext)
+            return new EventMessage(_currentContext)
             {
                 OrganizationId = cipher.OrganizationId,
                 UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId,
                 CipherId = cipher.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
-            await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogCollectionEventAsync(Collection collection, EventType type)
+        public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, collection.OrganizationId))
+            if (!CanUseEvents(orgAbilities, collection.OrganizationId))
             {
                 return;
             }
@@ -111,15 +132,15 @@ namespace Bit.Core.Services
                 CollectionId = collection.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogGroupEventAsync(Group group, EventType type)
+        public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, group.OrganizationId))
+            if (!CanUseEvents(orgAbilities, group.OrganizationId))
             {
                 return;
             }
@@ -130,15 +151,35 @@ namespace Bit.Core.Services
                 GroupId = group.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type)
+        public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            if (!CanUseEvents(orgAbilities, policy.OrganizationId))
+            {
+                return;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = policy.OrganizationId,
+                PolicyId = policy.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            await _eventWriteService.CreateAsync(e);
+        }
+
+        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+            DateTime? date = null)
+        {
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
             {
                 return;
             }
@@ -150,14 +191,14 @@ namespace Bit.Core.Services
                 OrganizationUserId = organizationUser.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogOrganizationEventAsync(Organization organization, EventType type)
+        public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
         {
-            if(!organization.Enabled || !organization.UseEvents)
+            if (!organization.Enabled || !organization.UseEvents)
             {
                 return;
             }
@@ -167,7 +208,7 @@ namespace Bit.Core.Services
                 OrganizationId = organization.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = DateTime.UtcNow
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
         }

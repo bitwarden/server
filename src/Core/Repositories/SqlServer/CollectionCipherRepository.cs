@@ -22,7 +22,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CollectionCipher>(
                     "[dbo].[CollectionCipher_ReadByUserId]",
@@ -35,7 +35,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CollectionCipher>(
                     "[dbo].[CollectionCipher_ReadByOrganizationId]",
@@ -48,7 +48,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CollectionCipher>(
                     "[dbo].[CollectionCipher_ReadByUserIdCipherId]",
@@ -61,7 +61,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     "[dbo].[CollectionCipher_UpdateCollections]",
@@ -72,7 +72,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateCollectionsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> collectionIds)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     "[dbo].[CollectionCipher_UpdateCollectionsAdmin]",
@@ -84,7 +84,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId,
             Guid organizationId, IEnumerable<Guid> collectionIds)
         {
-            using(var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]",

@@ -50,7 +50,7 @@ namespace Bit.Core.Models.Table
 
         public string BillingEmailAddress()
         {
-            return Email;
+            return Email?.ToLowerInvariant()?.Trim();
         }
 
         public string BillingName()
@@ -73,16 +73,21 @@ namespace Bit.Core.Models.Table
             return "userId";
         }
 
+        public bool IsUser()
+        {
+            return true;
+        }
+
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {
-            if(string.IsNullOrWhiteSpace(TwoFactorProviders))
+            if (string.IsNullOrWhiteSpace(TwoFactorProviders))
             {
                 return null;
             }
 
             try
             {
-                if(_twoFactorProviders == null)
+                if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
                         JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
@@ -91,7 +96,7 @@ namespace Bit.Core.Models.Table
 
                 return _twoFactorProviders;
             }
-            catch(JsonSerializationException)
+            catch (JsonSerializationException)
             {
                 return null;
             }
@@ -119,7 +124,7 @@ namespace Bit.Core.Models.Table
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
         {
             var providers = GetTwoFactorProviders();
-            if(providers == null || !providers.ContainsKey(provider))
+            if (providers == null || !providers.ContainsKey(provider))
             {
                 return null;
             }
@@ -129,7 +134,7 @@ namespace Bit.Core.Models.Table
 
         public long StorageBytesRemaining()
         {
-            if(!MaxStorageGb.HasValue)
+            if (!MaxStorageGb.HasValue)
             {
                 return 0;
             }
@@ -140,7 +145,7 @@ namespace Bit.Core.Models.Table
         public long StorageBytesRemaining(short maxStorageGb)
         {
             var maxStorageBytes = maxStorageGb * 1073741824L;
-            if(!Storage.HasValue)
+            if (!Storage.HasValue)
             {
                 return maxStorageBytes;
             }
