@@ -207,7 +207,7 @@ namespace Bit.Core.Test.Services
             _organizationRepository.GetManyByEnabledAsync().Returns(organizations);
 
             Directory.CreateDirectory(_organizationDirectory);
-            var license = Substitute.ForPartsOf<OrganizationLicense>();
+            var license = Substitute.For<OrganizationLicense>();
             license.LicenseKey = "test";
             license.Version = 1;
             license.Enabled = organization.Enabled;
@@ -222,7 +222,7 @@ namespace Bit.Core.Test.Services
             license.UseTotp = organization.UseTotp;
             license.SelfHost = organization.SelfHost;
             license.Name = organization.Name;
-            license.Signature = String.Empty;
+            license.Signature = string.Empty;
             
             var licenseFile = CreateLicenseFile(organizationId, license);
             
