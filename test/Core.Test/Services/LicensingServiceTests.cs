@@ -259,6 +259,7 @@ namespace Bit.Core.Test.Services
         private static void DeleteLicenseFile(string licenseFile)
         {
             File.Delete(licenseFile);
+            Directory.Delete(_organizationDirectory);
         }
     }
 }
