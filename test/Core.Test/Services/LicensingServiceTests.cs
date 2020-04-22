@@ -86,9 +86,11 @@ namespace Bit.Core.Test.Services
             await _organizationRepository.Received().ReplaceAsync(Arg.Is<Organization>(o => o.Enabled == false));
             
             var loggerArguments = _logger.ReceivedCalls().Last().GetArguments()
-                .Select(arg => arg?.ToString() ?? string.Empty);
+                                                    .Select(arg => arg.ToString())
+                                                    .Where(arg => arg != null)
+                                                    .AsEnumerable<string>();
             
-            Assert.Contains(loggerArguments, arg => arg != null && arg.Contains("No license file"));
+            Assert.Contains(loggerArguments, arg => arg.Contains("No license file"));
         }
 
         [Fact]
@@ -169,9 +171,11 @@ namespace Bit.Core.Test.Services
             await _organizationRepository.Received().ReplaceAsync(Arg.Is<Organization>(o => o.Enabled == false));
             
             var loggerArguments = _logger.ReceivedCalls().Last().GetArguments()
-                .Select(arg => arg?.ToString() ?? string.Empty);
+                                                    .Select(arg => arg.ToString())
+                                                    .Where(arg => arg != null)
+                                                    .AsEnumerable<string>();
             
-            Assert.Contains(loggerArguments, arg => arg != null && arg.Contains("Invalid data"));
+            Assert.Contains(loggerArguments, arg => arg.Contains("Invalid data"));
             
             // Tear down
             DeleteLicenseFile(licenseFile);
@@ -229,10 +233,13 @@ namespace Bit.Core.Test.Services
             await _organizationRepository.Received().ReplaceAsync(organizations.First());
             await _organizationRepository.Received().ReplaceAsync(Arg.Is<Organization>(o => o.Enabled == false));
 
-            var loggerArguments = _logger.ReceivedCalls().Last().GetArguments()
-                                                        .Select(arg => arg?.ToString() ?? string.Empty);
             
-            Assert.Contains(loggerArguments, arg => arg != null && arg.Contains("Invalid signature"));
+            var loggerArguments = _logger.ReceivedCalls().Last().GetArguments()
+                                                    .Select(arg => arg.ToString())
+                                                    .Where(arg => arg != null)
+                                                    .AsEnumerable<string>();
+            
+            Assert.Contains(loggerArguments, arg => arg.Contains("Invalid signature"));
             
             // Tear down
             DeleteLicenseFile(licenseFile);
