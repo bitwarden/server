@@ -1214,7 +1214,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ImportAsync(Guid organizationId,
-            Guid importingUserId,
+            Guid? importingUserId,
             IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers,
             IEnumerable<string> removeUserExternalIds,
