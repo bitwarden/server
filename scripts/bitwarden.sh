@@ -43,8 +43,34 @@ WEBVERSION="2.13.2"
 # Functions
 
 function downloadSelf() {
-    curl -s -o $SCRIPT_PATH $GITHUB_BASE_URL/scripts/bitwarden.sh
-    chmod u+x $SCRIPT_PATH
+    local TMP_FILE="$SCRIPT_PATH.update"
+    if curl -fso $TMP_FILE $GITHUB_BASE_URL/scripts/bitwarden.sh; then
+        if SHA256SUM="$(curl -fsSo- $GITHUB_BASE_URL/scripts/bitwarden.sh 2>&1 |sha256sum - |awk '{print $1}')"; then
+            if [ -f $TMP_FILE ] && [ -n "$SHA256SUM" ] && echo "$SHA256SUM $TMP_FILE" |sha256sum --check --status; then
+                if mv -f $TMP_FILE $SCRIPT_PATH; then
+                    if ! chmod u+x $SCRIPT_PATH; then
+                        echo "Could not set proper permissions on $SCRIPT_PATH."
+                        exit $LINENO
+                    fi
+                else
+                    echo "Could not deploy $TMP_FILE to $SCRIPT_PATH."
+                    rm -f $TMP_FILE || echo "Could not remove $TMP_FILE."
+                    exit $LINENO
+                fi
+            else
+                echo "Checksum verification failed."
+                rm -f $TMP_FILE || echo "Could not remove $TMP_FILE."
+                exit $LINENO
+            fi
+        else
+            echo "Could not get remote file checksum."
+            rm -f $TMP_FILE || echo "Could not remove $TMP_FILE."
+            exit $LINENO
+        fi
+    else
+        echo "Could not download $SCRIPT_PATH from \"$GITHUB_BASE_URL/scripts/bitwarden.sh\"."
+        exit $LINENO
+    fi
 }
 
 function downloadRunFile() {
