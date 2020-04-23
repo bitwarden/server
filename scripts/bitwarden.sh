@@ -50,7 +50,7 @@ function downloadSelf() {
         # curl -S outputs an error message that is redirected to stdout
         # an sha256 checksum is generated for stdout (so either the file content or the curl error)
         # exit with message if checksum cannot be generated
-        if SHA256SUM="$(curl -fsSo- $GITHUB_BASE_URL/scripts/bitwarden.sh 2>&1 |sha256sum - |awk '{print $1}')"; then
+        if local SHA256SUM="$(curl -fsSo- $GITHUB_BASE_URL/scripts/bitwarden.sh 2>&1 |sha256sum - |awk '{print $1}')"; then
             # if the downloaded file exists and the generated checksum is not empty, check the file's checksum against it
             # exit with message if file is missing, checksum is empty or checksums do not match
             if [ -f $TMP_FILE ] && [ -n "$SHA256SUM" ] && echo "$SHA256SUM $TMP_FILE" |sha256sum --check --status; then
