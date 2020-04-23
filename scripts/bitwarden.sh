@@ -44,10 +44,19 @@ WEBVERSION="2.13.2"
 
 function downloadSelf() {
     local TMP_FILE="$SCRIPT_PATH.update"
+    # download file with temporary name, exit with message on failure
     if curl -fso $TMP_FILE $GITHUB_BASE_URL/scripts/bitwarden.sh; then
+        # get sha256 checksum from URL
+        # curl -S outputs an error message that is redirected to stdout
+        # an sha256 checksum is generated for stdout (so either the file content or the curl error)
+        # exit with message if checksum cannot be generated
         if SHA256SUM="$(curl -fsSo- $GITHUB_BASE_URL/scripts/bitwarden.sh 2>&1 |sha256sum - |awk '{print $1}')"; then
+            # if the downloaded file exists and the generated checksum is not empty, check the file's checksum against it
+            # exit with message if file is missing, checksum is empty or checksums do not match
             if [ -f $TMP_FILE ] && [ -n "$SHA256SUM" ] && echo "$SHA256SUM $TMP_FILE" |sha256sum --check --status; then
+                # move temporary file to actual location, exit with message on failure
                 if mv -f $TMP_FILE $SCRIPT_PATH; then
+                    # set permissions, exit with message on failure
                     if ! chmod u+x $SCRIPT_PATH; then
                         echo "Could not set proper permissions on $SCRIPT_PATH."
                         exit $LINENO
