@@ -12,7 +12,8 @@ namespace Bit.Setup
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
             "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
             "https://twofactorauth.org; " +
-            "object-src 'self' blob:;";
+            "object-src 'self' blob:; " +
+            "script-src 'self' https://ajax.cloudflare.com";
 
         private readonly Context _context;
 
