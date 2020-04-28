@@ -87,6 +87,11 @@ namespace Bit.Setup
             "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html")]
         public List<string> RealIps { get; set; }
 
+        [Description("Enables Cloudflare to be an exception in CSP. If you have the \n" +
+            "forever load issue while using cloudflare, enable this feature to possibly resolve.\n" +
+            "Learn more: https://github.com/bitwarden/server/issues/713")]
+        public bool EnableCloudflareCSP { get; set; } = false;
+
         [YamlIgnore]
         public string Domain
         {

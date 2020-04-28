@@ -6,14 +6,6 @@ namespace Bit.Setup
     public class NginxConfigBuilder
     {
         private const string ConfFile = "/bitwarden/nginx/default.conf";
-        private const string ContentSecurityPolicy =
-            "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
-            "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-            "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-            "https://twofactorauth.org; " +
-            "object-src 'self' blob:; " +
-            "script-src 'self' https://ajax.cloudflare.com";
 
         private readonly Context _context;
 
@@ -119,6 +111,28 @@ namespace Bit.Setup
                 {
                     SslProtocols = "TLSv1.2";
                 }
+
+                if (context.Config.EnableCloudflareCSP)
+                {
+                    ContentSecurityPolicy =
+                        "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
+                        "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+                        "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
+                        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+                        "https://twofactorauth.org; " +
+                        "object-src 'self' blob:; " +
+                        "script-src 'self' https://ajax.cloudflare.com";
+                }
+                else
+                {
+                    ContentSecurityPolicy =
+                        "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
+                        "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+                        "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
+                        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+                        "https://twofactorauth.org; " +
+                        "object-src 'self' blob:;";
+                }
             }
 
             public bool Ssl { get; set; }
@@ -131,6 +145,7 @@ namespace Bit.Setup
             public string SslCiphers { get; set; }
             public string SslProtocols { get; set; }
             public string ContentSecurityPolicy => string.Format(NginxConfigBuilder.ContentSecurityPolicy, Domain);
+            public bool EnableCloudflareCSP { get; set; }
             public List<string> RealIps { get; set; }
         }
     }
