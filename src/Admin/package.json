@@ -10,7 +10,7 @@
     "gulp-google-webfonts": "2.0.0",
     "gulp-sass": "4.0.1",
     "gulp-uglify": "3.0.0",
-    "jquery": "3.4.1",
+    "jquery": "3.5.0",
     "merge-stream": "1.0.1",
     "natives": "1.1.6",
     "popper.js": "1.14.4",
