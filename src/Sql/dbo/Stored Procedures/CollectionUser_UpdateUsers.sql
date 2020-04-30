@@ -14,35 +14,70 @@ BEGIN
             [Id] = @CollectionId
     )
 
-    ;WITH [AvailableUsersCTE] AS(
-        SELECT
-            Id
-        FROM
-            [dbo].[OrganizationUser]
-        WHERE
-            OrganizationId = @OrgId
+    CREATE TABLE #TempAvailableUsers
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL
     )
-    MERGE
+
+    INSERT INTO #TempAvailableUsers
+    SELECT
+        [Id]
+    FROM
+        [dbo].[OrganizationUser]
+    WHERE
+        [OrganizationId] = @OrgId
+
+    -- Update
+    UPDATE
+        [Target]
+    SET
+        [Target].[ReadOnly] = [Source].[ReadOnly]
+    FROM
         [dbo].[CollectionUser] AS [Target]
-    USING 
-        @Users AS [Source]
-    ON
+    INNER JOIN
+        @Users AS [Source] ON [Source].[Id] = [Target].[OrganizationUserId]
+    WHERE
         [Target].[CollectionId] = @CollectionId
-        AND [Target].[OrganizationUserId] = [Source].[Id]
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableUsersCTE]) THEN
-        INSERT VALUES
-        (
-            @CollectionId,
-            [Source].[Id],
-            [Source].[ReadOnly]
+        AND [Target].[ReadOnly] != [Source].[ReadOnly]
+
+    -- Insert
+    INSERT INTO
+        [dbo].[CollectionUser]
+    SELECT
+        @CollectionId,
+        [Source].[Id],
+        [Source].[ReadOnly]
+    FROM
+        @Users AS [Source]
+    WHERE
+        [Source].[Id] IN (SELECT [Id] FROM #TempAvailableUsers)
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[CollectionUser]
+            WHERE
+                [CollectionId] = @CollectionId
+                AND [OrganizationUserId] = [Source].[Id]
         )
-    WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
-        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[CollectionId] = @CollectionId THEN
-        DELETE
-    ;
+    
+    -- Delete
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+    WHERE
+        CU.[CollectionId] = @CollectionId
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                @Users
+            WHERE
+                [Id] = CU.[OrganizationUserId]
+        )
+
+    DROP TABLE #TempAvailableUsers
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrgId
 END

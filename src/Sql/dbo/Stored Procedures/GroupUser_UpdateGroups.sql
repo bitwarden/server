@@ -14,33 +14,56 @@ BEGIN
             [Id] = @OrganizationUserId
     )
 
-    ;WITH [AvailableGroupsCTE] AS(
-        SELECT
-            [Id]
-        FROM
-            [dbo].[Group]
-        WHERE
-            [OrganizationId] = @OrgId
+    CREATE TABLE #TempAvailableGroups
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL
     )
-    MERGE
-        [dbo].[GroupUser] AS [Target]
-    USING 
+
+    INSERT INTO #TempAvailableGroups
+    SELECT
+        [Id]
+    FROM
+        [dbo].[Group]
+    WHERE
+        [OrganizationId] = @OrgId
+
+    -- Insert
+    INSERT INTO
+        [dbo].[GroupUser]
+    SELECT
+        [Source].[Id],
+        @OrganizationUserId
+    FROM
         @GroupIds AS [Source]
-    ON
-        [Target].[GroupId] = [Source].[Id]
-        AND [Target].[OrganizationUserId] = @OrganizationUserId
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        INSERT VALUES
-        (
-            [Source].[Id],
-            @OrganizationUserId
+    WHERE
+        [Source].[Id] IN (SELECT [Id] FROM #TempAvailableGroups)
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[GroupUser]
+            WHERE
+                [OrganizationUserId] = @OrganizationUserId
+                AND [GroupId] = [Source].[Id]
         )
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[OrganizationUserId] = @OrganizationUserId
-    AND [Target].[GroupId] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        DELETE
-    ;
+    
+    -- Delete
+    DELETE
+        GU
+    FROM
+        [dbo].[GroupUser] GU
+    WHERE
+        GU.[OrganizationUserId] = @OrganizationUserId
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                @GroupIds
+            WHERE
+                [Id] = GU.[GroupId]
+        )
+
+    DROP TABLE #TempAvailableGroups
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @OrganizationUserId
 END
