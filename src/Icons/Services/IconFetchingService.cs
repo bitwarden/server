@@ -280,6 +280,23 @@ namespace Bit.Icons.Services
 
         private async Task<HttpResponseMessage> GetAsync(Uri uri)
         {
+            if (uri == null)
+            {
+                return null;
+            }
+
+            // Prevent non-http(s) and non-default ports
+            if ((uri.Scheme != "http" && uri.Scheme != "https") || !uri.IsDefaultPort)
+            {
+                return null;
+            }
+
+            // Prevent local hosts (localhost, bobs-pc, etc), IPv4, and IPv6 (which contain ":" in the host)
+            if (!uri.Host.Contains(".") || _ipRegex.IsMatch(uri.Host) || uri.Host.Contains(":"))
+            {
+                return null;
+            }
+
             using (var message = new HttpRequestMessage())
             {
                 message.RequestUri = uri;
@@ -348,13 +365,6 @@ namespace Bit.Icons.Services
             }
 
             Cleanup(response);
-
-            if (location == null || (location.Scheme != "http" && location.Scheme != "https") ||
-                !location.IsDefaultPort)
-            {
-                return null;
-            }
-
             var newResponse = await GetAsync(location);
             if (newResponse != null)
             {
