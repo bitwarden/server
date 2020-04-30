@@ -348,6 +348,13 @@ namespace Bit.Icons.Services
             }
 
             Cleanup(response);
+
+            if (location == null || (location.Scheme != "http" && location.Scheme != "https") ||
+                !location.IsDefaultPort)
+            {
+                return null;
+            }
+
             var newResponse = await GetAsync(location);
             if (newResponse != null)
             {
