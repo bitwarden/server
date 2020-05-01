@@ -36,16 +36,10 @@ namespace Bit.Icons.Services
         private readonly HashSet<string> _allowedMediaTypes;
         private readonly HttpClient _httpClient;
         private readonly ILogger<IIconFetchingService> _logger;
-        private readonly Regex _ipRegex;
 
         public IconFetchingService(ILogger<IIconFetchingService> logger)
         {
             _logger = logger;
-            _ipRegex = new Regex("^" +
-                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
-                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
-                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\." +
-                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
             _allowedMediaTypes = new HashSet<string>
             {
                 _pngMediaType,
@@ -64,7 +58,7 @@ namespace Bit.Icons.Services
 
         public async Task<IconResult> GetIconAsync(string domain)
         {
-            if (_ipRegex.IsMatch(domain))
+            if (IPAddress.TryParse(domain, out _))
             {
                 _logger.LogWarning("IP address: {0}.", domain);
                 return null;
@@ -292,7 +286,7 @@ namespace Bit.Icons.Services
             }
 
             // Prevent local hosts (localhost, bobs-pc, etc), IPv4, and IPv6 (which contain ":" in the host)
-            if (!uri.Host.Contains(".") || _ipRegex.IsMatch(uri.Host) || uri.Host.Contains(":"))
+            if (!uri.Host.Contains(".") || IPAddress.TryParse(uri.Host, out _))
             {
                 return null;
             }
