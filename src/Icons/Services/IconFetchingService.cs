@@ -285,7 +285,7 @@ namespace Bit.Icons.Services
                 return null;
             }
 
-            // Prevent local hosts (localhost, bobs-pc, etc), IPv4, and IPv6 (which contain ":" in the host)
+            // Prevent local hosts (localhost, bobs-pc, etc) and IP addresses
             if (!uri.Host.Contains(".") || IPAddress.TryParse(uri.Host, out _))
             {
                 return null;
