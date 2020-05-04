@@ -2,7 +2,7 @@
 
 while true
 do
-  [ "$1" = "loop" ] && sleep $((24 * 3600 - (`date +%H` * 3600 + `date +%M` * 60 + `date +%S`)))
+  [ "$1" = "loop" ] && sleep $((24 * 3600 - (`date +%_H` * 3600 + `date +%_M` * 60 + `date +%_S`)))
   ts=$(date +%Y%m%d_%H%M%S)
   mv /var/log/nginx/access.log /var/log/nginx/access.$ts.log
   mv /var/log/nginx/error.log /var/log/nginx/error.$ts.log
