@@ -43,8 +43,13 @@ WEBVERSION="2.13.2"
 # Functions
 
 function downloadSelf() {
-    curl -s -o $SCRIPT_PATH $GITHUB_BASE_URL/scripts/bitwarden.sh
-    chmod u+x $SCRIPT_PATH
+    if curl -s -w "http_code %{http_code}" -o $SCRIPT_PATH.1 $GITHUB_BASE_URL/scripts/bitwarden.sh | grep -q "^http_code 20[0-9]"
+    then
+        mv $SCRIPT_PATH.1 $SCRIPT_PATH
+        chmod u+x $SCRIPT_PATH
+    else
+        rm -f $SCRIPT_PATH.1
+    fi
 }
 
 function downloadRunFile() {
