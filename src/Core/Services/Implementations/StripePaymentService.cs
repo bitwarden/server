@@ -102,7 +102,7 @@ namespace Bit.Core.Services
             {
                 OffSession = true,
                 TrialPeriodDays = plan.TrialPeriodDays,
-                Items = new List<SubscriptionItemOption>(),
+                Items = new List<SubscriptionItemOptions>(),
                 Metadata = new Dictionary<string, string>
                 {
                     [org.GatewayIdField()] = org.Id.ToString()
@@ -111,36 +111,36 @@ namespace Bit.Core.Services
 
             if (plan.StripePlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripePlanId,
+                    Plan = plan.StripePlanId,
                     Quantity = 1
                 });
             }
 
             if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripeSeatPlanId,
+                    Plan = plan.StripeSeatPlanId,
                     Quantity = additionalSeats
                 });
             }
 
             if (additionalStorageGb > 0)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripeStoragePlanId,
+                    Plan = plan.StripeStoragePlanId,
                     Quantity = additionalStorageGb
                 });
             }
 
             if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripePremiumAccessPlanId,
+                    Plan = plan.StripePremiumAccessPlanId,
                     Quantity = 1
                 });
             }
@@ -154,15 +154,15 @@ namespace Bit.Core.Services
                     Description = org.BusinessName,
                     Email = org.BillingEmail,
                     Source = stipeCustomerSourceToken,
-                    PaymentMethodId = stipeCustomerPaymentMethodId,
+                    PaymentMethod = stipeCustomerPaymentMethodId,
                     Metadata = stripeCustomerMetadata,
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
                     }
                 });
                 subCreateOptions.AddExpand("latest_invoice.payment_intent");
-                subCreateOptions.CustomerId = customer.Id;
+                subCreateOptions.Customer = customer.Id;
                 var subscriptionService = new SubscriptionService();
                 subscription = await subscriptionService.CreateAsync(subCreateOptions);
                 if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
@@ -225,8 +225,8 @@ namespace Bit.Core.Services
 
             var subCreateOptions = new SubscriptionCreateOptions
             {
-                CustomerId = customer.Id,
-                Items = new List<SubscriptionItemOption>(),
+                Customer = customer.Id,
+                Items = new List<SubscriptionItemOptions>(),
                 Metadata = new Dictionary<string, string>
                 {
                     [org.GatewayIdField()] = org.Id.ToString()
@@ -235,36 +235,36 @@ namespace Bit.Core.Services
 
             if (plan.StripePlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripePlanId,
+                    Plan = plan.StripePlanId,
                     Quantity = 1
                 });
             }
 
             if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripeSeatPlanId,
+                    Plan = plan.StripeSeatPlanId,
                     Quantity = additionalSeats
                 });
             }
 
             if (additionalStorageGb > 0)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripeStoragePlanId,
+                    Plan = plan.StripeStoragePlanId,
                     Quantity = additionalStorageGb
                 });
             }
 
             if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = plan.StripePremiumAccessPlanId,
+                    Plan = plan.StripePremiumAccessPlanId,
                     Quantity = 1
                 });
             }
@@ -303,7 +303,7 @@ namespace Bit.Core.Services
                     {
                         paymentMethodType = PaymentMethodType.Card;
                         stripePaymentMethod = true;
-                        subCreateOptions.DefaultPaymentMethodId = paymentMethod.Id;
+                        subCreateOptions.DefaultPaymentMethod = paymentMethod.Id;
                     }
                 }
             }
@@ -440,11 +440,11 @@ namespace Bit.Core.Services
                     Description = user.Name,
                     Email = user.Email,
                     Metadata = stripeCustomerMetadata,
-                    PaymentMethodId = stipeCustomerPaymentMethodId,
+                    PaymentMethod = stipeCustomerPaymentMethodId,
                     Source = stipeCustomerSourceToken,
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
                     }
                 });
                 createdStripeCustomer = true;
@@ -457,25 +457,25 @@ namespace Bit.Core.Services
 
             var subCreateOptions = new SubscriptionCreateOptions
             {
-                CustomerId = customer.Id,
-                Items = new List<SubscriptionItemOption>(),
+                Customer = customer.Id,
+                Items = new List<SubscriptionItemOptions>(),
                 Metadata = new Dictionary<string, string>
                 {
                     [user.GatewayIdField()] = user.Id.ToString()
                 }
             };
 
-            subCreateOptions.Items.Add(new SubscriptionItemOption
+            subCreateOptions.Items.Add(new SubscriptionItemOptions
             {
-                PlanId = paymentMethodType == PaymentMethodType.AppleInApp ? PremiumPlanAppleIapId : PremiumPlanId,
+                Plan = paymentMethodType == PaymentMethodType.AppleInApp ? PremiumPlanAppleIapId : PremiumPlanId,
                 Quantity = 1,
             });
 
             if (additionalStorageGb > 0)
             {
-                subCreateOptions.Items.Add(new SubscriptionItemOption
+                subCreateOptions.Items.Add(new SubscriptionItemOptions
                 {
-                    PlanId = StoragePlanId,
+                    Plan = StoragePlanId,
                     Quantity = additionalStorageGb
                 });
             }
@@ -518,7 +518,7 @@ namespace Bit.Core.Services
                 {
                     var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
-                        CustomerId = customer.Id,
+                        Customer = customer.Id,
                         SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                     });
 
@@ -604,7 +604,7 @@ namespace Bit.Core.Services
                 {
                     var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
-                        CustomerId = customer.Id,
+                        Customer = customer.Id,
                         SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                     });
                     if (previewInvoice.AmountDue > 0)
@@ -630,7 +630,7 @@ namespace Bit.Core.Services
                 {
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
-                        SubscriptionId = subscription.Id
+                        Subscription = subscription.Id
                     });
 
                     var invoice = invoices?.FirstOrDefault();
@@ -687,11 +687,11 @@ namespace Bit.Core.Services
         }
 
         private List<InvoiceSubscriptionItemOptions> ToInvoiceSubscriptionItemOptions(
-            List<SubscriptionItemOption> subItemOptions)
+            List<SubscriptionItemOptions> subItemOptions)
         {
             return subItemOptions.Select(si => new InvoiceSubscriptionItemOptions
             {
-                PlanId = si.PlanId,
+                Plan = si.Plan,
                 Quantity = si.Quantity
             }).ToList();
         }
@@ -707,13 +707,13 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription not found.");
             }
 
-            Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
+            Func<string, Task<SubscriptionItem>> subUpdateAction = null;
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             var subItemOptions = sub.Items.Where(i => i.Plan.Id != storagePlanId)
                 .Select(i => new InvoiceSubscriptionItemOptions
                 {
                     Id = i.Id,
-                    PlanId = i.Plan.Id,
+                    Plan = i.Plan.Id,
                     Quantity = i.Quantity,
                 }).ToList();
 
@@ -721,16 +721,17 @@ namespace Bit.Core.Services
             {
                 subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
-                    PlanId = storagePlanId,
+                    Plan = storagePlanId,
                     Quantity = additionalStorage,
                 });
-                subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
+                subUpdateAction = (prorationBehavior) => subscriptionItemService.CreateAsync(
                     new SubscriptionItemCreateOptions
                     {
-                        PlanId = storagePlanId,
+                        Plan = storagePlanId,
                         Quantity = additionalStorage,
-                        SubscriptionId = sub.Id,
-                        Prorate = prorate
+                        Subscription = sub.Id,
+                        Prorate = true,
+                        //ProrationBehavior = prorationBehavior,
                     });
             }
             else if (additionalStorage > 0 && storageItem != null)
@@ -738,15 +739,16 @@ namespace Bit.Core.Services
                 subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
                     Id = storageItem.Id,
-                    PlanId = storagePlanId,
+                    Plan = storagePlanId,
                     Quantity = additionalStorage,
                 });
-                subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(storageItem.Id,
+                subUpdateAction = (prorationBehavior) => subscriptionItemService.UpdateAsync(storageItem.Id,
                     new SubscriptionItemUpdateOptions
                     {
-                        PlanId = storagePlanId,
+                        Plan = storagePlanId,
                         Quantity = additionalStorage,
-                        Prorate = prorate
+                        Prorate = true,
+                        //ProrationBehavior = prorationBehavior,
                     });
             }
             else if (additionalStorage == 0 && storageItem != null)
@@ -756,24 +758,18 @@ namespace Bit.Core.Services
                     Id = storageItem.Id,
                     Deleted = true
                 });
-                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(storageItem.Id);
+                await subscriptionItemService.DeleteAsync(storageItem.Id,
+                    new SubscriptionItemDeleteOptions());
             }
 
-            string paymentIntentClientSecret = null;
-            var invoicedNow = false;
             if (additionalStorage > 0)
             {
                 var result = await PreviewUpcomingInvoiceAndPayAsync(
-                    storableSubscriber, storagePlanId, subItemOptions, 400);
-                invoicedNow = result.Item1;
-                paymentIntentClientSecret = result.Item2;
+                    storableSubscriber, storagePlanId, subItemOptions, 400, subUpdateAction);
+                return result.Item2;
             }
 
-            if (subUpdateAction != null)
-            {
-                await subUpdateAction(!invoicedNow);
-            }
-            return paymentIntentClientSecret;
+            return null;
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -819,7 +815,7 @@ namespace Bit.Core.Services
                 var chargeService = new ChargeService();
                 var charges = await chargeService.ListAsync(new ChargeListOptions
                 {
-                    CustomerId = subscriber.GatewayCustomerId
+                    Customer = subscriber.GatewayCustomerId
                 });
 
                 if (charges?.Data != null)
@@ -827,7 +823,7 @@ namespace Bit.Core.Services
                     var refundService = new RefundService();
                     foreach (var charge in charges.Data.Where(c => c.Captured.GetValueOrDefault() && !c.Refunded))
                     {
-                        await refundService.CreateAsync(new RefundCreateOptions { ChargeId = charge.Id });
+                        await refundService.CreateAsync(new RefundCreateOptions { Charge = charge.Id });
                     }
                 }
             }
@@ -836,7 +832,8 @@ namespace Bit.Core.Services
         }
 
         public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
-            List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
+            List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500,
+            Func<string, Task<SubscriptionItem>> updateSubscription = null)
         {
             var customerService = new CustomerService();
             var customerOptions = new CustomerGetOptions();
@@ -856,14 +853,14 @@ namespace Bit.Core.Services
 
             var pendingInvoiceItems = invoiceItemService.ListAutoPaging(new InvoiceItemListOptions
             {
-                CustomerId = subscriber.GatewayCustomerId
+                Customer = subscriber.GatewayCustomerId
             }).ToList().Where(i => i.InvoiceId == null);
             var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
 
             var upcomingPreview = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
             {
-                CustomerId = subscriber.GatewayCustomerId,
-                SubscriptionId = subscriber.GatewaySubscriptionId,
+                Customer = subscriber.GatewayCustomerId,
+                Subscription = subscriber.GatewaySubscriptionId,
                 SubscriptionItems = subItemOptions
             });
 
@@ -871,6 +868,12 @@ namespace Bit.Core.Services
                 .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == planId && i.Proration));
             var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
             var invoiceNow = invoiceAmount >= prorateThreshold;
+            if (updateSubscription != null)
+            {
+                // This call "should" update the subscription with the noted
+                //  prorate behavior
+                await updateSubscription(invoiceNow ? "always_invoice" : "create_prorations");
+            }
             if (invoiceNow)
             {
                 // Owes more than prorateThreshold on next invoice.
@@ -894,35 +897,20 @@ namespace Bit.Core.Services
                 }
 
                 Invoice invoice = null;
-                var createdInvoiceItems = new List<InvoiceItem>();
                 Braintree.Transaction braintreeTransaction = null;
                 try
                 {
-                    foreach (var ii in itemsForInvoice)
-                    {
-                        if (pendingInvoiceItemsDict.ContainsKey(ii.Id))
-                        {
-                            continue;
-                        }
-                        var invoiceItem = await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
-                        {
-                            Currency = ii.Currency,
-                            Description = ii.Description,
-                            CustomerId = subscriber.GatewayCustomerId,
-                            SubscriptionId = ii.SubscriptionId,
-                            Discountable = ii.Discountable,
-                            Amount = ii.Amount
-                        });
-                        createdInvoiceItems.Add(invoiceItem);
-                    }
-
+                    // Update the subscription, assume we've prorated the subscription
+                    //  change, Stripe does the magic of staging our invoice items for us
+                    //  based on the subscription change (gotta love black boxes).
+                    // see: https://stripe.com/docs/api/subscriptions/update
                     invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
                     {
                         CollectionMethod = "send_invoice",
                         DaysUntilDue = 1,
-                        CustomerId = subscriber.GatewayCustomerId,
-                        SubscriptionId = subscriber.GatewaySubscriptionId,
-                        DefaultPaymentMethodId = cardPaymentMethodId
+                        Customer = subscriber.GatewayCustomerId,
+                        Subscription = subscriber.GatewaySubscriptionId,
+                        DefaultPaymentMethod = cardPaymentMethodId,
                     });
 
                     var invoicePayOptions = new InvoicePayOptions();
@@ -970,7 +958,7 @@ namespace Bit.Core.Services
                         else
                         {
                             invoicePayOptions.OffSession = true;
-                            invoicePayOptions.PaymentMethodId = cardPaymentMethodId;
+                            invoicePayOptions.PaymentMethod = cardPaymentMethodId;
                         }
                     }
 
@@ -1019,21 +1007,14 @@ namespace Bit.Core.Services
                             {
                                 Currency = item.Currency,
                                 Description = item.Description,
-                                CustomerId = item.CustomerId,
-                                SubscriptionId = item.SubscriptionId,
+                                Customer = item.CustomerId,
+                                Subscription = item.SubscriptionId,
                                 Discountable = item.Discountable,
                                 Metadata = item.Metadata,
                                 Quantity = item.Proration ? 1 : item.Quantity,
                                 UnitAmount = item.UnitAmount
                             };
                             await invoiceItemService.CreateAsync(i);
-                        }
-                    }
-                    else
-                    {
-                        foreach (var ii in createdInvoiceItems)
-                        {
-                            await invoiceItemService.DeleteAsync(ii.Id);
                         }
                     }
 
@@ -1324,10 +1305,10 @@ namespace Bit.Core.Services
                         Email = subscriber.BillingEmailAddress(),
                         Metadata = stripeCustomerMetadata,
                         Source = stipeCustomerSourceToken,
-                        PaymentMethodId = stipeCustomerPaymentMethodId,
+                        PaymentMethod = stipeCustomerPaymentMethodId,
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
-                            DefaultPaymentMethodId = stipeCustomerPaymentMethodId
+                            DefaultPaymentMethod = stipeCustomerPaymentMethodId
                         }
                     });
 
@@ -1353,7 +1334,7 @@ namespace Bit.Core.Services
                         else if (!string.IsNullOrWhiteSpace(stipeCustomerPaymentMethodId))
                         {
                             await paymentMethodService.AttachAsync(stipeCustomerPaymentMethodId,
-                                new PaymentMethodAttachOptions { CustomerId = customer.Id });
+                                new PaymentMethodAttachOptions { Customer = customer.Id });
                             defaultPaymentMethodId = stipeCustomerPaymentMethodId;
                         }
                     }
@@ -1372,7 +1353,7 @@ namespace Bit.Core.Services
 
                     var cardPaymentMethods = paymentMethodService.ListAutoPaging(new PaymentMethodListOptions
                     {
-                        CustomerId = customer.Id,
+                        Customer = customer.Id,
                         Type = "card"
                     });
                     foreach (var cardMethod in cardPaymentMethods.Where(m => m.Id != defaultPaymentMethodId))
@@ -1386,7 +1367,7 @@ namespace Bit.Core.Services
                         DefaultSource = defaultSourceId,
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
-                            DefaultPaymentMethodId = defaultPaymentMethodId
+                            DefaultPaymentMethod = defaultPaymentMethodId
                         }
                     });
                 }
@@ -1509,7 +1490,7 @@ namespace Bit.Core.Services
 
                     var invoices = await invoiceService.ListAsync(new InvoiceListOptions
                     {
-                        CustomerId = customer.Id,
+                        Customer = customer.Id,
                         Limit = 50
                     });
                     billingInfo.Invoices = invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
@@ -1547,7 +1528,7 @@ namespace Bit.Core.Services
                     try
                     {
                         var upcomingInvoice = await invoiceService.UpcomingAsync(
-                            new UpcomingInvoiceOptions { CustomerId = subscriber.GatewayCustomerId });
+                            new UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId });
                         if (upcomingInvoice != null)
                         {
                             subscriptionInfo.UpcomingInvoice =
@@ -1565,7 +1546,7 @@ namespace Bit.Core.Services
         {
             var paymentMethodService = new PaymentMethodService();
             var cardPaymentMethods = paymentMethodService.ListAutoPaging(
-                new PaymentMethodListOptions { CustomerId = customerId, Type = "card" });
+                new PaymentMethodListOptions { Customer = customerId, Type = "card" });
             return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
         }
 
