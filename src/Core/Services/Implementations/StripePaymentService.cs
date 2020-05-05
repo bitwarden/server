@@ -708,6 +708,7 @@ namespace Bit.Core.Services
             }
 
             Func<string, Task<SubscriptionItem>> subUpdateAction = null;
+            Func<Task<SubscriptionItem>> revertAction = null;
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             var subItemOptions = sub.Items.Where(i => i.Plan.Id != storagePlanId)
                 .Select(i => new InvoiceSubscriptionItemOptions
@@ -724,18 +725,27 @@ namespace Bit.Core.Services
                     Plan = storagePlanId,
                     Quantity = additionalStorage,
                 });
-                subUpdateAction = (prorationBehavior) => subscriptionItemService.CreateAsync(
-                    new SubscriptionItemCreateOptions
-                    {
-                        Plan = storagePlanId,
-                        Quantity = additionalStorage,
-                        Subscription = sub.Id,
-                        Prorate = true,
-                        //ProrationBehavior = prorationBehavior,
-                    });
+                subUpdateAction = async (prorationBehavior) =>
+                {
+                    storageItem = await subscriptionItemService.CreateAsync(
+                        new SubscriptionItemCreateOptions
+                        {
+                            Plan = storagePlanId,
+                            Quantity = additionalStorage,
+                            Subscription = sub.Id,
+                            Prorate = true,
+                        });
+                    return storageItem;
+                };
+                revertAction = () =>
+                {
+                    return subscriptionItemService.DeleteAsync(storageItem.Id,
+                        new SubscriptionItemDeleteOptions());
+                };
             }
             else if (additionalStorage > 0 && storageItem != null)
             {
+                var priorStorage = storageItem.Quantity;
                 subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
                     Id = storageItem.Id,
@@ -748,7 +758,13 @@ namespace Bit.Core.Services
                         Plan = storagePlanId,
                         Quantity = additionalStorage,
                         Prorate = true,
-                        //ProrationBehavior = prorationBehavior,
+                    });
+                revertAction = () => subscriptionItemService.UpdateAsync(storageItem.Id,
+                    new SubscriptionItemUpdateOptions
+                    {
+                        Plan = storagePlanId,
+                        Quantity = priorStorage,
+                        Prorate = true,
                     });
             }
             else if (additionalStorage == 0 && storageItem != null)
@@ -765,7 +781,8 @@ namespace Bit.Core.Services
             if (additionalStorage > 0)
             {
                 var result = await PreviewUpcomingInvoiceAndPayAsync(
-                    storableSubscriber, storagePlanId, subItemOptions, 400, subUpdateAction);
+                    storableSubscriber, storagePlanId, subItemOptions, 400, subUpdateAction,
+                    revertAction);
                 return result.Item2;
             }
 
@@ -833,7 +850,8 @@ namespace Bit.Core.Services
 
         public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
             List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500,
-            Func<string, Task<SubscriptionItem>> updateSubscription = null)
+            Func<string, Task<SubscriptionItem>> updateSubscription = null,
+            Func<Task<SubscriptionItem>> revertSubscriptionChanges = null)
         {
             var customerService = new CustomerService();
             var customerOptions = new CustomerGetOptions();
@@ -1000,21 +1018,9 @@ namespace Bit.Core.Services
                             });
                         }
 
-                        // Restore invoice items that were brought in
-                        foreach (var item in pendingInvoiceItems)
+                        if (revertSubscriptionChanges != null)
                         {
-                            var i = new InvoiceItemCreateOptions
-                            {
-                                Currency = item.Currency,
-                                Description = item.Description,
-                                Customer = item.CustomerId,
-                                Subscription = item.SubscriptionId,
-                                Discountable = item.Discountable,
-                                Metadata = item.Metadata,
-                                Quantity = item.Proration ? 1 : item.Quantity,
-                                UnitAmount = item.UnitAmount
-                            };
-                            await invoiceItemService.CreateAsync(i);
+                            await revertSubscriptionChanges();
                         }
                     }
 

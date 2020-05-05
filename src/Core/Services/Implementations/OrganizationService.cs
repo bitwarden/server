@@ -334,6 +334,7 @@ namespace Bit.Core.Services
             }
 
             Func<string, Task<SubscriptionItem>> subUpdateAction = null;
+            Func<Task<SubscriptionItem>> revertAction = null;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             var subItemOptions = sub.Items.Where(i => i.Plan.Id != plan.StripeSeatPlanId)
                 .Select(i => new InvoiceSubscriptionItemOptions
@@ -350,15 +351,24 @@ namespace Bit.Core.Services
                     Plan = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
                 });
-                subUpdateAction = (prorationBehavior) => subscriptionItemService.CreateAsync(
-                    new SubscriptionItemCreateOptions
-                    {
-                        Plan = plan.StripeSeatPlanId,
-                        Quantity = additionalSeats,
-                        Prorate = true,
-                        Subscription = sub.Id,
-                        //ProrationBehavior = prorationBehavior,
-                    });
+                subUpdateAction = async (prorationBehavior) =>
+                {
+                    seatItem = await subscriptionItemService.CreateAsync(
+                        new SubscriptionItemCreateOptions
+                        {
+                            Plan = plan.StripeSeatPlanId,
+                            Quantity = additionalSeats,
+                            Prorate = true,
+                            Subscription = sub.Id,
+                        });
+                    return seatItem;
+                };
+                revertAction = () =>
+                {
+                    newSeatTotal = organization.Seats;
+                    return subscriptionItemService.DeleteAsync(seatItem.Id,
+                        new SubscriptionItemDeleteOptions());
+                };
             }
             else if (additionalSeats > 0 && seatItem != null)
             {
@@ -374,7 +384,13 @@ namespace Bit.Core.Services
                         Plan = plan.StripeSeatPlanId,
                         Quantity = additionalSeats,
                         Prorate = true,
-                        //ProrationBehavior = prorationBehavior,
+                    });
+                revertAction = () => subscriptionItemService.UpdateAsync(seatItem.Id,
+                    new SubscriptionItemUpdateOptions
+                    {
+                        Plan = plan.StripeSeatPlanId,
+                        Quantity = newSeatTotal = organization.Seats,
+                        Prorate = true,
                     });
             }
             else if (seatItem != null && additionalSeats == 0)
@@ -392,7 +408,8 @@ namespace Bit.Core.Services
             if (additionalSeats > 0)
             {
                 var result = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
-                    organization, plan.StripeSeatPlanId, subItemOptions, 500, subUpdateAction);
+                    organization, plan.StripeSeatPlanId, subItemOptions, 500, subUpdateAction,
+                    revertAction);
                 paymentIntentClientSecret = result.Item2;
             }
 
