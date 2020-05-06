@@ -390,7 +390,7 @@ namespace Bit.Core.Services
                     {
                         Plan = plan.StripeSeatPlanId,
                         Quantity = newSeatTotal = organization.Seats,
-                        Prorate = true,
+                        Prorate = false,
                     });
             }
             else if (seatItem != null && additionalSeats == 0)

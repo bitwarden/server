@@ -883,7 +883,7 @@ namespace Bit.Core.Services
             });
 
             var itemsForInvoice = upcomingPreview.Lines?.Data?
-                .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == planId && i.Proration));
+                .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan?.Id == planId && i.Proration));
             var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
             var invoiceNow = invoiceAmount >= prorateThreshold;
             if (updateSubscription != null)
@@ -1003,24 +1003,43 @@ namespace Bit.Core.Services
                 }
                 catch (Exception e)
                 {
+                    if (revertSubscriptionChanges != null)
+                    {
+                        await revertSubscriptionChanges();
+                    }
+
                     if (braintreeTransaction != null)
                     {
                         await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
                     }
+
                     if (invoice != null)
                     {
+                        // Changes since API version 2019-08-14
+                        // Customer balances applied to all invoices are now debited or credited back
+                        //  to the customer when voided.
                         await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
-                        if (invoice.StartingBalance != 0)
-                        {
-                            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
-                            {
-                                Balance = customer.Balance
-                            });
-                        }
 
-                        if (revertSubscriptionChanges != null)
+                        // Restore invoice items that were brought in
+                        foreach (var item in pendingInvoiceItems)
                         {
-                            await revertSubscriptionChanges();
+                            // GOOD: This will re-create the pending charges for the next invoice
+                            // BAD:  However this will also create those items without Plan assignment
+                            // TODO: Reached out to Stripe support, need some assistance with how to get these back correctly
+                            /*
+                            var i = new InvoiceItemCreateOptions
+                            {
+                                Currency = item.Currency,
+                                Description = item.Description,
+                                Customer = item.CustomerId,
+                                Subscription = item.SubscriptionId,
+                                Discountable = item.Discountable,
+                                Metadata = item.Metadata,
+                                Quantity = item.Proration ? 1 : item.Quantity,
+                                UnitAmount = item.UnitAmount,
+                            };
+                            await invoiceItemService.CreateAsync(i);
+                            */
                         }
                     }
 
