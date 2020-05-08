@@ -339,7 +339,7 @@ namespace Bit.Core.Services
                 .Select(i => new InvoiceSubscriptionItemOptions
                 {
                     Id = i.Id,
-                    PlanId = i.Plan.Id,
+                    Plan = i.Plan.Id,
                     Quantity = i.Quantity,
                 }).ToList();
 
@@ -347,16 +347,16 @@ namespace Bit.Core.Services
             {
                 subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
-                    PlanId = plan.StripeSeatPlanId,
+                    Plan = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
                 });
                 subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
                     new SubscriptionItemCreateOptions
                     {
-                        PlanId = plan.StripeSeatPlanId,
+                        Plan = plan.StripeSeatPlanId,
                         Quantity = additionalSeats,
                         Prorate = prorate,
-                        SubscriptionId = sub.Id
+                        Subscription = sub.Id
                     });
             }
             else if (additionalSeats > 0 && seatItem != null)
@@ -364,13 +364,13 @@ namespace Bit.Core.Services
                 subItemOptions.Add(new InvoiceSubscriptionItemOptions
                 {
                     Id = seatItem.Id,
-                    PlanId = plan.StripeSeatPlanId,
+                    Plan = plan.StripeSeatPlanId,
                     Quantity = additionalSeats,
                 });
                 subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(seatItem.Id,
                     new SubscriptionItemUpdateOptions
                     {
-                        PlanId = plan.StripeSeatPlanId,
+                        Plan = plan.StripeSeatPlanId,
                         Quantity = additionalSeats,
                         Prorate = prorate
                     });
@@ -382,7 +382,8 @@ namespace Bit.Core.Services
                     Id = seatItem.Id,
                     Deleted = true
                 });
-                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id);
+                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id,
+                    new SubscriptionItemDeleteOptions());
             }
 
             string paymentIntentClientSecret = null;
