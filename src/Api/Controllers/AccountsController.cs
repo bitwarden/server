@@ -599,5 +599,24 @@ namespace Bit.Api.Controllers
 
             await _userService.ReinstatePremiumAsync(user);
         }
+
+        [HttpGet("enterprise-portal-signin-token")]
+        [Authorize("Web")]
+        public async Task<string> GetEnterprisePortalSignInToken()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var token = await _userService.GenerateEnterprisePortalSignInTokenAsync(user);
+            if (token == null)
+            {
+                throw new BadRequestException("Cannot generate sign in token.");
+            }
+
+            return token;
+        }
     }
 }
