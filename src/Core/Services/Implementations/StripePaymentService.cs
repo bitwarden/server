@@ -709,11 +709,11 @@ namespace Bit.Core.Services
             var prorationDate = DateTime.UtcNow;
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
             {
-                Items = new List<SubscriptionItemOptions>()
+                Items = new List<SubscriptionItemOptions>
                 {
-                    new SubscriptionItemOptions()
+                    new SubscriptionItemOptions
                     {
                         Id = storageItem?.Id,
                         Plan = storagePlanId,
@@ -739,11 +739,11 @@ namespace Bit.Core.Services
                 catch
                 {
                     // Need to revert the subscription
-                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                     {
-                        Items = new List<SubscriptionItemOptions>()
+                        Items = new List<SubscriptionItemOptions>
                         {
-                            new SubscriptionItemOptions()
+                            new SubscriptionItemOptions
                             {
                                 Id = storageItem?.Id,
                                 Plan = storagePlanId,

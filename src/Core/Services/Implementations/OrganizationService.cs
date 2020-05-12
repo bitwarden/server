@@ -338,9 +338,9 @@ namespace Bit.Core.Services
 
             var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
             {
-                Items = new List<SubscriptionItemOptions>()
+                Items = new List<SubscriptionItemOptions>
                 {
-                    new SubscriptionItemOptions()
+                    new SubscriptionItemOptions
                     {
                         Id = seatItem?.Id,
                         Plan = plan.StripeSeatPlanId,
@@ -361,21 +361,21 @@ namespace Bit.Core.Services
                 try
                 {
                     paymentIntentClientSecret = await (_paymentService as StripePaymentService)
-                        .PayInvoiceAfterSubscriptionChangeAsync(organization, subResponse?.LatestInvoiceId);
+                        .PayInvoiceAfterSubscriptionChangeAsync(organization, subResponse.LatestInvoiceId);
                 }
                 catch
                 {
                     // Need to revert the subscription
-                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                     {
-                        Items = new List<SubscriptionItemOptions>()
+                        Items = new List<SubscriptionItemOptions>
                         {
-                            new SubscriptionItemOptions()
+                            new SubscriptionItemOptions
                             {
                                 Id = seatItem?.Id,
                                 Plan = plan.StripeSeatPlanId,
                                 Quantity = organization.Seats,
-                                Deleted = (seatItem?.Id == null || organization.Seats == 0) ? true : (bool?)null
+                                Deleted = seatItem?.Id == null ? true : (bool?)null
                             }
                         },
                         // This proration behavior prevents a false "credit" from
