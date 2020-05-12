@@ -1020,6 +1020,13 @@ namespace Bit.Core.Services
             return await CanAccessPremium(user);
         }
 
+        public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
+        {
+            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+                "EnterprisePortalTokenSignIn");
+            return token;
+        }
+
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {

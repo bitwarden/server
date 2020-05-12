@@ -393,6 +393,7 @@ namespace Bit.Core.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
+            var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
             if (env.IsDevelopment())
             {
                 return;
@@ -400,8 +401,7 @@ namespace Bit.Core.Utilities
 
             if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
             {
-                services.AddDataProtection()
-                    .PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
+                builder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
             }
 
             if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
@@ -419,7 +419,7 @@ namespace Bit.Core.Utilities
                         "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                         .GetAwaiter().GetResult();
                 }
-                services.AddDataProtection()
+                builder
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
