@@ -699,81 +699,67 @@ namespace Bit.Core.Services
         public async Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
             string storagePlanId)
         {
-            var subscriptionItemService = new SubscriptionItemService();
             var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(storableSubscriber.GatewaySubscriptionId);
             if (sub == null)
             {
                 throw new GatewayException("Subscription not found.");
             }
-
-            Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
+            
+            var prorationDate = DateTime.UtcNow;
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
-            var subItemOptions = sub.Items.Where(i => i.Plan.Id != storagePlanId)
-                .Select(i => new InvoiceSubscriptionItemOptions
-                {
-                    Id = i.Id,
-                    Plan = i.Plan.Id,
-                    Quantity = i.Quantity,
-                }).ToList();
-
-            if (additionalStorage > 0 && storageItem == null)
+            
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
             {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
+                Items = new List<SubscriptionItemOptions>()
                 {
-                    Plan = storagePlanId,
-                    Quantity = additionalStorage,
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
-                    new SubscriptionItemCreateOptions
+                    new SubscriptionItemOptions()
                     {
+                        Id = storageItem?.Id,
                         Plan = storagePlanId,
                         Quantity = additionalStorage,
-                        Subscription = sub.Id,
-                        Prorate = prorate
-                    });
-            }
-            else if (additionalStorage > 0 && storageItem != null)
-            {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
-                {
-                    Id = storageItem.Id,
-                    Plan = storagePlanId,
-                    Quantity = additionalStorage,
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(storageItem.Id,
-                    new SubscriptionItemUpdateOptions
-                    {
-                        Plan = storagePlanId,
-                        Quantity = additionalStorage,
-                        Prorate = prorate
-                    });
-            }
-            else if (additionalStorage == 0 && storageItem != null)
-            {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
-                {
-                    Id = storageItem.Id,
-                    Deleted = true
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(storageItem.Id,
-                    new SubscriptionItemDeleteOptions());
-            }
+                        Deleted = (storageItem?.Id != null && additionalStorage == 0) ? true : (bool?)null
+                    }
+                },
+                ProrationBehavior = "always_invoice",
+                PaymentBehavior = "allow_incomplete",
+                DaysUntilDue = 1,
+                CollectionMethod = "send_invoice",
+                ProrationDate = prorationDate,
+            });
 
             string paymentIntentClientSecret = null;
-            var invoicedNow = false;
             if (additionalStorage > 0)
             {
-                var result = await PreviewUpcomingInvoiceAndPayAsync(
-                    storableSubscriber, storagePlanId, subItemOptions, 400);
-                invoicedNow = result.Item1;
-                paymentIntentClientSecret = result.Item2;
+                try
+                {
+                    paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
+                        storableSubscriber, subResponse?.LatestInvoiceId);
+                }
+                catch
+                {
+                    // Need to revert the subscription
+                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+                    {
+                        Items = new List<SubscriptionItemOptions>()
+                        {
+                            new SubscriptionItemOptions()
+                            {
+                                Id = storageItem?.Id,
+                                Plan = storagePlanId,
+                                Quantity = storageItem?.Quantity ?? 0,
+                                Deleted = (storageItem?.Id == null || (storageItem?.Quantity ?? 0) == 0)
+                                    ? true : (bool?)null
+                            }
+                        },
+                        // This proration behavior prevents a false "credit" from
+                        //  being applied forward to the next month's invoice
+                        ProrationBehavior = "none",
+                    });
+                    throw;
+                }
             }
 
-            if (subUpdateAction != null)
-            {
-                await subUpdateAction(!invoicedNow);
-            }
             return paymentIntentClientSecret;
         }
 
@@ -836,8 +822,7 @@ namespace Bit.Core.Services
             await customerService.DeleteAsync(subscriber.GatewayCustomerId);
         }
 
-        public async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber, string planId,
-            List<InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
+        public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, string invoiceId)
         {
             var customerService = new CustomerService();
             var customerOptions = new CustomerGetOptions();
@@ -852,202 +837,139 @@ namespace Bit.Core.Services
             }
 
             var invoiceService = new InvoiceService();
-            var invoiceItemService = new InvoiceItemService();
             string paymentIntentClientSecret = null;
 
-            var pendingInvoiceItems = invoiceItemService.ListAutoPaging(new InvoiceItemListOptions
+            var invoice = await invoiceService.GetAsync(invoiceId, new InvoiceGetOptions());
+            if (invoice == null)
             {
-                Customer = subscriber.GatewayCustomerId
-            }).ToList().Where(i => i.InvoiceId == null);
-            var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
+                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
+            }
 
-            var upcomingPreview = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
+            // Invoice them and pay now instead of waiting until Stripe does this automatically.
+
+            string cardPaymentMethodId = null;
+            if (invoice?.AmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
             {
-                Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId,
-                SubscriptionItems = subItemOptions
-            });
-
-            var itemsForInvoice = upcomingPreview.Lines?.Data?
-                .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == planId && i.Proration));
-            var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
-            var invoiceNow = invoiceAmount >= prorateThreshold;
-            if (invoiceNow)
-            {
-                // Owes more than prorateThreshold on next invoice.
-                // Invoice them and pay now instead of waiting until next billing cycle.
-
-                string cardPaymentMethodId = null;
-                var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
-                if (invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
+                var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+                var hasDefaultValidSource = customer.DefaultSource != null &&
+                    (customer.DefaultSource is Card || customer.DefaultSource is BankAccount);
+                if (!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
                 {
-                    var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
-                    var hasDefaultValidSource = customer.DefaultSource != null &&
-                        (customer.DefaultSource is Card || customer.DefaultSource is BankAccount);
-                    if (!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
+                    cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
+                    if (cardPaymentMethodId == null)
                     {
-                        cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
-                        if (cardPaymentMethodId == null)
-                        {
-                            throw new BadRequestException("No payment method is available.");
-                        }
+                        // We're going to delete this draft invoice, it can't be paid
+                        await invoiceService.DeleteAsync(invoice.Id);
+                        throw new BadRequestException("No payment method is available.");
                     }
                 }
+            }
 
-                Invoice invoice = null;
-                var createdInvoiceItems = new List<InvoiceItem>();
-                Braintree.Transaction braintreeTransaction = null;
-                try
+            Braintree.Transaction braintreeTransaction = null;
+            try
+            {
+                // Finalize the invoice (from Draft) w/o auto-advance so we
+                //  can attempt payment manually.
+                invoice = await invoiceService.FinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions()
                 {
-                    foreach (var ii in itemsForInvoice)
+                    AutoAdvance = false,
+                });
+                var invoicePayOptions = new InvoicePayOptions()
+                {
+                    PaymentMethod = cardPaymentMethodId,
+                };
+                if (invoice.AmountDue > 0)
+                {
+                    if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
                     {
-                        if (pendingInvoiceItemsDict.ContainsKey(ii.Id))
-                        {
-                            continue;
-                        }
-                        var invoiceItem = await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
-                        {
-                            Currency = ii.Currency,
-                            Description = ii.Description,
-                            Customer = subscriber.GatewayCustomerId,
-                            Subscription = ii.SubscriptionId,
-                            Discountable = ii.Discountable,
-                            Amount = ii.Amount
-                        });
-                        createdInvoiceItems.Add(invoiceItem);
-                    }
-
-                    invoice = await invoiceService.CreateAsync(new InvoiceCreateOptions
-                    {
-                        CollectionMethod = "send_invoice",
-                        DaysUntilDue = 1,
-                        Customer = subscriber.GatewayCustomerId,
-                        Subscription = subscriber.GatewaySubscriptionId,
-                        DefaultPaymentMethod = cardPaymentMethodId
-                    });
-
-                    var invoicePayOptions = new InvoicePayOptions();
-                    if (invoice.AmountDue > 0)
-                    {
-                        if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
-                        {
-                            invoicePayOptions.PaidOutOfBand = true;
-                            var btInvoiceAmount = (invoice.AmountDue / 100M);
-                            var transactionResult = await _btGateway.Transaction.SaleAsync(
-                                new Braintree.TransactionRequest
+                        invoicePayOptions.PaidOutOfBand = true;
+                        var btInvoiceAmount = (invoice.AmountDue / 100M);
+                        var transactionResult = await _btGateway.Transaction.SaleAsync(
+                            new Braintree.TransactionRequest
+                            {
+                                Amount = btInvoiceAmount,
+                                CustomerId = customer.Metadata["btCustomerId"],
+                                Options = new Braintree.TransactionOptionsRequest
                                 {
-                                    Amount = btInvoiceAmount,
-                                    CustomerId = customer.Metadata["btCustomerId"],
-                                    Options = new Braintree.TransactionOptionsRequest
+                                    SubmitForSettlement = true,
+                                    PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        SubmitForSettlement = true,
-                                        PayPal = new Braintree.TransactionOptionsPayPalRequest
-                                        {
-                                            CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
-                                        }
-                                    },
-                                    CustomFields = new Dictionary<string, string>
-                                    {
-                                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
                                     }
-                                });
-
-                            if (!transactionResult.IsSuccess())
-                            {
-                                throw new GatewayException("Failed to charge PayPal customer.");
-                            }
-
-                            braintreeTransaction = transactionResult.Target;
-                            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
-                            {
-                                Metadata = new Dictionary<string, string>
+                                },
+                                CustomFields = new Dictionary<string, string>
                                 {
-                                    ["btTransactionId"] = braintreeTransaction.Id,
-                                    ["btPayPalTransactionId"] =
-                                        braintreeTransaction.PayPalDetails.AuthorizationId
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
                                 }
                             });
-                        }
-                        else
-                        {
-                            invoicePayOptions.OffSession = true;
-                            invoicePayOptions.PaymentMethod = cardPaymentMethodId;
-                        }
-                    }
 
-                    try
-                    {
-                        await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
-                    }
-                    catch (StripeException e)
-                    {
-                        if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
-                            e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                        if (!transactionResult.IsSuccess())
                         {
-                            // SCA required, get intent client secret
-                            var invoiceGetOptions = new InvoiceGetOptions();
-                            invoiceGetOptions.AddExpand("payment_intent");
-                            invoice = await invoiceService.GetAsync(invoice.Id, invoiceGetOptions);
-                            paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
+                            throw new GatewayException("Failed to charge PayPal customer.");
                         }
-                        else
+                        
+                        braintreeTransaction = transactionResult.Target;
+                        invoice = await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                         {
-                            throw new GatewayException("Unable to pay invoice.");
-                        }
+                            Metadata = new Dictionary<string, string>
+                            {
+                                ["btTransactionId"] = braintreeTransaction.Id,
+                                ["btPayPalTransactionId"] =
+                                    braintreeTransaction.PayPalDetails.AuthorizationId
+                            },
+                        });
+                        invoicePayOptions.PaidOutOfBand = true;
                     }
                 }
-                catch (Exception e)
-                {
-                    if (braintreeTransaction != null)
-                    {
-                        await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
-                    }
-                    if (invoice != null)
-                    {
-                        await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
-                        if (invoice.StartingBalance != 0)
-                        {
-                            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
-                            {
-                                Balance = customer.Balance
-                            });
-                        }
 
-                        // Restore invoice items that were brought in
-                        foreach (var item in pendingInvoiceItems)
-                        {
-                            var i = new InvoiceItemCreateOptions
-                            {
-                                Currency = item.Currency,
-                                Description = item.Description,
-                                Customer = item.CustomerId,
-                                Subscription = item.SubscriptionId,
-                                Discountable = item.Discountable,
-                                Metadata = item.Metadata,
-                                Quantity = item.Proration ? 1 : item.Quantity,
-                                UnitAmount = item.UnitAmount
-                            };
-                            await invoiceItemService.CreateAsync(i);
-                        }
+                try
+                {
+                    invoice = await invoiceService.PayAsync(invoice.Id, invoicePayOptions);
+                }
+                catch (StripeException e)
+                {
+                    if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
+                        e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                    {
+                        // SCA required, get intent client secret
+                        var invoiceGetOptions = new InvoiceGetOptions();
+                        invoiceGetOptions.AddExpand("payment_intent");
+                        invoice = await invoiceService.GetAsync(invoice.Id, invoiceGetOptions);
+                        paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
                     }
                     else
                     {
-                        foreach (var ii in createdInvoiceItems)
-                        {
-                            await invoiceItemService.DeleteAsync(ii.Id);
-                        }
+                        throw new GatewayException("Unable to pay invoice.");
                     }
-
-                    if (e is StripeException strEx &&
-                        (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
-                    {
-                        throw new GatewayException("Bank account is not yet verified.");
-                    }
-
-                    throw e;
                 }
             }
-            return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
+            catch (Exception e)
+            {
+                if (braintreeTransaction != null)
+                {
+                    await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                }
+                if (invoice != null)
+                {
+                    if (invoice.Status == "paid")
+                    {
+                        // It's apparently paid, so we need to return w/o throwing an exception
+                        return paymentIntentClientSecret;
+                    }
+
+                    await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
+                }
+
+                if (e is StripeException strEx &&
+                    (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+                {
+                    throw new GatewayException("Bank account is not yet verified.");
+                }
+
+                // Let the caller perform any subscription change cleanup
+                throw;
+            }
+            return paymentIntentClientSecret;
         }
 
         public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,

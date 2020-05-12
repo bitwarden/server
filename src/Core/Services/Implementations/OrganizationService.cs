@@ -333,70 +333,59 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Subscription not found.");
             }
 
-            Func<bool, Task<SubscriptionItem>> subUpdateAction = null;
+            var prorationDate = DateTime.UtcNow;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
-            var subItemOptions = sub.Items.Where(i => i.Plan.Id != plan.StripeSeatPlanId)
-                .Select(i => new InvoiceSubscriptionItemOptions
-                {
-                    Id = i.Id,
-                    Plan = i.Plan.Id,
-                    Quantity = i.Quantity,
-                }).ToList();
 
-            if (additionalSeats > 0 && seatItem == null)
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
             {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
+                Items = new List<SubscriptionItemOptions>()
                 {
-                    Plan = plan.StripeSeatPlanId,
-                    Quantity = additionalSeats,
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.CreateAsync(
-                    new SubscriptionItemCreateOptions
+                    new SubscriptionItemOptions()
                     {
+                        Id = seatItem?.Id,
                         Plan = plan.StripeSeatPlanId,
                         Quantity = additionalSeats,
-                        Prorate = prorate,
-                        Subscription = sub.Id
-                    });
-            }
-            else if (additionalSeats > 0 && seatItem != null)
-            {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
-                {
-                    Id = seatItem.Id,
-                    Plan = plan.StripeSeatPlanId,
-                    Quantity = additionalSeats,
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.UpdateAsync(seatItem.Id,
-                    new SubscriptionItemUpdateOptions
-                    {
-                        Plan = plan.StripeSeatPlanId,
-                        Quantity = additionalSeats,
-                        Prorate = prorate
-                    });
-            }
-            else if (seatItem != null && additionalSeats == 0)
-            {
-                subItemOptions.Add(new InvoiceSubscriptionItemOptions
-                {
-                    Id = seatItem.Id,
-                    Deleted = true
-                });
-                subUpdateAction = (prorate) => subscriptionItemService.DeleteAsync(seatItem.Id,
-                    new SubscriptionItemDeleteOptions());
-            }
+                        Deleted = (seatItem?.Id != null && additionalSeats == 0) ? true : (bool?)null
+                    }
+                },
+                ProrationBehavior = "always_invoice",
+                PaymentBehavior = "allow_incomplete",
+                DaysUntilDue = 1,
+                CollectionMethod = "send_invoice",
+                ProrationDate = prorationDate,
+            });
 
             string paymentIntentClientSecret = null;
-            var invoicedNow = false;
             if (additionalSeats > 0)
             {
-                var result = await (_paymentService as StripePaymentService).PreviewUpcomingInvoiceAndPayAsync(
-                    organization, plan.StripeSeatPlanId, subItemOptions, 500);
-                invoicedNow = result.Item1;
-                paymentIntentClientSecret = result.Item2;
+                try
+                {
+                    paymentIntentClientSecret = await (_paymentService as StripePaymentService)
+                        .PayInvoiceAfterSubscriptionChangeAsync(organization, subResponse?.LatestInvoiceId);
+                }
+                catch
+                {
+                    // Need to revert the subscription
+                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+                    {
+                        Items = new List<SubscriptionItemOptions>()
+                        {
+                            new SubscriptionItemOptions()
+                            {
+                                Id = seatItem?.Id,
+                                Plan = plan.StripeSeatPlanId,
+                                Quantity = organization.Seats,
+                                Deleted = (seatItem?.Id == null || organization.Seats == 0) ? true : (bool?)null
+                            }
+                        },
+                        // This proration behavior prevents a false "credit" from
+                        //  being applied forward to the next month's invoice
+                        ProrationBehavior = "none",
+                    });
+                    throw;
+                }
             }
 
-            await subUpdateAction(!invoicedNow);
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
             return paymentIntentClientSecret;
