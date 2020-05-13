@@ -336,7 +336,7 @@ namespace Bit.Core.Services
             var prorationDate = DateTime.UtcNow;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
 
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions()
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
             {
                 Items = new List<SubscriptionItemOptions>
                 {
@@ -349,7 +349,6 @@ namespace Bit.Core.Services
                     }
                 },
                 ProrationBehavior = "always_invoice",
-                PaymentBehavior = "allow_incomplete",
                 DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,

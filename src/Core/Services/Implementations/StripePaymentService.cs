@@ -705,7 +705,7 @@ namespace Bit.Core.Services
             {
                 throw new GatewayException("Subscription not found.");
             }
-            
+
             var prorationDate = DateTime.UtcNow;
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             
@@ -722,7 +722,6 @@ namespace Bit.Core.Services
                     }
                 },
                 ProrationBehavior = "always_invoice",
-                PaymentBehavior = "allow_incomplete",
                 DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,
@@ -870,11 +869,11 @@ namespace Bit.Core.Services
             {
                 // Finalize the invoice (from Draft) w/o auto-advance so we
                 //  can attempt payment manually.
-                invoice = await invoiceService.FinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions()
+                invoice = await invoiceService.FinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions
                 {
                     AutoAdvance = false,
                 });
-                var invoicePayOptions = new InvoicePayOptions()
+                var invoicePayOptions = new InvoicePayOptions
                 {
                     PaymentMethod = cardPaymentMethodId,
                 };
