@@ -41,7 +41,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Import([FromBody]OrganizationImportRequestModel model)
         {
             if (!_globalSettings.SelfHosted &&
-                (model.Groups.Count() > 200 || model.Members.Count(u => !u.Deleted) > 1000))
+                (model.Groups.Count() > 2000 || model.Members.Count(u => !u.Deleted) > 2000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
             }
