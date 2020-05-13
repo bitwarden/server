@@ -204,7 +204,7 @@ namespace Bit.Billing.Controllers
                 {
                     var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
                     {
-                        CustomerId = charge.CustomerId
+                        Customer = charge.CustomerId
                     });
                     foreach (var sub in subscriptions)
                     {
