@@ -2,7 +2,7 @@
   "name": "bitwarden",
   "version": "0.0.0",
   "devDependencies": {
-    "bootstrap": "4.3.1",
+    "bootstrap": "4.5.0",
     "font-awesome": "4.7.0",
     "gulp": "3.9.1",
     "gulp-concat": "2.6.1",

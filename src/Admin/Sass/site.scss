@@ -1,4 +1,11 @@
-﻿$theme-colors: ( "primary": #175DDC, "primary-accent": #1252A3, "danger": #dd4b39, "success": #00a65a, "info": #555555, "warning": #bf7e16);
+﻿$primary: #175DDC;
+$primary-accent: #1252A3;
+$success: #00a65a;
+$info: #555555;
+$warning: #bf7e16;
+$danger: #dd4b39;
+
+$theme-colors: ( "primary-accent": $primary-accent );
 $font-family-sans-serif: 'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 
 $h1-font-size: 2rem;
