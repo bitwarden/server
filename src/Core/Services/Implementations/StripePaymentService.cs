@@ -956,7 +956,25 @@ namespace Bit.Core.Services
                         return paymentIntentClientSecret;
                     }
 
-                    await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
+                    invoice = await invoiceService.VoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
+
+                    // HACK: Workaround for customer balance credit
+                    if (invoice.StartingBalance < 0)
+                    {
+                        // Customer had a balance applied to this invoice. Since we can't fully trust Stripe to
+                        //  credit it back to the customer (even though their docs claim they will), we need to
+                        //  check that balance against the current customer balance and determine if it needs to be re-applied
+                        customer = await customerService.GetAsync(subscriber.GatewayCustomerId, customerOptions);
+
+                        // Assumption: Customer balance should now be $0, otherwise payment would not have failed.
+                        if (customer.Balance == 0)
+                        {
+                            await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                            {
+                                Balance = invoice.StartingBalance
+                            });
+                        }
+                    }
                 }
 
                 if (e is StripeException strEx &&
