@@ -88,6 +88,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendLicenseExpiredAsync(IEnumerable<string> emails, bool isOrganization)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {
             return Task.FromResult(0);

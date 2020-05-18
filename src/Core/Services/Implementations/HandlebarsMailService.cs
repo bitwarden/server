@@ -278,6 +278,18 @@ namespace Bit.Core.Services
             message.Category = "AddedCredit";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, bool isOrganization)
+        {
+            var message = CreateDefaultMessage("License Expired", emails);
+            var model = new LicenseExpiredViewModel
+            {
+                IsOrganization = isOrganization
+            };
+            await AddMessageContentAsync(message, "LicenseExpired", model);
+            message.Category = "LicenseExpired";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
 
         public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
         {

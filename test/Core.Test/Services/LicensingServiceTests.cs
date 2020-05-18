@@ -16,6 +16,7 @@ namespace Bit.Core.Test.Services
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IMailService _mailService;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<LicensingService> _logger;
 
@@ -24,6 +25,7 @@ namespace Bit.Core.Test.Services
             _userRepository = Substitute.For<IUserRepository>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+            _mailService = Substitute.For<IMailService>();
             _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<LicensingService>>();
             _globalSettings = new GlobalSettings();
@@ -32,6 +34,7 @@ namespace Bit.Core.Test.Services
                 _userRepository,
                 _organizationRepository,
                 _organizationUserRepository,
+                _mailService,
                 _hostingEnvironment,
                 _logger,
                 _globalSettings

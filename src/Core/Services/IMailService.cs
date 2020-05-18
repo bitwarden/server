@@ -25,6 +25,7 @@ namespace Bit.Core.Services
             bool mentionInvoices);
         Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
         Task SendAddedCreditAsync(string email, decimal amount);
+        Task SendLicenseExpiredAsync(IEnumerable<string> emails, bool isOrganization);
         Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
         Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
     }
