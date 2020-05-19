@@ -128,7 +128,7 @@ namespace Bit.Core.Services
             org.RevisionDate = DateTime.UtcNow;
             await _organizationRepository.ReplaceAsync(org);
 
-            await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, true);
+            await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.Name);
         }
 
         public async Task ValidateUsersAsync()
@@ -219,7 +219,7 @@ namespace Bit.Core.Services
             user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
-            await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email }, false);
+            await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
         }
 
         public bool VerifyLicense(ILicense license)

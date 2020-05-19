@@ -88,7 +88,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendLicenseExpiredAsync(IEnumerable<string> emails, bool isOrganization)
+        public Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
         {
             return Task.FromResult(0);
         }

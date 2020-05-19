@@ -2,6 +2,7 @@
 {
     public class LicenseExpiredViewModel : BaseMailModel
     {
-        public bool IsOrganization { get; set; }
+        public string OrganizationName { get; set; }
+        public bool IsOrganization => !string.IsNullOrWhiteSpace(OrganizationName);
     }
 }

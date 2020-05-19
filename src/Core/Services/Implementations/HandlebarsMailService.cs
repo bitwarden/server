@@ -279,12 +279,12 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
         
-        public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, bool isOrganization)
+        public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
         {
             var message = CreateDefaultMessage("License Expired", emails);
             var model = new LicenseExpiredViewModel
             {
-                IsOrganization = isOrganization
+                OrganizationName = organizationName,
             };
             await AddMessageContentAsync(message, "LicenseExpired", model);
             message.Category = "LicenseExpired";
