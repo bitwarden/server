@@ -14,28 +14,15 @@ BEGIN
             [Id] = @CollectionId
     )
 
-    CREATE TABLE #TempAvailableUsers
-    (
-        [Id] UNIQUEIDENTIFIER NOT NULL
-    )
-
-    INSERT INTO #TempAvailableUsers
-    SELECT
-        [Id]
-    FROM
-        [dbo].[OrganizationUser]
-    WHERE
-        [OrganizationId] = @OrgId
-
     -- Update
     UPDATE
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly]
     FROM
-        [dbo].[CollectionUser] AS [Target]
+        [dbo].[CollectionUser] [Target]
     INNER JOIN
-        @Users AS [Source] ON [Source].[Id] = [Target].[OrganizationUserId]
+        @Users [Source] ON [Source].[Id] = [Target].[OrganizationUserId]
     WHERE
         [Target].[CollectionId] = @CollectionId
         AND [Target].[ReadOnly] != [Source].[ReadOnly]
@@ -48,10 +35,11 @@ BEGIN
         [Source].[Id],
         [Source].[ReadOnly]
     FROM
-        @Users AS [Source]
+        @Users [Source]
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [Source].[Id] = OU.[Id] AND OU.[OrganizationId] = @OrgId
     WHERE
-        [Source].[Id] IN (SELECT [Id] FROM #TempAvailableUsers)
-        AND NOT EXISTS (
+        NOT EXISTS (
             SELECT
                 1
             FROM
@@ -76,8 +64,6 @@ BEGIN
             WHERE
                 [Id] = CU.[OrganizationUserId]
         )
-
-    DROP TABLE #TempAvailableUsers
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrgId
 END

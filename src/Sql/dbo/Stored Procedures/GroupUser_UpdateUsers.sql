@@ -14,19 +14,6 @@ BEGIN
             [Id] = @GroupId
     )
 
-    CREATE TABLE #TempAvailableUsers
-    (
-        [Id] UNIQUEIDENTIFIER NOT NULL
-    )
-
-    INSERT INTO #TempAvailableUsers
-    SELECT
-        [Id]
-    FROM
-        [dbo].[OrganizationUser]
-    WHERE
-        [OrganizationId] = @OrgId
-
     -- Insert
     INSERT INTO
         [dbo].[GroupUser]
@@ -35,9 +22,10 @@ BEGIN
         [Source].[Id]
     FROM
         @OrganizationUserIds AS [Source]
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [Source].[Id] = OU.[Id] AND OU.[OrganizationId] = @OrgId
     WHERE
-        [Source].[Id] IN (SELECT [Id] FROM #TempAvailableUsers)
-        AND NOT EXISTS (
+        NOT EXISTS (
             SELECT
                 1
             FROM
@@ -62,8 +50,6 @@ BEGIN
             WHERE
                 [Id] = GU.[OrganizationUserId]
         )
-
-    DROP TABLE #TempAvailableUsers
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
 END

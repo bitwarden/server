@@ -17,19 +17,6 @@ BEGIN
 
     EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate
 
-    CREATE TABLE #TempAvailableCollections
-    (
-        [Id] UNIQUEIDENTIFIER NOT NULL
-    )
-
-    INSERT INTO #TempAvailableCollections
-    SELECT
-        Id
-    FROM
-        [dbo].[Collection]
-    WHERE
-        OrganizationId = @OrganizationId
-
     -- Update
     UPDATE
         [Target]
@@ -52,9 +39,10 @@ BEGIN
         [Source].[ReadOnly]
     FROM
         @Collections AS [Source]
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = [Source].[Id] AND C.[OrganizationId] = @OrganizationId
     WHERE
-        [Source].[Id] IN (SELECT [Id] FROM #TempAvailableCollections)
-        AND NOT EXISTS (
+        NOT EXISTS (
             SELECT
                 1
             FROM
@@ -79,6 +67,4 @@ BEGIN
             WHERE
                 [Id] = CU.[CollectionId]
         )
-
-    DROP TABLE #TempAvailableCollections
 END
