@@ -86,7 +86,7 @@ build_script:
       $env:swaggerGen = "true"
       $env:ASPNETCORE_ENVIRONMENT = "Production"
       cd .\src\Api
-      dotnet swagger tofile --output ..\..\swagger.json --host api.bitwarden.com `
+      dotnet swagger tofile --output ..\..\swagger.json --host https://api.bitwarden.com `
         .\bin\Debug\netcoreapp3.1\Api.dll public
       cd ..\..
       $env:ASPNETCORE_ENVIRONMENT = ""
