@@ -8,7 +8,8 @@ BEGIN
 
     SELECT
         [CollectionId] [Id],
-        [ReadOnly]
+        [ReadOnly],
+        [HidePasswords]
     FROM
         [dbo].[CollectionGroup]
     WHERE

@@ -38,10 +38,15 @@ BEGIN
         (
             [Source].[Id],
             @Id,
-            [Source].[ReadOnly]
+            [Source].[ReadOnly],
+            [Source].[HidePasswords]
         )
-    WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
-        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
+    WHEN MATCHED AND (
+        [Target].[ReadOnly] != [Source].[ReadOnly]
+        OR [Target].[HidePasswords] != [Source].[HidePasswords]
+    ) THEN
+        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
+                   [Target].[HidePasswords] = [Source].[HidePasswords]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[OrganizationUserId] = @Id THEN
         DELETE

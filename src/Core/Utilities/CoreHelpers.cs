@@ -125,6 +125,8 @@ namespace Bit.Core.Utilities
             table.Columns.Add(idColumn);
             var readOnlyColumn = new DataColumn("ReadOnly", typeof(bool));
             table.Columns.Add(readOnlyColumn);
+            var hidePasswordsColumn = new DataColumn("HidePasswords", typeof(bool));
+            table.Columns.Add(hidePasswordsColumn);
 
             if (values != null)
             {
@@ -133,6 +135,7 @@ namespace Bit.Core.Utilities
                     var row = table.NewRow();
                     row[idColumn] = value.Id;
                     row[readOnlyColumn] = value.ReadOnly;
+                    row[hidePasswordsColumn] = value.HidePasswords;
                     table.Rows.Add(row);
                 }
             }

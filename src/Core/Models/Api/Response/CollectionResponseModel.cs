@@ -34,9 +34,11 @@ namespace Bit.Core.Models.Api
             : base(collectionDetails, "collectionDetails")
         {
             ReadOnly = collectionDetails.ReadOnly;
+            HidePasswords = collectionDetails.HidePasswords;
         }
 
         public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
     }
 
     public class CollectionGroupDetailsResponseModel : CollectionResponseModel

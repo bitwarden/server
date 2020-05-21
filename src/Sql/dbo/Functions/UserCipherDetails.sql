@@ -24,6 +24,13 @@ SELECT
         ELSE 0
     END [Edit],
     CASE
+        WHEN
+            CU.[HidePasswords] = 0
+            OR CG.[HidePasswords] = 0
+        THEN 1
+        ELSE 0
+    END [ViewPassword],
+    CASE
         WHEN O.[UseTotp] = 1
         THEN 1
         ELSE 0
@@ -55,6 +62,7 @@ UNION ALL
 SELECT
     *,
     1 [Edit],
+    1 [ViewPassword],
     0 [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId)

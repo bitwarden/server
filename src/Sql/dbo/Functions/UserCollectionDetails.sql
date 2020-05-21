@@ -11,7 +11,14 @@ SELECT
             OR CG.[ReadOnly] = 0
         THEN 0
         ELSE 1
-    END [ReadOnly]
+    END [ReadOnly],
+    CASE
+        WHEN
+            CU.[HidePasswords] = 0
+            OR CG.[HidePasswords] = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN

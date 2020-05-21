@@ -8,7 +8,8 @@ BEGIN
 
     SELECT
         CU.[CollectionId] Id,
-        CU.[ReadOnly]
+        CU.[ReadOnly],
+        CU.[HidePasswords]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

@@ -14,9 +14,11 @@ namespace Bit.Core.Models.Api
 
             Id = selection.Id.ToString();
             ReadOnly = selection.ReadOnly;
+            HidePasswords = selection.HidePasswords;
         }
 
         public string Id { get; set; }
         public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
     }
 }
