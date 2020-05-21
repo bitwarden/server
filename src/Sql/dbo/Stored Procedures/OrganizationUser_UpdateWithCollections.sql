@@ -17,33 +17,54 @@ BEGIN
 
     EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate
 
-    ;WITH [AvailableCollectionsCTE] AS(
-        SELECT
-            Id
-        FROM
-            [dbo].[Collection]
-        WHERE
-            OrganizationId = @OrganizationId
-    )
-    MERGE
+    -- Update
+    UPDATE
+        [Target]
+    SET
+        [Target].[ReadOnly] = [Source].[ReadOnly]
+    FROM
         [dbo].[CollectionUser] AS [Target]
-    USING 
+    INNER JOIN
+        @Collections AS [Source] ON [Source].[Id] = [Target].[CollectionId]
+    WHERE
+        [Target].[OrganizationUserId] = @Id
+        AND [Target].[ReadOnly] != [Source].[ReadOnly]
+
+    -- Insert
+    INSERT INTO
+        [dbo].[CollectionUser]
+    SELECT
+        [Source].[Id],
+        @Id,
+        [Source].[ReadOnly]
+    FROM
         @Collections AS [Source]
-    ON
-        [Target].[CollectionId] = [Source].[Id]
-        AND [Target].[OrganizationUserId] = @Id
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT VALUES
-        (
-            [Source].[Id],
-            @Id,
-            [Source].[ReadOnly]
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = [Source].[Id] AND C.[OrganizationId] = @OrganizationId
+    WHERE
+        NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[CollectionUser]
+            WHERE
+                [CollectionId] = [Source].[Id]
+                AND [OrganizationUserId] = @Id
         )
-    WHEN MATCHED AND [Target].[ReadOnly] != [Source].[ReadOnly] THEN
-        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly]
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[OrganizationUserId] = @Id THEN
-        DELETE
-    ;
+    
+    -- Delete
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+    WHERE
+        CU.[OrganizationUserId] = @Id
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                @Collections
+            WHERE
+                [Id] = CU.[CollectionId]
+        )
 END
