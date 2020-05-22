@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
             {
                 Id = new Guid(Id),
                 ReadOnly = ReadOnly,
-                HidePasswords = HidePasswords
+                HidePasswords = HidePasswords,
             };
         }
     }

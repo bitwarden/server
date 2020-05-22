@@ -3,22 +3,8 @@ RETURNS TABLE
 AS RETURN
 SELECT
     C.*,
-    CASE
-        WHEN
-            OU.[AccessAll] = 1
-            OR G.[AccessAll] = 1
-            OR CU.[ReadOnly] = 0
-            OR CG.[ReadOnly] = 0
-        THEN 0
-        ELSE 1
-    END [ReadOnly],
-    CASE
-        WHEN
-            CU.[HidePasswords] = 0
-            OR CG.[HidePasswords] = 0
-        THEN 0
-        ELSE 1
-    END [HidePasswords]
+    COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) AS [ReadOnly],
+    COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) AS [HidePasswords]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN
