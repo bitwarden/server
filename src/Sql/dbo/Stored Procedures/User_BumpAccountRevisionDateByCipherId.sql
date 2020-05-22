@@ -11,7 +11,7 @@ BEGIN
         U.[AccountRevisionDate] = GETUTCDATE()
     FROM
         [dbo].[User] U
-    LEFT JOIN
+    INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[UserId] = U.[Id]
     LEFT JOIN
         [dbo].[CollectionCipher] CC ON CC.[CipherId] = @CipherId
@@ -24,16 +24,12 @@ BEGIN
     LEFT JOIN
         [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = CC.[CollectionId]
     WHERE
-        OU.[Status] = 2 -- 2 = Confirmed
+        OU.[OrganizationId] = @OrganizationId
+        AND OU.[Status] = 2 -- 2 = Confirmed
         AND (
             CU.[CollectionId] IS NOT NULL
             OR CG.[CollectionId] IS NOT NULL
-            OR (
-                OU.[OrganizationId] = @OrganizationId
-                AND (
-                    OU.[AccessAll] = 1
-                    OR G.[AccessAll] = 1
-                )
-            )
+            OR OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
         )
 END

@@ -14,40 +14,61 @@ BEGIN
             [Id] = @CollectionId
     )
 
-    ;WITH [AvailableUsersCTE] AS(
-        SELECT
-            Id
-        FROM
-            [dbo].[OrganizationUser]
-        WHERE
-            OrganizationId = @OrgId
-    )
-    MERGE
-        [dbo].[CollectionUser] AS [Target]
-    USING 
-        @Users AS [Source]
-    ON
+    -- Update
+    UPDATE
+        [Target]
+    SET
+        [Target].[ReadOnly] = [Source].[ReadOnly],
+        [Target].[HidePasswords] = [Source].[HidePasswords]
+    FROM
+        [dbo].[CollectionUser] [Target]
+    INNER JOIN
+        @Users [Source] ON [Source].[Id] = [Target].[OrganizationUserId]
+    WHERE
         [Target].[CollectionId] = @CollectionId
-        AND [Target].[OrganizationUserId] = [Source].[Id]
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableUsersCTE]) THEN
-        INSERT VALUES
-        (
-            @CollectionId,
-            [Source].[Id],
-            [Source].[ReadOnly],
-            [Source].[HidePasswords]
+        AND (
+            [Target].[ReadOnly] != [Source].[ReadOnly]
+            OR [Target].[HidePasswords] != [Source].[HidePasswords]
         )
-    WHEN MATCHED AND (
-        [Target].[ReadOnly] != [Source].[ReadOnly]
-        OR [Target].[HidePasswords] != [Source].[HidePasswords]
-    ) THEN
-        UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords]
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[CollectionId] = @CollectionId THEN
-        DELETE
-    ;
+
+    -- Insert
+    INSERT INTO
+        [dbo].[CollectionUser]
+    SELECT
+        @CollectionId,
+        [Source].[Id],
+        [Source].[ReadOnly],
+        [Source].[HidePasswords]
+    FROM
+        @Users [Source]
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [Source].[Id] = OU.[Id] AND OU.[OrganizationId] = @OrgId
+    WHERE
+        NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[CollectionUser]
+            WHERE
+                [CollectionId] = @CollectionId
+                AND [OrganizationUserId] = [Source].[Id]
+        )
+    
+    -- Delete
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+    WHERE
+        CU.[CollectionId] = @CollectionId
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                @Users
+            WHERE
+                [Id] = CU.[OrganizationUserId]
+        )
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrgId
 END
