@@ -24,7 +24,9 @@ SELECT
     END [Edit],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
         THEN 1
         ELSE 0
     END [ViewPassword],

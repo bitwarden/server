@@ -11,7 +11,14 @@ SELECT
         THEN 0
         ELSE 1
     END [ReadOnly],
-    COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) AS [HidePasswords]
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN

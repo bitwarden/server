@@ -87,7 +87,9 @@ SELECT
     END [Edit],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
         THEN 1
         ELSE 0
     END [ViewPassword],
@@ -150,7 +152,14 @@ SELECT
         THEN 0
         ELSE 1
     END [ReadOnly],
-    COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) AS [HidePasswords]
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN
@@ -905,9 +914,9 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[CipherDetails_Create]') IS NOT NULL
+IF OBJECT_ID('[dbo].[CipherDetails_CreateWithCollections]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_Create]
+    DROP PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
 END
 GO
 
