@@ -2,6 +2,48 @@
  * Add HiddenPassword support to collections
  */
 
+IF OBJECT_ID('[dbo].[Group_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Group_CreateWithCollections]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Group_UpdateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Group_UpdateWithCollections]
+END
+GO
+
+IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUser_UpdateUsers]
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_UpdateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_CreateWithGroups]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_CreateWithGroups]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_UpdateWithGroups]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_UpdateWithGroups]
+END
+GO
+
 IF TYPE_ID('[dbo].[SelectionReadOnlyArray]') IS NOT NULL
 BEGIN
     DROP TYPE [dbo].[SelectionReadOnlyArray]
@@ -211,12 +253,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Group_CreateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Group_CreateWithCollections]
-END
-GO
-
 CREATE PROCEDURE [dbo].[Group_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -286,12 +322,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Group_UpdateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Group_UpdateWithCollections]
-END
-GO
-
 CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -343,12 +373,6 @@ BEGIN
     ;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
-END
-GO
-
-IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CollectionUser_UpdateUsers]
 END
 GO
 
@@ -451,12 +475,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationUser_CreateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
-END
-GO
-
 CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -527,12 +545,6 @@ BEGIN
         [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = [OU].[Id]
     WHERE
         [OrganizationUserId] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationUser_UpdateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
 END
 GO
 
@@ -640,12 +652,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Collection_CreateWithGroups]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_CreateWithGroups]
-END
-GO
-
 CREATE PROCEDURE [dbo].[Collection_CreateWithGroups]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -712,12 +718,6 @@ BEGIN
         [dbo].[CollectionGroup]
     WHERE
         [CollectionId] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[Collection_UpdateWithGroups]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_UpdateWithGroups]
 END
 GO
 
