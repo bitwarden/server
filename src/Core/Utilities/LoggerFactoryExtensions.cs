@@ -5,7 +5,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Syslog;
 using System;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Bit.Core.Utilities
 {
@@ -69,6 +72,52 @@ namespace Bit.Core.Utilities
                 config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings?.Syslog.Destination))
+            {
+                // appending sitename to project name to allow eaiser identification in syslog.
+                var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
+                if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
+                {
+                    config.WriteTo.LocalSyslog(appName);
+                }
+                else if (Uri.TryCreate(globalSettings.Syslog.Destination,UriKind.Absolute, out var syslogAddress))
+                {
+                    // Syslog's standard port is 514 (both UDP and TCP). TLS does not have a standard port, so assume 514.
+                    int port = syslogAddress.Port >= 0
+                        ? syslogAddress.Port
+                        : 514;
+
+                    if (syslogAddress.Scheme.Equals("udp"))
+                    {
+                        config.WriteTo.UdpSyslog(syslogAddress.Host, port, appName);
+                    }
+                    else if (syslogAddress.Scheme.Equals("tcp"))
+                    {
+                        config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName);
+                    }
+                    else if (syslogAddress.Scheme.Equals("tls"))
+                    {
+                        // TLS v1.1, v1.2 and v1.3 are explicitly selected (leaving out TLS v1.0)
+                        const SslProtocols protocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+
+                        if (CoreHelpers.SettingHasValue(globalSettings.Syslog.CertificateThumbprint))
+                        {
+                            config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
+                                secureProtocols: protocols,
+                                certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser, 
+                                                                           globalSettings.Syslog.CertificateThumbprint));
+                        }
+                        else
+                        {
+                            config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
+                                secureProtocols: protocols,
+                                certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
+                                                                          globalSettings.Syslog?.CertificatePassword ?? string.Empty));
+                        }
+
+                    }
+                }
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
             {
