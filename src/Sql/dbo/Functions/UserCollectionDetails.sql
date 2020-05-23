@@ -3,7 +3,14 @@ RETURNS TABLE
 AS RETURN
 SELECT
     C.*,
-    COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) AS [ReadOnly],
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 0
+        ELSE 1
+    END [ReadOnly],
     COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) AS [HidePasswords]
 FROM
     [dbo].[CollectionView] C

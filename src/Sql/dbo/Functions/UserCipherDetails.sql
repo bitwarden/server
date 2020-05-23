@@ -17,16 +17,14 @@ SELECT
     CASE
         WHEN
             OU.[AccessAll] = 1
-            OR CU.[ReadOnly] = 0
             OR G.[AccessAll] = 1
-            OR CG.[ReadOnly] = 0
+            OR COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1
         ELSE 0
     END [Edit],
     CASE
         WHEN
-            CU.[HidePasswords] = 0
-            OR CG.[HidePasswords] = 0
+            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
         THEN 1
         ELSE 0
     END [ViewPassword],

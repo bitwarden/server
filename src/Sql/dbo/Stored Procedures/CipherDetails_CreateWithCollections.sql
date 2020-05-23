@@ -12,6 +12,7 @@
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
     @Edit BIT, -- not used
+    @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
@@ -20,7 +21,8 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @OrganizationUseTotp, @DeletedDate
+        @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @ViewPassword,
+        @OrganizationUseTotp, @DeletedDate
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds

@@ -12,6 +12,7 @@
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
     @Edit BIT, -- not used
+    @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7)
 AS
