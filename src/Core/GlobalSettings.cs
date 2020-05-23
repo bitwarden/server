@@ -190,9 +190,9 @@ namespace Bit.Core
             /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="System.Security.Cryptography.X509Certificates.X509Certificate2.X509Certificate2(string, string)" />.
             /// The file format of the certificate may be binary encded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
             /// </remarks>
-            public string Certificate { get; set; }
+            public string CertificatePath { get; set; }
             /// <summary>
-            /// The password for the encrypted private key in the certificate supplied in <see cref="Certificate" />.
+            /// The password for the encrypted private key in the certificate supplied in <see cref="CertificatePath" />.
             /// </summary>
             /// <value></value>
             public string CertificatePassword { get; set; }

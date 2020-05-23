@@ -112,7 +112,7 @@ namespace Bit.Core.Utilities
                         {
                             config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
                                 secureProtocols: protocols,
-                                certProvider: new CertificateFileProvider(globalSettings.Syslog.Certificate,
+                                certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
                                                                           globalSettings.Syslog?.CertificatePassword ?? string.Empty));
                         }
 
