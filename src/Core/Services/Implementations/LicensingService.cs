@@ -24,6 +24,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IMailService _mailService;
         private readonly ILogger<LicensingService> _logger;
 
         private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
@@ -32,6 +33,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IMailService mailService,
             IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
             GlobalSettings globalSettings)
@@ -39,6 +41,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _mailService = mailService;
             _logger = logger;
             _globalSettings = globalSettings;
 
@@ -124,6 +127,8 @@ namespace Bit.Core.Services
             org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
             org.RevisionDate = DateTime.UtcNow;
             await _organizationRepository.ReplaceAsync(org);
+
+            await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.Name);
         }
 
         public async Task ValidateUsersAsync()
@@ -213,6 +218,8 @@ namespace Bit.Core.Services
             user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;
             user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+
+            await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
         }
 
         public bool VerifyLicense(ILicense license)
