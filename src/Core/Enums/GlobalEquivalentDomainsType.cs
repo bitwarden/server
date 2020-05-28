@@ -83,5 +83,6 @@
         Cisco = 78,
         CedarFair = 79,
         Ubiquiti = 80,
+        Discord = 81,
     }
 }
