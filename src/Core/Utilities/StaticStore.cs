@@ -92,6 +92,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Cisco, new List<string> { "dnsomatic.com", "opendns.com", "umbrella.com"});
             GlobalDomains.Add(GlobalEquivalentDomainsType.CedarFair, new List<string> {"cagreatamerica.com", "canadaswonderland.com", "carowinds.com", "cedarfair.com", "cedarpoint.com", "dorneypark.com", "kingsdominion.com", "knotts.com", "miadventure.com", "schlitterbahn.com", "valleyfair.com", "visitkingsisland.com", "worldsoffun.com"});
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubiquiti, new List<string> {"ubnt.com", "ui.com"});
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Discord, new List<string> {"discordapp.com", "discord.com"});
             #endregion
 
             #region Plans
