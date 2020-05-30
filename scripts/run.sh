@@ -81,6 +81,15 @@ function install() {
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION
+
+    # If synology device ~ https://xpenology.com/forum/topic/12455-bitwarden-self-hosted-password-manager-on-docker/
+    if uname -a | grep -q " synology_"
+    then
+        grep "^      - ../.*:/.*" $DOCKER_DIR/docker-compose.yml | awk -F' - ../|:' '{print $2}' | while read dir
+        do
+            mkdir -p $OUTPUT_DIR/$dir
+        done
+    fi
 }
 
 function dockerComposeUp() {
