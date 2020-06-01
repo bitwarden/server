@@ -85,6 +85,7 @@ function install() {
 
 function dockerComposeUp() {
     dockerComposeFiles
+    dockerComposeVolumes
     docker-compose up -d
 }
 
@@ -106,6 +107,30 @@ function dockerComposeFiles() {
         export COMPOSE_FILE="$DOCKER_DIR/docker-compose.yml"
     fi
     export COMPOSE_HTTP_TIMEOUT="300"
+}
+
+function dockerComposeVolumes() {
+    createDir "core"
+    createDir "core/attachments"
+    createDir "logs"
+    createDir "logs/admin"
+    createDir "logs/api"
+    createDir "logs/events"
+    createDir "logs/icons"
+    createDir "logs/identity"
+    createDir "logs/mssql"
+    createDir "logs/nginx"
+    createDir "logs/notifications"
+    createDir "mssql/backups"
+    createDir "mssql/data"
+}
+
+function createDir() {
+    if [ ! -d "${OUTPUT_DIR}/$1" ]
+    then
+        echo "Creating directory $OUTPUT_DIR/$1"
+        mkdir -p $OUTPUT_DIR/$1
+    fi
 }
 
 function dockerPrune() {

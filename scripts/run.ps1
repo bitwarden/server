@@ -76,6 +76,7 @@ function Install() {
 
 function Docker-Compose-Up {
     Docker-Compose-Files
+    Docker-Compose-Volumes
     Invoke-Expression ("docker-compose up -d{0}" -f $quietPullFlag)
 }
 
@@ -97,6 +98,30 @@ function Docker-Compose-Files {
         $env:COMPOSE_FILE = "${dockerDir}\docker-compose.yml"
     }
     $env:COMPOSE_HTTP_TIMEOUT = "300"
+}
+
+function Docker-Compose-Volumes {
+    Create-Dir "core"
+    Create-Dir "core/attachments"
+    Create-Dir "logs"
+    Create-Dir "logs/admin"
+    Create-Dir "logs/api"
+    Create-Dir "logs/events"
+    Create-Dir "logs/icons"
+    Create-Dir "logs/identity"
+    Create-Dir "logs/mssql"
+    Create-Dir "logs/nginx"
+    Create-Dir "logs/notifications"
+    Create-Dir "mssql/backups"
+    Create-Dir "mssql/data"
+}
+
+function Create-Dir($str) {
+    $outPath = "${outputDir}/$str"
+    if (!(Test-Path -Path $outPath )) {
+        Write-Line "Creating directory $outPath"
+        New-Item -ItemType directory -Path $outPath | Out-Null
+    }
 }
 
 function Docker-Prune {
