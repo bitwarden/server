@@ -210,6 +210,7 @@ then
     updateDatabase
 elif [ "$1" == "update" ]
 then
+    dockerComposeFiles
     CORE_ID=$(docker-compose ps -q admin)
     WEB_ID=$(docker-compose ps -q web)
     if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
