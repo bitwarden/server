@@ -14,7 +14,7 @@ namespace Bit.Core.Utilities
 
         public async Task Invoke(HttpContext httpContext, CurrentContext currentContext, GlobalSettings globalSettings)
         {
-            currentContext.Build(httpContext, globalSettings);
+            await currentContext.BuildAsync(httpContext, globalSettings);
             await _next.Invoke(httpContext);
         }
     }
