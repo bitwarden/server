@@ -26,7 +26,7 @@ namespace Bit.Core
         public virtual Guid? InstallationId { get; set; }
         public virtual Guid? OrganizationId { get; set; }
 
-        public void Build(HttpContext httpContext, GlobalSettings globalSettings)
+        public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
         {
             if (_builtHttpContext)
             {
@@ -35,7 +35,7 @@ namespace Bit.Core
 
             _builtHttpContext = true;
             HttpContext = httpContext;
-            Build(httpContext.User, globalSettings);
+            await BuildAsync(httpContext.User, globalSettings);
 
             if (DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
             {
@@ -49,7 +49,7 @@ namespace Bit.Core
             }
         }
 
-        public void Build(ClaimsPrincipal user, GlobalSettings globalSettings)
+        public async virtual Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
         {
             if (_builtClaimsPrincipal)
             {
@@ -58,9 +58,14 @@ namespace Bit.Core
 
             _builtClaimsPrincipal = true;
             IpAddress = HttpContext.GetIpAddress(globalSettings);
+            await SetContextAsync(user);
+        }
+
+        public virtual Task SetContextAsync(ClaimsPrincipal user)
+        {
             if (user == null || !user.Claims.Any())
             {
-                return;
+                return Task.FromResult(0);
             }
 
             var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
@@ -143,6 +148,7 @@ namespace Bit.Core
                         Type = OrganizationUserType.Manager
                     }));
             }
+            return Task.FromResult(0);
         }
 
         public bool OrganizationUser(Guid orgId)
