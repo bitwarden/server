@@ -49,7 +49,7 @@ namespace Bit.Core.Services
 
         public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
             string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
-            short additionalSeats, bool premiumAccessAddon)
+            short additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             var customerService = new CustomerService();
 
@@ -159,7 +159,21 @@ namespace Bit.Core.Services
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
                         DefaultPaymentMethod = stipeCustomerPaymentMethodId
-                    }
+                    },
+                    // TODO: Address info for zip code and country, optional other address info and tax ID
+                    Address = new AddressOptions
+                    {
+                        Country = null,
+                        PostalCode = null,
+                    },
+                    TaxIdData = new List<CustomerTaxIdDataOptions>
+                    {
+                        new CustomerTaxIdDataOptions
+                        {
+                            Type = "",
+                            Value = null,
+                        },
+                    },
                 });
                 subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 subCreateOptions.Customer = customer.Id;
@@ -1499,6 +1513,76 @@ namespace Bit.Core.Services
             }
 
             return subscriptionInfo;
+        }
+
+        public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
+        {
+            if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+
+                if (customer == null)
+                {
+                    return null;
+                }
+
+                var address = customer.Address;
+                var taxId = customer.TaxIds?.FirstOrDefault();
+
+                return new TaxInfo
+                {
+                    TaxIdNumber = taxId?.Value,
+                    BillingAddressLine1 = address?.Line1,
+                    BillingAddressLine2 = address?.Line2,
+                    BillingAddressCity = address?.City,
+                    BillingAddressState = address?.State,
+                    BillingAddressPostalCode = address?.PostalCode,
+                    BillingAddressCountry = address?.Country,
+                };
+            }
+
+            return null;
+        }
+
+        public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
+        {
+            if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.UpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                {
+                    Address = new AddressOptions
+                    {
+                        Line1 = taxInfo.BillingAddressLine1,
+                        Line2 = taxInfo.BillingAddressLine2,
+                        City = taxInfo.BillingAddressCity,
+                        State = taxInfo.BillingAddressState,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                        Country = taxInfo.BillingAddressCountry,
+                    },
+                });
+
+                if (!subscriber.IsUser() && customer != null)
+                {
+                    var taxIdService = new TaxIdService();
+                    var taxId = customer.TaxIds?.FirstOrDefault();
+
+                    if (taxId != null)
+                    {
+                        await taxIdService.DeleteAsync(customer.Id, taxId.Id);
+                    }
+                    if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber) &&
+                        !string.IsNullOrWhiteSpace(taxInfo.TaxIdType))
+                    {
+                        await taxIdService.CreateAsync(customer.Id, new TaxIdCreateOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        });
+                    }
+                }
+            }
         }
 
         private PaymentMethod GetLatestCardPaymentMethod(string customerId)

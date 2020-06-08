@@ -618,5 +618,38 @@ namespace Bit.Api.Controllers
 
             return token;
         }
+        
+        [HttpGet("tax")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<TaxInfoResponseModel> GetTaxInfo()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var taxInfo = await _paymentService.GetTaxInfoAsync(user);
+            return new TaxInfoResponseModel(taxInfo);
+        }
+        
+        [HttpPut("tax")]
+        [HttpPost("tax")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task PutTaxInfo([FromBody]TaxInfoUpdateRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var taxInfo = new TaxInfo
+            {
+                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressCountry = model.Country,
+            };
+            await _paymentService.SaveTaxInfoAsync(user, taxInfo);
+        }
     }
 }
