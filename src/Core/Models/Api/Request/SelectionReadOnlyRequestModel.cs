@@ -11,13 +11,15 @@ namespace Bit.Core.Models.Api
         [Required]
         public string Id { get; set; }
         public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
 
         public SelectionReadOnly ToSelectionReadOnly()
         {
             return new SelectionReadOnly
             {
                 Id = new Guid(Id),
-                ReadOnly = ReadOnly
+                ReadOnly = ReadOnly,
+                HidePasswords = HidePasswords,
             };
         }
     }

@@ -21,14 +21,18 @@ BEGIN
     UPDATE
         [Target]
     SET
-        [Target].[ReadOnly] = [Source].[ReadOnly]
+        [Target].[ReadOnly] = [Source].[ReadOnly],
+        [Target].[HidePasswords] = [Source].[HidePasswords]
     FROM
         [dbo].[CollectionUser] AS [Target]
     INNER JOIN
         @Collections AS [Source] ON [Source].[Id] = [Target].[CollectionId]
     WHERE
         [Target].[OrganizationUserId] = @Id
-        AND [Target].[ReadOnly] != [Source].[ReadOnly]
+        AND (
+            [Target].[ReadOnly] != [Source].[ReadOnly]
+            OR [Target].[HidePasswords] != [Source].[HidePasswords]
+        )
 
     -- Insert
     INSERT INTO
@@ -36,7 +40,8 @@ BEGIN
     SELECT
         [Source].[Id],
         @Id,
-        [Source].[ReadOnly]
+        [Source].[ReadOnly],
+        [Source].[HidePasswords]
     FROM
         @Collections AS [Source]
     INNER JOIN

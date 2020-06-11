@@ -17,12 +17,19 @@ SELECT
     CASE
         WHEN
             OU.[AccessAll] = 1
-            OR CU.[ReadOnly] = 0
             OR G.[AccessAll] = 1
-            OR CG.[ReadOnly] = 0
+            OR COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1
         ELSE 0
     END [Edit],
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 1
+        ELSE 0
+    END [ViewPassword],
     CASE
         WHEN O.[UseTotp] = 1
         THEN 1
@@ -55,6 +62,7 @@ UNION ALL
 SELECT
     *,
     1 [Edit],
+    1 [ViewPassword],
     0 [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId)

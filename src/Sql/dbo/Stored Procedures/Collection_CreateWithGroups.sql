@@ -24,12 +24,14 @@ BEGIN
     (
         [CollectionId],
         [GroupId],
-        [ReadOnly]
+        [ReadOnly],
+        [HidePasswords]
     )
     SELECT
         @Id,
         [Id],
-        [ReadOnly]
+        [ReadOnly],
+        [HidePasswords]
     FROM
         @Groups
     WHERE

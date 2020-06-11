@@ -29,12 +29,14 @@ BEGIN
     (
         [CollectionId],
         [OrganizationUserId],
-        [ReadOnly]
+        [ReadOnly],
+        [HidePasswords]
     )
     SELECT
         [Id],
         @Id,
-        [ReadOnly]
+        [ReadOnly],
+        [HidePasswords]
     FROM
         @Collections
     WHERE

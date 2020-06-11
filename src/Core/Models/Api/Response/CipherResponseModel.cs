@@ -89,11 +89,13 @@ namespace Bit.Core.Models.Api
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
+            ViewPassword = cipher.ViewPassword;
         }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public bool Edit { get; set; }
+        public bool ViewPassword { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel
