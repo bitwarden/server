@@ -1,20 +1,18 @@
 {
-  "name": "bitwarden",
+  "name": "bitwarden-admin",
   "version": "0.0.0",
+  "description": "Bitwarden System Admin Portal",
+  "repository": "https://github.com/bitwarden/server",
+  "license": "GPL-3.0",
   "devDependencies": {
     "bootstrap": "4.5.0",
+    "del": "5.1.0",
     "font-awesome": "4.7.0",
-    "gulp": "3.9.1",
-    "gulp-concat": "2.6.1",
-    "gulp-cssmin": "0.2.0",
+    "gulp": "4.0.2",
     "gulp-google-webfonts": "2.0.0",
     "gulp-sass": "4.0.1",
-    "gulp-uglify": "3.0.0",
-    "jquery": "3.4.1",
+    "jquery": "3.5.1",
     "merge-stream": "1.0.1",
-    "natives": "1.1.6",
-    "popper.js": "1.14.4",
-    "rimraf": "2.6.2",
-    "run-sequence": "2.2.1"
+    "popper.js": "1.16.1"
   }
 }
