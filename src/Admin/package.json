@@ -1,5 +1,5 @@
 {
-  "name": "bitwarden",
+  "name": "bitwarden-admin",
   "version": "0.0.0",
   "description": "Bitwarden System Admin Portal",
   "repository": "https://github.com/bitwarden/server",
