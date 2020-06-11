@@ -1,7 +1,7 @@
 {
   "name": "bitwarden",
   "version": "0.0.0",
-  "description": "-",
+  "description": "Bitwarden System Admin Portal",
   "repository": "https://github.com/bitwarden/server",
   "license": "GPL-3.0",
   "devDependencies": {
