@@ -146,7 +146,7 @@ namespace Bit.Core.Services
             }
 
             Customer customer = null;
-            Subscription subscription = null;
+            Subscription subscription;
             try
             {
                 customer = await customerService.CreateAsync(new CustomerCreateOptions
@@ -160,18 +160,22 @@ namespace Bit.Core.Services
                     {
                         DefaultPaymentMethod = stipeCustomerPaymentMethodId
                     },
-                    // TODO: Address info for zip code and country, optional other address info and tax ID
                     Address = new AddressOptions
                     {
-                        Country = null,
-                        PostalCode = null,
+                        Country = taxInfo.BillingAddressCountry,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                        // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name intead.
+                        Line1 = taxInfo.BillingAddressLine1 ?? org.BusinessName,
+                        Line2 = taxInfo.BillingAddressLine2,
+                        City = taxInfo.BillingAddressCity,
+                        State = taxInfo.BillingAddressState,
                     },
-                    TaxIdData = new List<CustomerTaxIdDataOptions>
+                    TaxIdData = !taxInfo.HasTaxId ? null : new List<CustomerTaxIdDataOptions>
                     {
                         new CustomerTaxIdDataOptions
                         {
-                            Type = "",
-                            Value = null,
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
                         },
                     },
                 });
@@ -1530,6 +1534,13 @@ namespace Bit.Core.Services
                 var address = customer.Address;
                 var taxId = customer.TaxIds?.FirstOrDefault();
 
+                // Line1 is required, so if missing we're using the subscriber name
+                // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
+                if (address != null && address.Line1 == subscriber.BillingName())
+                {
+                    address.Line1 = null;
+                }
+
                 return new TaxInfo
                 {
                     TaxIdNumber = taxId?.Value,
@@ -1554,7 +1565,7 @@ namespace Bit.Core.Services
                 {
                     Address = new AddressOptions
                     {
-                        Line1 = taxInfo.BillingAddressLine1,
+                        Line1 = taxInfo.BillingAddressLine1 ?? subscriber.BillingName(),
                         Line2 = taxInfo.BillingAddressLine2,
                         City = taxInfo.BillingAddressCity,
                         State = taxInfo.BillingAddressState,

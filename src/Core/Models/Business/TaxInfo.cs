@@ -136,5 +136,11 @@
                 return _taxIdType;
             }
         }
+
+        public bool HasTaxId
+        {
+            get => !string.IsNullOrWhiteSpace(TaxIdNumber) &&
+                !string.IsNullOrWhiteSpace(TaxIdType);
+        }
     }
 }
