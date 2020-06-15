@@ -47,7 +47,8 @@ namespace Bit.Core.Models.Api
                 Type = Type,
                 UserId = !hasOrgId ? (Guid?)userId : null,
                 OrganizationId = allowOrgIdSet && hasOrgId ? new Guid(OrganizationId) : (Guid?)null,
-                Edit = true
+                Edit = true,
+                ViewPassword = true,
             };
             ToCipherDetails(cipher);
             return cipher;
