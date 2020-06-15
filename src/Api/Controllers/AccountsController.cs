@@ -634,7 +634,6 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPut("tax")]
-        [HttpPost("tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutTaxInfo([FromBody]TaxInfoUpdateRequestModel model)
         {

@@ -26,9 +26,13 @@
             {
                 if (string.IsNullOrWhiteSpace(BillingAddressCountry) ||
                     string.IsNullOrWhiteSpace(TaxIdNumber))
+                {
                     return null;
+                }
                 if (!string.IsNullOrWhiteSpace(_taxIdType))
+                {
                     return _taxIdType;
+                }
 
                 switch (BillingAddressCountry)
                 {
@@ -44,7 +48,9 @@
                     case "CA":
                         // May break for those in Québec given the assumption of QST
                         if (BillingAddressState?.Contains("bec") ?? false)
+                        {
                             _taxIdType = "ca_qst";
+                        }
                         _taxIdType = "ca_bn";
                         break;
                     case "CL":

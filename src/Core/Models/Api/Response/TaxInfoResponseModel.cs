@@ -4,7 +4,8 @@ namespace Bit.Core.Models.Api
 {
     public class TaxInfoResponseModel
     {
-        public TaxInfoResponseModel () { }
+        public TaxInfoResponseModel() { }
+
         public TaxInfoResponseModel(TaxInfo taxInfo)
         {
             if (taxInfo == null)

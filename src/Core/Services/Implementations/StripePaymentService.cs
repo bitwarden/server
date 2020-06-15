@@ -165,7 +165,7 @@ namespace Bit.Core.Services
                         Country = taxInfo.BillingAddressCountry,
                         PostalCode = taxInfo.BillingAddressPostalCode,
                         // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name intead.
-                        Line1 = taxInfo.BillingAddressLine1 ?? org.BusinessName,
+                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
                         Line2 = taxInfo.BillingAddressLine2,
                         City = taxInfo.BillingAddressCity,
                         State = taxInfo.BillingAddressState,
@@ -1536,7 +1536,7 @@ namespace Bit.Core.Services
 
                 // Line1 is required, so if missing we're using the subscriber name
                 // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
-                if (address != null && address.Line1 == subscriber.BillingName())
+                if (address != null && string.IsNullOrWhiteSpace(address.Line1))
                 {
                     address.Line1 = null;
                 }
@@ -1565,7 +1565,7 @@ namespace Bit.Core.Services
                 {
                     Address = new AddressOptions
                     {
-                        Line1 = taxInfo.BillingAddressLine1 ?? subscriber.BillingName(),
+                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
                         Line2 = taxInfo.BillingAddressLine2,
                         City = taxInfo.BillingAddressCity,
                         State = taxInfo.BillingAddressState,
