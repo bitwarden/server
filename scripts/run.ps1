@@ -182,7 +182,7 @@ function Restart {
     Print-Environment
 }
 
-function certRestart {
+function Cert-Restart {
     Docker-Compose-Down
     Docker-Compose-Pull
     Force-Update-Lets-Encrypt
@@ -216,7 +216,7 @@ elseif ($stop) {
     Docker-Compose-Down
 }
 elseif ($renewcert) {
-    certRestart
+    Cert-Restart
 }
 elseif ($updateconf) {
     Docker-Compose-Down
