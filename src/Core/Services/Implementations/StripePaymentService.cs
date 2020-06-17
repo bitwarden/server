@@ -49,7 +49,7 @@ namespace Bit.Core.Services
 
         public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
             string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
-            short additionalSeats, bool premiumAccessAddon)
+            short additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             var customerService = new CustomerService();
 
@@ -146,7 +146,7 @@ namespace Bit.Core.Services
             }
 
             Customer customer = null;
-            Subscription subscription = null;
+            Subscription subscription;
             try
             {
                 customer = await customerService.CreateAsync(new CustomerCreateOptions
@@ -159,7 +159,25 @@ namespace Bit.Core.Services
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
                         DefaultPaymentMethod = stipeCustomerPaymentMethodId
-                    }
+                    },
+                    Address = new AddressOptions
+                    {
+                        Country = taxInfo.BillingAddressCountry,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                        // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name intead.
+                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                        Line2 = taxInfo.BillingAddressLine2,
+                        City = taxInfo.BillingAddressCity,
+                        State = taxInfo.BillingAddressState,
+                    },
+                    TaxIdData = !taxInfo.HasTaxId ? null : new List<CustomerTaxIdDataOptions>
+                    {
+                        new CustomerTaxIdDataOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        },
+                    },
                 });
                 subCreateOptions.AddExpand("latest_invoice.payment_intent");
                 subCreateOptions.Customer = customer.Id;
@@ -1499,6 +1517,83 @@ namespace Bit.Core.Services
             }
 
             return subscriptionInfo;
+        }
+
+        public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
+        {
+            if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+
+                if (customer == null)
+                {
+                    return null;
+                }
+
+                var address = customer.Address;
+                var taxId = customer.TaxIds?.FirstOrDefault();
+
+                // Line1 is required, so if missing we're using the subscriber name
+                // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
+                if (address != null && string.IsNullOrWhiteSpace(address.Line1))
+                {
+                    address.Line1 = null;
+                }
+
+                return new TaxInfo
+                {
+                    TaxIdNumber = taxId?.Value,
+                    BillingAddressLine1 = address?.Line1,
+                    BillingAddressLine2 = address?.Line2,
+                    BillingAddressCity = address?.City,
+                    BillingAddressState = address?.State,
+                    BillingAddressPostalCode = address?.PostalCode,
+                    BillingAddressCountry = address?.Country,
+                };
+            }
+
+            return null;
+        }
+
+        public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
+        {
+            if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.UpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                {
+                    Address = new AddressOptions
+                    {
+                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                        Line2 = taxInfo.BillingAddressLine2,
+                        City = taxInfo.BillingAddressCity,
+                        State = taxInfo.BillingAddressState,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                        Country = taxInfo.BillingAddressCountry,
+                    },
+                });
+
+                if (!subscriber.IsUser() && customer != null)
+                {
+                    var taxIdService = new TaxIdService();
+                    var taxId = customer.TaxIds?.FirstOrDefault();
+
+                    if (taxId != null)
+                    {
+                        await taxIdService.DeleteAsync(customer.Id, taxId.Id);
+                    }
+                    if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber) &&
+                        !string.IsNullOrWhiteSpace(taxInfo.TaxIdType))
+                    {
+                        await taxIdService.CreateAsync(customer.Id, new TaxIdCreateOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        });
+                    }
+                }
+            }
         }
 
         private PaymentMethod GetLatestCardPaymentMethod(string customerId)

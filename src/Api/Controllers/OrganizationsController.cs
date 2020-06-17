@@ -462,5 +462,54 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
+        
+        [HttpGet("{id}/tax")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<TaxInfoResponseModel> GetTaxInfo(string id)
+        {
+            var orgIdGuid = new Guid(id);
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var taxInfo = await _paymentService.GetTaxInfoAsync(organization);
+            return new TaxInfoResponseModel(taxInfo);
+        }
+        
+        [HttpPut("{id}/tax")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task PutTaxInfo(string id, [FromBody]OrganizationTaxInfoUpdateRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if (!_currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var taxInfo = new TaxInfo
+            {
+                TaxIdNumber = model.TaxId,
+                BillingAddressLine1 = model.Line1,
+                BillingAddressLine2 = model.Line2,
+                BillingAddressCity = model.City,
+                BillingAddressState = model.State,
+                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressCountry = model.Country,
+            };
+            await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        }
     }
 }

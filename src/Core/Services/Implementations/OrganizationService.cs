@@ -486,7 +486,7 @@ namespace Bit.Core.Services
             {
                 await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                    signup.PremiumAccessAddon);
+                    signup.PremiumAccessAddon, signup.TaxInfo);
             }
 
             return await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
