@@ -703,7 +703,8 @@ namespace Bit.Core.Services
         }
 
         public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license)
+            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
+            string country, string postalCode)
         {
             if (user.Premium)
             {
@@ -742,7 +743,7 @@ namespace Bit.Core.Services
             else
             {
                 paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                    paymentToken, additionalStorageGb);
+                    paymentToken, additionalStorageGb, country, postalCode);
             }
 
             user.Premium = true;

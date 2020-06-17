@@ -14,7 +14,7 @@ namespace Bit.Core.Services
         Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
            short additionalStorageGb, short additionalSeats, bool premiumAccessAddon);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
-            short additionalStorageGb);
+            short additionalStorageGb, string country, string postalCode);
         Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
         Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
             bool skipInAppPurchaseCheck = false);

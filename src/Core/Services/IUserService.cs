@@ -46,7 +46,8 @@ namespace Bit.Core.Services
         Task<IdentityResult> DeleteAsync(User user, string token);
         Task SendDeleteConfirmationAsync(string email);
         Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license);
+            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
+            string country, string postalCode);
         Task IapCheckAsync(User user, PaymentMethodType paymentMethodType);
         Task UpdateLicenseAsync(User user, UserLicense license);
         Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);

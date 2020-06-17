@@ -75,7 +75,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-            PaymentMethodType paymentMethodType)
+            PaymentMethodType paymentMethodType, TaxInfo taxInfo)
         {
             var organization = await GetOrgById(organizationId);
             if (organization == null)
@@ -83,6 +83,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
+            await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
             var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
                 paymentMethodType, paymentToken);
             if (updated)

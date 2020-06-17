@@ -208,9 +208,18 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-
+            
             await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken,
-                model.PaymentMethodType.Value);
+                model.PaymentMethodType.Value, new TaxInfo
+                {
+                    BillingAddressLine1 = model.Line1,
+                    BillingAddressLine2 = model.Line2,
+                    BillingAddressState = model.State,
+                    BillingAddressCity = model.City,
+                    BillingAddressPostalCode = model.PostalCode,
+                    BillingAddressCountry = model.Country,
+                    TaxIdNumber = model.TaxId,
+                });
         }
 
         [HttpPost("{id}/upgrade")]

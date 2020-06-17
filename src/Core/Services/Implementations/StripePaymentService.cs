@@ -345,7 +345,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
-            string paymentToken, short additionalStorageGb)
+            string paymentToken, short additionalStorageGb, string country, string postalCode)
         {
             if (paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -463,9 +463,27 @@ namespace Bit.Core.Services
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
                         DefaultPaymentMethod = stipeCustomerPaymentMethodId
-                    }
+                    },
+                    Address = new AddressOptions
+                    {
+                        Line1 = string.Empty,
+                        Country = country,
+                        PostalCode = postalCode,
+                    },
                 });
                 createdStripeCustomer = true;
+            }
+            else if (customer != null)
+            {
+                await customerService.UpdateAsync(customer.Id, new CustomerUpdateOptions
+                {
+                    Address = new AddressOptions
+                    {
+                        Line1 = string.Empty,
+                        Country = country,
+                        PostalCode = postalCode,
+                    }
+                });
             }
 
             if (customer == null)
