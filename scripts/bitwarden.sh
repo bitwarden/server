@@ -91,6 +91,7 @@ updatedb
 updaterun
 updateself
 updateconf
+renewcert
 rebuild
 help
 
@@ -132,6 +133,10 @@ elif [ "$1" == "stop" ]
 then
     checkOutputDirExists
     $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+elif [ "$1" == "renewcert" ]
+then
+    checkOutputDirExists
+    $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION
 elif [ "$1" == "updaterun" ]
 then
     checkOutputDirExists

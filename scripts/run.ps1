@@ -8,6 +8,7 @@ param (
     [switch] $stop,
     [switch] $pull,
     [switch] $updateconf,
+    [switch] $renewcert,
     [switch] $updatedb,
     [switch] $update
 )
@@ -139,6 +140,16 @@ function Update-Lets-Encrypt {
     }
 }
 
+function Force-Update-Lets-Encrypt {
+    if (Test-Path -Path "${outputDir}\letsencrypt\live") {
+        Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
+        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
+            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
+            "renew{0} --logs-dir /etc/letsencrypt/logs --force-renew" -f $qFlag
+        Invoke-Expression $certbotExp
+    }
+}
+
 function Update-Database {
     Pull-Setup
     Docker-Compose-Files
@@ -171,6 +182,15 @@ function Restart {
     Print-Environment
 }
 
+function certRestart {
+    Docker-Compose-Down
+    Docker-Compose-Pull
+    Force-Update-Lets-Encrypt
+    Docker-Compose-Up
+    Print-Environment
+}
+
+
 function Pull-Setup {
     Invoke-Expression ("docker pull{0} bitwarden/setup:${coreVersion}" -f "") #TODO: qFlag
 }
@@ -194,6 +214,9 @@ elseif ($pull) {
 }
 elseif ($stop) {
     Docker-Compose-Down
+}
+elseif ($renewcert) {
+    certRestart
 }
 elseif ($updateconf) {
     Docker-Compose-Down

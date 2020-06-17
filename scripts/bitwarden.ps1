@@ -6,6 +6,7 @@ param (
     [switch] $update,
     [switch] $rebuild,
     [switch] $updateconf,
+    [switch] $renewcert,
     [switch] $updatedb,
     [switch] $updaterun,
     [switch] $updateself,
@@ -64,6 +65,7 @@ Available commands:
 -updaterun
 -updateself
 -updateconf
+-renewcert
 -rebuild
 -help
 
@@ -136,6 +138,10 @@ elseif ($updatedb) {
 elseif ($stop) {
     Check-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -stop -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
+}
+elseif ($renewcert) {
+    Check-Output-Dir-Exists
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -renewcert -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($updaterun) {
     Check-Output-Dir-Exists

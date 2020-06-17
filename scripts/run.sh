@@ -148,6 +148,16 @@ function updateLetsEncrypt() {
     fi
 }
 
+function forceupdateLetsEncrypt() {
+	if [ -d "${OUTPUT_DIR}/letsencrypt/live" ]
+	then
+	docker pull certbot/certbot
+	docker run -i --rm --name certbot -p 443:443 -p 80:80 \
+		-v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+		renew --logs-dir /etc/letsencrypt/logs --force-renew
+	fi
+}
+
 function updateDatabase() {
     pullSetup
     dockerComposeFiles
@@ -183,6 +193,14 @@ function restart() {
     printEnvironment
 }
 
+function certrestart() {
+    dockerComposeDown
+    dockerComposePull
+    forceupdateLetsEncrypt
+    dockerComposeUp
+    printEnvironment
+}
+
 function pullSetup() {
     docker pull bitwarden/setup:$COREVERSION
 }
@@ -201,6 +219,9 @@ then
 elif [ "$1" == "stop" ]
 then
     dockerComposeDown
+elif [ "$1" == "renewcert" ]
+then
+	certrestart
 elif [ "$1" == "updateconf" ]
 then
     dockerComposeDown
