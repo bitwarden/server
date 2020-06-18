@@ -7,7 +7,7 @@ namespace Bit.Core.Services
 {
     public class AmazonSqsBlockIpService : IBlockIpService, IDisposable
     {
-        private readonly AmazonSQSClient _client;
+        private readonly IAmazonSQS _client;
         private string _blockIpQueueUrl;
         private string _unblockIpQueueUrl;
         private bool _didInit = false;
@@ -15,6 +15,17 @@ namespace Bit.Core.Services
 
         public AmazonSqsBlockIpService(
             GlobalSettings globalSettings)
+            : this(globalSettings, new AmazonSQSClient(
+                globalSettings.Amazon.AccessKeyId,
+                globalSettings.Amazon.AccessKeySecret,
+                RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region))
+            )
+        {
+        }
+
+        public AmazonSqsBlockIpService(
+            GlobalSettings globalSettings,
+            IAmazonSQS amazonSqs)
         {
             if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
             {
@@ -28,8 +39,8 @@ namespace Bit.Core.Services
             {
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.Region));
             }
-            _client = new AmazonSQSClient(globalSettings.Amazon.AccessKeyId,
-                globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region));
+
+            _client = amazonSqs;
         }
 
         public void Dispose()

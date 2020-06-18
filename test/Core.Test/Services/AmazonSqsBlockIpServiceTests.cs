@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using Amazon.SQS;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
@@ -10,12 +12,23 @@ namespace Bit.Core.Test.Services
         private readonly AmazonSqsBlockIpService _sut;
 
         private readonly GlobalSettings _globalSettings;
+        private readonly IAmazonSQS _amazonSqs;
 
         public AmazonSqsBlockIpServiceTests()
         {
-            _globalSettings = new GlobalSettings();
+            _globalSettings = new GlobalSettings
+            {
+                Amazon =
+                {
+                    AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
+                    AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
+                    Region = "Region-AmazonSesMailDeliveryServiceTests"
+                }
+            };
 
-            _sut = new AmazonSqsBlockIpService(_globalSettings);
+            _amazonSqs = Substitute.For<IAmazonSQS>();
+
+            _sut = new AmazonSqsBlockIpService(_globalSettings, _amazonSqs);
         }
 
         public void Dispose()
@@ -23,12 +36,43 @@ namespace Bit.Core.Test.Services
             _sut?.Dispose();
         }
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact(Skip = "Needs additional work")]
-        public void ServiceExists()
+        [Fact]
+        public async Task BlockIpAsync_UnblockCalled_WhenNotPermanent()
         {
-            Assert.NotNull(_sut);
+            const string expectedIp = "ip";
+
+            await _sut.BlockIpAsync(expectedIp, false);
+
+            await _amazonSqs.Received(2).SendMessageAsync(
+                Arg.Any<string>(),
+                Arg.Is(expectedIp));
+        }
+
+        [Fact]
+        public async Task BlockIpAsync_UnblockNotCalled_WhenPermanent()
+        {
+            const string expectedIp = "ip";
+
+            await _sut.BlockIpAsync(expectedIp, true);
+
+            await _amazonSqs.Received(1).SendMessageAsync(
+                Arg.Any<string>(),
+                Arg.Is(expectedIp));
+        }
+
+        [Fact]
+        public async Task BlockIpAsync_NotBlocked_WhenAlreadyBlockedRecently()
+        {
+            const string expectedIp = "ip";
+
+            await _sut.BlockIpAsync(expectedIp, true);
+
+            // The second call should hit the already blocked guard clause
+            await _sut.BlockIpAsync(expectedIp, true);
+
+            await _amazonSqs.Received(1).SendMessageAsync(
+                Arg.Any<string>(),
+                Arg.Is(expectedIp));
         }
     }
 }
