@@ -208,7 +208,7 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-            
+
             await _organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken,
                 model.PaymentMethodType.Value, new TaxInfo
                 {
