@@ -25,14 +25,14 @@ namespace Bit.Core.Test.Services
         public AmazonSesMailDeliveryServiceTests()
         {
             _globalSettings = new GlobalSettings
-                {
-                    Amazon =
+            {
+                Amazon =
                         {
                             AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
                             AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
                             Region = "Region-AmazonSesMailDeliveryServiceTests"
                         }
-                };
+            };
 
             _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<AmazonSesMailDeliveryService>>();

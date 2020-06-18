@@ -25,10 +25,12 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IWebHostEnvironment hostingEnvironment,
             ILogger<AmazonSesMailDeliveryService> logger)
-        : this(globalSettings, hostingEnvironment, logger, new AmazonSimpleEmailServiceClient(
-            globalSettings.Amazon.AccessKeyId,
-            globalSettings.Amazon.AccessKeySecret,
-            RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region)))
+        : this(globalSettings, hostingEnvironment, logger,
+              new AmazonSimpleEmailServiceClient(
+                globalSettings.Amazon.AccessKeyId,
+                globalSettings.Amazon.AccessKeySecret,
+                RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region))
+              )
         {
         }
 
