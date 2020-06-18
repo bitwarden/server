@@ -345,7 +345,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
-            string paymentToken, short additionalStorageGb)
+            string paymentToken, short additionalStorageGb, TaxInfo taxInfo)
         {
             if (paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -393,7 +393,7 @@ namespace Bit.Core.Services
                 {
                     try
                     {
-                        await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, true);
+                        await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, true, taxInfo);
                     }
                     catch (Exception e)
                     {
@@ -463,7 +463,13 @@ namespace Bit.Core.Services
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
                     {
                         DefaultPaymentMethod = stipeCustomerPaymentMethodId
-                    }
+                    },
+                    Address = new AddressOptions
+                    {
+                        Line1 = string.Empty,
+                        Country = taxInfo.BillingAddressCountry,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                    },
                 });
                 createdStripeCustomer = true;
             }
@@ -1098,7 +1104,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-            string paymentToken, bool allowInAppPurchases = false)
+            string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null)
         {
             if (subscriber == null)
             {
@@ -1286,7 +1292,16 @@ namespace Bit.Core.Services
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
                             DefaultPaymentMethod = stipeCustomerPaymentMethodId
-                        }
+                        },
+                        Address = taxInfo == null ? null : new AddressOptions
+                        {
+                            Country = taxInfo.BillingAddressCountry,
+                            PostalCode = taxInfo.BillingAddressPostalCode,
+                            Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                            Line2 = taxInfo.BillingAddressLine2,
+                            City = taxInfo.BillingAddressCity,
+                            State = taxInfo.BillingAddressState,
+                        },
                     });
 
                     subscriber.Gateway = GatewayType.Stripe;
@@ -1345,7 +1360,16 @@ namespace Bit.Core.Services
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
                             DefaultPaymentMethod = defaultPaymentMethodId
-                        }
+                        },
+                        Address = taxInfo == null ? null : new AddressOptions
+                        {
+                            Country = taxInfo.BillingAddressCountry,
+                            PostalCode = taxInfo.BillingAddressPostalCode,
+                            Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                            Line2 = taxInfo.BillingAddressLine2,
+                            City = taxInfo.BillingAddressCity,
+                            State = taxInfo.BillingAddressState,
+                        },
                     });
                 }
             }

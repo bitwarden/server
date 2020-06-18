@@ -703,7 +703,8 @@ namespace Bit.Core.Services
         }
 
         public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license)
+            PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
+            TaxInfo taxInfo)
         {
             if (user.Premium)
             {
@@ -742,7 +743,7 @@ namespace Bit.Core.Services
             else
             {
                 paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                    paymentToken, additionalStorageGb);
+                    paymentToken, additionalStorageGb, taxInfo);
             }
 
             user.Premium = true;
@@ -844,14 +845,14 @@ namespace Bit.Core.Services
             return secret;
         }
 
-        public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType)
+        public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo)
         {
             if (paymentToken.StartsWith("btok_"))
             {
                 throw new BadRequestException("Invalid token.");
             }
 
-            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken);
+            var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, taxInfo: taxInfo);
             if (updated)
             {
                 await SaveUserAsync(user);

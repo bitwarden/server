@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {
-    public class PaymentRequestModel
+    public class PaymentRequestModel : OrganizationTaxInfoUpdateRequestModel
     {
         [Required]
         public PaymentMethodType? PaymentMethodType { get; set; }

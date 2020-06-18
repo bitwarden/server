@@ -468,13 +468,23 @@ namespace Bit.Api.Controllers
                 license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
             }
 
+            if (!valid && !_globalSettings.SelfHosted && string.IsNullOrWhiteSpace(model.Country))
+            {
+                throw new BadRequestException("Country is required.");
+            }
+
             if (!valid || (_globalSettings.SelfHosted && license == null))
             {
                 throw new BadRequestException("Invalid license.");
             }
 
             var result = await _userService.SignUpPremiumAsync(user, model.PaymentToken,
-                model.PaymentMethodType.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license);
+                model.PaymentMethodType.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
+                new TaxInfo
+                {
+                    BillingAddressCountry = model.Country,
+                    BillingAddressPostalCode = model.PostalCode,
+                });
             var profile = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
             return new PaymentResponseModel
             {
@@ -534,7 +544,12 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType.Value);
+            await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType.Value,
+                new TaxInfo
+                {
+                    BillingAddressCountry = model.Country,
+                    BillingAddressPostalCode = model.PostalCode,
+                });
         }
 
         [HttpPost("storage")]
