@@ -16,7 +16,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<AmazonSesMailDeliveryService> _logger;
-        private readonly AmazonSimpleEmailServiceClient _client;
+        private readonly IAmazonSimpleEmailService _client;
         private readonly string _source;
         private readonly string _senderTag;
         private readonly string _configSetName;
@@ -25,6 +25,18 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IWebHostEnvironment hostingEnvironment,
             ILogger<AmazonSesMailDeliveryService> logger)
+        : this(globalSettings, hostingEnvironment, logger, new AmazonSimpleEmailServiceClient(
+            globalSettings.Amazon.AccessKeyId,
+            globalSettings.Amazon.AccessKeySecret,
+            RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region)))
+        {
+        }
+
+        public AmazonSesMailDeliveryService(
+            GlobalSettings globalSettings,
+            IWebHostEnvironment hostingEnvironment,
+            ILogger<AmazonSesMailDeliveryService> logger,
+            IAmazonSimpleEmailService amazonSimpleEmailService)
         {
             if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
             {
@@ -42,8 +54,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _hostingEnvironment = hostingEnvironment;
             _logger = logger;
-            _client = new AmazonSimpleEmailServiceClient(globalSettings.Amazon.AccessKeyId,
-                globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region));
+            _client = amazonSimpleEmailService;
             _source = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
             _senderTag = $"Server_{globalSettings.ProjectName}";
             if (!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))

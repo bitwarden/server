@@ -1,4 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Amazon.SimpleEmail;
+using Amazon.SimpleEmail.Model;
+using Bit.Core.Models.Mail;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,16 +20,29 @@ namespace Bit.Core.Test.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<AmazonSesMailDeliveryService> _logger;
+        private readonly IAmazonSimpleEmailService _amazonSimpleEmailService;
 
         public AmazonSesMailDeliveryServiceTests()
         {
-            _globalSettings = new GlobalSettings();
+            _globalSettings = new GlobalSettings
+                {
+                    Amazon =
+                        {
+                            AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
+                            AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
+                            Region = "Region-AmazonSesMailDeliveryServiceTests"
+                        }
+                };
+
             _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<AmazonSesMailDeliveryService>>();
+            _amazonSimpleEmailService = Substitute.For<IAmazonSimpleEmailService>();
+
             _sut = new AmazonSesMailDeliveryService(
                 _globalSettings,
                 _hostingEnvironment,
-                _logger
+                _logger,
+                _amazonSimpleEmailService
             );
         }
 
@@ -32,12 +51,40 @@ namespace Bit.Core.Test.Services
             _sut?.Dispose();
         }
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact(Skip = "Needs additional work")]
-        public void ServiceExists()
+        [Fact]
+        public async Task SendEmailAsync_CallsSendEmailAsync_WhenMessageIsValid()
         {
-            Assert.NotNull(_sut);
+            var mailMessage = new MailMessage
+            {
+                ToEmails = new List<string> { "ToEmails" },
+                BccEmails = new List<string> { "BccEmails" },
+                Subject = "Subject",
+                HtmlContent = "HtmlContent",
+                TextContent = "TextContent",
+                Category = "Category"
+            };
+
+            await _sut.SendEmailAsync(mailMessage);
+
+            await _amazonSimpleEmailService.Received(1).SendEmailAsync(
+                Arg.Do<SendEmailRequest>(request =>
+                {
+                    Assert.False(string.IsNullOrEmpty(request.Source));
+
+                    Assert.Single(request.Destination.ToAddresses);
+                    Assert.Equal(mailMessage.ToEmails.First(), request.Destination.ToAddresses.First());
+
+                    Assert.Equal(mailMessage.Subject, request.Message.Subject.Data);
+                    Assert.Equal(mailMessage.HtmlContent, request.Message.Body.Html.Data);
+                    Assert.Equal(mailMessage.TextContent, request.Message.Body.Text.Data);
+
+                    Assert.Single(request.Destination.BccAddresses);
+                    Assert.Equal(mailMessage.BccEmails.First(), request.Destination.BccAddresses.First());
+
+                    Assert.Contains(request.Tags, x => x.Name == "Environment");
+                    Assert.Contains(request.Tags, x => x.Name == "Sender");
+                    Assert.Contains(request.Tags, x => x.Name == "Category");
+                }));
         }
     }
 }
