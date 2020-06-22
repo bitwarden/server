@@ -69,7 +69,10 @@
     <Folder Include="dbo\User Defined Types\" />
   </ItemGroup>
   <ItemGroup>
+    <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
+    <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
+    <Build Include="dbo\Tables\SsoConfig.sql" />
     <Build Include="dbo\Tables\User.sql" />
     <Build Include="dbo\Tables\U2f.sql" />
     <Build Include="dbo\Tables\Device.sql" />
@@ -84,6 +87,7 @@
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Tables\Organization.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
+    <Build Include="dbo\Views\SsoConfigView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\U2fView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
