@@ -10,3 +10,59 @@ BEGIN
     );
 END
 GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoConfig')
+    BEGIN
+        DROP VIEW [dbo].[SsoConfigView]
+    END
+GO
+
+CREATE VIEW [dbo].[SsoConfigView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[SsoConfig]
+GO
+
+IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[SsoConfig_ReadByIdentifier]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_ReadByIdentifier]
+    @Identifier NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[SsoConfigView]
+    WHERE
+            [Identifier] = @Identifier
+END
+GO
+
+IF OBJECT_ID('[dbo].[SsoConfig_ReadByOrganizationId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[SsoConfig_ReadByOrganizationId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[SsoConfigView]
+    WHERE
+            [OrganizationId] = @OrganizationId
+END
+GO
