@@ -1,10 +1,10 @@
 ﻿CREATE PROCEDURE [dbo].[SsoConfig_ReadByIdentifier]
-@Identifier NVARCHAR(50)
+    @Identifier NVARCHAR(50)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT
+    SELECT TOP 1
         *
     FROM
         [dbo].[SsoConfigView]
