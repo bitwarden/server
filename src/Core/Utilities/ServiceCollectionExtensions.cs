@@ -382,7 +382,7 @@ namespace Bit.Core.Utilities
             }
 
             services.AddTransient<ClientStore>();
-            services.AddTransient<ICorsPolicyService, AllowAllCorsPolicyService>();
+            services.AddTransient<ICorsPolicyService, VaultCorsPolicyService>();
             services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
