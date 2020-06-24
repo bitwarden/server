@@ -835,7 +835,7 @@ namespace Bit.Core.Services
                 if (charges?.Data != null)
                 {
                     var refundService = new RefundService();
-                    foreach (var charge in charges.Data.Where(c => c.Captured.GetValueOrDefault() && !c.Refunded))
+                    foreach (var charge in charges.Data.Where(c => c.Captured && !c.Refunded))
                     {
                         await refundService.CreateAsync(new RefundCreateOptions { Charge = charge.Id });
                     }
