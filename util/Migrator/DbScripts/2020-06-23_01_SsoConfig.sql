@@ -26,6 +26,7 @@ SELECT
     *
 FROM
     [dbo].[SsoConfig]
+GO
 
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
 BEGIN
