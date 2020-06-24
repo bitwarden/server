@@ -14,7 +14,7 @@ BEGIN
 END
 GO
 
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoConfig')
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoConfigView')
 BEGIN
     DROP VIEW [dbo].[SsoConfigView]
 END
@@ -26,6 +26,7 @@ SELECT
     *
 FROM
     [dbo].[SsoConfig]
+GO
 
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
 BEGIN
