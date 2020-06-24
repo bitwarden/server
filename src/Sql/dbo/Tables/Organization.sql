@@ -1,5 +1,6 @@
 ﻿CREATE TABLE [dbo].[Organization] (
     [Id]                    UNIQUEIDENTIFIER NOT NULL,
+    [Identifier]            NVARCHAR (50)    NULL,
     [Name]                  NVARCHAR (50)    NOT NULL,
     [BusinessName]          NVARCHAR (50)    NULL,
     [BusinessAddress1]      NVARCHAR (50)    NULL,
@@ -42,3 +43,6 @@ CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
     INCLUDE ([UseTotp]);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_Identifier]
+    ON [dbo].[Organization]([Identifier] ASC)
