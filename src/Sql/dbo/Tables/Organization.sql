@@ -44,5 +44,7 @@ CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     INCLUDE ([UseTotp]);
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Organization_Identifier]
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
+    WHERE [Identifier] IS NOT NULL;
+

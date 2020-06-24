@@ -23,11 +23,9 @@ GO
 CREATE VIEW [dbo].[SsoConfigView]
 AS
 SELECT
-    SSO.*
+    *
 FROM
-    [dbo].[SsoConfig] SSO
-INNER JOIN
-    [dbo].[Organization] O ON O.[Identifier] = SSO.[Identifier]
+    [dbo].[SsoConfig]
 
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
 BEGIN

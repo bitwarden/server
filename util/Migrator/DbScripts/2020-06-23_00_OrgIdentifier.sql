@@ -12,7 +12,8 @@ IF NOT EXISTS (
     AND object_id = OBJECT_ID('[dbo].[Organization]')
 )
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_Organization_Identifier]
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
         ON [dbo].[Organization]([Identifier] ASC)
+        WHERE [Identifier] IS NOT NULL;
 END
 GO
