@@ -1,11 +1,14 @@
 ﻿IF OBJECT_ID('[dbo].[SsoConfig]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[SsoConfig] (
-        [OrganizationId]     UNIQUEIDENTIFIER    NULL,
+        [Id]                 BIGINT              IDENTITY (1, 1) NOT NULL,
+        [Enabled]            BIT                 NOT NULL,
+        [OrganizationId]     UNIQUEIDENTIFIER    NOT NULL,
         [Identifier]         NVARCHAR (50)       NULL,
         [Data]               NVARCHAR (MAX)      NULL,
         [CreationDate]       DATETIME2 (7)       NOT NULL,
         [RevisionDate]       DATETIME2 (7)       NOT NULL,
+        CONSTRAINT [PK_SsoConfig] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_SsoConfig_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) 
     );
 END
@@ -23,7 +26,6 @@ SELECT
     *
 FROM
     [dbo].[SsoConfig]
-GO
 
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
 BEGIN
@@ -42,7 +44,7 @@ BEGIN
     FROM
         [dbo].[SsoConfigView]
     WHERE
-            [Identifier] = @Identifier
+        [Identifier] = @Identifier
 END
 GO
 
@@ -63,6 +65,6 @@ BEGIN
     FROM
         [dbo].[SsoConfigView]
     WHERE
-            [OrganizationId] = @OrganizationId
+        [OrganizationId] = @OrganizationId
 END
 GO
