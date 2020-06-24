@@ -14,7 +14,7 @@ BEGIN
 END
 GO
 
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoConfig')
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoConfigView')
 BEGIN
     DROP VIEW [dbo].[SsoConfigView]
 END
