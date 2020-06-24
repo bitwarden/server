@@ -5,12 +5,10 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT TOP 1
-        SSO.*,
-        O.[Identifier]
+        SSO.*
     FROM
         [dbo].[SsoConfigView] SSO
     INNER JOIN
         [dbo].[Organization] O ON O.[Id] = SSO.[OrganizationId]
-    WHERE
-        O.[Identifier] = @Identifier
+        AND O.[Identifier] = @Identifier
 END
