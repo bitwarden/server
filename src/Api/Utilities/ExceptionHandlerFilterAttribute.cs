@@ -54,18 +54,17 @@ namespace Bit.Api.Utilities
                     errorMessage = badRequestException.Message;
                 }
             }
-            else if (exception is StripeException stripeException &&
-                stripeException?.StripeError?.ErrorType == "card_error")
+            else if (exception is StripeException stripeException && stripeException?.StripeError?.Type == "card_error")
             {
                 context.HttpContext.Response.StatusCode = 400;
                 if (_publicApi)
                 {
-                    publicErrorModel = new PublicApi.ErrorResponseModel(stripeException.StripeError.Parameter,
+                    publicErrorModel = new PublicApi.ErrorResponseModel(stripeException.StripeError.Param,
                         stripeException.Message);
                 }
                 else
                 {
-                    internalErrorModel = new InternalApi.ErrorResponseModel(stripeException.StripeError.Parameter,
+                    internalErrorModel = new InternalApi.ErrorResponseModel(stripeException.StripeError.Param,
                         stripeException.Message);
                 }
             }

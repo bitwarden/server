@@ -53,7 +53,7 @@
     <PackageReference Include="System.Text.Json" Version="4.7.2" />
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.17.0" />
-    <PackageReference Include="Stripe.net" Version="36.9.0" />
+    <PackageReference Include="Stripe.net" Version="37.13.0" />
     <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
