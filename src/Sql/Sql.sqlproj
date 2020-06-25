@@ -69,8 +69,10 @@
     <Folder Include="dbo\User Defined Types\" />
   </ItemGroup>
   <ItemGroup>
+    <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\SsoConfig_Update.sql" />
     <Build Include="dbo\Tables\Grant.sql" />
     <Build Include="dbo\Tables\SsoConfig.sql" />
     <Build Include="dbo\Tables\User.sql" />

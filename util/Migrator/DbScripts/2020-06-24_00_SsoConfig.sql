@@ -4,7 +4,6 @@ BEGIN
         [Id]                 BIGINT              IDENTITY (1, 1) NOT NULL,
         [Enabled]            BIT                 NOT NULL,
         [OrganizationId]     UNIQUEIDENTIFIER    NOT NULL,
-        [Identifier]         NVARCHAR (50)       NULL,
         [Data]               NVARCHAR (MAX)      NULL,
         [CreationDate]       DATETIME2 (7)       NOT NULL,
         [RevisionDate]       DATETIME2 (7)       NOT NULL,
@@ -26,6 +25,74 @@ SELECT
     *
 FROM
     [dbo].[SsoConfig]
+GO
+
+IF OBJECT_ID('[dbo].[SsoConfig_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoConfig_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_Create]
+    @Id BIGINT,
+    @Enabled BIT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Data NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[SsoConfig]
+    (
+        [Id],
+        [Enabled],
+        [OrganizationId],
+        [Data],
+        [CreationDate],
+        [RevisionDate]
+    )
+    VALUES
+    (
+        @Id,
+        @Enabled,
+        @OrganizationId,
+        @Data,
+        @CreationDate,
+        @RevisionDate
+    )
+END
+GO
+
+IF OBJECT_ID('[dbo].[SsoConfig_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoConfig_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_Update]
+    @Id BIGINT,
+    @Enabled BIT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Data NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[SsoConfig]
+    SET
+        [Enabled] = @Enabled,
+        [OrganizationId] = @OrganizationId,
+        [Data] = @Data,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate
+    WHERE
+        [Id] = @Id
+END
 GO
 
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
