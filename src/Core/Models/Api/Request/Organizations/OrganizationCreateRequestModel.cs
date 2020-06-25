@@ -37,7 +37,6 @@ namespace Bit.Core.Models.Api
         public string BillingAddressCity { get; set; }
         public string BillingAddressState { get; set; }
         public string BillingAddressPostalCode { get; set; }
-        [Required]
         [StringLength(2)]
         public string BillingAddressCountry { get; set; }
 
