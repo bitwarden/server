@@ -4,7 +4,7 @@ namespace Bit.Core.Models.Table
 {
     public class SsoConfig
     {
-        public long Id { get; set; }
+        public long? Id { get; set; }
         public bool Enabled { get; set; } = true;
         public Guid OrganizationId { get; set; }
         public string Data { get; set; }
