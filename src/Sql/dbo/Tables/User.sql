@@ -23,6 +23,7 @@
     [Gateway]                         TINYINT          NULL,
     [GatewayCustomerId]               VARCHAR (50)     NULL,
     [GatewaySubscriptionId]           VARCHAR (50)     NULL,
+    [ReferenceId]                     NVARCHAR (50)    NULL,
     [LicenseKey]                      VARCHAR (100)    NULL,
     [Kdf]                             TINYINT          NOT NULL,
     [KdfIterations]                   INT              NOT NULL,

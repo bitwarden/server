@@ -25,6 +25,7 @@ namespace Bit.Core.Models.Api
         public Guid? OrganizationUserId { get; set; }
         public KdfType? Kdf { get; set; }
         public int? KdfIterations { get; set; }
+        public string ReferenceId { get; set; }
 
         public User ToUser()
         {
@@ -34,7 +35,8 @@ namespace Bit.Core.Models.Api
                 Email = Email,
                 MasterPasswordHint = MasterPasswordHint,
                 Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
-                KdfIterations = KdfIterations.GetValueOrDefault(5000)
+                KdfIterations = KdfIterations.GetValueOrDefault(5000),
+                ReferenceId = ReferenceId,
             };
 
             if (Key != null)

@@ -467,11 +467,12 @@ namespace Bit.Core.Services
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
                 Gateway = null,
+                ReferenceId = signup.Owner.ReferenceId,
                 Enabled = true,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
                 ApiKey = CoreHelpers.SecureRandomString(30),
                 CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow
+                RevisionDate = DateTime.UtcNow,
             };
 
             if (plan.Type == PlanType.Free)
@@ -541,6 +542,7 @@ namespace Bit.Core.Services
                 Gateway = null,
                 GatewayCustomerId = null,
                 GatewaySubscriptionId = null,
+                ReferenceId = owner.ReferenceId,
                 Enabled = license.Enabled,
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
