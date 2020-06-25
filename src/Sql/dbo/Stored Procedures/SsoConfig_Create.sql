@@ -8,7 +8,6 @@
 AS
 BEGIN
     SET NOCOUNT ON
-    SET @Id = SCOPE_IDENTITY();
 
     INSERT INTO [dbo].[SsoConfig]
     (
@@ -28,4 +27,6 @@ BEGIN
         @CreationDate,
         @RevisionDate
     )
+
+    SET @Id = SCOPE_IDENTITY();
 END
