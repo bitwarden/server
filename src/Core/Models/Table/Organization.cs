@@ -38,6 +38,7 @@ namespace Bit.Core.Models.Table
         public GatewayType? Gateway { get; set; }
         public string GatewayCustomerId { get; set; }
         public string GatewaySubscriptionId { get; set; }
+        public string ReferenceId { get; set; }
         public bool Enabled { get; set; } = true;
         public string LicenseKey { get; set; }
         public string ApiKey { get; set; }
