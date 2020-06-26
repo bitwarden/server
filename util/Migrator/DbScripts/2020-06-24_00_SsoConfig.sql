@@ -46,7 +46,6 @@ BEGIN
 
     INSERT INTO [dbo].[SsoConfig]
     (
-        [Id],
         [Enabled],
         [OrganizationId],
         [Data],
@@ -55,7 +54,6 @@ BEGIN
     )
     VALUES
     (
-        @Id,
         @Enabled,
         @OrganizationId,
         @Data,
