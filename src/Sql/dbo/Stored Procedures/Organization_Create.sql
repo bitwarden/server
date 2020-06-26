@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER,
+    @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -41,6 +42,7 @@ BEGIN
     INSERT INTO [dbo].[Organization]
     (
         [Id],
+        [Identifier],
         [Name],
         [BusinessName],
         [BusinessAddress1],
@@ -79,6 +81,7 @@ BEGIN
     VALUES
     (
         @Id,
+        @Identifier,
         @Name,
         @BusinessName,
         @BusinessAddress1,

@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
+    @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -41,6 +42,7 @@ BEGIN
     UPDATE
         [dbo].[Organization]
     SET
+        [Identifier] = @Identifier,
         [Name] = @Name,
         [BusinessName] = @BusinessName,
         [BusinessAddress1] = @BusinessAddress1,
