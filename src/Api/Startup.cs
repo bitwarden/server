@@ -169,8 +169,11 @@ namespace Bit.Api
             app.UseRouting();
 
             // Add Cors
-            app.UseCors(policy => policy.SetIsOriginAllowed(o => o == globalSettings.BaseServiceUri.Vault)
-                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+            app.UseCors(policy => policy.SetIsOriginAllowed(o =>
+            {
+                return o == globalSettings.BaseServiceUri.Vault ||
+                    (!globalSettings.SelfHosted && o == "https://bitwarden.com");
+            }).AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
