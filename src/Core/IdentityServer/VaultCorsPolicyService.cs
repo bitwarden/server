@@ -1,20 +1,21 @@
-﻿using IdentityServer4.Services;
+﻿using Bit.Core.Utilities;
+using IdentityServer4.Services;
 using System.Threading.Tasks;
 
 namespace Bit.Core.IdentityServer
 {
-    public class VaultCorsPolicyService : ICorsPolicyService
+    public class CustomCorsPolicyService : ICorsPolicyService
     {
         private readonly GlobalSettings _globalSettings;
 
-        public VaultCorsPolicyService(GlobalSettings globalSettings)
+        public CustomCorsPolicyService(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
         }
 
         public Task<bool> IsOriginAllowedAsync(string origin)
         {
-            return Task.FromResult(origin == _globalSettings.BaseServiceUri.Vault);
+            return Task.FromResult(CoreHelpers.IsCorsOriginAllowed(origin, _globalSettings));
         }
     }
 }

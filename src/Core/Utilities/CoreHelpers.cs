@@ -595,5 +595,16 @@ namespace Bit.Core.Utilities
 
             return httpContext.Connection?.RemoteIpAddress?.ToString();
         }
+
+        public static bool IsCorsOriginAllowed(string origin, GlobalSettings globalSettings)
+        {
+            return
+                // Web vault
+                origin == globalSettings.BaseServiceUri.Vault ||
+                // Safari extension origin
+                origin == "file://" ||
+                // Product website
+                (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
+        }
     }
 }

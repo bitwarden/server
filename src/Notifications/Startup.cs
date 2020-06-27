@@ -102,7 +102,7 @@ namespace Bit.Notifications
             app.UseRouting();
 
             // Add Cors
-            app.UseCors(policy => policy.SetIsOriginAllowed(o => o == globalSettings.BaseServiceUri.Vault)
+            app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
                 .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
             // Add authentication to the request pipeline.
