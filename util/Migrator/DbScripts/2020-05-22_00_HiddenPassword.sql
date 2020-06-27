@@ -951,3 +951,27 @@ BEGIN
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
 END
 GO
+
+IF OBJECT_ID('[dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *,
+        1 [Edit],
+        1 [ViewPassword],
+        0 [OrganizationUseTotp]
+    FROM
+        [dbo].[CipherDetails](@UserId)
+    WHERE
+        [UserId] = @UserId
+END
+GO

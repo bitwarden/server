@@ -7,6 +7,7 @@ BEGIN
     SELECT
         *,
         1 [Edit],
+        1 [ViewPassword],
         0 [OrganizationUseTotp]
     FROM
         [dbo].[CipherDetails](@UserId)
