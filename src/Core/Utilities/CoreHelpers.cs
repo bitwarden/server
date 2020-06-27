@@ -604,7 +604,7 @@ namespace Bit.Core.Utilities
                 // Safari extension origin
                 origin == "file://" ||
                 // Product website
-                (!globalSettings.SelfHosted && origin == "https://bitwarden.com";
+                (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
         }
     }
 }
