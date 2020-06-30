@@ -778,10 +778,17 @@ namespace Bit.Core.Services
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
+                        CollectionMethod = "charge_automatically",
                     });
                     throw;
                 }
             }
+
+            // Change back the subscription collection method
+            await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+            {
+                CollectionMethod = "charge_automatically",
+            });
 
             return paymentIntentClientSecret;
         }
