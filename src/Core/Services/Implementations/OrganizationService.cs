@@ -336,6 +336,8 @@ namespace Bit.Core.Services
 
             var prorationDate = DateTime.UtcNow;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
+            // Retain original collection method
+            var collectionMethod = sub.CollectionMethod;
 
             var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
             {
@@ -381,17 +383,20 @@ namespace Bit.Core.Services
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
-                        CollectionMethod = "charge_automatically",
+                        CollectionMethod = collectionMethod,
                     });
                     throw;
                 }
             }
 
             // Change back the subscription collection method
-            await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+            if (collectionMethod != "send_invoice")
             {
-                CollectionMethod = "charge_automatically",
-            });
+                await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+                {
+                    CollectionMethod = collectionMethod,
+                });
+            }
 
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
