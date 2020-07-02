@@ -95,6 +95,8 @@ namespace Bit.Setup
                 ["globalSettings__attachment__baseUrl"] = $"{_context.Config.Url}/attachments",
                 ["globalSettings__dataProtection__directory"] = $"{_context.OutputDir}/core/aspnet-dataprotection",
                 ["globalSettings__logDirectory"] = $"{_context.OutputDir}/logs",
+                ["globalSettings__logRollBySizeLimit"] = string.Empty,
+                ["globalSettings__syslog__destination"] = string.Empty,
                 ["globalSettings__licenseDirectory"] = $"{_context.OutputDir}/core/licenses",
                 ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),
