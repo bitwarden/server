@@ -32,7 +32,7 @@ namespace Bit.Admin.Jobs
                 TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
             if (_globalSettings.SelfHosted)
             {
-                timeZone = TimeZoneInfo.Utc;
+                timeZone = TimeZoneInfo.Local;
             }
 
             var everyTopOfTheHourTrigger = TriggerBuilder.Create()

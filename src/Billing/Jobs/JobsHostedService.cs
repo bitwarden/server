@@ -31,7 +31,7 @@ namespace Bit.Billing.Jobs
                    TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
             if (_globalSettings.SelfHosted)
             {
-                timeZone = TimeZoneInfo.Utc;
+                timeZone = TimeZoneInfo.Local;
             }
 
             var everyDayAtNinePmTrigger = TriggerBuilder.Create()
