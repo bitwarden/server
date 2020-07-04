@@ -36,7 +36,7 @@ namespace Bit.Setup
                                   "appropriate directory before running 'start' (see docs for info).";
                     Helpers.ShowBanner(_context, "NOTE", message);
                 }
-                else if (Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
+                else if (Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate (encouraged)?"))
                 {
                     Directory.CreateDirectory($"/bitwarden/ssl/self/{_context.Install.Domain}/");
                     Helpers.WriteLine(_context, "Generating self signed SSL certificate.");
