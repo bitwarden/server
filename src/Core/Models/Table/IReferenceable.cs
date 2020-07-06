@@ -1,8 +1,10 @@
-﻿namespace Bit.Core.Models
+﻿using System;
+
+namespace Bit.Core.Models
 {
     public interface IReferenceable
     {
-        string Id { get; set; }
+        Guid Id { get; set; }
         string ReferenceId { get; set; }
         bool IsUser();
     }
