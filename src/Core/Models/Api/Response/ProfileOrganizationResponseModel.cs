@@ -37,6 +37,7 @@ namespace Bit.Core.Models.Api
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
+        public bool UseBusinessPortal => UsePolicies; // TODO add events if needed, add SSO when created
         public bool UsersGetPremium { get; set; }
         public bool SelfHost { get; set; }
         public int Seats { get; set; }
