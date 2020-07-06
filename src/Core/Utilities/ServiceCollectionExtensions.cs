@@ -196,6 +196,15 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
             }
+
+            if (globalSettings.SelfHosted)
+            {
+                services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();
+            }
+            else
+            {
+                services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
+            }
         }
 
         public static void AddNoopServices(this IServiceCollection services)

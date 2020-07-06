@@ -45,6 +45,7 @@ namespace Bit.Core.Services
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly IDataProtector _organizationServiceDataProtector;
+        private readonly IReferenceEventService _referenceEventService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -71,6 +72,7 @@ namespace Bit.Core.Services
             IDataProtectionProvider dataProtectionProvider,
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
+            IReferenceEventService referenceEventService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -102,6 +104,7 @@ namespace Bit.Core.Services
             _policyRepository = policyRepository;
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
+            _referenceEventService = referenceEventService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }

@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Bit.Core.Models.Table
 {
-    public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable
+    public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
