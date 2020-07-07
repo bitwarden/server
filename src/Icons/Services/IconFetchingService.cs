@@ -291,6 +291,13 @@ namespace Bit.Icons.Services
                 return null;
             }
 
+            // Resolve host to make sure it is not an internal/private IP address
+            var hostEntry = Dns.GetHostEntry(uri.Host);
+            if (hostEntry?.AddressList.Any(ip => IsInternal(ip)) ?? true)
+            {
+                return null;
+            }
+
             using (var message = new HttpRequestMessage())
             {
                 message.RequestUri = uri;
@@ -404,6 +411,27 @@ namespace Bit.Icons.Services
         private string GetScheme(Uri uri)
         {
             return uri != null && uri.Scheme == "http" ? "http" : "https";
+        }
+
+        public static bool IsInternal(IPAddress ip)
+        {
+            if (IPAddress.IsLoopback(ip))
+            {
+                return true;
+            }
+            else if (ip.ToString() == "::1")
+            {
+                return false;
+            }
+
+            var bytes = ip.GetAddressBytes();
+            return (bytes[0]) switch
+            {
+                10 => true,
+                172 => bytes[1] < 32 && bytes[1] >= 16,
+                192 => bytes[1] == 168,
+                _ => false,
+            };
         }
     }
 }
