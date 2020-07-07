@@ -45,6 +45,7 @@ namespace Bit.Core.Services
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly IDataProtector _organizationServiceDataProtector;
+        private readonly IReferenceEventService _referenceEventService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -71,6 +72,7 @@ namespace Bit.Core.Services
             IDataProtectionProvider dataProtectionProvider,
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
+            IReferenceEventService referenceEventService,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -102,6 +104,7 @@ namespace Bit.Core.Services
             _policyRepository = policyRepository;
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
+            _referenceEventService = referenceEventService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -219,6 +222,8 @@ namespace Bit.Core.Services
             }
 
             await _userRepository.DeleteAsync(user);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.DeleteAccount, user));
             await _pushService.PushLogOutAsync(user.Id);
             return IdentityResult.Success;
         }
@@ -288,6 +293,8 @@ namespace Bit.Core.Services
             if (result == IdentityResult.Success)
             {
                 await _mailService.SendWelcomeEmailAsync(user);
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.Signup, user));
             }
 
             return result;
@@ -765,6 +772,12 @@ namespace Bit.Core.Services
             {
                 await SaveUserAsync(user);
                 await _pushService.PushSyncVaultAsync(user.Id);
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.UpgradePlan, user)
+                    {
+                        Storage = user.MaxStorageGb,
+                        PlanName = PremiumPlanId,
+                    });
             }
             catch when(!_globalSettings.SelfHosted)
             {
@@ -841,6 +854,12 @@ namespace Bit.Core.Services
 
             var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
                 StoragePlanId);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.AdjustStorage, user)
+                {
+                    Storage = storageAdjustmentGb,
+                    PlanName = StoragePlanId,
+                });
             await SaveUserAsync(user);
             return secret;
         }
@@ -868,11 +887,18 @@ namespace Bit.Core.Services
                 eop = false;
             }
             await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.CancelSubscription, user)
+                {
+                    EndOfPeriod = eop,
+                });
         }
 
         public async Task ReinstatePremiumAsync(User user)
         {
             await _paymentService.ReinstateSubscriptionAsync(user);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user));
         }
 
         public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
