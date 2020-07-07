@@ -111,10 +111,11 @@ namespace Bit.Core.Services
             }
 
             await _paymentService.CancelSubscriptionAsync(organization, eop);
-            await _referenceEventService.RaiseEventAsync(organization, "cancel", new
-            {
-                endOfPeriod,
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.CancelSubscription, organization)
+                {
+                    EndOfPeriod = endOfPeriod,
+                });
         }
 
         public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -126,7 +127,8 @@ namespace Bit.Core.Services
             }
 
             await _paymentService.ReinstateSubscriptionAsync(organization);
-            await _referenceEventService.RaiseEventAsync(organization, "resintate");
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization));
         }
 
         public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -250,13 +252,14 @@ namespace Bit.Core.Services
             await ReplaceAndUpdateCache(organization);
             if (success)
             {
-                await _referenceEventService.RaiseEventAsync(organization, "upgrade-plan", new
-                {
-                    plan = newPlan.Name,
-                    planType = newPlan.Type,
-                    seats = organization.Seats,
-                    storage = organization.MaxStorageGb,
-                });
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.UpgradePlan, organization)
+                    {
+                        PlanName = newPlan.Name,
+                        PlanType = newPlan.Type,
+                        Seats = organization.Seats,
+                        Storage = organization.MaxStorageGb,
+                    });
             }
 
             return new Tuple<bool, string>(success, paymentIntentClientSecret);
@@ -283,12 +286,13 @@ namespace Bit.Core.Services
 
             var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
                 plan.StripeStoragePlanId);
-            await _referenceEventService.RaiseEventAsync(organization, "adjust-storage", new
-            {
-                plan = plan.Name,
-                planType = plan.Type,
-                storage = storageAdjustmentGb,
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.AdjustStorage, organization)
+                {
+                    PlanName = plan.Name,
+                    PlanType = plan.Type,
+                    Storage = storageAdjustmentGb,
+                });
             await ReplaceAndUpdateCache(organization);
             return secret;
         }
@@ -423,12 +427,13 @@ namespace Bit.Core.Services
             }
 
             organization.Seats = (short?)newSeatTotal;
-            await _referenceEventService.RaiseEventAsync(organization, "adjust-seats", new
-            {
-                plan = plan.Name,
-                planType = plan.Type,
-                seats = organization.Seats,
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
+                {
+                    PlanName = plan.Name,
+                    PlanType = plan.Type,
+                    Seats = organization.Seats,
+                });
             await ReplaceAndUpdateCache(organization);
             return paymentIntentClientSecret;
         }
@@ -534,13 +539,14 @@ namespace Bit.Core.Services
             }
 
             var returnValue = await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
-            await _referenceEventService.RaiseEventAsync(organization, "signup", new
-            {
-                plan = plan.Name,
-                planType = plan.Type,
-                seats = returnValue.Item1.Seats,
-                storage = returnValue.Item1.MaxStorageGb,
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.Signup, organization)
+                {
+                    PlanName = plan.Name,
+                    PlanType = plan.Type,
+                    Seats = returnValue.Item1.Seats,
+                    Storage = returnValue.Item1.MaxStorageGb,
+                });
             return returnValue;
         }
 
@@ -779,7 +785,8 @@ namespace Bit.Core.Services
                     var eop = !organization.ExpirationDate.HasValue ||
                         organization.ExpirationDate.Value >= DateTime.UtcNow;
                     await _paymentService.CancelSubscriptionAsync(organization, eop);
-                    await _referenceEventService.RaiseEventAsync(organization, "delete");
+                    await _referenceEventService.RaiseEventAsync(
+                        new ReferenceEvent(ReferenceEventType.DeleteAccount, organization));
                 }
                 catch (GatewayException) { }
             }

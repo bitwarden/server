@@ -1,11 +1,10 @@
 ﻿using System.Threading.Tasks;
-using Bit.Core.Models;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
     public interface IReferenceEventService
     {
-        Task RaiseEventAsync(IReferenceable reference, string eventType,
-            object additionalInfo = null);
+        Task RaiseEventAsync(ReferenceEvent referenceEvent);
     }
 }
