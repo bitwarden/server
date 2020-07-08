@@ -9,17 +9,17 @@ echo -e "\n## Building Admin"
 echo -e "\nBuilding app"
 echo ".NET Core version $(dotnet --version)"
 echo "Restore"
-dotnet restore $DIR/Admin.csproj
+dotnet restore "$DIR/Admin.csproj"
 echo "Clean"
-dotnet clean $DIR/Admin.csproj -c "Release" -o $DIR/obj/Docker/publish
+dotnet clean "$DIR/Admin.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
 echo "Node Build"
-cd $DIR
+cd "$DIR"
 npm install
-cd $CUR_DIR
-gulp --gulpfile $DIR/gulpfile.js build
+cd "$CUR_DIR"
+gulp --gulpfile "$DIR/gulpfile.js" build
 echo "Publish"
-dotnet publish $DIR/Admin.csproj -c "Release" -o $DIR/obj/Docker/publish
+dotnet publish "$DIR/Admin.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
 
 echo -e "\nBuilding docker image"
 docker --version
-docker build -t bitwarden/admin $DIR/.
+docker build -t bitwarden/admin "$DIR/."

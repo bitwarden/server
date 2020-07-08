@@ -7,4 +7,4 @@ echo -e "\n## Building MsSql"
 
 echo -e "\nBuilding docker image"
 docker --version
-docker build -t bitwarden/mssql $DIR/.
+docker build -t bitwarden/mssql "$DIR/."
