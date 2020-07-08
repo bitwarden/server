@@ -38,6 +38,7 @@ namespace Bit.Core.Test.Services
         private readonly IDataProtectionProvider _dataProtectionProvider;
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
+        private readonly IReferenceEventService _referenceEventService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -65,6 +66,7 @@ namespace Bit.Core.Test.Services
             _dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
             _paymentService = Substitute.For<IPaymentService>();
             _policyRepository = Substitute.For<IPolicyRepository>();
+            _referenceEventService = Substitute.For<IReferenceEventService>();
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
 
@@ -91,6 +93,7 @@ namespace Bit.Core.Test.Services
                 _dataProtectionProvider,
                 _paymentService,
                 _policyRepository,
+                _referenceEventService,
                 _currentContext,
                 _globalSettings
             );
