@@ -9,6 +9,9 @@ using AspNetCoreRateLimit;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Logging;
+using System.IdentityModel.Tokens.Jwt;
+using System.Threading.Tasks;
 
 namespace Bit.Identity
 {
@@ -49,12 +52,50 @@ namespace Bit.Identity
             // Caching
             services.AddMemoryCache();
 
+            // Mvc
+            services.AddMvc();
+
             if (!globalSettings.SelfHosted)
             {
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
             }
+
+            JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+            services
+                .AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme =
+                        IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
+                })
+                .AddOpenIdConnect("sso", "Single Sign On", options =>
+                {
+                    // TODO: update these to real values
+                    options.Authority = "http://localhost:5182";
+                    options.ClientId = "sso";
+                    options.ClientSecret = "TODO";
+                    options.RequireHttpsMetadata = false;
+
+                    options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
+                    options.ResponseType = "code id_token";
+
+                    options.SaveTokens = true;
+                    options.GetClaimsFromUserInfoEndpoint = true;
+
+                    options.Scope.Add("api");
+                    options.Scope.Add("offline_access");
+
+                    options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+                    {
+                        OnRedirectToIdentityProvider = context =>
+                        {
+                            // Pass domain_hint onto the sso idp
+                            context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
+                            return Task.FromResult(0);
+                        }
+                    };
+                });
 
             // IdentityServer
             services.AddCustomIdentityServerServices(Environment, globalSettings);
@@ -80,6 +121,8 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
+            IdentityModelEventSource.ShowPII = true;
+
             app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
@@ -95,11 +138,24 @@ namespace Bit.Identity
                 app.UseForwardedHeaders(globalSettings);
             }
 
+            // Add static files to the request pipeline.
+            app.UseStaticFiles();
+
+            // Add routing
+            app.UseRouting();
+
+            // Add Cors
+            app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
+
+            // Add Mvc stuff
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
             // Log startup
             logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
