@@ -64,11 +64,7 @@ namespace Bit.Identity
 
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
             services
-                .AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme =
-                        IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
-                })
+                .AddAuthentication()
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
                     // TODO: update these to real values
@@ -78,13 +74,7 @@ namespace Bit.Identity
                     options.RequireHttpsMetadata = false;
 
                     options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
-                    options.ResponseType = "code id_token";
-
-                    options.SaveTokens = true;
-                    options.GetClaimsFromUserInfoEndpoint = true;
-
-                    options.Scope.Add("api");
-                    options.Scope.Add("offline_access");
+                    options.ResponseType = "code";
 
                     options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                     {

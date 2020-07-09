@@ -1,0 +1,12 @@
+﻿@model Bit.Identity.Models.RedirectViewModel
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=@Model.RedirectUrl" data-url="@Model.RedirectUrl">
+    <script>
+        window.location.href = document.querySelector("meta[http-equiv=refresh]").getAttribute("data-url");
+    </script>
+</head>
+<body>
+    <p>You are now being returned to the application. Once complete, you may close this tab.</p>
+</body>
+</html>

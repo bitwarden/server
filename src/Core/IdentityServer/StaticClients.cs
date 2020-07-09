@@ -28,8 +28,7 @@ namespace Bit.Core.IdentityServer
                 string[] scopes = null)
             {
                 ClientId = id;
-                RequireClientSecret = false;
-                AllowedGrantTypes = GrantTypes.ResourceOwnerPassword;
+                AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode };
                 RefreshTokenExpiration = TokenExpiration.Sliding;
                 RefreshTokenUsage = TokenUsage.ReUse;
                 SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
@@ -37,6 +36,39 @@ namespace Bit.Core.IdentityServer
                 UpdateAccessTokenClaimsOnRefresh = true;
                 AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;
+
+                RequireConsent = false;
+                RequirePkce = true;
+                RequireClientSecret = false;
+                if (id == "web")
+                {
+                    RedirectUris = new[] { "https://localhost:8080/callback.html" };
+                    PostLogoutRedirectUris = new[] { "https://localhost:8080" };
+                    AllowedCorsOrigins = new[] { "https://localhost:8080" };
+                }
+                else if (id == "desktop")
+                {
+                    RedirectUris = new[] { "bitwarden://callback" };
+                    PostLogoutRedirectUris = new[] { "bitwarden-desktop://logged-out" };
+                }
+                else if (id == "connector")
+                {
+                    RedirectUris = new[] { "bwdc://callback" };
+                    PostLogoutRedirectUris = new[] { "bwdc://logged-out" };
+                }
+                else if (id == "browser")
+                {
+                    // TODO
+                }
+                else if (id == "cli")
+                {
+                    // TODO
+                }
+                else if (id == "mobile")
+                {
+                    RedirectUris = new[] { "bitwarden://callback" };
+                    PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
+                }
 
                 if (scopes == null)
                 {

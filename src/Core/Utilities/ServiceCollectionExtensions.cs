@@ -345,12 +345,12 @@ namespace Bit.Core.Utilities
             var identityServerBuilder = services
                 .AddIdentityServer(options =>
                 {
-                    options.Endpoints.EnableAuthorizeEndpoint = false;
-                    options.Endpoints.EnableIntrospectionEndpoint = false;
-                    options.Endpoints.EnableEndSessionEndpoint = false;
-                    options.Endpoints.EnableUserInfoEndpoint = false;
-                    options.Endpoints.EnableCheckSessionEndpoint = false;
-                    options.Endpoints.EnableTokenRevocationEndpoint = false;
+                    //options.Endpoints.EnableAuthorizeEndpoint = false;
+                    //options.Endpoints.EnableIntrospectionEndpoint = false;
+                    //options.Endpoints.EnableEndSessionEndpoint = false;
+                    //options.Endpoints.EnableUserInfoEndpoint = false;
+                    //options.Endpoints.EnableCheckSessionEndpoint = false;
+                    //options.Endpoints.EnableTokenRevocationEndpoint = false;
                     options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                     options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 })
