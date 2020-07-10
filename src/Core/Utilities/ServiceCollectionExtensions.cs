@@ -356,7 +356,12 @@ namespace Bit.Core.Utilities
                 })
                 .AddInMemoryCaching()
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
-                .AddClientStoreCache<ClientStore>();
+                .AddClientStoreCache<ClientStore>()
+                .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
+                .AddProfileService<ProfileService>()
+                .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
+                .AddPersistedGrantStore<PersistedGrantStore>()
+                .AddClientStore<ClientStore>();
 
             if (env.IsDevelopment())
             {
@@ -390,12 +395,7 @@ namespace Bit.Core.Utilities
                 throw new Exception("No identity certificate to use.");
             }
 
-            services.AddTransient<ClientStore>();
             services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
-            services.AddScoped<IResourceOwnerPasswordValidator, ResourceOwnerPasswordValidator>();
-            services.AddScoped<IProfileService, ProfileService>();
-            services.AddSingleton<IPersistedGrantStore, PersistedGrantStore>();
-
             return identityServerBuilder;
         }
 

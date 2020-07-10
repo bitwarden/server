@@ -42,18 +42,18 @@ namespace Bit.Core.IdentityServer
                 RequireClientSecret = false;
                 if (id == "web")
                 {
-                    RedirectUris = new[] { "https://localhost:8080/callback.html" };
+                    RedirectUris = new[] { "https://localhost:8080/sso-connector.html" };
                     PostLogoutRedirectUris = new[] { "https://localhost:8080" };
                     AllowedCorsOrigins = new[] { "https://localhost:8080" };
                 }
                 else if (id == "desktop")
                 {
-                    RedirectUris = new[] { "bitwarden://callback" };
+                    RedirectUris = new[] { "bitwarden://sso-callback" };
                     PostLogoutRedirectUris = new[] { "bitwarden-desktop://logged-out" };
                 }
                 else if (id == "connector")
                 {
-                    RedirectUris = new[] { "bwdc://callback" };
+                    RedirectUris = new[] { "bwdc://sso-callback" };
                     PostLogoutRedirectUris = new[] { "bwdc://logged-out" };
                 }
                 else if (id == "browser")
@@ -66,7 +66,7 @@ namespace Bit.Core.IdentityServer
                 }
                 else if (id == "mobile")
                 {
-                    RedirectUris = new[] { "bitwarden://callback" };
+                    RedirectUris = new[] { "bitwarden://sso-callback" };
                     PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
                 }
 

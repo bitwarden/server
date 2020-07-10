@@ -27,7 +27,7 @@ namespace Bit.Identity
         public IConfiguration Configuration { get; private set; }
         public IWebHostEnvironment Environment { get; set; }
 
-        public void ConfigureServices(IServiceCollection services, IWebHostEnvironment environment)
+        public void ConfigureServices(IServiceCollection services)
         {
             // Options
             services.AddOptions();
@@ -68,7 +68,7 @@ namespace Bit.Identity
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
                     options.Authority = globalSettings.BaseServiceUri.InternalSso;
-                    options.RequireHttpsMetadata = !environment.IsDevelopment() &&
+                    options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "sso";
                     options.ClientSecret = globalSettings.SsoClientKey;

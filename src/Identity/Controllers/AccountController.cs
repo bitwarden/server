@@ -38,15 +38,23 @@ namespace Bit.Identity.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login(string returnUrl)
+        public async Task<IActionResult> Login(string returnUrl)
         {
-            // TODO: Get and pass the organizationIdentifier
-            return RedirectToAction(nameof(SsoChallenge),
-                new { organizationIdentifier = "org_oidc_okta", returnUrl = returnUrl });
+            var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
+            if (context.Parameters.AllKeys.Contains("domain_hint") &&
+                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+            {
+                return RedirectToAction(nameof(ExternalChallenge),
+                    new { organizationIdentifier = context.Parameters["domain_hint"], returnUrl = returnUrl });
+            }
+            else
+            {
+                throw new Exception("No domain_hint provided.");
+            }
         }
 
         [HttpGet]
-        public IActionResult SsoChallenge(string organizationIdentifier, string returnUrl, string returnType)
+        public IActionResult ExternalChallenge(string organizationIdentifier, string returnUrl)
         {
             if (string.IsNullOrWhiteSpace(organizationIdentifier))
             {
@@ -80,11 +88,10 @@ namespace Bit.Identity.Controllers
             var provider = "sso";
             var props = new AuthenticationProperties
             {
-                RedirectUri = Url.Action(nameof(SsoCallback)),
+                RedirectUri = Url.Action(nameof(ExternalCallback)),
                 Items =
                 {
                     { "return_url", returnUrl },
-                    { "return_type", returnType },
                     { "domain_hint", domainHint },
                     { "scheme", provider },
                 },
@@ -94,7 +101,7 @@ namespace Bit.Identity.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult> SsoCallback()
+        public async Task<ActionResult> ExternalCallback()
         {
             // Read external identity from the temporary cookie
             var result = await HttpContext.AuthenticateAsync(
