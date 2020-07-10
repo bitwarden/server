@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT TOP 1
+    SELECT
         SSO.*
     FROM
         [dbo].[SsoConfigView] SSO

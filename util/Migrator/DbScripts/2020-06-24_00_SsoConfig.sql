@@ -95,6 +95,27 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[SsoConfig_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoConfig_ReadById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_ReadById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[SsoConfigView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
 IF OBJECT_ID('[dbo].[SsoConfig_ReadByIdentifier]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[SsoConfig_ReadByIdentifier]
@@ -107,7 +128,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT TOP 1
+    SELECT
         SSO.*
     FROM
         [dbo].[SsoConfigView] SSO
@@ -129,7 +150,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT TOP 1
+    SELECT
         *
     FROM
         [dbo].[SsoConfigView]

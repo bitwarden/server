@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT TOP 1
+    SELECT
         *
     FROM
         [dbo].[SsoConfigView]
