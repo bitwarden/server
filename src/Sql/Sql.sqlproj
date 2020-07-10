@@ -70,7 +70,6 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
-    <Build Include="dbo\Stored Procedures\SsoConfig_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Update.sql" />

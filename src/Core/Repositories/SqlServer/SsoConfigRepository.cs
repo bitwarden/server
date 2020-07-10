@@ -18,19 +18,6 @@ namespace Bit.Core.Repositories.SqlServer
         public SsoConfigRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
-        
-        public async Task<SsoConfig> GetBySsoConfigIdAsync(long? id)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<SsoConfig>(
-                    $"[{Schema}].[{Table}_ReadById]",
-                    new { Id = id },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.SingleOrDefault();
-            }
-        }
 
         public async Task<ICollection<SsoConfig>> GetManyByOrganizationIdAsync(Guid organizationId)
         {

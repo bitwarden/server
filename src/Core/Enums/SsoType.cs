@@ -2,9 +2,7 @@
 {
     public enum SsoType : byte
     {
-        // TODO proper SsoType values
-        Type1 = 1,
-        Type2 = 2,
-        Type3 = 3,
+        OpenIdConnect = 1,
+        SAML2 = 2,
     }
 }
