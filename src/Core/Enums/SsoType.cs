@@ -3,6 +3,6 @@
     public enum SsoType : byte
     {
         OpenIdConnect = 1,
-        SAML2 = 2,
+        Saml2 = 2,
     }
 }
