@@ -1,6 +1,5 @@
 ﻿using System;
 using Bit.Core.Models.Table;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Data;
@@ -19,7 +18,7 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString, readOnlyConnectionString)
         { }
 
-        public async Task<ICollection<SsoConfig>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<SsoConfig> GetByOrganizationIdAsync(Guid organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -28,11 +27,11 @@ namespace Bit.Core.Repositories.SqlServer
                     new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                return results.SingleOrDefault();
             }
         }
 
-        public async Task<ICollection<SsoConfig>> GetManyByIdentifierAsync(string identifier)
+        public async Task<SsoConfig> GetByIdentifierAsync(string identifier)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -41,7 +40,7 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Identifier = identifier },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                return results.SingleOrDefault();
             }
         }
     }
