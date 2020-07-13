@@ -76,6 +76,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
                 services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
+                services.AddSingleton<ISsoConfigRepository, SqlServerRepos.SsoConfigRepository>();
             }
 
             if (globalSettings.SelfHosted)
