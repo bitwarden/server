@@ -21,6 +21,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionRepository _collectionRepository;
+        private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IDataProtector _dataProtector;
@@ -41,6 +42,7 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
+            IUserService userService,
             IUserRepository userRepository,
             IGroupRepository groupRepository,
             IDataProtectionProvider dataProtectionProvider,
@@ -60,6 +62,7 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _collectionRepository = collectionRepository;
+            _userService = userService;
             _userRepository = userRepository;
             _groupRepository = groupRepository;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
@@ -862,7 +865,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
+        public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type, Guid? updatingUserId)
         {
             if (!type.ToString().Contains("Organization"))
             {
@@ -881,6 +884,18 @@ namespace Bit.Core.Services
             }
 
             providers[type].Enabled = true;
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
+            foreach (var orgUser in orgUsers.Where(ou =>
+                ou.Status != Enums.OrganizationUserStatusType.Invited 
+                && ou.UserId != updatingUserId))
+            {
+                if (!await _userService.TwoFactorIsEnabledAsync(orgUser))
+                {
+                    await DeleteUserAsync(organization.Id, orgUser.Id, updatingUserId);
+                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.Name, orgUser.Email);
+                }
+            }
+
             organization.SetTwoFactorProviders(providers);
             await UpdateAsync(organization);
         }
@@ -1209,6 +1224,7 @@ namespace Bit.Core.Services
         public async Task DeleteUserAsync(Guid organizationId, Guid userId)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+
             if (orgUser == null)
             {
                 throw new NotFoundException();
