@@ -1,4 +1,5 @@
-﻿using IdentityServer4.Models;
+﻿using IdentityServer4;
+using IdentityServer4.Models;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -75,6 +76,26 @@ namespace Bit.Core.IdentityServer
                     scopes = new string[] { "api" };
                 }
                 AllowedScopes = scopes;
+            }
+        }
+
+        public class SsoClient : Client
+        {
+            public SsoClient(GlobalSettings globalSettings)
+            {
+                ClientId = "sso";
+                RequireClientSecret = true;
+                RequirePkce = true;
+                ClientSecrets = new List<Secret> { new Secret(globalSettings.SsoClientKey.Sha256()) };
+                AllowedScopes = new string[]
+                {
+                    IdentityServerConstants.StandardScopes.OpenId,
+                    IdentityServerConstants.StandardScopes.Profile
+                };
+                AllowedGrantTypes = GrantTypes.Code;
+                Enabled = true;
+                RedirectUris = new List<string> { $"{globalSettings.BaseServiceUri.Identity}/signin-oidc" };
+                RequireConsent = false;
             }
         }
     }

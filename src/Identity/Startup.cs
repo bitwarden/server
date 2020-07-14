@@ -12,6 +12,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
+using IdentityServer4.Stores;
+using Bit.Core.IdentityServer;
+using IdentityServer4.Services;
 
 namespace Bit.Identity
 {
@@ -88,7 +91,7 @@ namespace Bit.Identity
                 });
 
             // IdentityServer
-            services.AddCustomIdentityServerServices(Environment, globalSettings);
+            AddCustomIdentityServerServices(services, Environment, globalSettings);
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
@@ -149,6 +152,37 @@ namespace Bit.Identity
 
             // Log startup
             logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        }
+
+        public static IIdentityServerBuilder AddCustomIdentityServerServices(IServiceCollection services,
+            IWebHostEnvironment env, GlobalSettings globalSettings)
+        {
+            services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
+
+            var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
+            var identityServerBuilder = services
+                .AddIdentityServer(options =>
+                {
+                    options.Endpoints.EnableIntrospectionEndpoint = false;
+                    options.Endpoints.EnableEndSessionEndpoint = false;
+                    options.Endpoints.EnableUserInfoEndpoint = false;
+                    options.Endpoints.EnableCheckSessionEndpoint = false;
+                    options.Endpoints.EnableTokenRevocationEndpoint = false;
+                    options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
+                    options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
+                })
+                .AddInMemoryCaching()
+                .AddInMemoryApiResources(ApiResources.GetApiResources())
+                .AddClientStoreCache<ClientStore>()
+                .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
+                .AddProfileService<ProfileService>()
+                .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
+                .AddPersistedGrantStore<PersistedGrantStore>()
+                .AddClientStore<ClientStore>()
+                .AddIdentityServerCertificate(env, globalSettings);
+
+            services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
+            return identityServerBuilder;
         }
     }
 }

@@ -5,9 +5,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using IdentityModel;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
-using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -338,69 +335,6 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static IIdentityServerBuilder AddCustomIdentityServerServices(
-            this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
-        {
-            services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
-
-            var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
-            var identityServerBuilder = services
-                .AddIdentityServer(options =>
-                {
-                    //options.Endpoints.EnableAuthorizeEndpoint = false;
-                    //options.Endpoints.EnableIntrospectionEndpoint = false;
-                    //options.Endpoints.EnableEndSessionEndpoint = false;
-                    //options.Endpoints.EnableUserInfoEndpoint = false;
-                    //options.Endpoints.EnableCheckSessionEndpoint = false;
-                    //options.Endpoints.EnableTokenRevocationEndpoint = false;
-                    options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
-                    options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
-                })
-                .AddInMemoryCaching()
-                .AddInMemoryApiResources(ApiResources.GetApiResources())
-                .AddClientStoreCache<ClientStore>()
-                .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
-                .AddProfileService<ProfileService>()
-                .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-                .AddPersistedGrantStore<PersistedGrantStore>()
-                .AddClientStore<ClientStore>();
-
-            if (env.IsDevelopment())
-            {
-                identityServerBuilder.AddDeveloperSigningCredential(false);
-            }
-            else if (globalSettings.SelfHosted &&
-                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-                && File.Exists("identity.pfx"))
-            {
-                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
-                    globalSettings.IdentityServer.CertificatePassword);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
-            {
-                var identityServerCert = CoreHelpers.GetCertificate(
-                    globalSettings.IdentityServer.CertificateThumbprint);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else if (!globalSettings.SelfHosted &&
-                CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
-            {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                var identityServerCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
-                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else
-            {
-                throw new Exception("No identity certificate to use.");
-            }
-
-            services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
-            return identityServerBuilder;
-        }
-
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
@@ -434,6 +368,43 @@ namespace Bit.Core.Utilities
                     .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
+        }
+
+        public static IIdentityServerBuilder AddIdentityServerCertificate(
+            this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
+        {
+            if (env.IsDevelopment())
+            {
+                identityServerBuilder.AddDeveloperSigningCredential(false);
+            }
+            else if (globalSettings.SelfHosted &&
+                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
+                && File.Exists("identity.pfx"))
+            {
+                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
+                    globalSettings.IdentityServer.CertificatePassword);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+            {
+                var identityServerCert = CoreHelpers.GetCertificate(
+                    globalSettings.IdentityServer.CertificateThumbprint);
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else if (!globalSettings.SelfHosted &&
+                CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                var identityServerCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+                identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else
+            {
+                throw new Exception("No identity certificate to use.");
+            }
+            return identityServerBuilder;
         }
 
         public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,

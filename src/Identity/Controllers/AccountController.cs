@@ -128,7 +128,8 @@ namespace Bit.Identity.Controllers
             var additionalLocalClaims = new List<Claim>();
             var localSignInProps = new AuthenticationProperties
             {
-                IsPersistent = false
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
             };
             ProcessLoginCallbackForOidc(result, additionalLocalClaims, localSignInProps);
 
