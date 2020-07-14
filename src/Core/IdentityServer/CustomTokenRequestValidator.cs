@@ -72,13 +72,16 @@ namespace Bit.Core.IdentityServer
         protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
             Dictionary<string, object> customResponse)
         {
+            context.Result.Error = "invalid_grant";
             context.Result.ErrorDescription = "Two factor required.";
             context.Result.IsError = true;
+            context.Result.CustomResponse = customResponse;
         }
 
         protected override void SetErrorResult(CustomTokenRequestValidationContext context,
             Dictionary<string, object> customResponse)
         {
+            context.Result.Error = "invalid_grant";
             context.Result.IsError = true;
             context.Result.CustomResponse = customResponse;
         }

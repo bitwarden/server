@@ -141,6 +141,9 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("Key", user.Key);
             }
 
+            customResponse.Add("Kdf", (byte)user.Kdf);
+            customResponse.Add("KdfIterations", user.KdfIterations);
+
             if (sendRememberToken)
             {
                 var token = await _userManager.GenerateTwoFactorTokenAsync(user,
