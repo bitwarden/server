@@ -341,6 +341,8 @@ namespace Bit.Core.Utilities
         public static IIdentityServerBuilder AddCustomIdentityServerServices(
             this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
+            services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
+
             var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
             var identityServerBuilder = services
                 .AddIdentityServer(options =>
