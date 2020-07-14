@@ -212,8 +212,10 @@ namespace Bit.Api.Controllers
             }
 
             model.ToOrganization(organization);
+
+            var updatingUserId = _userService.GetProperUserId(User);
             await _organizationService.UpdateTwoFactorProviderAsync(organization,
-                TwoFactorProviderType.OrganizationDuo);
+                TwoFactorProviderType.OrganizationDuo, updatingUserId);
             var response = new TwoFactorDuoResponseModel(organization);
             return response;
         }
