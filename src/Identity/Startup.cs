@@ -66,6 +66,8 @@ namespace Bit.Identity
             }
 
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
+            // Authentication
             services
                 .AddAuthentication()
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
