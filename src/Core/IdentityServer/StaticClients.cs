@@ -79,14 +79,14 @@ namespace Bit.Core.IdentityServer
             }
         }
 
-        public class SsoClient : Client
+        public class OidcIdentityClient : Client
         {
-            public SsoClient(GlobalSettings globalSettings)
+            public OidcIdentityClient(GlobalSettings globalSettings)
             {
-                ClientId = "sso";
+                ClientId = "oidc-identity";
                 RequireClientSecret = true;
                 RequirePkce = true;
-                ClientSecrets = new List<Secret> { new Secret(globalSettings.SsoClientKey.Sha256()) };
+                ClientSecrets = new List<Secret> { new Secret(globalSettings.OidcIdentityClientKey.Sha256()) };
                 AllowedScopes = new string[]
                 {
                     IdentityServerConstants.StandardScopes.OpenId,

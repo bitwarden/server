@@ -75,8 +75,8 @@ namespace Bit.Identity
                     options.Authority = globalSettings.BaseServiceUri.InternalSso;
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                    options.ClientId = "sso";
-                    options.ClientSecret = globalSettings.SsoClientKey;
+                    options.ClientId = "oidc-identity";
+                    options.ClientSecret = globalSettings.OidcIdentityClientKey;
 
                     options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
                     options.ResponseType = "code";
