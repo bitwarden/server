@@ -1135,5 +1135,16 @@ namespace Bit.Core.Services
                 }
             }
         }
+
+        public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
+        {
+            var result = await base.ConfirmEmailAsync(user, token);
+            if (result.Succeeded)
+            {
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
+            }
+            return result;
+        }
     }
 }

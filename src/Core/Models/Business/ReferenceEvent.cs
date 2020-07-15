@@ -34,6 +34,8 @@ namespace Bit.Core.Models.Business
 
         public DateTime EventDate { get; set; } = DateTime.UtcNow;
 
+        public int? Users { get; set; }
+
         public bool? EndOfPeriod { get; set; }
 
         public string PlanName { get; set; }

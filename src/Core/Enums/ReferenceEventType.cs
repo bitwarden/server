@@ -18,5 +18,11 @@ namespace Bit.Core.Enums
         ReinstateSubscription,
         [EnumMember(Value = "delete-account")]
         DeleteAccount,
+        [EnumMember(Value = "confirm-email")]
+        ConfirmEmailAddress,
+        [EnumMember(Value = "invited-users")]
+        InvitedUsers,
+        [EnumMember(Value = "rebilled")]
+        Rebilled,
     }
 }
