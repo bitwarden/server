@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."groupuser_readbyorganizationid$tmp"(par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE "groupuser_readbyorganizationid$tmp"(par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,8 +11,8 @@ BEGIN
     AS
     SELECT
         gu.*
-        FROM vault_dbo.groupuser AS gu
-        INNER JOIN vault_dbo."Group" AS g
+        FROM groupuser AS gu
+        INNER JOIN "Group" AS g
             ON g.id = gu.groupid
         WHERE g.organizationid = par_OrganizationId;
 END;

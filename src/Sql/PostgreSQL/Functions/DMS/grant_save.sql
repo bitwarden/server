@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.grant_save(par_key character varying, par_type character varying, par_subjectid character varying, par_clientid character varying, par_creationdate timestamp without time zone, par_expirationdate timestamp without time zone, par_data text)
+CREATE OR REPLACE PROCEDURE grant_save(par_key character varying, par_type character varying, par_subjectid character varying, par_clientid character varying, par_creationdate timestamp without time zone, par_expirationdate timestamp without time zone, par_data text)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN

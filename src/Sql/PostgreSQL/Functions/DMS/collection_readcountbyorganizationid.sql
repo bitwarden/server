@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collection_readcountbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE collection_readcountbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         COUNT(1)
-        FROM vault_dbo.collection
+        FROM collection
         WHERE organizationid = par_OrganizationId;
 END;
 $procedure$

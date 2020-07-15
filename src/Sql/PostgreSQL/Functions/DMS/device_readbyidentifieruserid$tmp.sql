@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."device_readbyidentifieruserid$tmp"(par_userid uuid, par_identifier character varying)
+CREATE OR REPLACE PROCEDURE "device_readbyidentifieruserid$tmp"(par_userid uuid, par_identifier character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.deviceview
+        FROM deviceview
         WHERE userid = par_UserId AND LOWER(identifier) = LOWER(par_Identifier);
 END;
 $procedure$

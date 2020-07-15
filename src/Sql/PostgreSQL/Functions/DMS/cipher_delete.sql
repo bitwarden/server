@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_delete(par_ids vault_dbo.guididarray, par_userid uuid)
+CREATE OR REPLACE PROCEDURE cipher_delete(par_ids guididarray, par_userid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -20,8 +20,8 @@ BEGIN
         userid UUID NULL,
         organizationid UUID NULL,
         attachments NUMERIC(1, 0) NOT NULL);
-    PERFORM vault_dbo.usercipherdetails(par_UserId);
-    PERFORM vault_dbo.guididarray$aws$f('"par_Ids$aws$tmp"');
+    PERFORM usercipherdetails(par_UserId);
+    PERFORM guididarray$aws$f('"par_Ids$aws$tmp"');
     INSERT INTO "par_Ids$aws$tmp"
     SELECT
         *
@@ -33,12 +33,12 @@ BEGIN
             WHEN attachments IS NULL THEN 0
             ELSE 1
         END
-        FROM vault_dbo.usercipherdetails$tmptbl
+        FROM usercipherdetails$tmptbl
         WHERE Edit = 1 AND id IN (SELECT
             *
             FROM "par_Ids$aws$tmp");
     /* Delete ciphers */
-    DELETE FROM vault_dbo.cipher
+    DELETE FROM cipher
         WHERE id IN (SELECT
             id
             FROM "#Temp");
@@ -50,8 +50,8 @@ BEGIN
         WHEN 0 THEN - 1
         ELSE 0
     END) = 0 LOOP
-        CALL vault_dbo.organization_updatestorage(var_OrgId);
-        CALL vault_dbo.user_bumpaccountrevisiondatebyorganizationid(var_OrgId);
+        CALL organization_updatestorage(var_OrgId);
+        CALL user_bumpaccountrevisiondatebyorganizationid(var_OrgId);
         FETCH NEXT FROM orgcursor INTO var_OrgId;
     END LOOP;
     CLOSE orgcursor;
@@ -63,9 +63,9 @@ BEGIN
         WHERE userid IS NOT NULL AND attachments = 1;
 
     IF var_UserCiphersWithStorageCount > 0 THEN
-        CALL vault_dbo.user_updatestorage(par_UserId);
+        CALL user_updatestorage(par_UserId);
     END IF;
-    CALL vault_dbo.user_bumpaccountrevisiondate(par_UserId);
+    CALL user_bumpaccountrevisiondate(par_UserId);
     DROP TABLE "#Temp";
     /*
 

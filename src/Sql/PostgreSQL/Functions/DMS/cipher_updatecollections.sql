@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_updatecollections(par_id uuid, par_userid uuid, par_organizationid uuid, par_collectionids vault_dbo.guididarray, INOUT return_code integer)
+CREATE OR REPLACE PROCEDURE cipher_updatecollections(par_id uuid, par_userid uuid, par_organizationid uuid, par_collection_ids guididarray, INOUT return_code integer)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -19,25 +19,25 @@ BEGIN
         INSERT INTO "#AvailableCollections"
         SELECT
             id
-            FROM vault_dbo.collection
+            FROM collection
             WHERE organizationid = par_OrganizationId;
     ELSE
         INSERT INTO "#AvailableCollections"
         SELECT
             c.id
-            FROM vault_dbo.collection AS c
-            INNER JOIN vault_dbo.organization AS o
+            FROM collection AS c
+            INNER JOIN organization AS o
                 ON o.id = c.organizationid
-            INNER JOIN vault_dbo.organizationuser AS ou
+            INNER JOIN organization_user AS ou
                 ON ou.organizationid = o.id AND ou.userid = par_UserId
-            LEFT OUTER JOIN vault_dbo.collectionuser AS cu
-                ON ou.accessall = 0 AND cu.collectionid = c.id AND cu.organizationuserid = ou.id
-            LEFT OUTER JOIN vault_dbo.groupuser AS gu
-                ON cu.collectionid IS NULL AND ou.accessall = 0 AND gu.organizationuserid = ou.id
-            LEFT OUTER JOIN vault_dbo."Group" AS g
+            LEFT OUTER JOIN collectionuser AS cu
+                ON ou.accessall = 0 AND cu.collection_id = c.id AND cu.organization_userid = ou.id
+            LEFT OUTER JOIN groupuser AS gu
+                ON cu.collection_id IS NULL AND ou.accessall = 0 AND gu.organization_userid = ou.id
+            LEFT OUTER JOIN "Group" AS g
                 ON g.id = gu.groupid
-            LEFT OUTER JOIN vault_dbo.collectiongroup AS cg
-                ON g.accessall = 0 AND cg.collectionid = c.id AND cg.groupid = gu.groupid
+            LEFT OUTER JOIN collection_group AS cg
+                ON g.accessall = 0 AND cg.collection_id = c.id AND cg.groupid = gu.groupid
             WHERE o.id = par_OrganizationId AND o.enabled = 1 AND ou.status = 2 AND
             /* Confirmed */
             (ou.accessall = 1 OR cu.readonly = 0 OR g.accessall = 1 OR cg.readonly = 0);
@@ -50,7 +50,7 @@ BEGIN
         return_code := (- 1);
         RETURN;
     END IF;
-    INSERT INTO vault_dbo.collectioncipher (collectionid, cipherid)
+    INSERT INTO collectioncipher (collection_id, cipherid)
     SELECT
         id, par_Id
         FROM "par_CollectionIds$aws$tmp"

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.organizationuser_readcountbyonlyowner(par_userid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE organization_user_readcountbyonlyowner(par_userid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -12,7 +12,7 @@ BEGIN
     WITH ownercountcte
     AS (SELECT
         ou.userid, COUNT(1) OVER (PARTITION BY ou.organizationid) AS confirmedownercount
-        FROM vault_dbo.organizationuser AS ou
+        FROM organization_user AS ou
         WHERE ou.type = 0 AND
         /* 0 = Owner */
         ou.status = 2

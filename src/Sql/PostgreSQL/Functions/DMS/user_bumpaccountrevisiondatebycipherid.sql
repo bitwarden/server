@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.user_bumpaccountrevisiondatebycipherid(par_cipherid uuid, par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE user_bumpaccountrevisiondatebycipherid(par_cipherid uuid, par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -6,24 +6,24 @@ BEGIN
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
     SET NOCOUNT ON
     */
-    UPDATE vault_dbo."User"
+    UPDATE "User"
     SET accountrevisiondate = timezone('UTC', CURRENT_TIMESTAMP(6))
-    FROM vault_dbo."User" AS u
-    LEFT OUTER JOIN vault_dbo.organizationuser AS ou
+    FROM "User" AS u
+    LEFT OUTER JOIN organization_user AS ou
         ON ou.userid = u.id
-    LEFT OUTER JOIN vault_dbo.collectioncipher AS cc
+    LEFT OUTER JOIN collectioncipher AS cc
         ON cc.cipherid = par_CipherId
-    LEFT OUTER JOIN vault_dbo.collectionuser AS cu
-        ON ou.accessall = 0 AND cu.organizationuserid = ou.id AND cu.collectionid = cc.collectionid
-    LEFT OUTER JOIN vault_dbo.groupuser AS gu
-        ON cu.collectionid IS NULL AND ou.accessall = 0 AND gu.organizationuserid = ou.id
-    LEFT OUTER JOIN vault_dbo."Group" AS g
+    LEFT OUTER JOIN collectionuser AS cu
+        ON ou.accessall = 0 AND cu.organization_userid = ou.id AND cu.collection_id = cc.collection_id
+    LEFT OUTER JOIN groupuser AS gu
+        ON cu.collection_id IS NULL AND ou.accessall = 0 AND gu.organization_userid = ou.id
+    LEFT OUTER JOIN "Group" AS g
         ON g.id = gu.groupid
-    LEFT OUTER JOIN vault_dbo.collectiongroup AS cg
-        ON g.accessall = 0 AND cg.groupid = gu.groupid AND cg.collectionid = cc.collectionid
+    LEFT OUTER JOIN collection_group AS cg
+        ON g.accessall = 0 AND cg.groupid = gu.groupid AND cg.collection_id = cc.collection_id
         WHERE ou.status = 2 AND
         /* 2 = Confirmed */
-        (cu.collectionid IS NOT NULL OR cg.collectionid IS NOT NULL OR (ou.organizationid = par_OrganizationId AND (ou.accessall = 1 OR g.accessall = 1)));
+        (cu.collection_id IS NOT NULL OR cg.collection_id IS NOT NULL OR (ou.organizationid = par_OrganizationId AND (ou.accessall = 1 OR g.accessall = 1)));
 END;
 $procedure$
 ;

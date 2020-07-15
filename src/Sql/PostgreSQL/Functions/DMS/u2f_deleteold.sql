@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.u2f_deleteold()
+CREATE OR REPLACE PROCEDURE u2f_deleteold()
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE

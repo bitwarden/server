@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.organizationuser_updatewithcollections(par_id uuid, par_organizationid uuid, par_userid uuid, par_email character varying, par_key text, par_status numeric, par_type numeric, par_accessall numeric, par_externalid character varying, par_creationdate timestamp without time zone, par_revisiondate timestamp without time zone, par_collections vault_dbo.selectionreadonlyarray)
+CREATE OR REPLACE PROCEDURE organization_user_updatewithcollections(par_id uuid, par_organizationid uuid, par_userid uuid, par_email character varying, par_key text, par_status numeric, par_type numeric, par_accessall numeric, par_externalid character varying, par_creationdate timestamp without time zone, par_revisiondate timestamp without time zone, par_collections selectionreadonlyarray)
  LANGUAGE plpgsql
 AS $procedure$
 /*

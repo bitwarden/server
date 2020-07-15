@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.transaction_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE transaction_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.transactionview
+        FROM transactionview
         WHERE userid = par_UserId;
 END;
 $procedure$

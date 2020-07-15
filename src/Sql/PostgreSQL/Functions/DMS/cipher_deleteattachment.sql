@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_deleteattachment(par_id uuid, par_attachmentid character varying)
+CREATE OR REPLACE PROCEDURE cipher_deleteattachment(par_id uuid, par_attachmentid character varying)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -14,19 +14,19 @@ BEGIN
     SELECT
         userid, organizationid
         INTO var_UserId, var_OrganizationId
-        FROM vault_dbo.cipher
+        FROM cipher
         WHERE id = par_Id;
-    UPDATE vault_dbo.cipher
+    UPDATE cipher
     SET attachments = JSON_MODIFY(attachments, var_AttachmentIdPath, NULL)
         WHERE id = par_Id;
 
     IF var_OrganizationId IS NOT NULL THEN
-        CALL vault_dbo.organization_updatestorage(var_OrganizationId);
-        CALL vault_dbo.user_bumpaccountrevisiondatebycipherid(par_Id, var_OrganizationId);
+        CALL organization_updatestorage(var_OrganizationId);
+        CALL user_bumpaccountrevisiondatebycipherid(par_Id, var_OrganizationId);
     ELSE
         IF var_UserId IS NOT NULL THEN
-            CALL vault_dbo.user_updatestorage(var_UserId);
-            CALL vault_dbo.user_bumpaccountrevisiondate(var_UserId);
+            CALL user_updatestorage(var_UserId);
+            CALL user_bumpaccountrevisiondate(var_UserId);
         END IF;
     END IF;
 END;

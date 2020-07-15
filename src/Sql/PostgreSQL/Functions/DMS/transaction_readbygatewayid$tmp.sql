@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."transaction_readbygatewayid$tmp"(par_gateway numeric, par_gatewayid character varying)
+CREATE OR REPLACE PROCEDURE "transaction_readbygatewayid$tmp"(par_gateway numeric, par_gatewayid character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.transactionview
+        FROM transactionview
         WHERE gateway = par_Gateway AND LOWER(gatewayid) = LOWER(par_GatewayId);
 END;
 $procedure$

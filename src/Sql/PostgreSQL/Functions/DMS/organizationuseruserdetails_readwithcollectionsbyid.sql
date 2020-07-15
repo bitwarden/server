@@ -1,21 +1,21 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.organizationuseruserdetails_readwithcollectionsbyid(par_id uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE organization_useruserdetails_readwithcollectionsbyid(par_id uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
-    organizationuseruserdetails_readbyid$refcur_1 refcursor;
+    organization_useruserdetails_readbyid$refcur_1 refcursor;
 BEGIN
     /*
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
     SET NOCOUNT ON
     */
-    CALL vault_dbo.organizationuseruserdetails_readbyid(par_Id, p_refcur => organizationuseruserdetails_readbyid$refcur_1);
+    CALL organization_useruserdetails_readbyid(par_Id, p_refcur => organization_useruserdetails_readbyid$refcur_1);
     OPEN p_refcur FOR
     SELECT
-        cu.collectionid AS id, cu.readonly
-        FROM vault_dbo.organizationuser AS ou
-        INNER JOIN vault_dbo.collectionuser AS cu
-            ON ou.accessall = 0 AND cu.organizationuserid = ou.id
-        WHERE organizationuserid = par_Id;
+        cu.collection_id AS id, cu.readonly
+        FROM organization_user AS ou
+        INNER JOIN collectionuser AS cu
+            ON ou.accessall = 0 AND cu.organization_userid = ou.id
+        WHERE organization_userid = par_Id;
 END;
 $procedure$
 ;

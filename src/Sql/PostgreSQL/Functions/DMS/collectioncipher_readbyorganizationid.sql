@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collectioncipher_readbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE collectioncipher_readbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,9 +9,9 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         sc.*
-        FROM vault_dbo.collectioncipher AS sc
-        INNER JOIN vault_dbo.collection AS s
-            ON s.id = sc.collectionid
+        FROM collectioncipher AS sc
+        INNER JOIN collection AS s
+            ON s.id = sc.collection_id
         WHERE s.organizationid = par_OrganizationId;
 END;
 $procedure$

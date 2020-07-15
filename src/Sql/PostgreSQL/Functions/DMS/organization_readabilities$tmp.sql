@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."organization_readabilities$tmp"()
+CREATE OR REPLACE PROCEDURE "organization_readabilities$tmp"()
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -15,7 +15,7 @@ BEGIN
             WHEN use2fa = 1 AND twofactorproviders IS NOT NULL AND LOWER(twofactorproviders) != LOWER('{}') THEN 1
             ELSE 0
         END AS using2fa, usersgetpremium, enabled
-        FROM vault_dbo.organization;
+        FROM organization;
 END;
 $procedure$
 ;

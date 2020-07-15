@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_deletebyid(par_id uuid)
+CREATE OR REPLACE PROCEDURE cipher_deletebyid(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -17,23 +17,23 @@ BEGIN
             ELSE 0
         END
         INTO var_UserId, var_OrganizationId, var_Attachments
-        FROM vault_dbo.cipher
+        FROM cipher
         WHERE id = par_Id
         LIMIT 1;
-    DELETE FROM vault_dbo.cipher
+    DELETE FROM cipher
         WHERE id = par_Id;
 
     IF var_OrganizationId IS NOT NULL THEN
         IF var_Attachments = 1 THEN
-            CALL vault_dbo.organization_updatestorage(var_OrganizationId);
+            CALL organization_updatestorage(var_OrganizationId);
         END IF;
-        CALL vault_dbo.user_bumpaccountrevisiondatebycipherid(par_Id, var_OrganizationId);
+        CALL user_bumpaccountrevisiondatebycipherid(par_Id, var_OrganizationId);
     ELSE
         IF var_UserId IS NOT NULL THEN
             IF var_Attachments = 1 THEN
-                CALL vault_dbo.user_updatestorage(var_UserId);
+                CALL user_updatestorage(var_UserId);
             END IF;
-            CALL vault_dbo.user_bumpaccountrevisiondate(var_UserId);
+            CALL user_bumpaccountrevisiondate(var_UserId);
         END IF;
     END IF;
 END;

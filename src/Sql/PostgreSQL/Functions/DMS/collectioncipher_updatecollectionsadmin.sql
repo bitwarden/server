@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collectioncipher_updatecollectionsadmin(par_cipherid uuid, par_organizationid uuid, par_collectionids vault_dbo.guididarray)
+CREATE OR REPLACE PROCEDURE collectioncipher_updatecollectionsadmin(par_cipherid uuid, par_organizationid uuid, par_collection_ids guididarray)
  LANGUAGE plpgsql
 AS $procedure$
 /*

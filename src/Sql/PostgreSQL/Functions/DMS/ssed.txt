@@ -1,0 +1,1 @@
+find . -name '*.sql' -exec ssed -i 's/collectionid/collection_id/g' {} +

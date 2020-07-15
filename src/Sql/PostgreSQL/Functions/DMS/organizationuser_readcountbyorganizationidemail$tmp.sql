@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."organizationuser_readcountbyorganizationidemail$tmp"(par_organizationid uuid, par_email character varying, par_onlyusers numeric)
+CREATE OR REPLACE PROCEDURE "organization_user_readcountbyorganizationidemail$tmp"(par_organizationid uuid, par_email character varying, par_onlyusers numeric)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,8 +11,8 @@ BEGIN
     AS
     SELECT
         COUNT(1) AS col1
-        FROM vault_dbo.organizationuser AS ou
-        LEFT OUTER JOIN vault_dbo."User" AS u
+        FROM organization_user AS ou
+        LEFT OUTER JOIN "User" AS u
             ON ou.userid = u.id
         WHERE ou.organizationid = par_OrganizationId AND ((par_OnlyUsers = 0 AND (LOWER(ou.email) = LOWER(par_Email) OR LOWER(u.email) = LOWER(par_Email))) OR (par_OnlyUsers = 1 AND LOWER(u.email) = LOWER(par_Email)));
 END;

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collectioncipher_updatecollectionsforciphers(par_cipherids vault_dbo.guididarray, par_organizationid uuid, par_userid uuid, par_collectionids vault_dbo.guididarray)
+CREATE OR REPLACE PROCEDURE collectioncipher_updatecollectionsforciphers(par_cipherids guididarray, par_organizationid uuid, par_userid uuid, par_collection_ids guididarray)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,19 +11,19 @@ BEGIN
     INSERT INTO "#AvailableCollections"
     SELECT
         c.id
-        FROM vault_dbo.collection AS c
-        INNER JOIN vault_dbo.organization AS o
+        FROM collection AS c
+        INNER JOIN organization AS o
             ON o.id = c.organizationid
-        INNER JOIN vault_dbo.organizationuser AS ou
+        INNER JOIN organization_user AS ou
             ON ou.organizationid = o.id AND ou.userid = par_UserId
-        LEFT OUTER JOIN vault_dbo.collectionuser AS cu
-            ON ou.accessall = 0 AND cu.collectionid = c.id AND cu.organizationuserid = ou.id
-        LEFT OUTER JOIN vault_dbo.groupuser AS gu
-            ON cu.collectionid IS NULL AND ou.accessall = 0 AND gu.organizationuserid = ou.id
-        LEFT OUTER JOIN vault_dbo."Group" AS g
+        LEFT OUTER JOIN collectionuser AS cu
+            ON ou.accessall = 0 AND cu.collection_id = c.id AND cu.organization_userid = ou.id
+        LEFT OUTER JOIN groupuser AS gu
+            ON cu.collection_id IS NULL AND ou.accessall = 0 AND gu.organization_userid = ou.id
+        LEFT OUTER JOIN "Group" AS g
             ON g.id = gu.groupid
-        LEFT OUTER JOIN vault_dbo.collectiongroup AS cg
-            ON g.accessall = 0 AND cg.collectionid = c.id AND cg.groupid = gu.groupid
+        LEFT OUTER JOIN collection_group AS cg
+            ON g.accessall = 0 AND cg.collection_id = c.id AND cg.groupid = gu.groupid
         WHERE o.id = par_OrganizationId AND o.enabled = 1 AND ou.status = 2 AND
         /* Confirmed */
         (ou.accessall = 1 OR cu.readonly = 0 OR g.accessall = 1 OR cg.readonly = 0);
@@ -34,12 +34,12 @@ BEGIN
         /* No writable collections available to share with in this organization. */
         RETURN;
     END IF;
-    PERFORM vault_dbo.guididarray$aws$f('"par_CipherIds$aws$tmp"');
+    PERFORM guididarray$aws$f('"par_CipherIds$aws$tmp"');
     INSERT INTO "par_CipherIds$aws$tmp"
     SELECT
         *
         FROM UNNEST(par_CipherIds);
-    INSERT INTO vault_dbo.collectioncipher (collectionid, cipherid)
+    INSERT INTO collectioncipher (collection_id, cipherid)
     SELECT
         collection.id, cipher.id
         FROM "par_CollectionIds$aws$tmp" AS collection
@@ -48,7 +48,7 @@ BEGIN
         WHERE collection.id IN (SELECT
             id
             FROM "#AvailableCollections");
-    CALL vault_dbo.user_bumpaccountrevisiondatebyorganizationid(par_OrganizationId);
+    CALL user_bumpaccountrevisiondatebyorganizationid(par_OrganizationId);
     /*
 
     DROP TABLE IF EXISTS "#AvailableCollections";

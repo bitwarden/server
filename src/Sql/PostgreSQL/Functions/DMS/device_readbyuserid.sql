@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.device_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE device_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.deviceview
+        FROM deviceview
         WHERE userid = par_UserId;
 END;
 $procedure$

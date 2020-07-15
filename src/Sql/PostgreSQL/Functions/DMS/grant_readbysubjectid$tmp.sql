@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."grant_readbysubjectid$tmp"(par_subjectid character varying)
+CREATE OR REPLACE PROCEDURE "grant_readbysubjectid$tmp"(par_subjectid character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.grantview
+        FROM grantview
         WHERE LOWER(subjectid) = LOWER(par_SubjectId);
 END;
 $procedure$

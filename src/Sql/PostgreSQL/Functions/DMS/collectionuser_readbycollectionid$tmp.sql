@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."collectionuser_readbycollectionid$tmp"(par_collectionid uuid)
+CREATE OR REPLACE PROCEDURE "collectionuser_readbycollection_id$tmp"(par_collection_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -10,9 +10,9 @@ BEGIN
     CREATE TEMP TABLE CollectionUser_ReadByCollectionId$TMPTBL
     AS
     SELECT
-        organizationuserid AS id, readonly
-        FROM vault_dbo.collectionuser
-        WHERE collectionid = par_CollectionId;
+        organization_userid AS id, readonly
+        FROM collectionuser
+        WHERE collection_id = par_CollectionId;
 END;
 $procedure$
 ;

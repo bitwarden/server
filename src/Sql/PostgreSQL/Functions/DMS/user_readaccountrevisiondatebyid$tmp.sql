@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."user_readaccountrevisiondatebyid$tmp"(par_id uuid)
+CREATE OR REPLACE PROCEDURE "user_readaccountrevisiondatebyid$tmp"(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         accountrevisiondate
-        FROM vault_dbo."User"
+        FROM "User"
         WHERE id = par_Id;
 END;
 $procedure$

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."cipherorganizationdetails_readbyid$tmp"(par_id uuid)
+CREATE OR REPLACE PROCEDURE "cipherorganizationdetails_readbyid$tmp"(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -15,8 +15,8 @@ BEGIN
             WHEN o.usetotp = 1 THEN 1
             ELSE 0
         END AS organizationusetotp
-        FROM vault_dbo.cipherview AS c
-        LEFT OUTER JOIN vault_dbo.organization AS o
+        FROM cipherview AS c
+        LEFT OUTER JOIN organization AS o
             ON o.id = c.organizationid
         WHERE c.id = par_Id;
 END;

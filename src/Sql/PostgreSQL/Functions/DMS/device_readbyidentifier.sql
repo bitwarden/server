@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.device_readbyidentifier(par_identifier character varying, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE device_readbyidentifier(par_identifier character varying, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.deviceview
+        FROM deviceview
         WHERE LOWER(identifier) = LOWER(par_Identifier);
 END;
 $procedure$

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."organizationuserorganizationdetails_readbyuseridstatus$tmp"(par_userid uuid, par_status numeric)
+CREATE OR REPLACE PROCEDURE "organization_userorganizationdetails_readbyuseridstatus$tmp"(par_userid uuid, par_status numeric)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.organizationuserorganizationdetailsview
+        FROM organization_userorganizationdetailsview
         WHERE userid = par_UserId AND (par_Status IS NULL OR status = par_Status);
 END;
 $procedure$

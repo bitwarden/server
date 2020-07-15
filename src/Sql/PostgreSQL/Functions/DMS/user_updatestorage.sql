@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.user_updatestorage(par_id uuid)
+CREATE OR REPLACE PROCEDURE user_updatestorage(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -16,7 +16,7 @@ BEGIN
     --    INSERT INTO "#UserStorageUpdateTemp"
     --    SELECT
     --        id, attachments
-    --        FROM vault_dbo.cipher
+    --        FROM cipher
     --        WHERE userid = par_Id;
     --    WITH cte
     --    AS (SELECT
@@ -30,7 +30,7 @@ BEGIN
     --        INTO var_Storage
     --        FROM cte;
     --    DROP TABLE "#UserStorageUpdateTemp";
-    --    UPDATE vault_dbo."User"
+    --    UPDATE "User"
     --    SET storage = var_Storage, revisiondate = timezone('UTC', CURRENT_TIMESTAMP(6))
     --        WHERE id = par_Id;
     --    /*

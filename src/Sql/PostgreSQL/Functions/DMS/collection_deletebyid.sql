@@ -1,10 +1,10 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collection_deletebyid(par_id uuid)
+CREATE OR REPLACE PROCEDURE collection_deletebyid(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
     var_OrganizationId UUID DEFAULT (SELECT
         organizationid
-        FROM vault_dbo.collection
+        FROM collection
         WHERE id = par_Id
         LIMIT 1);
 BEGIN
@@ -13,11 +13,11 @@ BEGIN
     SET NOCOUNT ON
     */
     IF var_OrganizationId IS NOT NULL THEN
-        CALL vault_dbo.user_bumpaccountrevisiondatebycollectionid(par_Id, var_OrganizationId);
+        CALL user_bumpaccountrevisiondatebycollection_id(par_Id, var_OrganizationId);
     END IF;
-    DELETE FROM vault_dbo.collectiongroup
-        WHERE collectionid = par_Id;
-    DELETE FROM vault_dbo.collection
+    DELETE FROM collection_group
+        WHERE collection_id = par_Id;
+    DELETE FROM collection
         WHERE id = par_Id;
 END;
 $procedure$

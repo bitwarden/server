@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.groupuser_updateusers(par_groupid uuid, par_organizationuserids vault_dbo.guididarray)
+CREATE OR REPLACE PROCEDURE groupuser_updateusers(par_groupid uuid, par_organization_userids guididarray)
  LANGUAGE plpgsql
 AS $procedure$
 /*

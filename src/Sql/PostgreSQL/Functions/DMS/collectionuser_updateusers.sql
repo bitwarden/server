@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.collectionuser_updateusers(par_collectionid uuid, par_users vault_dbo.selectionreadonlyarray)
+CREATE OR REPLACE PROCEDURE collectionuser_updateusers(par_collection_id uuid, par_users selectionreadonlyarray)
  LANGUAGE plpgsql
 AS $procedure$
 /*

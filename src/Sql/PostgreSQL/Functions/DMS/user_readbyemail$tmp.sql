@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."user_readbyemail$tmp"(par_email character varying)
+CREATE OR REPLACE PROCEDURE "user_readbyemail$tmp"(par_email character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.userview
+        FROM userview
         WHERE LOWER(email) = LOWER(par_Email);
 END;
 $procedure$

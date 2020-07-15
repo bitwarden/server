@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."user_readkdfbyemail$tmp"(par_email character varying)
+CREATE OR REPLACE PROCEDURE "user_readkdfbyemail$tmp"(par_email character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         kdf, kdfiterations
-        FROM vault_dbo."User"
+        FROM "User"
         WHERE LOWER(email) = LOWER(par_Email);
 END;
 $procedure$

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.grant_deleteexpired()
+CREATE OR REPLACE PROCEDURE grant_deleteexpired()
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_readbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE cipher_readbyorganizationid(par_organizationid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.cipherview
+        FROM cipherview
         WHERE userid IS NULL AND organizationid = par_OrganizationId;
 END;
 $procedure$

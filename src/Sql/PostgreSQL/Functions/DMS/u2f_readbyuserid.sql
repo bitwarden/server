@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.u2f_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE u2f_readbyuserid(par_userid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.u2fview
+        FROM u2fview
         WHERE userid = par_UserId;
 END;
 $procedure$

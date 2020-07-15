@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.user_readpublickeybyid(par_id character varying, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE user_readpublickeybyid(par_id character varying, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         publickey
-        FROM vault_dbo."User"
+        FROM "User"
         WHERE id = par_Id::UUID;
 END;
 $procedure$

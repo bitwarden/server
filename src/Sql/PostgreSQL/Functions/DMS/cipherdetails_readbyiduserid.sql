@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipherdetails_readbyiduserid(par_id uuid, par_userid uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE cipherdetails_readbyiduserid(par_id uuid, par_userid uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -6,11 +6,11 @@ BEGIN
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
     SET NOCOUNT ON
     */
-    PERFORM vault_dbo.usercipherdetails(par_UserId);
+    PERFORM usercipherdetails(par_UserId);
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.usercipherdetails$tmptbl
+        FROM usercipherdetails$tmptbl
         WHERE Id = par_Id
         ORDER BY Edit DESC NULLS FIRST
         LIMIT 1;

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."user_readpublickeybyid$tmp"(par_id character varying)
+CREATE OR REPLACE PROCEDURE "user_readpublickeybyid$tmp"(par_id character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         publickey
-        FROM vault_dbo."User"
+        FROM "User"
         WHERE id = par_Id::UUID;
 END;
 $procedure$

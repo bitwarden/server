@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."group_readbyorganizationid$tmp"(par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE "group_readbyorganizationid$tmp"(par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.groupview
+        FROM groupview
         WHERE organizationid = par_OrganizationId;
 END;
 $procedure$

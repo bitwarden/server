@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.organizationuser_readbyid(par_id uuid, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE organization_user_readbyid(par_id uuid, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.organizationuserview
+        FROM organization_userview
         WHERE id = par_Id;
 END;
 $procedure$

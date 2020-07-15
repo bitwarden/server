@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."grant_readbykey$tmp"(par_key character varying)
+CREATE OR REPLACE PROCEDURE "grant_readbykey$tmp"(par_key character varying)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.grantview
+        FROM grantview
         WHERE LOWER(key) = LOWER(par_Key);
 END;
 $procedure$

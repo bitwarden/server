@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."collection_readcountbyorganizationid$tmp"(par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE "collection_readcountbyorganizationid$tmp"(par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         COUNT(1) AS col1
-        FROM vault_dbo.collection
+        FROM collection
         WHERE organizationid = par_OrganizationId;
 END;
 $procedure$

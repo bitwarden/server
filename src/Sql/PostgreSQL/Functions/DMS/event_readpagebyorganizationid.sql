@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.event_readpagebyorganizationid(par_organizationid uuid, par_startdate timestamp without time zone, par_enddate timestamp without time zone, par_beforedate timestamp without time zone, par_pagesize numeric, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE event_readpagebyorganizationid(par_organizationid uuid, par_startdate timestamp without time zone, par_enddate timestamp without time zone, par_beforedate timestamp without time zone, par_pagesize numeric, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.eventview
+        FROM eventview
         WHERE date >= par_StartDate AND (par_BeforeDate IS NOT NULL OR date <= par_EndDate) AND (par_BeforeDate IS NULL OR date < par_BeforeDate) AND organizationid = par_OrganizationId
         ORDER BY date DESC NULLS FIRST
         OFFSET 0 LIMIT (par_PageSize);

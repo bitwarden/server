@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.organizationuser_readcountbyorganizationidemail(par_organizationid uuid, par_email character varying, par_onlyusers numeric, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE organization_user_readcountbyorganizationidemail(par_organizationid uuid, par_email character varying, par_onlyusers numeric, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,8 +9,8 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         COUNT(1)
-        FROM vault_dbo.organizationuser AS ou
-        LEFT OUTER JOIN vault_dbo."User" AS u
+        FROM organization_user AS ou
+        LEFT OUTER JOIN "User" AS u
             ON ou.userid = u.id
         WHERE ou.organizationid = par_OrganizationId AND ((par_OnlyUsers = 0 AND (LOWER(ou.email) = LOWER(par_Email) OR LOWER(u.email) = LOWER(par_Email))) OR (par_OnlyUsers = 1 AND LOWER(u.email) = LOWER(par_Email)));
 END;

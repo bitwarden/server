@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."event_readpagebycipherid$tmp"(par_organizationid uuid, par_userid uuid, par_cipherid uuid, par_startdate timestamp without time zone, par_enddate timestamp without time zone, par_beforedate timestamp without time zone, par_pagesize numeric)
+CREATE OR REPLACE PROCEDURE "event_readpagebycipherid$tmp"(par_organizationid uuid, par_userid uuid, par_cipherid uuid, par_startdate timestamp without time zone, par_enddate timestamp without time zone, par_beforedate timestamp without time zone, par_pagesize numeric)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.eventview
+        FROM eventview
         WHERE date >= par_StartDate AND (par_BeforeDate IS NOT NULL OR date <= par_EndDate) AND (par_BeforeDate IS NULL OR date < par_BeforeDate) AND ((par_OrganizationId IS NULL AND organizationid IS NULL) OR (par_OrganizationId IS NOT NULL AND organizationid = par_OrganizationId)) AND ((par_UserId IS NULL AND userid IS NULL) OR (par_UserId IS NOT NULL AND userid = par_UserId)) AND cipherid = par_CipherId
         ORDER BY date DESC NULLS FIRST
         OFFSET 0 LIMIT (par_PageSize);

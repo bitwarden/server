@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_updatepartial(par_id uuid, par_userid uuid, par_folderid uuid, par_favorite numeric)
+CREATE OR REPLACE PROCEDURE cipher_updatepartial(par_id uuid, par_userid uuid, par_folderid uuid, par_favorite numeric)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -9,7 +9,7 @@ BEGIN
     [7810 - Severity CRITICAL - PostgreSQL doesn't support the SET NOCOUNT. If need try another way to send message back to the client application.]
     SET NOCOUNT ON
     */
-    UPDATE vault_dbo.cipher
+    UPDATE cipher
     SET folders =
     CASE
         WHEN par_FolderId IS NOT NULL AND folders IS NULL THEN CONCAT('{', var_UserIdKey, ':"', par_FolderId, '"', '}')
@@ -24,7 +24,7 @@ BEGIN
         WHERE id = par_Id;
 
     IF par_UserId IS NOT NULL THEN
-        CALL vault_dbo.user_bumpaccountrevisiondate(par_UserId);
+        CALL user_bumpaccountrevisiondate(par_UserId);
     END IF;
 END;
 $procedure$

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_deletebyorganizationid(par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE cipher_deletebyorganizationid(par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -48,8 +48,8 @@ BEGIN
         COMMIT;
     END LOOP;
     /* Cleanup organization */
-    CALL vault_dbo.organization_updatestorage(par_OrganizationId);
-    CALL vault_dbo.user_bumpaccountrevisiondatebyorganizationid(par_OrganizationId);
+    CALL organization_updatestorage(par_OrganizationId);
+    CALL user_bumpaccountrevisiondatebyorganizationid(par_OrganizationId);
 END;
 $procedure$
 ;

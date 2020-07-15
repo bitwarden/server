@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.grant_readbykey(par_key character varying, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE grant_readbykey(par_key character varying, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.grantview
+        FROM grantview
         WHERE LOWER(key) = LOWER(par_Key);
 END;
 $procedure$

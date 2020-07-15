@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION vault_dbo.cipherdetails(par_userid uuid)
+CREATE OR REPLACE FUNCTION cipherdetails(par_userid uuid)
  RETURNS void
  LANGUAGE plpgsql
 AS $function$

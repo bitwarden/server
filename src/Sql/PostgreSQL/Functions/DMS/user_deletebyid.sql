@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.user_deletebyid(par_id uuid)
+CREATE OR REPLACE PROCEDURE user_deletebyid(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -30,27 +30,27 @@ BEGIN
     BEGIN TRANSACTION User_DeleteById
     */
     /* Delete folders */
-    DELETE FROM vault_dbo.folder
+    DELETE FROM folder
         WHERE userid = par_Id;
     /* Delete devices */
-    DELETE FROM vault_dbo.device
+    DELETE FROM device
         WHERE userid = par_Id;
     /* Delete collection users */
-    DELETE FROM vault_dbo.collectionuser AS cu
-    USING vault_dbo.organizationuser AS ou
-        WHERE ou.userid = par_Id AND ou.id = cu.organizationuserid;
+    DELETE FROM collectionuser AS cu
+    USING organization_user AS ou
+        WHERE ou.userid = par_Id AND ou.id = cu.organization_userid;
     /* Delete group users */
-    DELETE FROM vault_dbo.groupuser AS gu
-    USING vault_dbo.organizationuser AS ou
-        WHERE ou.userid = par_Id AND ou.id = gu.organizationuserid;
+    DELETE FROM groupuser AS gu
+    USING organization_user AS ou
+        WHERE ou.userid = par_Id AND ou.id = gu.organization_userid;
     /* Delete organization users */
-    DELETE FROM vault_dbo.organizationuser
+    DELETE FROM organization_user
         WHERE userid = par_Id;
     /* Delete U2F logins */
-    DELETE FROM vault_dbo.u2f
+    DELETE FROM u2f
         WHERE userid = par_Id;
     /* Finally, delete the user */
-    DELETE FROM vault_dbo."User"
+    DELETE FROM "User"
         WHERE id = par_Id;
     COMMIT;
 END;

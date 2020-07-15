@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.cipher_deletebyuserid(par_userid uuid)
+CREATE OR REPLACE PROCEDURE cipher_deletebyuserid(par_userid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -26,11 +26,11 @@ BEGIN
         COMMIT;
     END LOOP;
     /* Delete folders */
-    DELETE FROM vault_dbo.folder
+    DELETE FROM folder
         WHERE userid = par_UserId;
     /* Cleanup user */
-    CALL vault_dbo.user_updatestorage(par_UserId);
-    CALL vault_dbo.user_bumpaccountrevisiondate(par_UserId);
+    CALL user_updatestorage(par_UserId);
+    CALL user_bumpaccountrevisiondate(par_UserId);
 END;
 $procedure$
 ;

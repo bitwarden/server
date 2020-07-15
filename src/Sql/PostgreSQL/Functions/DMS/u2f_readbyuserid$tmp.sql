@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."u2f_readbyuserid$tmp"(par_userid uuid)
+CREATE OR REPLACE PROCEDURE "u2f_readbyuserid$tmp"(par_userid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.u2fview
+        FROM u2fview
         WHERE userid = par_UserId;
 END;
 $procedure$

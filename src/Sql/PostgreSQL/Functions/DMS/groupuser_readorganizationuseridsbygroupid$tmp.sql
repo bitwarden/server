@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."groupuser_readorganizationuseridsbygroupid$tmp"(par_groupid uuid)
+CREATE OR REPLACE PROCEDURE "groupuser_readorganization_useridsbygroupid$tmp"(par_groupid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -10,8 +10,8 @@ BEGIN
     CREATE TEMP TABLE GroupUser_ReadOrganizationUserIdsByGroupId$TMPTBL
     AS
     SELECT
-        organizationuserid
-        FROM vault_dbo.groupuser
+        organization_userid
+        FROM groupuser
         WHERE groupid = par_GroupId;
 END;
 $procedure$

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."folder_readbyid$tmp"(par_id uuid)
+CREATE OR REPLACE PROCEDURE "folder_readbyid$tmp"(par_id uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.folderview
+        FROM folderview
         WHERE id = par_Id;
 END;
 $procedure$

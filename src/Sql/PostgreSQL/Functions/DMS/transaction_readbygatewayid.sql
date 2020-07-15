@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.transaction_readbygatewayid(par_gateway numeric, par_gatewayid character varying, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE transaction_readbygatewayid(par_gateway numeric, par_gatewayid character varying, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         *
-        FROM vault_dbo.transactionview
+        FROM transactionview
         WHERE gateway = par_Gateway AND LOWER(gatewayid) = LOWER(par_GatewayId);
 END;
 $procedure$

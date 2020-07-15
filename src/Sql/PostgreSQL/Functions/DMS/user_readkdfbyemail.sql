@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo.user_readkdfbyemail(par_email character varying, INOUT p_refcur refcursor)
+CREATE OR REPLACE PROCEDURE user_readkdfbyemail(par_email character varying, INOUT p_refcur refcursor)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     OPEN p_refcur FOR
     SELECT
         kdf, kdfiterations
-        FROM vault_dbo."User"
+        FROM "User"
         WHERE LOWER(email) = LOWER(par_Email);
 END;
 $procedure$

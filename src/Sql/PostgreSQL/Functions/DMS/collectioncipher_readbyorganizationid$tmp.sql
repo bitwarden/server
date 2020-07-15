@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."collectioncipher_readbyorganizationid$tmp"(par_organizationid uuid)
+CREATE OR REPLACE PROCEDURE "collectioncipher_readbyorganizationid$tmp"(par_organizationid uuid)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,9 +11,9 @@ BEGIN
     AS
     SELECT
         sc.*
-        FROM vault_dbo.collectioncipher AS sc
-        INNER JOIN vault_dbo.collection AS s
-            ON s.id = sc.collectionid
+        FROM collectioncipher AS sc
+        INNER JOIN collection AS s
+            ON s.id = sc.collection_id
         WHERE s.organizationid = par_OrganizationId;
 END;
 $procedure$

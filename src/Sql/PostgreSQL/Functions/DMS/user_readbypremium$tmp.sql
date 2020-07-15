@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE vault_dbo."user_readbypremium$tmp"(par_premium numeric)
+CREATE OR REPLACE PROCEDURE "user_readbypremium$tmp"(par_premium numeric)
  LANGUAGE plpgsql
 AS $procedure$
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
     AS
     SELECT
         *
-        FROM vault_dbo.userview
+        FROM userview
         WHERE premium = par_Premium;
 END;
 $procedure$
