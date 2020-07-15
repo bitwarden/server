@@ -865,6 +865,7 @@ namespace Bit.Core.Services
             }
         }
 
+        // If the owner applying 2FA doesn't have 2FA they will be locked out
         public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type, Guid? updatingUserId)
         {
             if (!type.ToString().Contains("Organization"))
@@ -884,20 +885,20 @@ namespace Bit.Core.Services
             }
 
             providers[type].Enabled = true;
+            organization.SetTwoFactorProviders(providers);
+            await UpdateAsync(organization);
+
             var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
             foreach (var orgUser in orgUsers.Where(ou =>
                 ou.Status != Enums.OrganizationUserStatusType.Invited 
                 && ou.UserId != updatingUserId))
             {
-                if (!await _userService.TwoFactorIsEnabledAsync(orgUser))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, orgUser))
                 {
                     await DeleteUserAsync(organization.Id, orgUser.Id, updatingUserId);
                     await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.Name, orgUser.Email);
                 }
             }
-
-            organization.SetTwoFactorProviders(providers);
-            await UpdateAsync(organization);
         }
 
         public async Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)

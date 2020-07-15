@@ -188,7 +188,6 @@ namespace Bit.Api.Controllers
             [FromBody]UpdateTwoFactorDuoRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, false);
-
             var orgIdGuid = new Guid(id);
             if (!_currentContext.OrganizationAdmin(orgIdGuid))
             {
