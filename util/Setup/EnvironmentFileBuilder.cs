@@ -103,7 +103,7 @@ namespace Bit.Setup
                 ["globalSettings__licenseDirectory"] = $"{_context.OutputDir}/core/licenses",
                 ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),
-                ["globalSettings__ssoClientKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
+                ["globalSettings__oidcIdentityClientKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),
                 ["globalSettings__duo__aKey"] = _context.Stub ? "RANDOM_DUO_AKEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),
