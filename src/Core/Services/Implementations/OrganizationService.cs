@@ -865,7 +865,6 @@ namespace Bit.Core.Services
             }
         }
 
-        // If the owner applying 2FA doesn't have 2FA they will be locked out
         public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type, Guid? updatingUserId)
         {
             if (!type.ToString().Contains("Organization"))
@@ -1225,7 +1224,6 @@ namespace Bit.Core.Services
         public async Task DeleteUserAsync(Guid organizationId, Guid userId)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-
             if (orgUser == null)
             {
                 throw new NotFoundException();
