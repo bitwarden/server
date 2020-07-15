@@ -949,6 +949,7 @@ namespace Bit.Core.Services
             }
 
             var orgUsers = new List<OrganizationUser>();
+            var orgUserInvitedCount = 0;
             foreach (var email in emails)
             {
                 // Make sure user is not already invited
@@ -982,10 +983,16 @@ namespace Bit.Core.Services
                     await _organizationUserRepository.CreateAsync(orgUser);
                 }
 
-                await SendInviteAsync(orgUser);
+                await SendInviteAsync(orgUser, organization);
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Invited);
                 orgUsers.Add(orgUser);
+                orgUserInvitedCount++;
             }
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
+                {
+                    Users = orgUserInvitedCount
+                });
 
             return orgUsers;
         }
@@ -999,16 +1006,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User invalid.");
             }
 
-            await SendInviteAsync(orgUser);
+            var org = await GetOrgById(orgUser.OrganizationId);
+            await SendInviteAsync(orgUser, org);
         }
 
-        private async Task SendInviteAsync(OrganizationUser orgUser)
+        private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
         {
-            var org = await GetOrgById(orgUser.OrganizationId);
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync(org.Name, orgUser, token);
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, token);
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,

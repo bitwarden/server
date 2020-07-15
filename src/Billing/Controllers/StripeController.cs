@@ -1,5 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -34,6 +35,7 @@ namespace Bit.Billing.Controllers
         private readonly IMailService _mailService;
         private readonly ILogger<StripeController> _logger;
         private readonly Braintree.BraintreeGateway _btGateway;
+        private readonly IReferenceEventService _referenceEventService;
 
         public StripeController(
             GlobalSettings globalSettings,
@@ -45,6 +47,7 @@ namespace Bit.Billing.Controllers
             IUserService userService,
             IAppleIapService appleIapService,
             IMailService mailService,
+            IReferenceEventService referenceEventService,
             ILogger<StripeController> logger)
         {
             _billingSettings = billingSettings?.Value;
@@ -55,6 +58,7 @@ namespace Bit.Billing.Controllers
             _userService = userService;
             _appleIapService = appleIapService;
             _mailService = mailService;
+            _referenceEventService = referenceEventService;
             _logger = logger;
             _btGateway = new Braintree.BraintreeGateway
             {
@@ -381,6 +385,17 @@ namespace Bit.Billing.Controllers
                             {
                                 await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
                             }
+                        }
+                        if (ids.Item1.HasValue || ids.Item2.HasValue)
+                        {
+                            await _referenceEventService.RaiseEventAsync(
+                                new ReferenceEvent(ReferenceEventType.Rebilled, null)
+                                {
+                                    Id = ids.Item1 ?? ids.Item2 ?? default,
+                                    Source = ids.Item1.HasValue
+                                        ? ReferenceEventSource.Organization
+                                        : ReferenceEventSource.User,
+                                });
                         }
                     }
                 }
