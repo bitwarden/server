@@ -50,7 +50,7 @@ namespace Bit.Core.IdentityServer
                 else if (id == "desktop")
                 {
                     RedirectUris = new[] { "bitwarden://sso-callback" };
-                    PostLogoutRedirectUris = new[] { "bitwarden-desktop://logged-out" };
+                    PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
                 }
                 else if (id == "connector")
                 {
