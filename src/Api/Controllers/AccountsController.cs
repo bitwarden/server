@@ -195,6 +195,25 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
+        [HttpPost("verify-password")]
+        public async Task PostVerifyPassword([FromBody]VerifyPasswordRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                return;
+            }
+
+            ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+        }
+
         [HttpPost("kdf")]
         public async Task PostKdf([FromBody]KdfRequestModel model)
         {
@@ -633,7 +652,7 @@ namespace Bit.Api.Controllers
 
             return token;
         }
-        
+
         [HttpGet("tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<TaxInfoResponseModel> GetTaxInfo()
@@ -647,7 +666,7 @@ namespace Bit.Api.Controllers
             var taxInfo = await _paymentService.GetTaxInfoAsync(user);
             return new TaxInfoResponseModel(taxInfo);
         }
-        
+
         [HttpPut("tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutTaxInfo([FromBody]TaxInfoUpdateRequestModel model)

@@ -87,6 +87,23 @@ services:
       - default
       - public
 
+  sso:
+    image: bitwarden/sso:{{{CoreVersion}}}
+    container_name: bitwarden-sso
+    restart: always
+    volumes:
+      - ../identity:/etc/bitwarden/identity
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/sso:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
   admin:
     image: bitwarden/admin:{{{CoreVersion}}}
     container_name: bitwarden-admin

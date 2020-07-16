@@ -1,4 +1,5 @@
-﻿using IdentityServer4.Models;
+﻿using IdentityServer4;
+using IdentityServer4.Models;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,8 +29,7 @@ namespace Bit.Core.IdentityServer
                 string[] scopes = null)
             {
                 ClientId = id;
-                RequireClientSecret = false;
-                AllowedGrantTypes = GrantTypes.ResourceOwnerPassword;
+                AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode };
                 RefreshTokenExpiration = TokenExpiration.Sliding;
                 RefreshTokenUsage = TokenUsage.ReUse;
                 SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
@@ -38,11 +38,64 @@ namespace Bit.Core.IdentityServer
                 AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
                 AllowOfflineAccess = true;
 
+                RequireConsent = false;
+                RequirePkce = true;
+                RequireClientSecret = false;
+                if (id == "web")
+                {
+                    RedirectUris = new[] { "https://localhost:8080/sso-connector.html" };
+                    PostLogoutRedirectUris = new[] { "https://localhost:8080" };
+                    AllowedCorsOrigins = new[] { "https://localhost:8080" };
+                }
+                else if (id == "desktop")
+                {
+                    RedirectUris = new[] { "bitwarden://sso-callback" };
+                    PostLogoutRedirectUris = new[] { "bitwarden-desktop://logged-out" };
+                }
+                else if (id == "connector")
+                {
+                    RedirectUris = new[] { "bwdc://sso-callback" };
+                    PostLogoutRedirectUris = new[] { "bwdc://logged-out" };
+                }
+                else if (id == "browser")
+                {
+                    // TODO
+                }
+                else if (id == "cli")
+                {
+                    // TODO
+                }
+                else if (id == "mobile")
+                {
+                    RedirectUris = new[] { "bitwarden://sso-callback" };
+                    PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
+                }
+
                 if (scopes == null)
                 {
                     scopes = new string[] { "api" };
                 }
                 AllowedScopes = scopes;
+            }
+        }
+
+        public class OidcIdentityClient : Client
+        {
+            public OidcIdentityClient(GlobalSettings globalSettings)
+            {
+                ClientId = "oidc-identity";
+                RequireClientSecret = true;
+                RequirePkce = true;
+                ClientSecrets = new List<Secret> { new Secret(globalSettings.OidcIdentityClientKey.Sha256()) };
+                AllowedScopes = new string[]
+                {
+                    IdentityServerConstants.StandardScopes.OpenId,
+                    IdentityServerConstants.StandardScopes.Profile
+                };
+                AllowedGrantTypes = GrantTypes.Code;
+                Enabled = true;
+                RedirectUris = new List<string> { $"{globalSettings.BaseServiceUri.Identity}/signin-oidc" };
+                RequireConsent = false;
             }
         }
     }

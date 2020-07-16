@@ -9,6 +9,12 @@ using AspNetCoreRateLimit;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Logging;
+using System.IdentityModel.Tokens.Jwt;
+using System.Threading.Tasks;
+using IdentityServer4.Stores;
+using Bit.Core.IdentityServer;
+using IdentityServer4.Services;
 
 namespace Bit.Identity
 {
@@ -49,6 +55,9 @@ namespace Bit.Identity
             // Caching
             services.AddMemoryCache();
 
+            // Mvc
+            services.AddMvc();
+
             if (!globalSettings.SelfHosted)
             {
                 // Rate limiting
@@ -56,8 +65,35 @@ namespace Bit.Identity
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
             }
 
+            JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
+            // Authentication
+            services
+                .AddAuthentication()
+                .AddOpenIdConnect("sso", "Single Sign On", options =>
+                {
+                    options.Authority = globalSettings.BaseServiceUri.InternalSso;
+                    options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
+                        globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
+                    options.ClientId = "oidc-identity";
+                    options.ClientSecret = globalSettings.OidcIdentityClientKey;
+
+                    options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
+                    options.ResponseType = "code";
+
+                    options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+                    {
+                        OnRedirectToIdentityProvider = context =>
+                        {
+                            // Pass domain_hint onto the sso idp
+                            context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
+                            return Task.FromResult(0);
+                        }
+                    };
+                });
+
             // IdentityServer
-            services.AddCustomIdentityServerServices(Environment, globalSettings);
+            AddCustomIdentityServerServices(services, Environment, globalSettings);
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
@@ -80,6 +116,8 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
+            IdentityModelEventSource.ShowPII = true;
+
             app.UseSerilog(env, appLifetime, globalSettings);
 
             // Default Middleware
@@ -95,14 +133,58 @@ namespace Bit.Identity
                 app.UseForwardedHeaders(globalSettings);
             }
 
+            // Add static files to the request pipeline.
+            app.UseStaticFiles();
+
+            // Add routing
+            app.UseRouting();
+
+            // Add Cors
+            app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add IdentityServer to the request pipeline.
             app.UseIdentityServer();
 
+            // Add Mvc stuff
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+
             // Log startup
             logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        }
+
+        public static IIdentityServerBuilder AddCustomIdentityServerServices(IServiceCollection services,
+            IWebHostEnvironment env, GlobalSettings globalSettings)
+        {
+            services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
+
+            var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
+            var identityServerBuilder = services
+                .AddIdentityServer(options =>
+                {
+                    options.Endpoints.EnableIntrospectionEndpoint = false;
+                    options.Endpoints.EnableEndSessionEndpoint = false;
+                    options.Endpoints.EnableUserInfoEndpoint = false;
+                    options.Endpoints.EnableCheckSessionEndpoint = false;
+                    options.Endpoints.EnableTokenRevocationEndpoint = false;
+                    options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
+                    options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
+                })
+                .AddInMemoryCaching()
+                .AddInMemoryApiResources(ApiResources.GetApiResources())
+                .AddClientStoreCache<ClientStore>()
+                .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
+                .AddProfileService<ProfileService>()
+                .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
+                .AddPersistedGrantStore<PersistedGrantStore>()
+                .AddClientStore<ClientStore>()
+                .AddIdentityServerCertificate(env, globalSettings);
+
+            services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
+            return identityServerBuilder;
         }
     }
 }
