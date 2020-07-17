@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		appveyor.yml = appveyor.yml
 		build.sh = build.sh
+		.github\workflows\build.yml = .github\workflows\build.yml
 		dotnet-tools.json = dotnet-tools.json
 		LICENSE.txt = LICENSE.txt
 		NuGet.Config = NuGet.Config
@@ -50,7 +51,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventsProcessor", "src\Even
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Migrator", "util\Migrator\Migrator.csproj", "{54DED792-A022-417E-9804-21FCC9C7C610}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Test", "test\Api.Test\Api.Test.csproj", "{860DE301-0B3E-4717-9C21-A9B4C3C2B121}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Api.Test", "test\Api.Test\Api.Test.csproj", "{860DE301-0B3E-4717-9C21-A9B4C3C2B121}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
