@@ -11,6 +11,21 @@ on:
 
 jobs:
 
+  cloc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up cloc
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cloc
+
+      - name: Print lines of code
+        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
+
   ubuntu:
     runs-on: ubuntu-latest
 
@@ -22,11 +37,6 @@ jobs:
 
       - name: Set up gulp
         run: npm i -g gulp
-
-      - name: Set up cloc
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install cloc
 
       - name: Print environment
         run: |
@@ -51,9 +61,6 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v2
-
-      - name: Print lines of code
-        run: cloc --vcs git --exclude-dir Resources,store,test,Properties --include-lang C#,XAML
 
       - name: Build
         run: |
