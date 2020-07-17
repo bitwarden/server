@@ -1,0 +1,180 @@
+name: Build
+
+on:
+  push:
+    branches-ignore:
+      - 'l10n_master'
+      - 'gh-pages'
+  release:
+    types:
+      - published
+
+jobs:
+
+  cloc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Set up gulp
+        run: npm i -g gulp
+
+      - name: Set up cloc
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cloc
+
+      - name: Print environment
+        run: |
+          nuget help
+          msbuild -version
+          dotnet --info
+          node --version
+          npm --version
+          gulp --version
+          docker --version
+          Write-Output "GitHub ref: $env:GITHUB_REF"
+          Write-Output "GitHub event: $env:GITHUB_EVENT"
+        shell: pwsh
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_EVENT: ${{ github.event_name }}
+
+      - name: Log into docker
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Print lines of code
+        run: cloc --vcs git --exclude-dir Resources,store,test,Properties --include-lang C#,XAML
+
+      - name: Build
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+
+      - name: Tag dev
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        run: ./build.sh tag dev
+
+      - name: Tag beta
+        if: github.event_name == 'release'
+        run: ./build.sh tag beta
+
+      - name: Tag version
+        if: github.event_name == 'release'
+        run: ./build.sh tag _________
+
+      - name: List docker images
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        run: docker images
+
+      - name: Push dev images
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        run: ./build.sh push dev
+
+      - name: Push beta images
+        if: github.event_name == 'release'
+        run: ./build.sh push beta
+
+      - name: Push latest images
+        if: github.event_name == 'release'
+        run: ./build.sh push latest
+
+      - name: Push version images
+        if: github.event_name == 'release'
+        run: ./build.sh push _________
+
+      - name: Make docker stub
+        run: |
+          STUB_OUTPUT=$(pwd)/docker-stub
+          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
+          sudo chown -R appveyor:appveyor $STUB_OUTPUT
+          rm -rf $STUB_OUTPUT/letsencrypt
+          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
+          touch $STUB_OUTPUT/env/uid.env
+          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
+
+      - name: Upload docker stub artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: docker-stub.zip
+          path: ./docker-stub.zip
+
+      - name: Log out of docker
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        run: docker logout
+
+  android:
+    runs-on: windows-latest
+
+    steps:
+      - name: Set up NuGet
+        uses: nuget/setup-nuget@v1
+        with:
+          nuget-version: 'latest'
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v1.0.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Print environment
+        run: |
+          nuget help
+          msbuild -version
+          dotnet --info
+          node --version
+          npm --version
+          docker --version
+          Write-Output "GitHub ref: $env:GITHUB_REF"
+          Write-Output "GitHub event: $env:GITHUB_EVENT"
+        shell: pwsh
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_EVENT: ${{ github.event_name }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Restore
+        run: |
+          msbuild /t:restore
+          dotnet tool restore
+        shell: pwsh
+
+      - name: Build solution
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+        shell: pwsh
+
+      - name: Test solution
+        run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+        shell: pwsh
+
+      - name: Build swagger
+        run: |
+          cd .\src\Api
+          dotnet swagger tofile --output ..\..\swagger.json --host https://api.bitwarden.com `
+            .\bin\Debug\netcoreapp3.1\Api.dll public
+          cd ..\..
+        shell: pwsh
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: 'True'
+
+      - name: Upload swagger.json artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: swagger.json
+          path: ./swagger.json
+
