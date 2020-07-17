@@ -45,6 +45,9 @@ jobs:
       - name: Log into docker
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Checkout repo
         uses: actions/checkout@v2
