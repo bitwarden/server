@@ -134,7 +134,7 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
 
-      - name: Upload swagger.json artifact
+      - name: Upload swagger artifact
         uses: actions/upload-artifact@v2-preview
         with:
           name: swagger.json
