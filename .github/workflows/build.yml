@@ -40,6 +40,7 @@ jobs:
 
       - name: Print environment
         run: |
+          whoami
           dotnet --info
           node --version
           npm --version
@@ -110,7 +111,7 @@ jobs:
           STUB_OUTPUT=$(pwd)/docker-stub
           docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
             dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
-          sudo chown -R appveyor:appveyor $STUB_OUTPUT
+          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
           rm -rf $STUB_OUTPUT/letsencrypt
           rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
           touch $STUB_OUTPUT/env/uid.env
@@ -121,6 +122,23 @@ jobs:
         with:
           name: docker-stub.zip
           path: ./docker-stub.zip
+
+      - name: Build swagger
+        run: |
+          cd ./src/Api
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
+            ./obj/Docker/publish/Api/Api.dll public
+          cd ../..
+        shell: pwsh
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: 'True'
+
+      - name: Upload swagger.json artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: swagger.json
+          path: ./swagger.json
 
       - name: Log out of docker
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
@@ -150,7 +168,6 @@ jobs:
           dotnet --info
           node --version
           npm --version
-          docker --version
           Write-Output "GitHub ref: $env:GITHUB_REF"
           Write-Output "GitHub event: $env:GITHUB_EVENT"
         shell: pwsh
@@ -174,21 +191,3 @@ jobs:
       - name: Test solution
         run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
         shell: pwsh
-
-      - name: Build swagger
-        run: |
-          cd .\src\Api
-          dotnet swagger tofile --output ..\..\swagger.json --host https://api.bitwarden.com `
-            .\bin\Debug\netcoreapp3.1\Api.dll public
-          cd ..\..
-        shell: pwsh
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
-          swaggerGen: 'True'
-
-      - name: Upload swagger.json artifact
-        uses: actions/upload-artifact@v2-preview
-        with:
-          name: swagger.json
-          path: ./swagger.json
-
