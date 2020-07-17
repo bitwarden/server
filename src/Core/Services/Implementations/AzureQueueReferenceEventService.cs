@@ -30,9 +30,9 @@ namespace Bit.Core.Services
 
         private async Task SendMessageAsync(ReferenceEvent referenceEvent)
         {
-            if (_globalSettings.SelfHosted || string.IsNullOrWhiteSpace(referenceEvent.ReferenceId))
+            if (_globalSettings.SelfHosted)
             {
-                // Ignore for self-hosted, OR, where there is no ReferenceId
+                // Ignore for self-hosted
                 return;
             }
             try

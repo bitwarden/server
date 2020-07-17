@@ -18,7 +18,7 @@ namespace Bit.Core.Models.Business
             {
                 Source = source.IsUser() ? ReferenceEventSource.User : ReferenceEventSource.Organization;
                 Id = source.Id;
-                ReferenceId = source.ReferenceId;
+                ReferenceData = source.ReferenceData;
             }
         }
 
@@ -30,7 +30,7 @@ namespace Bit.Core.Models.Business
 
         public Guid Id { get; set; }
 
-        public string ReferenceId { get; set; }
+        public string ReferenceData { get; set; }
 
         public DateTime EventDate { get; set; } = DateTime.UtcNow;
 
