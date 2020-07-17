@@ -360,6 +360,26 @@ namespace Bit.Api.Controllers
             await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
         }
 
+        [HttpDelete("")]
+        [HttpPost("delete-admin")]
+        public async Task DeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only delete up to 500 items at a time. " +
+                    "Consider using the \"Purge Vault\" option instead.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var ciphers = await _cipherRepository.GetManyByIdAsync(model.Ids.Select(i => new Guid(i)));
+            ciphers = ciphers
+                .Where(cipher => ciphers != null
+                        && cipher.OrganizationId.HasValue
+                        && _currentContext.OrganizationAdmin(cipher.OrganizationId.Value)).ToList();
+
+            await _cipherService.DeleteManyAsync(ciphers.Select(cipher => cipher.Id), userId);
+        }
+
         [HttpPut("{id}/delete")]
         public async Task PutDelete(string id)
         {
@@ -396,6 +416,24 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+        }
+
+        [HttpPut("delete-admin")]
+        public async Task PutDeleteManyAdmin([FromBody]CipherBulkRestoreRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only restore up to 500 items at a time.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var ciphers = await _cipherRepository.GetManyByIdAsync(model.Ids.Select(i => new Guid(i)));
+            ciphers = ciphers
+                .Where(cipher => ciphers != null
+                        && cipher.OrganizationId.HasValue
+                        && _currentContext.OrganizationAdmin(cipher.OrganizationId.Value)).ToList();
+
+            await _cipherService.SoftDeleteManyAsync(ciphers.Select(cipher => cipher.Id), userId);
         }
 
         [HttpPut("{id}/restore")]
