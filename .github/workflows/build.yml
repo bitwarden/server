@@ -11,7 +11,7 @@ on:
 
 jobs:
 
-  cloc:
+  ubuntu:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +30,6 @@ jobs:
 
       - name: Print environment
         run: |
-          nuget help
-          msbuild -version
           dotnet --info
           node --version
           npm --version
@@ -69,7 +67,10 @@ jobs:
 
       - name: Tag version
         if: github.event_name == 'release'
-        run: ./build.sh tag _________
+        run: ./build.sh tag $($env:RELEASE_TAG_NAME.TrimStart('v'))
+        shell: pwsh
+        env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
       - name: List docker images
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
@@ -89,7 +90,10 @@ jobs:
 
       - name: Push version images
         if: github.event_name == 'release'
-        run: ./build.sh push _________
+        run: ./build.sh push $($env:RELEASE_TAG_NAME.TrimStart('v'))
+        shell: pwsh
+        env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
       - name: Make docker stub
         run: |
@@ -112,7 +116,7 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
         run: docker logout
 
-  android:
+  windows:
     runs-on: windows-latest
 
     steps:
