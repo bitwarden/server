@@ -144,6 +144,19 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
         run: docker logout
 
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        run: |
+          hub release edit `
+            -a ./swagger.json `
+            -a ./docker-stub.zip `
+            -m "Version $($env:RELEASE_TAG_NAME.TrimStart('v'))" `
+            $env:RELEASE_TAG_NAME
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+
   windows:
     runs-on: windows-latest
 
