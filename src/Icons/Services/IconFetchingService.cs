@@ -419,15 +419,28 @@ namespace Bit.Icons.Services
             {
                 return true;
             }
-            else if (ip.ToString() == "::1")
+
+            var ipString = ip.ToString();
+            if (ipString == "::1")
             {
                 return false;
             }
 
+            // IPv6
+            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+            {
+                return ipString.StartsWith("fc") || ipString.StartsWith("fd") ||
+                    ipString.StartsWith("fe") || ipString.StartsWith("ff");
+            }
+
+            // IPv4
             var bytes = ip.GetAddressBytes();
             return (bytes[0]) switch
             {
+                0 => true,
                 10 => true,
+                127 => true,
+                169 => bytes[1] == 254, // Cloud environments, such as AWS
                 172 => bytes[1] < 32 && bytes[1] >= 16,
                 192 => bytes[1] == 168,
                 _ => false,
