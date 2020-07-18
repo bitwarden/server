@@ -421,9 +421,9 @@ namespace Bit.Icons.Services
             }
 
             var ipString = ip.ToString();
-            if (ipString == "::1")
+            if (ipString == "::1" || ipString == "::")
             {
-                return false;
+                return true;
             }
 
             // IPv6
