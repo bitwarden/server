@@ -360,7 +360,7 @@ namespace Bit.Api.Controllers
             await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
         }
 
-        [HttpDelete("")]
+        [HttpDelete("admin")]
         [HttpPost("delete-admin")]
         public async Task DeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
         {
