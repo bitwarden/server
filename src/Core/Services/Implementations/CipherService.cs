@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System.IO;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using System.Text.Json;
 
 namespace Bit.Core.Services
 {
@@ -288,13 +289,18 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherDeleteAsync(cipher);
         }
 
-        public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
+        public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
         {
             var cipherIdsSet = new HashSet<Guid>(cipherIds);
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
-            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+            var ciphers = orgAdmin && organizationId.HasValue
+                ? await _cipherRepository.GetManyDetailsByOrganizationIdAsync((Guid)organizationId)
+                : await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
 
-            await _cipherRepository.DeleteAsync(cipherIds, deletingUserId);
+            var deletingCiphers = orgAdmin && organizationId.HasValue
+                ? ciphers.Where(c => cipherIdsSet.Contains(c.Id))
+                : ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+
+            await _cipherRepository.DeleteAsync(deletingCiphers.Select(x => x.Id), deletingUserId);
 
             var events = deletingCiphers.Select(c =>
                 new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
@@ -693,13 +699,18 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
-        public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
+        public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
         {
             var cipherIdsSet = new HashSet<Guid>(cipherIds);
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
-            var deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+            var ciphers = orgAdmin && organizationId.HasValue
+                ? await _cipherRepository.GetManyDetailsByOrganizationIdAsync((Guid)organizationId)
+                : await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
 
-            await _cipherRepository.SoftDeleteAsync(cipherIds, deletingUserId);
+            var deletingCiphers = orgAdmin && organizationId.HasValue
+                ? ciphers.Where(c => cipherIdsSet.Contains(c.Id))
+                : ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+
+            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(x => x.Id), deletingUserId);
 
             var events = deletingCiphers.Select(c =>
                 new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
