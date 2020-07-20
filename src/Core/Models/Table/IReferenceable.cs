@@ -5,7 +5,7 @@ namespace Bit.Core.Models
     public interface IReferenceable
     {
         Guid Id { get; set; }
-        string ReferenceId { get; set; }
+        string ReferenceData { get; set; }
         bool IsUser();
     }
 }
