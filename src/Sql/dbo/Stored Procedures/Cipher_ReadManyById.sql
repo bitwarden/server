@@ -9,5 +9,5 @@ BEGIN
     FROM
         [dbo].[CipherView]
     WHERE
-        [Id] = IN (SELECT* FROM @Id)
+        [Id] = IN (SELECT * FROM @Id)
 END
