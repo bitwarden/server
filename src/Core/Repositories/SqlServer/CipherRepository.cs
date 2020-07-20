@@ -793,6 +793,19 @@ namespace Bit.Core.Repositories.SqlServer
             return collectionCiphersTable;
         }
 
+        public async Task<IEnumerable<CipherDetails>> GetManyByIdAsync(IEnumerable<Guid> ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherDetails>(
+                    $"[{Schema}].[CipherDetails_ReadByIdUserId]",
+                    new { Ids = ids },
+                    commandType: CommandType.StoredProcedure);
+
+                return results;
+            }
+        }
+
         public class CipherDetailsWithCollections : CipherDetails
         {
             public DataTable CollectionIds { get; set; }
