@@ -12,7 +12,7 @@ namespace Bit.Core.Repositories
         Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
         Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
         Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
-        Task<ICollection<CipherDetails>> GetManyByIdAsync(IEnumerable<Guid> ids);
+        Task<IEnumerable<CipherDetails>> GetManyByIdAsync(IEnumerable<Guid> ids);
         Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
         Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
