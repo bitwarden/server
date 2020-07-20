@@ -798,7 +798,7 @@ namespace Bit.Core.Repositories.SqlServer
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadByIdUserId]",
+                    $"[{Schema}].[CipherDetails_ReadManyById]",
                     new { Ids = ids },
                     commandType: CommandType.StoredProcedure);
 
