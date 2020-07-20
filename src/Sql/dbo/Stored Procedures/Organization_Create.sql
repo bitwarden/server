@@ -27,7 +27,7 @@
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
-    @ReferenceData VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
     @ApiKey VARCHAR(30),

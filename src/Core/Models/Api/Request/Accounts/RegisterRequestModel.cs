@@ -27,7 +27,7 @@ namespace Bit.Core.Models.Api
         public Guid? OrganizationUserId { get; set; }
         public KdfType? Kdf { get; set; }
         public int? KdfIterations { get; set; }
-        public ReferenceEventData ReferenceData { get; set; }
+        public Dictionary<string, object> ReferenceData { get; set; }
 
         public User ToUser()
         {
