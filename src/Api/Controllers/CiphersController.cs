@@ -370,14 +370,12 @@ namespace Bit.Api.Controllers
                     "Consider using the \"Purge Vault\" option instead.");
             }
 
-            var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByIdAsync(model.Ids.Select(i => new Guid(i)));
-            ciphers = ciphers
-                .Where(cipher => ciphers != null
-                        && cipher.OrganizationId.HasValue
-                        && _currentContext.OrganizationAdmin(cipher.OrganizationId.Value)).ToList();
+            if(model == null || !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId))){
+                throw new NotFoundException();
+            }
 
-            await _cipherService.DeleteManyAsync(ciphers.Select(cipher => cipher.Id), userId);
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
         }
 
         [HttpPut("{id}/delete")]
@@ -407,7 +405,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete")]
-        public async Task PutDeleteMany([FromBody]CipherBulkRestoreRequestModel model)
+        public async Task PutDeleteMany([FromBody]CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -419,21 +417,19 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete-admin")]
-        public async Task PutDeleteManyAdmin([FromBody]CipherBulkRestoreRequestModel model)
+        public async Task PutDeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
                 throw new BadRequestException("You can only delete up to 500 items at a time.");
             }
 
-            var userId = _userService.GetProperUserId(User).Value;
-            var ciphers = await _cipherRepository.GetManyByIdAsync(model.Ids.Select(i => new Guid(i)));
-            ciphers = ciphers
-                .Where(cipher => ciphers != null
-                        && cipher.OrganizationId.HasValue
-                        && _currentContext.OrganizationAdmin(cipher.OrganizationId.Value)).ToList();
+            if(model == null || !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId))){
+                throw new NotFoundException();
+            }
 
-            await _cipherService.SoftDeleteManyAsync(ciphers.Select(cipher => cipher.Id), userId);
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
         }
 
         [HttpPut("{id}/restore")]
