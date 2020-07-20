@@ -798,8 +798,8 @@ namespace Bit.Core.Repositories.SqlServer
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<CipherDetails>(
-                    $"[{Schema}].[CipherDetails_ReadManyById]",
-                    new { Ids = ids },
+                    $"[{Schema}].[Cipher_ReadManyById]",
+                    new { Ids = ids.ToGuidIdArrayTVP() },
                     commandType: CommandType.StoredProcedure);
 
                 return results;
