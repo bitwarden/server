@@ -88,18 +88,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<CipherDetails>> GetManyDetailsByOrganizationIdAsync(Guid organizationId)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<CipherDetails>(
-                        $"[{Schema}].[Cipher_ReadByOrganizationId]",
-                        new { OrganizationId = organizationId },
-                        commandType: CommandType.StoredProcedure);
-                return results;
-            }
-        }
-
         public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))

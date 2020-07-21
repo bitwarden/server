@@ -370,7 +370,9 @@ namespace Bit.Api.Controllers
                     "Consider using the \"Purge Vault\" option instead.");
             }
 
-            if(model == null || !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId))){
+            if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
+                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+            {
                 throw new NotFoundException();
             }
 
@@ -424,7 +426,9 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("You can only delete up to 500 items at a time.");
             }
 
-            if(model == null || !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId))){
+            if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
+                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+            {
                 throw new NotFoundException();
             }
 
