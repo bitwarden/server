@@ -27,7 +27,7 @@
     [Gateway]               TINYINT          NULL,
     [GatewayCustomerId]     VARCHAR (50)     NULL,
     [GatewaySubscriptionId] VARCHAR (50)     NULL,
-    [ReferenceId]           NVARCHAR (50)    NULL,
+    [ReferenceData]         NVARCHAR (MAX)   NULL,
     [Enabled]               BIT              NOT NULL,
     [LicenseKey]            VARCHAR (100)    NULL,
     [ApiKey]                VARCHAR (30)     NOT NULL,

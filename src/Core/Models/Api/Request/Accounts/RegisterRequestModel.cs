@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
@@ -25,7 +27,7 @@ namespace Bit.Core.Models.Api
         public Guid? OrganizationUserId { get; set; }
         public KdfType? Kdf { get; set; }
         public int? KdfIterations { get; set; }
-        public string ReferenceId { get; set; }
+        public Dictionary<string, object> ReferenceData { get; set; }
 
         public User ToUser()
         {
@@ -36,8 +38,12 @@ namespace Bit.Core.Models.Api
                 MasterPasswordHint = MasterPasswordHint,
                 Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
                 KdfIterations = KdfIterations.GetValueOrDefault(5000),
-                ReferenceId = ReferenceId,
             };
+
+            if (ReferenceData != null)
+            {
+                user.ReferenceData = JsonConvert.SerializeObject(ReferenceData);
+            }
 
             if (Key != null)
             {
