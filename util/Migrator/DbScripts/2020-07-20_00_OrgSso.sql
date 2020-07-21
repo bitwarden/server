@@ -76,6 +76,7 @@ GO
 
 CREATE PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER,
+    @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -103,6 +104,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
     @ApiKey VARCHAR(30),
@@ -117,6 +119,7 @@ BEGIN
     INSERT INTO [dbo].[Organization]
     (
         [Id],
+        [Identifier],
         [Name],
         [BusinessName],
         [BusinessAddress1],
@@ -144,6 +147,7 @@ BEGIN
         [Gateway],
         [GatewayCustomerId],
         [GatewaySubscriptionId],
+        [ReferenceData],
         [Enabled],
         [LicenseKey],
         [ApiKey],
@@ -155,6 +159,7 @@ BEGIN
     VALUES
     (
         @Id,
+        @Identifier,
         @Name,
         @BusinessName,
         @BusinessAddress1,
@@ -182,6 +187,7 @@ BEGIN
         @Gateway,
         @GatewayCustomerId,
         @GatewaySubscriptionId,
+        @ReferenceData,
         @Enabled,
         @LicenseKey,
         @ApiKey,
@@ -201,6 +207,7 @@ GO
 
 CREATE PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
+    @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -228,6 +235,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
     @ApiKey VARCHAR(30),
@@ -242,6 +250,7 @@ BEGIN
     UPDATE
         [dbo].[Organization]
     SET
+        [Identifier] = @Identifier,
         [Name] = @Name,
         [BusinessName] = @BusinessName,
         [BusinessAddress1] = @BusinessAddress1,
@@ -269,6 +278,7 @@ BEGIN
         [Gateway] = @Gateway,
         [GatewayCustomerId] = @GatewayCustomerId,
         [GatewaySubscriptionId] = @GatewaySubscriptionId,
+        [ReferenceData] = @ReferenceData,
         [Enabled] = @Enabled,
         [LicenseKey] = @LicenseKey,
         [ApiKey] = @ApiKey,
