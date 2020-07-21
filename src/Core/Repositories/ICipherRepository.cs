@@ -14,7 +14,6 @@ namespace Bit.Core.Repositories
         Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
         Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
         Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<IEnumerable<CipherDetails>> GetManyDetailsByOrganizationIdAsync(Guid organizationId);
         Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
         Task CreateAsync(CipherDetails cipher);
         Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds);
