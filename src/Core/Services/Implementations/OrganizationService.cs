@@ -34,6 +34,7 @@ namespace Bit.Core.Services
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
 
@@ -54,6 +55,7 @@ namespace Bit.Core.Services
             IApplicationCacheService applicationCacheService,
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings)
         {
@@ -73,6 +75,7 @@ namespace Bit.Core.Services
             _applicationCacheService = applicationCacheService;
             _paymentService = paymentService;
             _policyRepository = policyRepository;
+            _ssoConfigRepository = ssoConfigRepository;
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
         }
@@ -214,6 +217,16 @@ namespace Bit.Core.Services
                 {
                     throw new BadRequestException($"Your new plan does not allow the policies feature. " +
                         $"Disable your policies.");
+                }
+            }
+            
+            if (!newPlan.UseSso && organization.UseSso)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null)
+                {
+                    throw new BadRequestException($"Your new plan does not allow the SSO feature. " +
+                        $"Disable your SSO configuration.");
                 }
             }
 
@@ -504,6 +517,7 @@ namespace Bit.Core.Services
                 MaxStorageGb = !plan.MaxStorageGb.HasValue ?
                     (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
                 UsePolicies = plan.UsePolicies,
+                UseSso = plan.UseSso,
                 UseGroups = plan.UseGroups,
                 UseEvents = plan.UseEvents,
                 UseDirectory = plan.UseDirectory,
@@ -586,6 +600,7 @@ namespace Bit.Core.Services
                 MaxCollections = license.MaxCollections,
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
                 UsePolicies = license.UsePolicies,
+                UseSso = license.UseSso,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -747,6 +762,16 @@ namespace Bit.Core.Services
                         $"policies. Your new license does not allow for the use of policies. Disable all policies.");
                 }
             }
+            
+            if (!license.UseSso && organization.UseSso)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null)
+                {
+                    throw new BadRequestException($"Your organization currently has a SSO configuration. " +
+                        $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
+                }
+            }
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
@@ -766,6 +791,7 @@ namespace Bit.Core.Services
             organization.Use2fa = license.Use2fa;
             organization.UseApi = license.UseApi;
             organization.UsePolicies = license.UsePolicies;
+            organization.UseSso = license.UseSso;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;

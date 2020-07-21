@@ -14,6 +14,7 @@
     [Seats]                 SMALLINT         NULL,
     [MaxCollections]        SMALLINT         NULL,
     [UsePolicies]           BIT              NOT NULL,
+    [UseSso]                BIT              NOT NULL,
     [UseGroups]             BIT              NOT NULL,
     [UseDirectory]          BIT              NOT NULL,
     [UseEvents]             BIT              NOT NULL,
