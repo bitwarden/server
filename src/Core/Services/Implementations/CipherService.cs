@@ -303,7 +303,7 @@ namespace Bit.Core.Services
             {
                 var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
                 deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
-                await _cipherRepository.DeleteAsync(deletingCiphers.FirstOrDefault());
+                await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
             }
 
             var events = deletingCiphers.Select(c =>
