@@ -243,7 +243,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_SoftDeleteByIdsOrganizationId]",
-                    new { Ids = ids.ToGuidIdArrayTVP(), organizationId = organizationId },
+                    new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
             }
         }
