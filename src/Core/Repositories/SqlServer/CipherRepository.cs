@@ -232,7 +232,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[Cipher_DeleteByIdsOrganizationId]",
-                    new { Ids = ids.ToGuidIdArrayTVP(), organizationId = organizationId },
+                    new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
             }
         }
