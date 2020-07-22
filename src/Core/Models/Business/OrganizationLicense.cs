@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
             ILicensingService licenseService)
         {
-            Version = 5; // TODO: bump to version 7
+            Version = 6; // TODO: bump to version 7
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;

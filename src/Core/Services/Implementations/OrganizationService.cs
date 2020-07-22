@@ -223,7 +223,7 @@ namespace Bit.Core.Services
             if (!newPlan.UseSso && organization.UseSso)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-                if (ssoConfig != null)
+                if (ssoConfig != null && ssoConfig.Enabled)
                 {
                     throw new BadRequestException($"Your new plan does not allow the SSO feature. " +
                         $"Disable your SSO configuration.");
@@ -766,7 +766,7 @@ namespace Bit.Core.Services
             if (!license.UseSso && organization.UseSso)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-                if (ssoConfig != null)
+                if (ssoConfig != null && ssoConfig.Enabled)
                 {
                     throw new BadRequestException($"Your organization currently has a SSO configuration. " +
                         $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
