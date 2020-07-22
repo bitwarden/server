@@ -360,6 +360,26 @@ namespace Bit.Api.Controllers
             await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
         }
 
+        [HttpDelete("admin")]
+        [HttpPost("delete-admin")]
+        public async Task DeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only delete up to 500 items at a time. " +
+                    "Consider using the \"Purge Vault\" option instead.");
+            }
+
+            if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
+                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
+        }
+
         [HttpPut("{id}/delete")]
         public async Task PutDelete(string id)
         {
@@ -387,15 +407,33 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete")]
-        public async Task PutDeleteMany([FromBody]CipherBulkRestoreRequestModel model)
+        public async Task PutDeleteMany([FromBody]CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
-                throw new BadRequestException("You can only restore up to 500 items at a time.");
+                throw new BadRequestException("You can only delete up to 500 items at a time.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
             await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+        }
+
+        [HttpPut("delete-admin")]
+        public async Task PutDeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
+        {
+            if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+            {
+                throw new BadRequestException("You can only delete up to 500 items at a time.");
+            }
+
+            if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
+                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
         }
 
         [HttpPut("{id}/restore")]

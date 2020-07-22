@@ -18,7 +18,7 @@ namespace Bit.Core.Services
         Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
             Guid organizationShareId);
         Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
-        Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);
+        Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
         Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
         Task PurgeAsync(Guid organizationId);
         Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId);
@@ -34,7 +34,7 @@ namespace Bit.Core.Services
         Task ImportCiphersAsync(List<Collection> collections, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
         Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
-        Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId);
+        Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
         Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
         Task RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId);
     }

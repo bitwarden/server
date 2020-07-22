@@ -204,6 +204,7 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public IEnumerable<string> Ids { get; set; }
+        public string OrganizationId { get; set; }
     }
 
     public class CipherBulkRestoreRequestModel

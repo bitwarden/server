@@ -24,6 +24,7 @@ namespace Bit.Core.Repositories
         Task UpdateAttachmentAsync(CipherAttachment attachment);
         Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
         Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
+        Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
         Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
         Task DeleteByUserIdAsync(Guid userId);
         Task DeleteByOrganizationIdAsync(Guid organizationId);
@@ -33,6 +34,7 @@ namespace Bit.Core.Repositories
         Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
             IEnumerable<CollectionCipher> collectionCiphers);
         Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
+        Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
         Task RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     }
 }
