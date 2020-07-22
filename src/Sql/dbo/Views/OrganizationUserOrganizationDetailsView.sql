@@ -6,6 +6,7 @@ SELECT
     O.[Name],
     O.[Enabled],
     O.[UsePolicies],
+    O.[UseSso],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],

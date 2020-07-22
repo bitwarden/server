@@ -31,6 +31,7 @@ namespace Bit.Core.Models.Api
             MaxCollections = organization.MaxCollections;
             MaxStorageGb = organization.MaxStorageGb;
             UsePolicies = organization.UsePolicies;
+            UseSso = organization.UseSso;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -56,6 +57,7 @@ namespace Bit.Core.Models.Api
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool UsePolicies { get; set; }
+        public bool UseSso { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

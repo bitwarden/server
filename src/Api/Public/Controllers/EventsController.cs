@@ -66,7 +66,7 @@ namespace Bit.Api.Public.Controllers
             }
 
             var eventResponses = result.Data.Select(e => new EventResponseModel(e));
-            var response = new ListResponseModel<EventResponseModel>(eventResponses);
+            var response = new ListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
             return new JsonResult(response);
         }
     }
