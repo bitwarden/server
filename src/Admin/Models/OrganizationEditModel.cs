@@ -30,6 +30,7 @@ namespace Bit.Admin.Models
             Seats = org.Seats;
             MaxCollections = org.MaxCollections;
             UsePolicies = org.UsePolicies;
+            UseSso = org.UseSso;
             UseGroups = org.UseGroups;
             UseDirectory = org.UseDirectory;
             UseEvents = org.UseEvents;
@@ -71,6 +72,8 @@ namespace Bit.Admin.Models
         public short? MaxCollections { get; set; }
         [Display(Name = "Policies")]
         public bool UsePolicies { get; set; }
+        [Display(Name = "SSO")]
+        public bool UseSso { get; set; }
         [Display(Name = "Groups")]
         public bool UseGroups { get; set; }
         [Display(Name = "Directory")]
@@ -112,6 +115,7 @@ namespace Bit.Admin.Models
             existingOrganization.Seats = Seats;
             existingOrganization.MaxCollections = MaxCollections;
             existingOrganization.UsePolicies = UsePolicies;
+            existingOrganization.UseSso = UseSso;
             existingOrganization.UseGroups = UseGroups;
             existingOrganization.UseDirectory = UseDirectory;
             existingOrganization.UseEvents = UseEvents;

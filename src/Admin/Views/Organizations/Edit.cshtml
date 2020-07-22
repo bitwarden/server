@@ -22,6 +22,7 @@
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
                 // Features
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
+                document.getElementById('@(nameof(Model.UseSso))').checked = true;
                 document.getElementById('@(nameof(Model.UseGroups))').checked = true;
                 document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
                 document.getElementById('@(nameof(Model.UseEvents))').checked = true;
@@ -164,6 +165,10 @@
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UsePolicies">
         <label class="form-check-label" asp-for="UsePolicies"></label>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="UseSso">
+        <label class="form-check-label" asp-for="UseSso"></label>
     </div>
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UseDirectory">

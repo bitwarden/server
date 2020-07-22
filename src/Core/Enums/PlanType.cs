@@ -17,6 +17,10 @@ namespace Bit.Core.Enums
         [Display(Name = "Enterprise (Annually)")]
         EnterpriseAnnually = 5,
         [Display(Name = "Custom")]
-        Custom = 6
+        Custom = 6,
+        [Display(Name = "PLACEHOLDER")]
+        SsoPlaceholderMonthly = 10,
+        [Display(Name = "PLACEHOLDER")]
+        SsoPlaceholderAnnually = 11,
     }
 }
