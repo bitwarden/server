@@ -29,30 +29,31 @@ GO
 -- Create dbo.PlanTypeGroup
 IF OBJECT_ID('[dbo].[PlanTypeGroup]') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[PlanTypeGroup] (
-        [Id] INT NOT NULL PRIMARY KEY IDENTITY,
-        [Name] NVARCHAR(50),
-        [Description] NVARCHAR(MAX),
-        [CanBeUsedByBusiness] BIT,
-        [BaseSeats] INT,
-        [BaseStorageGb] INT,
-        [MaxCollections] INT,
-        [AdditionalSeatsAddon] BIT,
-        [AdditionalStorageAddon] BIT,
-        [PremiumAccessAddon] BIT,
-        [TrialPeriodDays] INT,
-        [HasSelfHost] BIT,
-        [HasPolicies] BIT,
-        [HasGroups] BIT,
-        [HasDirectory] BIT,
-        [HasEvents] BIT,
-        [HasTotp] BIT,
-        [Has2fa] BIT,
-        [HasApi] BIT,
-        [UsersGetPremium] BIT,
-        [HasSsoSupport] BIT,
-        [SortOrder] INT,
-        [IsLegacy] BIT,
+    CREATE TABLE [dbo].[PlanTypeGroup](
+        [Id]                            [INT]               IDENTITY(1,1) NOT NULL,
+        [Name]                          [NVARCHAR](50)      NULL,
+        [Description]                   [NVARCHAR](max)     NULL,
+        [CanBeUsedByBusiness]           [BIT]               NOT NULL,
+        [BaseSeats]                     [INT]               NOT NULL,
+        [BaseStorageGb]                 [INT]               NOT NULL,
+        [MaxCollections]                [INT]               NULL,
+        [HasAdditionalSeatsOption]      [BIT]               NOT NULL,
+        [HasAdditionalStorageOption]    [BIT]               NOT NULL,
+        [HasPremiumAccessAddon]         [BIT]               NOT NULL,
+        [TrialPeriodDays]               [INT]               NOT NULL,
+        [HasSelfHost]                   [BIT]               NOT NULL,
+        [HasPolicies]                   [BIT]               NOT NULL,
+        [HasGroups]                     [BIT]               NOT NULL,
+        [HasDirectory]                  [BIT]               NOT NULL,
+        [HasEvents]                     [BIT]               NOT NULL,
+        [HasTotp]                       [BIT]               NOT NULL,
+        [Has2fa]                        [BIT]               NOT NULL,
+        [HasApi]                        [BIT]               NOT NULL,
+        [UsersGetPremium]               [BIT]               NOT NULL,
+        [HasSso]                        [bit]               NOT NULL,
+        [SortOrder]                     [INT]               NOT NULL,
+        [IsLegacy]                      [BIT]               NOT NULL
+        CONSTRAINT [PK_PlanType] PRIMARY KEY CLUSTERED ([Id] ASC)
     )
 END
 GO
@@ -62,7 +63,7 @@ IF OBJECT_ID('[dbo].[PlanTypeGroup]') IS NOT NULL
 BEGIN
     INSERT INTO [dbo].[PlanTypeGroup]
     VALUES 
-        ('Free','For testing or personal users to share with 1 other user.',0,2,null,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0),
+        ('Free','For testing or personal users to share with 1 other user.',0,2,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0),
         ('Families (2019)','For personal use, to share with family & friends.',0,5,1,null,0,1,1,7,1,0,0,0,0,1,0,0,0,0,10,1),
         ('Teams (2019)','For businesses and other team organizations.',1,5,1,null,1,1,0,7,0,0,0,0,0,1,0,0,0,0,20,1),
         ('Enterprise (2019)','For businesses and other large organizations.',1,0,1,null,1,1,0,7,1,1,1,1,1,1,1,1,1,0,30,1),
@@ -73,21 +74,23 @@ END
 GO
 
 -- Create dbo.PlanType
--- Increments from 0 for backwards compatability with existing PlanType enum
 IF OBJECT_ID('[dbo].[PlanType]') IS NULL
 BEGIN
+    -- ID increments from 0 for backwards compatability with existing enum
     CREATE TABLE [dbo].[PlanType] (
-        [Id] INT NOT NULL PRIMARY KEY IDENTITY(0,1),
-        [StripePlanId] nvarchar(50),
-        [StripeSeatPlanId] nvarchar(50),
-        [StripeStoragePlanId] nvarchar(50),
-        [StripePremiumAccessPlanId] nvarchar(50),
-        [BasePrice] INT,
-        [SeatPrice] INT,
-        [AdditionalStoragePricePerGb] INT,
-        [PremiumAccessAddonCost] INT,
-        [IsAnnual] BIT,
-        [PlanTypeGroupId] INT NOT NULL FOREIGN KEY REFERENCES PlanTypeGroup(Id),
+        [Id]                            [INT]               IDENTITY(0,1) NOT NULL,
+        [StripePlanId]                  [NVARCHAR](50)      NULL,
+        [StripeSeatPlanId]              [NVARCHAR](50)      NULL,
+        [StripeStoragePlanId]           [NVARCHAR](50)      NULL,
+        [StripePremiumAccessPlanId]     [NVARCHAR](50)      NULL,
+        [BasePrice]                     [DECIMAL](18, 2)    NULL,
+        [SeatPrice]                     [DECIMAL](18, 2)    NULL,
+        [AdditionalStoragePricePerGb]   [DECIMAL](18, 2)    NULL,
+        [HasPremiumAccessAddonCost]     [DECIMAL](18, 2)    NULL,
+        [IsAnnual]                      [BIT]               NOT NULL,
+        [PlanTypeGroupId]               [INT]               NOT NULL,
+        CONSTRAINT [PK_PlanTypeId] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_PlanType_PlanTypeGrouo] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
     )
 END
 GO
@@ -97,7 +100,7 @@ IF OBJECT_ID('[dbo].[PlanType]') IS NOT NULL
 BEGIN
     INSERT INTO [dbo].[PlanType]
     VALUES
-        (null,null,null,null,null,null,null,null,null,1),
+        (null,null,null,null,null,null,null,null,0,1),
         ('personal-org-annually', null,'storage-gb-annually','personal-org-premium-access-annually',12, null, 3.96, 3.33,1,2),
         ('teams-org-monthly', 'teams-org-seat-monthly', 'storage-gb-monthly', null, 8, 2.5, 0.5, null, 0, 3),
         ('teams-org-annually', 'teams-org-seat-annually', 'storage-gb-annually', null, 60, 24, 3.96, null, 1, 3),
@@ -378,16 +381,26 @@ GO
 CREATE VIEW [dbo].[PlanTypePlanTypeGroup]
 AS
 SELECT
-    PT.*,
+    PT.Id,
+    PT.StripePlanId,
+    PT.StripeSeatPlanId,
+    PT.StripeStoragePlanId,
+    PT.StripePremiumAccessPlanId,
+    PT.BasePrice,
+    PT.SeatPrice,
+    PT.AdditionalStoragePricePerGb,
+    PT.HasPremiumAccessAddonCost,
+    PT.IsAnnual,
+    PTG.Id AS PlanTypeGroupId,
     PTG.Name,
     PTG.Description,
     PTG.CanBeUsedByBusiness,
     PTG.BaseSeats,
     PTG.BaseStorageGb,
     PTG.MaxCollections,
-    PTG.AdditionalSeatsAddon,
-    PTG.AdditionalStorageAddon,
-    PTG.PremiumAccessAddon,
+    PTG.HasAdditionalSeatsOption,
+    PTG.HasAdditionalStorageOption,
+    PTG.HasPremiumAccessAddon,
     PTG.TrialPeriodDays,
     PTG.HasSelfHost,
     PTG.HasPolicies,
@@ -398,7 +411,7 @@ SELECT
     PTG.Has2fa,
     PTG.HasApi,
     PTG.UsersGetPremium,
-    PTG.HasSsoSupport,
+    PTG.HasSso,
     PTG.SortOrder,
     PTG.IsLegacy
 FROM
@@ -417,8 +430,41 @@ GO
 CREATE PROCEDURE [dbo].[PlanTypePlanTypeGroup_Read]
 AS
 BEGIN
-    SELECT * 
-    FROM [dbo].[PlanTypePlanTypeGroup] 
-    FOR JSON AUTO
+    SELECT 
+        Id,
+        StripePlanId,
+        StripeSeatPlanId,
+        StripeStoragePlanId,
+        StripePremiumAccessPlanId,
+        BasePrice,
+        SeatPrice,
+        AdditionalStoragePricePerGb,
+        HasPremiumAccessAddonCost,
+        IsAnnual,
+        PlanTypeGroupId AS "PlanTypeGroup.Id",
+        Name AS "PlanTypeGroup.Name",
+        Description AS "PlanTypeGroup.Description",
+        CanBeUsedByBusiness AS "PlanTypeGroup.CanBeUsedByBusiness",
+        BaseSeats AS "PlanTypeGroup.BaseSeats",
+        BaseStorageGb AS "PlanTypeGroup.BaseStorageGb",
+        MaxCollections AS "PlanTypeGroup.MaxCollections",
+        HasAdditionalSeatsOption AS "PlanTypeGroup.HasAdditionalSeatsOption",
+        HasAdditionalStorageOption AS "PlanTypeGroup.HasAdditionalStorageOption",
+        HasPremiumAccessAddon AS "PlanTypeGroup.HasPremiumAccessAddon",
+        TrialPeriodDays AS "PlanTypeGroup.TrialPeriodDays",
+        HasSelfHost AS "PlanTypeGroup.HasSelfHost",
+        HasPolicies AS "PlanTypeGroup.HasPolicies",
+        HasGroups AS "PlanTypeGroup.HasGroups",
+        HasDirectory AS "PlanTypeGroup.HasDirectory",
+        HasEvents AS "PlanTypeGroup.HasEvents",
+        HasTotp AS "PlanTypeGroup.HasTotp",
+        Has2fa AS "PlanTypeGroup.Has2fa",
+        HasApi AS "PlanTypeGroup.HasApi",
+        UsersGetPremium AS "PlanTypeGroup.UsersGetPremium",
+        HasSso AS "PlanTypeGroup.HasSso",
+        SortOrder AS "PlanTypeGroup.SortOrder",
+        IsLegacy AS "PlanTypeGroup.IsLegacy"
+    FROM [dbo].[PlanTypePlanTypeGroup]
+    FOR JSON PATH
 END
 GO

@@ -7,6 +7,8 @@ using Dapper;
 using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using System.Text.Json;
+using System.Text;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -81,6 +83,25 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<PlanTypePlanTypeGroup>> GetPlanTypePlanTypeGroups()
+        {
+
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = new StringBuilder();
+                var reader = await connection.ExecuteReaderAsync(
+                    $"[{Schema}].[PlanTypePlanTypeGroup_Read]",
+                    commandType: CommandType.StoredProcedure);
+
+                while (reader.Read()) {
+                    results.Append(reader.GetValue(0).ToString());
+                }
+
+
+                return JsonSerializer.Deserialize<ICollection<PlanTypePlanTypeGroup>>(results.ToString());
             }
         }
     }
