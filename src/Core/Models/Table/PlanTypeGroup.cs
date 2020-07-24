@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Table
         public bool CanBeUsedByBusiness { get; set; }
         public int BaseSeats { get; set; }
         public int BaseStorageGb { get; set; }
-        public int? MaxCollecions { get; set; }
+        public int? MaxCollections { get; set; }
         public bool HasAdditionalSeatsOption { get; set; }
         public bool HasAdditionalStorageOption { get; set; }
         public bool HasPremiumAccessOption { get; set; }
