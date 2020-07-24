@@ -11,6 +11,7 @@ using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
+
 namespace Bit.Api.Controllers
 {
     [Route("organizations")]

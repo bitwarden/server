@@ -90,7 +90,7 @@ BEGIN
         [IsAnnual]                      [BIT]               NOT NULL,
         [PlanTypeGroupId]               [INT]               NOT NULL,
         CONSTRAINT [PK_PlanTypeId] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_PlanType_PlanTypeGrouo] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
+        CONSTRAINT [FK_PlanType_PlanTypeGroup] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
     )
 END
 GO
@@ -123,7 +123,7 @@ BEGIN
 
     ALTER TABLE
         [dbo].[Organization]
-    ADD CONSTRAINT FK_PlanTypeId 
+    ADD CONSTRAINT FK_Organization_PlanTypeId 
     FOREIGN KEY (PlanTypeId) REFERENCES PlanType(Id);
 END
 GO

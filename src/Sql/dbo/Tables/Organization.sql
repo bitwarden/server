@@ -36,7 +36,9 @@
     [ExpirationDate]        DATETIME2 (7)    NULL,
     [CreationDate]          DATETIME2 (7)    NOT NULL,
     [RevisionDate]          DATETIME2 (7)    NOT NULL,
-    CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
+    [PlanTypeId]            INT              NOT NULL,
+    CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_Organization_PlanTypeId] FOREIGN KEY ([PlanTypeId]) REFERENCES [dbo].[PlanType] ([Id])
 );
 
 
