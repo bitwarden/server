@@ -11,7 +11,6 @@ using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
-
 namespace Bit.Api.Controllers
 {
     [Route("organizations")]
@@ -471,7 +470,7 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
-        
+
         [HttpGet("{id}/tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<TaxInfoResponseModel> GetTaxInfo(string id)
@@ -491,7 +490,7 @@ namespace Bit.Api.Controllers
             var taxInfo = await _paymentService.GetTaxInfoAsync(organization);
             return new TaxInfoResponseModel(taxInfo);
         }
-        
+
         [HttpPut("{id}/tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutTaxInfo(string id, [FromBody]OrganizationTaxInfoUpdateRequestModel model)
@@ -519,6 +518,12 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        }
+
+        [HttpGet("plan-types")]
+        public async Task<ListResponseModel<PlanTypeResponseModel>> GetPlanOptions() {
+            var data = await _organizationRepository.GetPlanTypePlanTypeGroups();
+            return new ListResponseModel<PlanTypeResponseModel>(data.ToList().Select(planType => new PlanTypeResponseModel(planType)));
         }
     }
 }

@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Table
         public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
-        public PlanType PlanType { get; set; }
+        public Enums.PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
@@ -48,6 +48,7 @@ namespace Bit.Core.Models.Table
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public int PlanTypeId { get; set; }
 
         public void SetNewId()
         {

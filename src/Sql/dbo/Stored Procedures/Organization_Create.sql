@@ -36,6 +36,7 @@
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
+    @PlanTypeId INT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -78,7 +79,8 @@ BEGIN
         [TwoFactorProviders],
         [ExpirationDate],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [PlanTypeId]
     )
     VALUES
     (
@@ -119,5 +121,6 @@ BEGIN
         @ExpirationDate,
         @CreationDate,
         @RevisionDate
+        @PlanTypeId
     )
 END

@@ -18,7 +18,7 @@ namespace Bit.Core.Models.Api
         [StringLength(50)]
         [EmailAddress]
         public string BillingEmail { get; set; }
-        public PlanType PlanType { get; set; }
+        public Enums.PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
         public PaymentMethodType? PaymentMethodType { get; set; }
@@ -39,6 +39,7 @@ namespace Bit.Core.Models.Api
         public string BillingAddressPostalCode { get; set; }
         [StringLength(2)]
         public string BillingAddressCountry { get; set; }
+        public int PlanTypeId { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
@@ -71,21 +72,21 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (PlanType != PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
+            if (PlanType != Enums.PlanType.Free && string.IsNullOrWhiteSpace(PaymentToken))
             {
                 yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
             }
-            if (PlanType != PlanType.Free && !PaymentMethodType.HasValue)
+            if (PlanType != Enums.PlanType.Free && !PaymentMethodType.HasValue)
             {
                 yield return new ValidationResult("Payment method type required.",
                     new string[] { nameof(PaymentMethodType) });
             }
-            if (PlanType != PlanType.Free && string.IsNullOrWhiteSpace(BillingAddressCountry))
+            if (PlanType != Enums.PlanType.Free && string.IsNullOrWhiteSpace(BillingAddressCountry))
             {
                 yield return new ValidationResult("Country required.",
                     new string[] { nameof(BillingAddressCountry) });
             }
-            if (PlanType != PlanType.Free && BillingAddressCountry == "US" &&
+            if (PlanType != Enums.PlanType.Free && BillingAddressCountry == "US" &&
                 string.IsNullOrWhiteSpace(BillingAddressPostalCode))
             {
                 yield return new ValidationResult("Zip / postal code is required.",

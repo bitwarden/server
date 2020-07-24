@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -89,6 +90,11 @@ namespace Bit.Core.Repositories.EntityFramework
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                 }).ToListAsync();
             }
+        }
+
+        public Task<ICollection<PlanTypePlanTypeGroup>> GetPlanTypePlanTypeGroups()
+        {
+            throw new NotImplementedException();
         }
     }
 }

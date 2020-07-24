@@ -169,7 +169,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot upgrade to this plan.");
             }
 
-            if (existingPlan.Type != PlanType.Free)
+            if (existingPlan.Type != Enums.PlanType.Free)
             {
                 throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
@@ -537,7 +537,7 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow,
             };
 
-            if (plan.Type == PlanType.Free)
+            if (plan.Type == Enums.PlanType.Free)
             {
                 var adminCount =
                     await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -579,7 +579,7 @@ namespace Bit.Core.Services
                     "hosting of organizations and that the installation id matches your current installation.");
             }
 
-            if (license.PlanType != PlanType.Custom &&
+            if (license.PlanType != Enums.PlanType.Custom &&
                 StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
             {
                 throw new BadRequestException("Plan not found.");
@@ -1068,7 +1068,7 @@ namespace Bit.Core.Services
             if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
             {
                 var org = await GetOrgById(orgUser.OrganizationId);
-                if (org.PlanType == PlanType.Free)
+                if (org.PlanType == Enums.PlanType.Free)
                 {
                     var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
                         user.Id);
@@ -1122,7 +1122,7 @@ namespace Bit.Core.Services
             }
 
             var org = await GetOrgById(organizationId);
-            if (org.PlanType == PlanType.Free &&
+            if (org.PlanType == Enums.PlanType.Free &&
                 (orgUser.Type == OrganizationUserType.Admin || orgUser.Type == OrganizationUserType.Owner))
             {
                 var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(

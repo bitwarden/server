@@ -46,7 +46,7 @@ namespace Bit.Core.Models.Business
 
             if (subscriptionInfo?.Subscription == null)
             {
-                if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
+                if (org.PlanType == Bit.Core.Enums.PlanType.Custom && org.ExpirationDate.HasValue)
                 {
                     Expires = Refresh = org.ExpirationDate.Value;
                     Trial = false;
@@ -97,7 +97,7 @@ namespace Bit.Core.Models.Business
         public string BusinessName { get; set; }
         public bool Enabled { get; set; }
         public string Plan { get; set; }
-        public PlanType PlanType { get; set; }
+        public Bit.Core.Enums.PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
