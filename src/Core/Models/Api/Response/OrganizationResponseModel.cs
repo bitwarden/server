@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using Bit.Core.Models.Table;
-using System.Collections.Generic;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Models.Api

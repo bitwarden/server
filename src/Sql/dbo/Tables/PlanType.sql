@@ -12,5 +12,5 @@ CREATE TABLE [dbo].[PlanType] (
 	[IsAnnual]                      [BIT]               NOT NULL,
 	[PlanTypeGroupId]               [INT]               NOT NULL,
     CONSTRAINT [PK_PlanType] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_PlanType_PlanTypeGrouo] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
+    CONSTRAINT [FK_PlanType_PlanTypeGroup] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
 );
