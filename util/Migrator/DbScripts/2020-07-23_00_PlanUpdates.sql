@@ -2,7 +2,7 @@
 IF COL_LENGTH('[dbo].[Organization]', 'PlanTypeId') IS NOT NULL
 BEGIN
     ALTER TABLE [dbo].[Organization]
-    DROP CONSTRAINT FK_PlanTypeId
+    DROP CONSTRAINT FK_Organization_PlanType
     ALTER TABLE [dbo].[Organization]
     DROP COLUMN [PlanTypeId];
 END
@@ -53,7 +53,7 @@ BEGIN
         [HasSso]                        [bit]               NOT NULL,
         [SortOrder]                     [INT]               NOT NULL,
         [IsLegacy]                      [BIT]               NOT NULL
-        CONSTRAINT [PK_PlanType] PRIMARY KEY CLUSTERED ([Id] ASC)
+        CONSTRAINT [PK_PlanTypeGroup] PRIMARY KEY CLUSTERED ([Id] ASC)
     )
 END
 GO
@@ -89,7 +89,7 @@ BEGIN
         [HasPremiumAccessAddonCost]     [DECIMAL](18, 2)    NULL,
         [IsAnnual]                      [BIT]               NOT NULL,
         [PlanTypeGroupId]               [INT]               NOT NULL,
-        CONSTRAINT [PK_PlanTypeId] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [PK_PlanType] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_PlanType_PlanTypeGroup] FOREIGN KEY ([PlanTypeGroupId]) REFERENCES [dbo].[PlanTypeGroup] ([Id])
     )
 END
@@ -123,7 +123,7 @@ BEGIN
 
     ALTER TABLE
         [dbo].[Organization]
-    ADD CONSTRAINT FK_Organization_PlanTypeId 
+    ADD CONSTRAINT FK_Organization_PlanType
     FOREIGN KEY (PlanTypeId) REFERENCES PlanType(Id);
 END
 GO

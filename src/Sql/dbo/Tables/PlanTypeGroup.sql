@@ -22,5 +22,5 @@ CREATE TABLE [dbo].[PlanTypeGroup](
 	[HasSso]                        [bit]               NOT NULL,
 	[SortOrder]                     [INT]               NOT NULL,
 	[IsLegacy]                      [BIT]               NOT NULL
-    CONSTRAINT [PK_PlanType] PRIMARY KEY CLUSTERED ([Id] ASC)
+    CONSTRAINT [PK_PlanTypeGroup] PRIMARY KEY CLUSTERED ([Id] ASC)
 );

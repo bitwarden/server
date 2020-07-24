@@ -35,7 +35,7 @@
     @TwoFactorProviders NVARCHAR(MAX),
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
     @PlanTypeId INT
 AS
 BEGIN
