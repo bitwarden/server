@@ -567,6 +567,28 @@ namespace Bit.Core.Services
             Logger.LogWarning("Change password failed for user {userId}.", user.Id);
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
+        
+        public async Task<IdentityResult> ChangePasswordNoCompareAsync(User user, string newMasterPassword, string key)
+        {
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+            
+            var result = await UpdatePasswordHash(user, newMasterPassword);
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.Key = key;
+
+            await _userRepository.ReplaceAsync(user);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+
+            return IdentityResult.Success;
+        }
 
         public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
             string key, KdfType kdf, int kdfIterations)
