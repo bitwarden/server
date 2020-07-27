@@ -85,24 +85,5 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-
-        public async Task<ICollection<PlanTypePlanTypeGroup>> GetPlanTypePlanTypeGroups()
-        {
-
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = new StringBuilder();
-                var reader = await connection.ExecuteReaderAsync(
-                    $"[{Schema}].[PlanTypePlanTypeGroup_Read]",
-                    commandType: CommandType.StoredProcedure);
-
-                while (reader.Read()) {
-                    results.Append(reader.GetValue(0).ToString());
-                }
-
-
-                return JsonSerializer.Deserialize<ICollection<PlanTypePlanTypeGroup>>(results.ToString());
-            }
-        }
     }
 }

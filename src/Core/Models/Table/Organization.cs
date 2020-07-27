@@ -48,7 +48,6 @@ namespace Bit.Core.Models.Table
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
-        public int PlanTypeId { get; set; }
 
         public void SetNewId()
         {
