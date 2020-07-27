@@ -38,7 +38,6 @@ namespace Bit.Core.Models.Api
             UseApi = organization.UseApi;
             UsersGetPremium = organization.UsersGetPremium;
             SelfHost = organization.SelfHost;
-            PlanTypeId = organization.PlanTypeId;
         }
 
         public string Id { get; set; }
@@ -65,7 +64,6 @@ namespace Bit.Core.Models.Api
         public bool UseApi { get; set; }
         public bool UsersGetPremium { get; set; }
         public bool SelfHost { get; set; }
-        public int PlanTypeId { get; set; }
     }
 
     public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

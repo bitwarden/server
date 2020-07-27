@@ -13,6 +13,5 @@ namespace Bit.Core.Repositories
         Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid, int skip, int take);
         Task UpdateStorageAsync(Guid id);
         Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
-        Task<ICollection<PlanTypePlanTypeGroup>> GetPlanTypePlanTypeGroups();
     }
 }

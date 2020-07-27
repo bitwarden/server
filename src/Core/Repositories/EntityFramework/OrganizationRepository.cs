@@ -91,10 +91,5 @@ namespace Bit.Core.Repositories.EntityFramework
                 }).ToListAsync();
             }
         }
-
-        public Task<ICollection<PlanTypePlanTypeGroup>> GetPlanTypePlanTypeGroups()
-        {
-            throw new NotImplementedException();
-        }
     }
 }
