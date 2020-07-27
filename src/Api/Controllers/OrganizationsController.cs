@@ -520,11 +520,5 @@ namespace Bit.Api.Controllers
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
         }
-
-        [HttpGet("plan-types")]
-        public async Task<ListResponseModel<PlanTypeResponseModel>> GetPlanOptions() {
-            var data = await _organizationRepository.GetPlanTypePlanTypeGroups();
-            return new ListResponseModel<PlanTypeResponseModel>(data.ToList().Select(planType => new PlanTypeResponseModel(planType)));
-        }
     }
 }
