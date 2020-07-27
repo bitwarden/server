@@ -7,8 +7,6 @@ using Dapper;
 using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
-using System.Text.Json;
-using System.Text;
 
 namespace Bit.Core.Repositories.SqlServer
 {

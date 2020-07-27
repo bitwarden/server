@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
