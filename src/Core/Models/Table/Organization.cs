@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Table
         public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
-        public Enums.PlanType PlanType { get; set; }
+        public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
