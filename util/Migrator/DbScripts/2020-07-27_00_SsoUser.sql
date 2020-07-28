@@ -11,9 +11,12 @@ BEGIN
         CONSTRAINT [FK_SsoUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
 
-    CREATE NONCLUSTERED INDEX [IX_SsoUser_OrganizationIdExternalId]
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_SsoUser_OrganizationIdExternalId]
         ON [dbo].[SsoUser]([OrganizationId] ASC, [ExternalId] ASC)
         INCLUDE ([UserId]);
+
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_SsoUser_OrganizationIdUserId]
+        ON [dbo].[SsoUser]([OrganizationId] ASC, [UserId] ASC);
 END
 GO
 
@@ -143,7 +146,10 @@ BEGIN
     INNER JOIN
         [dbo].[SsoUser] SU ON SU.[UserId] = U.[Id]
     WHERE
-        SU.[OrganizationId] = @OrganizationId
+        (
+            (@OrganizationId IS NULL AND SU.[OrganizationId] IS NULL)
+            OR (@OrganizationId IS NOT NULL AND SU.[OrganizationId] = @OrganizationId)
+        )
         AND SU.[ExternalId] = @ExternalId
 END
 GO
