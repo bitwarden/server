@@ -269,5 +269,10 @@
     <Build Include="dbo\Stored Procedures\Policy_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Restore.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_SoftDelete.sql" />
+    <Build Include="dbo\Tables\SsoUser.sql" />
+    <Build Include="dbo\Stored Procedures\SsoUser_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\SsoUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\SsoUser_ReadByOrganizationIdExternalId.sql" />
+    <Build Include="dbo\Stored Procedures\User_ReadBySsoUserOrganizationIdExternalId.sql" />
   </ItemGroup>
 </Project>
