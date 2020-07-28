@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.29.0" />
+    <PackageReference Include="NewRelic.Agent" Version="8.30.0" />
   </ItemGroup>
 
   <ItemGroup>
