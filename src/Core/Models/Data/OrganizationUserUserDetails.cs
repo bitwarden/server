@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Data
         public OrganizationUserType Type { get; set; }
         public bool AccessAll { get; set; }
         public string ExternalId { get; set; }
+        public string SsoExternalId { get; set; }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {

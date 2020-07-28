@@ -11,8 +11,11 @@ SELECT
     OU.[Status],
     OU.[Type],
     OU.[AccessAll],
-    OU.[ExternalId]
+    OU.[ExternalId],
+    SU.[ExternalId] SsoExternalId
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
