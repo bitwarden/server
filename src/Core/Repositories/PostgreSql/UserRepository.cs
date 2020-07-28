@@ -155,5 +155,10 @@ namespace Bit.Core.Repositories.PostgreSql
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        public Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -121,6 +122,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.Entry(user).Property(e => e.RenewalReminderDate).IsModified = true;
                 await dbContext.SaveChangesAsync();
             }
+        }
+
+        public Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

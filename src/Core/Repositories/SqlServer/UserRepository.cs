@@ -38,6 +38,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<User>(
+                    $"[{Schema}].[{Table}_ReadBySsoUserOrganizationIdExternalId]",
+                    new { OrganizationId = organizationId, ExternalId = externalId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
         public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
         {
             using (var connection = new SqlConnection(ConnectionString))
