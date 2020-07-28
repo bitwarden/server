@@ -574,6 +574,12 @@ namespace Bit.Core.Services
             {
                 throw new ArgumentNullException(nameof(user));
             }
+
+            if (user.MasterPassword != null)
+            {
+                Logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
+                return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
+            }
             
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)

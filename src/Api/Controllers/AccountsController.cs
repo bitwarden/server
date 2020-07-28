@@ -196,8 +196,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
         
-        [HttpPost("password-no-compare")]
-        public async Task PostPasswordNoCompare([FromBody]PasswordNoCompareRequestModel model)
+        [HttpPost("set-password")]
+        public async Task SetPasswordAsync([FromBody]SetPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

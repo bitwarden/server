@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api.Request.Accounts
 {
-    public class PasswordNoCompareRequestModel
+    public class SetPasswordRequestModel
     {
         [Required]
         [StringLength(300)]
