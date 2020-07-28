@@ -205,7 +205,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.ChangePasswordNoCompareAsync(user, model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.SetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
                 return;

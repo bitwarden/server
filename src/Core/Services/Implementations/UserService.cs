@@ -568,14 +568,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
         
-        public async Task<IdentityResult> ChangePasswordNoCompareAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key)
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if (user.MasterPassword != null)
+            if (!string.IsNullOrWhiteSpace(user.MasterPassword))
             {
                 Logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
