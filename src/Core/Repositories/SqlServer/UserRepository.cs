@@ -38,7 +38,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<User> GetBySsoUserAsync(Guid organizationId, string externalId)
+        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {

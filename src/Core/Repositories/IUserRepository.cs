@@ -9,7 +9,7 @@ namespace Bit.Core.Repositories
     public interface IUserRepository : IRepository<User, Guid>
     {
         Task<User> GetByEmailAsync(string email);
-        Task<User> GetBySsoUserAsync(Guid organizationId, string externalId);
+        Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId);
         Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email);
         Task<ICollection<User>> SearchAsync(string email, int skip, int take);
         Task<ICollection<User>> GetManyByPremiumAsync(bool premium);
