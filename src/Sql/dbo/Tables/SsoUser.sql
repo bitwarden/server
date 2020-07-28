@@ -15,5 +15,8 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_SsoUser_OrganizationIdExternalId]
     ON [dbo].[SsoUser]([OrganizationId] ASC, [ExternalId] ASC)
     INCLUDE ([UserId]);
 
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [IX_SsoUser_OrganizationIdUserId]
+    ON [dbo].[SsoUser]([OrganizationId] ASC, [UserId] ASC);
 
 
