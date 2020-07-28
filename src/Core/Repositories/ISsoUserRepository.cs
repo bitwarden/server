@@ -3,9 +3,7 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories
 {
-    public interface ISsoUserRepository
+    public interface ISsoUserRepository : IRepository<SsoUser, long>
     {
-        Task CreateAsync(SsoUser obj);
-        Task DeleteAsync(SsoUser obj);
     }
 }

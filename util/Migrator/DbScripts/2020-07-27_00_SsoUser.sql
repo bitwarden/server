@@ -1,10 +1,12 @@
 ﻿IF OBJECT_ID('[dbo].[SsoUser]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[SsoUser] (
+        [Id]                BIGINT           IDENTITY (1, 1) NOT NULL,
         [UserId]            UNIQUEIDENTIFIER NOT NULL,
-        [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
-        [ExternalId]        NVARCHAR(50) NOT NULL,
-        CONSTRAINT [PK_SsoUser] PRIMARY KEY CLUSTERED ([UserId] ASC, [OrganizationId] ASC),
+        [OrganizationId]    UNIQUEIDENTIFIER NULL,
+        [ExternalId]        NVARCHAR(50)     NOT NULL,
+        [CreationDate]      DATETIME2 (7)    NOT NULL,
+        CONSTRAINT [PK_SsoUser] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_SsoUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_SsoUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
@@ -15,6 +17,27 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[SsoUser_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoUser_ReadById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoUser_ReadById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[SsoUserView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
 IF OBJECT_ID('[dbo].[SsoUser_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[SsoUser_Create]
@@ -22,9 +45,11 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[SsoUser_Create]
+    @Id BIGINT OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ExternalId NVARCHAR(50)
+    @ExternalId NVARCHAR(50),
+    @CreationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -33,14 +58,46 @@ BEGIN
     (
         [UserId],
         [OrganizationId],
-        [ExternalId]
+        [ExternalId],
+        [CreationDate]
     )
     VALUES
     (
         @UserId,
         @OrganizationId,
-        @ExternalId
+        @ExternalId,
+        @CreationDate
     )
+
+    SET @Id = SCOPE_IDENTITY();
+END
+GO
+
+IF OBJECT_ID('[dbo].[SsoUser_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoUser_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoUser_Update]
+    @Id BIGINT OUTPUT,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ExternalId NVARCHAR(50),
+    @CreationDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[SsoUser]
+    SET
+        [UserId] = @UserId,
+        [OrganizationId] = @OrganizationId,
+        [ExternalId] = @ExternalId,
+        [CreationDate] = @CreationDate
+    WHERE
+        [Id] = @Id
 END
 GO
 
