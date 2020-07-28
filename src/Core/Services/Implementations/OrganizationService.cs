@@ -259,6 +259,7 @@ namespace Bit.Core.Services
             organization.Use2fa = newPlan.Use2fa;
             organization.UseApi = newPlan.UseApi;
             organization.SelfHost = newPlan.SelfHost;
+            organization.UsePolicies = newPlan.UsePolicies;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;
             organization.Enabled = success;
