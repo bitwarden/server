@@ -59,11 +59,14 @@ namespace Bit.Core.IdentityServer
                 }
                 else if (id == "browser")
                 {
-                    // TODO
+                    RedirectUris = new[] { "https://localhost:8080/sso-connector.html" };
+                    PostLogoutRedirectUris = new[] { "https://localhost:8080" };
+                    AllowedCorsOrigins = new[] { "https://localhost:8080" };
                 }
                 else if (id == "cli")
                 {
-                    // TODO
+                    RedirectUris = new[] { "bitwardencli://sso-callback" };
+                    PostLogoutRedirectUris = new[] { "bitwardencli://logged-out" };
                 }
                 else if (id == "mobile")
                 {
