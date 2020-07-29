@@ -27,6 +27,7 @@ namespace Bit.Core.Models.Api
             Status = organization.Status;
             Type = organization.Type;
             Enabled = organization.Enabled;
+            SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
         }
 
         public string Id { get; set; }
@@ -49,5 +50,6 @@ namespace Bit.Core.Models.Api
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }
         public bool Enabled { get; set; }
+        public bool SsoBound { get; set; }
     }
 }
