@@ -53,3 +53,4 @@ BEGIN
     EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
