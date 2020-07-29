@@ -292,8 +292,15 @@ namespace Bit.Icons.Services
             }
 
             // Resolve host to make sure it is not an internal/private IP address
-            var hostEntry = Dns.GetHostEntry(uri.Host);
-            if (hostEntry?.AddressList.Any(ip => IsInternal(ip)) ?? true)
+            try
+            {
+                var hostEntry = Dns.GetHostEntry(uri.Host);
+                if (hostEntry?.AddressList.Any(ip => IsInternal(ip)) ?? true)
+                {
+                    return null;
+                }
+            }
+            catch
             {
                 return null;
             }
