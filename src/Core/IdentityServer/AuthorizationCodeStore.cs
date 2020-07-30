@@ -23,7 +23,8 @@ namespace Bit.Core.IdentityServer
 
         public Task<string> StoreAuthorizationCodeAsync(AuthorizationCode code)
         {
-            return CreateItemAsync(code, code.ClientId, code.Subject.GetSubjectId(), code.CreationTime, code.Lifetime);
+            return CreateItemAsync(code, code.ClientId, code.Subject.GetSubjectId(), code.SessionId,
+                code.Description, code.CreationTime, code.Lifetime);
         }
 
         public Task<AuthorizationCode> GetAuthorizationCodeAsync(string code)

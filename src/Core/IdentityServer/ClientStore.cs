@@ -47,7 +47,7 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = installation.Enabled,
-                            Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, installation.Id.ToString()) }
+                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, installation.Id.ToString()) }
                         };
                     }
                 }
@@ -70,7 +70,7 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = true,
-                            Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, id) }
+                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, id) }
                         };
                     }
                 }
@@ -92,7 +92,7 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
                             Enabled = org.Enabled && org.UseApi,
-                            Claims = new List<Claim> { new Claim(JwtClaimTypes.Subject, org.Id.ToString()) }
+                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, org.Id.ToString()) }
                         };
                     }
                 }
