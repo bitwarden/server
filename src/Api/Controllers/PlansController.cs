@@ -1,8 +1,8 @@
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Utilities;
-using Bit.Core.Models.StaticStore;
+using Bit.Core.Models.Api;
+using System.Linq;
 
 namespace Bit.Api.Controllers
 {
@@ -11,9 +11,11 @@ namespace Bit.Api.Controllers
     public class PlanSController : Controller
     {
         [HttpGet("")]
-        public IEnumerable<Plan> Get()
+        public ListResponseModel<PlanResponseModel> Get()
         {
-            return StaticStore.Plans;
+            var data = StaticStore.Plans;
+            var responses = data.Select(plan => new PlanResponseModel(plan));
+            return new ListResponseModel<PlanResponseModel>(responses);
         }
     }
 }

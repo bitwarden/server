@@ -4,7 +4,6 @@ namespace Bit.Core.Models.StaticStore
 {
     public class Plan
     {
-
         public PlanType Type { get; set; }
         public ProductType Product { get; set; }
         public string Name { get; set; }
@@ -46,6 +45,6 @@ namespace Bit.Core.Models.StaticStore
         public decimal BasePrice { get; set; }
         public decimal SeatPrice { get; set; }
         public decimal AdditionalStoragePricePerGb { get; set; }
-        public decimal PremiumAccessOptionCost { get; set; }
+        public decimal PremiumAccessOptionPrice { get; set; }
     }
 }

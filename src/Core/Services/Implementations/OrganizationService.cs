@@ -250,8 +250,8 @@ namespace Bit.Core.Services
             organization.PlanType = newPlan.Type;
             organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
             organization.MaxCollections = newPlan.MaxCollections;
-            organization.MaxStorageGb = !newPlan.MaxAdditionalStorage.HasValue ?
-                (short?)null : (short)(newPlan.MaxAdditionalStorage.Value + upgrade.AdditionalStorageGb);
+            organization.MaxStorageGb = !newPlan.BaseStorageGb.HasValue ?
+                (short?)null : (short)(newPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
             organization.UseGroups = newPlan.HasGroups;
             organization.UseDirectory = newPlan.HasDirectory;
             organization.UseEvents = newPlan.HasEvents;
