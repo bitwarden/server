@@ -104,9 +104,11 @@ namespace Bit.Core.Utilities
                     Type = PlanType.Free,
                     Product = ProductType.Free,
                     Name = "Free",
-                    Description = "For testing or personal users to share with 1 other user.",
+                    i18nNameItem = "planNameFree",
+                    i18nDescriptionItem = "planDescFree",
                     BaseSeats = 2,
                     MaxCollections = 2,
+                    MaxUsers = 2,
 
                     SortOrder = -1 // Always the lowest plan, cannot be upgraded to
                 },
@@ -115,9 +117,12 @@ namespace Bit.Core.Utilities
                     Type = PlanType.FamiliesAnnually2019,
                     Product = ProductType.Families,
                     Name = "Families 2019",
-                    Description = "For personal use, to share with family & friends.",
+                    IsAnnual = true,
+                    i18nNameItem = "planNameFamilies",
+                    i18nDescriptionItem = "planDescFamilies",
                     BaseSeats = 5,
                     BaseStorageGb = 1,
+                    MaxUsers = 5,
 
                     HasAdditionalStorageOption = true,
                     HasPremiumAccessOption = true,
@@ -127,47 +132,23 @@ namespace Bit.Core.Utilities
                     HasTotp = true,
 
                     SortOrder = 1,
-                    IsLegacy = true,
+                    LegacyYear = 2020,
 
                     StripePlanId = "personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     StripePremiumAccessPlanId = "personal-org-premium-access-annually",
-                    BasePrice = 12,
-                    AdditionalStoragePricePerGb = 4,
+                    BasePrice = 1,
+                    AdditionalStoragePricePerGb = 0.33M,
                     PremiumAccessOptionCost = 40
-                },
-                new Plan
-                {
-                    Type = PlanType.TeamsMonthly2019,
-                    Product = ProductType.Teams,
-                    Name = "Teams (Monthly) 2019",
-                    Description = "For businesses and other team organizations.",
-                    CanBeUsedByBusiness = true,
-                    BaseSeats = 5,
-                    BaseStorageGb = 1,
-
-                    HasAdditionalSeatsOption = true,
-                    HasAdditionalStorageOption = true,
-                    TrialPeriodDays = 7,
-
-                    HasTotp = true,
-
-                    SortOrder = 2,
-                    IsLegacy = true,
-
-                    StripePlanId = "teams-org-monthly",
-                    StripeSeatPlanId = "teams-org-seat-monthly",
-                    StripeStoragePlanId = "storage-gb-monthly",
-                    BasePrice = 8,
-                    SeatPrice = 2.5M,
-                    AdditionalStoragePricePerGb = 0.33M
                 },
                 new Plan
                 {
                     Type = PlanType.TeamsAnnually2019,
                     Product = ProductType.Teams,
                     Name = "Teams (Annually) 2019",
-                    Description = "For businesses and other team organizations.",
+                    IsAnnual = true,
+                    i18nNameItem = "planNameTeams",
+                    i18nDescriptionItem = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 5,
                     BaseStorageGb = 1,
@@ -179,21 +160,85 @@ namespace Bit.Core.Utilities
                     HasTotp = true,
 
                     SortOrder = 2,
-                    IsLegacy = true,
+                    LegacyYear = 2020,
 
                     StripePlanId = "teams-org-annually",
                     StripeSeatPlanId = "teams-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 60,
-                    SeatPrice = 24,
-                    AdditionalStoragePricePerGb = 4
+                    BasePrice = 5,
+                    SeatPrice = 2,
+                    AdditionalStoragePricePerGb = 0.33M
+                },
+                new Plan
+                {
+                    Type = PlanType.TeamsMonthly2019,
+                    Product = ProductType.Teams,
+                    Name = "Teams (Monthly) 2019",
+                    i18nNameItem = "planNameTeams",
+                    i18nDescriptionItem = "planDescTeams",
+                    CanBeUsedByBusiness = true,
+                    BaseSeats = 5,
+                    BaseStorageGb = 1,
+
+                    HasAdditionalSeatsOption = true,
+                    HasAdditionalStorageOption = true,
+                    TrialPeriodDays = 7,
+
+                    HasTotp = true,
+
+                    SortOrder = 2,
+                    LegacyYear = 2020,
+
+                    StripePlanId = "teams-org-monthly",
+                    StripeSeatPlanId = "teams-org-seat-monthly",
+                    StripeStoragePlanId = "storage-gb-monthly",
+                    BasePrice = 8,
+                    SeatPrice = 2.5M,
+                    AdditionalStoragePricePerGb = 0.5M
+                },
+                new Plan
+                {
+                    Type = PlanType.EnterpriseAnnually2019,
+                    Name = "Enterprise (Annually) 2019",
+                    IsAnnual = true,
+                    Product = ProductType.Enterprise,
+                    i18nNameItem = "planNameEnterprise",
+                    i18nDescriptionItem = "planDescEnterprise",
+                    CanBeUsedByBusiness = true,
+                    BaseSeats = 0,
+                    BaseStorageGb = 1,
+
+                    HasAdditionalSeatsOption = true,
+                    HasAdditionalStorageOption = true,
+                    TrialPeriodDays = 7,
+
+                    HasPolicies = true,
+                    HasSelfHost = true,
+                    HasGroups = true,
+                    HasDirectory = true,
+                    HasEvents = true,
+                    HasTotp = true,
+                    Has2fa = true,
+                    HasApi = true,
+                    UsersGetPremium = true,
+
+                    SortOrder = 3,
+                    LegacyYear = 2020,
+
+                    StripePlanId = null,
+                    StripeSeatPlanId = "enterprise-org-seat-annually",
+                    StripeStoragePlanId = "storage-gb-annually",
+                    BasePrice = 0,
+                    SeatPrice = 3,
+                    AdditionalStoragePricePerGb = 0.33M
                 },
                 new Plan
                 {
                     Type = PlanType.EnterpriseMonthly2019,
                     Product = ProductType.Enterprise,
                     Name = "Enterprise (Monthly) 2019",
-                    Description = "For businesses and other large organizations.",
+                    i18nNameItem = "planNameEnterprise",
+                    i18nDescriptionItem = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -213,56 +258,26 @@ namespace Bit.Core.Utilities
                     UsersGetPremium = true,
 
                     SortOrder = 3,
-                    IsLegacy = true,
+                    LegacyYear = 2020,
 
                     StripePlanId = null,
                     StripeSeatPlanId = "enterprise-org-seat-monthly",
                     StripeStoragePlanId = "storage-gb-monthly",
                     BasePrice = 0,
                     SeatPrice = 4M,
-                    AdditionalStoragePricePerGb = 0.33M
-                },
-                new Plan
-                {
-                    Type = PlanType.EnterpriseAnnually2019,
-                    Name = "Enterprise (Annually) 2019",
-                    Product = ProductType.Enterprise,
-                    Description = "For businesses and other large organizations.",
-                    CanBeUsedByBusiness = true,
-                    BaseSeats = 0,
-                    BaseStorageGb = 1,
-
-                    HasAdditionalSeatsOption = true,
-                    HasAdditionalStorageOption = true,
-                    TrialPeriodDays = 7,
-
-                    HasPolicies = true,
-                    HasSelfHost = true,
-                    HasGroups = true,
-                    HasDirectory = true,
-                    HasEvents = true,
-                    HasTotp = true,
-                    Has2fa = true,
-                    HasApi = true,
-                    UsersGetPremium = true,
-
-                    SortOrder = 3,
-                    IsLegacy = true,
-
-                    StripePlanId = null,
-                    StripeSeatPlanId = "enterprise-org-seat-annually",
-                    StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 0,
-                    SeatPrice = 36,
+                    AdditionalStoragePricePerGb = 0.5M
                 },
                 new Plan
                 {
                     Type = PlanType.FamiliesAnnually,
                     Product = ProductType.Families,
                     Name = "Families",
-                    Description = "For personal use, to share with family & friends.",
+                    IsAnnual = true,
+                    i18nNameItem = "planNameFamilies",
+                    i18nDescriptionItem = "planDescFamilies",
                     BaseSeats = 5,
                     BaseStorageGb = 1,
+                    MaxUsers = 5,
 
                     TrialPeriodDays = 7,
 
@@ -273,15 +288,40 @@ namespace Bit.Core.Utilities
 
                     StripePlanId = "personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 12,
-                    AdditionalStoragePricePerGb = 4,
+                    BasePrice = 1,
+                    AdditionalStoragePricePerGb = 0.33M,
+                },
+                new Plan
+                {
+                    Type = PlanType.TeamsAnnually,
+                    Product = ProductType.Teams,
+                    Name = "Teams (Annually)",
+                    IsAnnual = true,
+                    i18nNameItem = "planNameTeams",
+                    i18nDescriptionItem = "planDescTeams",
+                    CanBeUsedByBusiness = true,
+                    BaseStorageGb = 1,
+
+                    HasAdditionalSeatsOption = true,
+                    HasAdditionalStorageOption = true,
+                    TrialPeriodDays = 7,
+
+                    HasTotp = true,
+
+                    SortOrder = 2,
+
+                    StripeSeatPlanId = "2020-teams-org-seat-annually",
+                    StripeStoragePlanId = "storage-gb-annually",
+                    SeatPrice = 3,
+                    AdditionalStoragePricePerGb = 0.33M
                 },
                 new Plan
                 {
                     Type = PlanType.TeamsMonthly,
                     Product = ProductType.Teams,
                     Name = "Teams (Monthly)",
-                    Description = "For businesses and other team organizations.",
+                    i18nNameItem = "planNameTeams",
+                    i18nDescriptionItem = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseStorageGb = 1,
 
@@ -296,36 +336,50 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "2020-teams-org-seat-monthly",
                     StripeStoragePlanId = "storage-gb-monthly",
                     SeatPrice = 4,
-                    AdditionalStoragePricePerGb = 0.33M
+                    AdditionalStoragePricePerGb = 0.5M
                 },
                 new Plan
                 {
-                    Type = PlanType.TeamsAnnually,
-                    Product = ProductType.Teams,
-                    Name = "Teams (Annually)",
-                    Description = "For businesses and other team organizations.",
+                    Type = PlanType.EnterpriseAnnually,
+                    Name = "Enterprise (Annually)",
+                    Product = ProductType.Enterprise,
+                    IsAnnual = true,
+                    i18nNameItem = "planNameEnterprise",
+                    i18nDescriptionItem = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
+                    BaseSeats = 0,
                     BaseStorageGb = 1,
 
                     HasAdditionalSeatsOption = true,
                     HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
+                    HasPolicies = true,
+                    HasSelfHost = true,
+                    HasGroups = true,
+                    HasDirectory = true,
+                    HasEvents = true,
                     HasTotp = true,
+                    Has2fa = true,
+                    HasApi = true,
+                    HasSso = true,
+                    UsersGetPremium = true,
 
-                    SortOrder = 2,
+                    SortOrder = 3,
 
-                    StripeSeatPlanId = "2020-teams-org-seat-annually",
+                    StripeSeatPlanId = "2020-enterprise-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    SeatPrice = 36,
-                    AdditionalStoragePricePerGb = 4
+                    BasePrice = 0,
+                    SeatPrice = 5,
+                    AdditionalStoragePricePerGb = 0.33M
                 },
                 new Plan
                 {
                     Type = PlanType.EnterpriseMonthly,
                     Product = ProductType.Enterprise,
                     Name = "Enterprise (Monthly)",
-                    Description = "For businesses and other large organizations.",
+                    i18nNameItem = "planNameEnterprise",
+                    i18nDescriptionItem = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -351,38 +405,7 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-monthly",
                     BasePrice = 0,
                     SeatPrice = 6,
-                    AdditionalStoragePricePerGb = 0.33M
-                },
-                new Plan
-                {
-                    Type = PlanType.EnterpriseAnnually,
-                    Name = "Enterprise (Annually)",
-                    Product = ProductType.Enterprise,
-                    Description = "For businesses and other large organizations.",
-                    CanBeUsedByBusiness = true,
-                    BaseSeats = 0,
-                    BaseStorageGb = 1,
-
-                    HasAdditionalSeatsOption = true,
-                    HasAdditionalStorageOption = true,
-                    TrialPeriodDays = 7,
-
-                    HasPolicies = true,
-                    HasSelfHost = true,
-                    HasGroups = true,
-                    HasDirectory = true,
-                    HasEvents = true,
-                    HasTotp = true,
-                    Has2fa = true,
-                    HasApi = true,
-                    UsersGetPremium = true,
-
-                    SortOrder = 3,
-
-                    StripeSeatPlanId = "2020-enterprise-org-seat-annually",
-                    StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 0,
-                    SeatPrice = 60,
+                    AdditionalStoragePricePerGb = 0.5M
                 },
             };
 

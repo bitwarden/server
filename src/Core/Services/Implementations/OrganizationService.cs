@@ -524,8 +524,8 @@ namespace Bit.Core.Services
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,
-                MaxStorageGb = !plan.MaxAdditionalStorage.HasValue ?
-                    (short?)null : (short)(plan.MaxAdditionalStorage.Value + signup.AdditionalStorageGb),
+                MaxStorageGb = !plan.BaseStorageGb.HasValue ?
+                    (short?)null : (short)(plan.BaseStorageGb.Value + signup.AdditionalStorageGb),
                 UsePolicies = plan.HasPolicies,
                 UseSso = plan.HasSso,
                 UseGroups = plan.HasGroups,
