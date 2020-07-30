@@ -65,6 +65,19 @@ namespace Bit.Identity
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
             }
 
+            // Cookies
+            if (Environment.IsDevelopment())
+            {
+                services.Configure<CookiePolicyOptions>(options =>
+                {
+                    options.MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+                    options.OnAppendCookie = ctx =>
+                    {
+                        ctx.CookieOptions.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+                    };
+                });
+            }
+
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
             // Authentication
@@ -133,6 +146,12 @@ namespace Bit.Identity
                 app.UseForwardedHeaders(globalSettings);
             }
 
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseCookiePolicy();
+            }
+
             // Add static files to the request pipeline.
             app.UseStaticFiles();
 
@@ -172,9 +191,14 @@ namespace Bit.Identity
                     options.Endpoints.EnableTokenRevocationEndpoint = false;
                     options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                     options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
+                    if(env.IsDevelopment())
+                    {
+                        options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+                    }
                 })
                 .AddInMemoryCaching()
                 .AddInMemoryApiResources(ApiResources.GetApiResources())
+                .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
                 .AddClientStoreCache<ClientStore>()
                 .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
                 .AddProfileService<ProfileService>()

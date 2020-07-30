@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
@@ -19,13 +17,6 @@ namespace Bit.Core.IdentityServer
             _grantRepository = grantRepository;
         }
 
-        public async Task<IEnumerable<PersistedGrant>> GetAllAsync(string subjectId)
-        {
-            var grants = await _grantRepository.GetManyAsync(subjectId);
-            var pGrants = grants.Select(g => ToPersistedGrant(g));
-            return pGrants;
-        }
-
         public async Task<PersistedGrant> GetAsync(string key)
         {
             var grant = await _grantRepository.GetByKeyAsync(key);
@@ -38,19 +29,22 @@ namespace Bit.Core.IdentityServer
             return pGrant;
         }
 
-        public async Task RemoveAllAsync(string subjectId, string clientId)
+        public async Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
         {
-            await _grantRepository.DeleteAsync(subjectId, clientId);
+            var grants = await _grantRepository.GetManyAsync(filter.SubjectId, filter.SessionId,
+                filter.ClientId, filter.Type);
+            var pGrants = grants.Select(g => ToPersistedGrant(g));
+            return pGrants;
         }
 
-        public async Task RemoveAllAsync(string subjectId, string clientId, string type)
+        public async Task RemoveAllAsync(PersistedGrantFilter filter)
         {
-            await _grantRepository.DeleteAsync(subjectId, clientId, type);
+            await _grantRepository.DeleteManyAsync(filter.SubjectId, filter.SessionId, filter.ClientId, filter.Type);
         }
 
         public async Task RemoveAsync(string key)
         {
-            await _grantRepository.DeleteAsync(key);
+            await _grantRepository.DeleteByKeyAsync(key);
         }
 
         public async Task StoreAsync(PersistedGrant pGrant)
@@ -59,30 +53,36 @@ namespace Bit.Core.IdentityServer
             await _grantRepository.SaveAsync(grant);
         }
 
-        private Grant ToGrant(PersistedGrant pGrant)
+        private Models.Table.Grant ToGrant(PersistedGrant pGrant)
         {
-            return new Grant
+            return new Models.Table.Grant
             {
                 Key = pGrant.Key,
                 Type = pGrant.Type,
                 SubjectId = pGrant.SubjectId,
+                SessionId = pGrant.SessionId,
                 ClientId = pGrant.ClientId,
+                Description = pGrant.Description,
                 CreationDate = pGrant.CreationTime,
                 ExpirationDate = pGrant.Expiration,
+                ConsumedDate = pGrant.ConsumedTime,
                 Data = pGrant.Data
             };
         }
 
-        private PersistedGrant ToPersistedGrant(Grant grant)
+        private PersistedGrant ToPersistedGrant(Models.Table.Grant grant)
         {
             return new PersistedGrant
             {
                 Key = grant.Key,
                 Type = grant.Type,
                 SubjectId = grant.SubjectId,
+                SessionId = grant.SessionId,
                 ClientId = grant.ClientId,
+                Description = grant.Description,
                 CreationTime = grant.CreationDate,
                 Expiration = grant.ExpirationDate,
+                ConsumedTime = grant.ConsumedDate,
                 Data = grant.Data
             };
         }

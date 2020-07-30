@@ -7,6 +7,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
 using IdentityModel;
+using IdentityServer4;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
@@ -132,8 +133,12 @@ namespace Bit.Identity.Controllers
             ProcessLoginCallbackForOidc(result, additionalLocalClaims, localSignInProps);
 
             // issue authentication cookie for user
-            await HttpContext.SignInAsync(user.Id.ToString(), user.Email, provider,
-                localSignInProps, additionalLocalClaims.ToArray());
+            await HttpContext.SignInAsync(new IdentityServerUser(user.Id.ToString())
+            {
+                DisplayName = user.Email,
+                IdentityProvider = provider,
+                AdditionalClaims = additionalLocalClaims.ToArray()
+            }, localSignInProps);
 
             // delete temporary cookie used during external authentication
             await HttpContext.SignOutAsync(IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme);
@@ -144,7 +149,7 @@ namespace Bit.Identity.Controllers
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
             if (context != null)
             {
-                if (await IsPkceClientAsync(context.ClientId))
+                if (await IsPkceClientAsync(context.Client.ClientId))
                 {
                     // if the client is PKCE then we assume it's native, so this change in how to
                     // return the response is for better UX for the end user.

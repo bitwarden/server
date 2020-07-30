@@ -109,12 +109,11 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientId.sql" />
+    <Build Include="dbo\Stored Procedures\Grant_Delete.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\Grant_DeleteBySubjectIdClientIdType.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
-    <Build Include="dbo\Stored Procedures\Grant_ReadBySubjectId.sql" />
+    <Build Include="dbo\Stored Procedures\Grant_Read.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
