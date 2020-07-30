@@ -8,11 +8,14 @@ namespace Bit.Core.Models.StaticStore
         public PlanType Type { get; set; }
         public ProductType Product { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
+        public bool IsAnnual { get; set; }
+        public string i18nNameItem { get; set; }
+        public string i18nDescriptionItem { get; set; }
         public bool CanBeUsedByBusiness { get; set; }
         public int BaseSeats { get; set; }
         public short? BaseStorageGb { get; set; }
         public short? MaxCollections { get; set; }
+        public short? MaxUsers { get; set; }
 
         public bool HasAdditionalSeatsOption { get; set; }
         public short? MaxAdditionalSeats { get; set; }
@@ -33,7 +36,7 @@ namespace Bit.Core.Models.StaticStore
         public bool UsersGetPremium { get; set; }
 
         public int SortOrder { get; set; }
-        public bool IsLegacy { get; set; }
+        public int? LegacyYear { get; set; }
         public bool Disabled { get; set; }
 
         public string StripePlanId { get; set; }
