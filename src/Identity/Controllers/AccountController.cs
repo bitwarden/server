@@ -212,7 +212,7 @@ namespace Bit.Identity.Controllers
                 localClaims.Add(new Claim(JwtClaimTypes.SessionId, sid.Value));
             }
 
-            // If the external provider issued an id_token, we'll keep it for signout
+            // If the external provider issued an idToken, we'll keep it for signout
             var idToken = externalResult.Properties.GetTokenValue("id_token");
             if (idToken != null)
             {
