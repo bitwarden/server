@@ -84,7 +84,7 @@ namespace Bit.Identity.Controllers
                 throw new Exception("Organization not found.");
             }
 
-            var provider = "sso";
+            var scheme = "sso";
             var props = new AuthenticationProperties
             {
                 RedirectUri = Url.Action(nameof(ExternalCallback)),
@@ -92,11 +92,11 @@ namespace Bit.Identity.Controllers
                 {
                     { "return_url", returnUrl },
                     { "domain_hint", domainHint },
-                    { "scheme", provider },
+                    { "scheme", scheme },
                 },
             };
 
-            return Challenge(props, provider);
+            return Challenge(props, scheme);
         }
 
         [HttpGet]
@@ -104,7 +104,7 @@ namespace Bit.Identity.Controllers
         {
             // Read external identity from the temporary cookie
             var result = await HttpContext.AuthenticateAsync(
-                IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme);
+                IdentityServerConstants.ExternalCookieAuthenticationScheme);
             if (result?.Succeeded != true)
             {
                 throw new Exception("External authentication error");
@@ -121,8 +121,8 @@ namespace Bit.Identity.Controllers
                 throw new Exception("Cannot find user.");
             }
 
-            // this allows us to collect any additonal claims or properties
-            // for the specific prtotocols used and store them in the local auth cookie.
+            // This allows us to collect any additional claims or properties
+            // for the specific protocols used and store them in the local auth cookie.
             // this is typically used to store data needed for signout from those protocols.
             var additionalLocalClaims = new List<Claim>();
             var localSignInProps = new AuthenticationProperties
@@ -130,9 +130,9 @@ namespace Bit.Identity.Controllers
                 IsPersistent = true,
                 ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
             };
-            ProcessLoginCallbackForOidc(result, additionalLocalClaims, localSignInProps);
+            ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 
-            // issue authentication cookie for user
+            // Issue authentication cookie for user
             await HttpContext.SignInAsync(new IdentityServerUser(user.Id.ToString())
             {
                 DisplayName = user.Email,
@@ -140,27 +140,29 @@ namespace Bit.Identity.Controllers
                 AdditionalClaims = additionalLocalClaims.ToArray()
             }, localSignInProps);
 
-            // delete temporary cookie used during external authentication
-            await HttpContext.SignOutAsync(IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme);
+            // Delete temporary cookie used during external authentication
+            await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
 
-            // retrieve return URL
+            // Retrieve return URL
             var returnUrl = result.Properties.Items["return_url"] ?? "~/";
 
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
             if (context != null)
             {
-                if (await IsPkceClientAsync(context.Client.ClientId))
+                if (IsNativeClient(context))
                 {
-                    // if the client is PKCE then we assume it's native, so this change in how to
+                    // The client is native, so this change in how to
                     // return the response is for better UX for the end user.
+                    HttpContext.Response.StatusCode = 200;
+                    HttpContext.Response.Headers["Location"] = string.Empty;
                     return View("Redirect", new RedirectViewModel { RedirectUrl = returnUrl });
                 }
 
-                // we can trust model.ReturnUrl since GetAuthorizationContextAsync returned non-null
+                // We can trust model.ReturnUrl since GetAuthorizationContextAsync returned non-null
                 return Redirect(returnUrl);
             }
 
-            // request for a local page
+            // Request for a local page
             if (Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
@@ -171,7 +173,7 @@ namespace Bit.Identity.Controllers
             }
             else
             {
-                // user might have clicked on a malicious link - should be logged
+                // User might have clicked on a malicious link - should be logged
                 throw new Exception("invalid return URL");
             }
         }
@@ -181,7 +183,7 @@ namespace Bit.Identity.Controllers
         {
             var externalUser = result.Principal;
 
-            // try to determine the unique id of the external user (issued by the provider)
+            // Try to determine the unique id of the external user (issued by the provider)
             // the most common claim type for that are the sub claim and the NameIdentifier
             // depending on the external provider, some other claim type might be used
             var userIdClaim = externalUser.FindFirst(JwtClaimTypes.Subject) ??
@@ -199,10 +201,10 @@ namespace Bit.Identity.Controllers
             return (user, provider, providerUserId, claims);
         }
 
-        private void ProcessLoginCallbackForOidc(AuthenticateResult externalResult,
-            List<Claim> localClaims, AuthenticationProperties localSignInProps)
+        private void ProcessLoginCallback(AuthenticateResult externalResult, List<Claim> localClaims,
+            AuthenticationProperties localSignInProps)
         {
-            // if the external system sent a session id claim, copy it over
+            // If the external system sent a session id claim, copy it over
             // so we can use it for single sign-out
             var sid = externalResult.Principal.Claims.FirstOrDefault(x => x.Type == JwtClaimTypes.SessionId);
             if (sid != null)
@@ -210,23 +212,19 @@ namespace Bit.Identity.Controllers
                 localClaims.Add(new Claim(JwtClaimTypes.SessionId, sid.Value));
             }
 
-            // if the external provider issued an id_token, we'll keep it for signout
-            var id_token = externalResult.Properties.GetTokenValue("id_token");
-            if (id_token != null)
+            // If the external provider issued an id_token, we'll keep it for signout
+            var idToken = externalResult.Properties.GetTokenValue("id_token");
+            if (idToken != null)
             {
                 localSignInProps.StoreTokens(
-                    new[] { new AuthenticationToken { Name = "id_token", Value = id_token } });
+                    new[] { new AuthenticationToken { Name = "id_token", Value = idToken } });
             }
         }
 
-        public async Task<bool> IsPkceClientAsync(string client_id)
+        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
         {
-            if (!string.IsNullOrWhiteSpace(client_id))
-            {
-                var client = await _clientStore.FindEnabledClientByIdAsync(client_id);
-                return client?.RequirePkce == true;
-            }
-            return false;
+            return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
+               && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
         }
     }
 }
