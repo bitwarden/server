@@ -19,7 +19,7 @@ namespace Bit.Core.Services
         public AzureQueueReferenceEventService (
             GlobalSettings globalSettings)
         {
-            _queueClient = new QueueClient(globalSettings.Storage.ConnectionString, _queueName);
+            _queueClient = new QueueClient(globalSettings.Events.ConnectionString, _queueName);
             _globalSettings = globalSettings;
         }
 
