@@ -21,17 +21,20 @@ namespace Bit.Identity.Controllers
     {
         private readonly IIdentityServerInteractionService _interaction;
         private readonly IUserRepository _userRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IClientStore _clientStore;
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
             IIdentityServerInteractionService interaction,
             IUserRepository userRepository,
+            ISsoConfigRepository ssoConfigRepository,
             IClientStore clientStore,
             ILogger<AccountController> logger)
         {
             _interaction = interaction;
             _userRepository = userRepository;
+            _ssoConfigRepository = ssoConfigRepository;
             _clientStore = clientStore;
             _logger = logger;
         }
@@ -60,29 +63,12 @@ namespace Bit.Identity.Controllers
                 throw new Exception("Invalid organization reference id.");
             }
 
-            // TODO: Lookup sso config and create a domain hint
-            var domainHint = "oidc_okta";
-            // Temp hardcoded orgs
-            if (organizationIdentifier == "org_oidc_okta")
+            var ssoConfig = _ssoConfigRepository.GetByIdentifierAsync(organizationIdentifier);
+            if (ssoConfig.Result == null || !ssoConfig.Result.Enabled)
             {
-                domainHint = "oidc_okta";
+                throw new Exception("Organization not found or SSO configuration not enabled");
             }
-            else if (organizationIdentifier == "org_oidc_onelogin")
-            {
-                domainHint = "oidc_onelogin";
-            }
-            else if (organizationIdentifier == "org_saml2_onelogin")
-            {
-                domainHint = "saml2_onelogin";
-            }
-            else if (organizationIdentifier == "org_saml2_sustainsys")
-            {
-                domainHint = "saml2_sustainsys";
-            }
-            else
-            {
-                throw new Exception("Organization not found.");
-            }
+            var domainHint = ssoConfig.Result.OrganizationId.ToString();
 
             var scheme = "sso";
             var props = new AuthenticationProperties
