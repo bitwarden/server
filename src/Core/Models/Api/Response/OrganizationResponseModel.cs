@@ -26,7 +26,7 @@ namespace Bit.Core.Models.Api
             BusinessCountry = organization.BusinessCountry;
             BusinessTaxNumber = organization.BusinessTaxNumber;
             BillingEmail = organization.BillingEmail;
-            Plan = Utilities.StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType);
+            Plan = new PlanResponseModel(Utilities.StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType));
             PlanType = organization.PlanType;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
@@ -52,7 +52,7 @@ namespace Bit.Core.Models.Api
         public string BusinessCountry { get; set; }
         public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
-        public Plan Plan { get; set; }
+        public PlanResponseModel Plan { get; set; }
         public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
