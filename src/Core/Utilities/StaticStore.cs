@@ -123,7 +123,7 @@ namespace Bit.Core.Utilities
                     DescriptionLocalizationKey = "planDescFamilies",
                     BaseSeats = 6,
                     BaseStorageGb = 1,
-                    MaxUsers = 5,
+                    MaxUsers = 6,
 
                     HasAdditionalStorageOption = true,
                     HasPremiumAccessOption = true,
@@ -283,7 +283,7 @@ namespace Bit.Core.Utilities
                     DescriptionLocalizationKey = "planDescFamilies",
                     BaseSeats = 6,
                     BaseStorageGb = 1,
-                    MaxUsers = 5,
+                    MaxUsers = 6,
 
                     TrialPeriodDays = 7,
 
