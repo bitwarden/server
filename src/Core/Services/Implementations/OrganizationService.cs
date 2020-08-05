@@ -164,7 +164,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization is already on this plan.");
             }
 
-            if (existingPlan.SortOrder >= newPlan.SortOrder)
+            if (existingPlan.UpgradeSortOrder >= newPlan.UpgradeSortOrder)
             {
                 throw new BadRequestException("You cannot upgrade to this plan.");
             }

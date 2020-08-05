@@ -104,13 +104,14 @@ namespace Bit.Core.Utilities
                     Type = PlanType.Free,
                     Product = ProductType.Free,
                     Name = "Free",
-                    i18nNameItem = "planNameFree",
-                    i18nDescriptionItem = "planDescFree",
+                    NameLocalizationKey = "planNameFree",
+                    DescriptionLocalizationKey = "planDescFree",
                     BaseSeats = 2,
                     MaxCollections = 2,
                     MaxUsers = 2,
 
-                    SortOrder = -1 // Always the lowest plan, cannot be upgraded to
+                    UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
+                    DisplaySortOrder = -1
                 },
                 new Plan
                 {
@@ -118,9 +119,9 @@ namespace Bit.Core.Utilities
                     Product = ProductType.Families,
                     Name = "Families 2019",
                     IsAnnual = true,
-                    i18nNameItem = "planNameFamilies",
-                    i18nDescriptionItem = "planDescFamilies",
-                    BaseSeats = 5,
+                    NameLocalizationKey = "planNameFamilies",
+                    DescriptionLocalizationKey = "planDescFamilies",
+                    BaseSeats = 6,
                     BaseStorageGb = 1,
                     MaxUsers = 5,
 
@@ -131,7 +132,8 @@ namespace Bit.Core.Utilities
                     HasSelfHost = true,
                     HasTotp = true,
 
-                    SortOrder = 1,
+                    UpgradeSortOrder = 1,
+                    DisplaySortOrder = 1,
                     LegacyYear = 2020,
 
                     StripePlanId = "personal-org-annually",
@@ -139,7 +141,7 @@ namespace Bit.Core.Utilities
                     StripePremiumAccessPlanId = "personal-org-premium-access-annually",
                     BasePrice = 1,
                     AdditionalStoragePricePerGb = 0.33M,
-                    PremiumAccessOptionCost = 40
+                    PremiumAccessOptionPrice = 40
                 },
                 new Plan
                 {
@@ -147,8 +149,8 @@ namespace Bit.Core.Utilities
                     Product = ProductType.Teams,
                     Name = "Teams (Annually) 2019",
                     IsAnnual = true,
-                    i18nNameItem = "planNameTeams",
-                    i18nDescriptionItem = "planDescTeams",
+                    NameLocalizationKey = "planNameTeams",
+                    DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 5,
                     BaseStorageGb = 1,
@@ -159,7 +161,8 @@ namespace Bit.Core.Utilities
 
                     HasTotp = true,
 
-                    SortOrder = 2,
+                    UpgradeSortOrder = 2,
+                    DisplaySortOrder = 2,
                     LegacyYear = 2020,
 
                     StripePlanId = "teams-org-annually",
@@ -174,8 +177,8 @@ namespace Bit.Core.Utilities
                     Type = PlanType.TeamsMonthly2019,
                     Product = ProductType.Teams,
                     Name = "Teams (Monthly) 2019",
-                    i18nNameItem = "planNameTeams",
-                    i18nDescriptionItem = "planDescTeams",
+                    NameLocalizationKey = "planNameTeams",
+                    DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 5,
                     BaseStorageGb = 1,
@@ -186,7 +189,8 @@ namespace Bit.Core.Utilities
 
                     HasTotp = true,
 
-                    SortOrder = 2,
+                    UpgradeSortOrder = 2,
+                    DisplaySortOrder = 2,
                     LegacyYear = 2020,
 
                     StripePlanId = "teams-org-monthly",
@@ -202,8 +206,8 @@ namespace Bit.Core.Utilities
                     Name = "Enterprise (Annually) 2019",
                     IsAnnual = true,
                     Product = ProductType.Enterprise,
-                    i18nNameItem = "planNameEnterprise",
-                    i18nDescriptionItem = "planDescEnterprise",
+                    NameLocalizationKey = "planNameEnterprise",
+                    DescriptionLocalizationKey = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -222,7 +226,8 @@ namespace Bit.Core.Utilities
                     HasApi = true,
                     UsersGetPremium = true,
 
-                    SortOrder = 3,
+                    UpgradeSortOrder = 3,
+                    DisplaySortOrder = 3,
                     LegacyYear = 2020,
 
                     StripePlanId = null,
@@ -237,8 +242,8 @@ namespace Bit.Core.Utilities
                     Type = PlanType.EnterpriseMonthly2019,
                     Product = ProductType.Enterprise,
                     Name = "Enterprise (Monthly) 2019",
-                    i18nNameItem = "planNameEnterprise",
-                    i18nDescriptionItem = "planDescEnterprise",
+                    NameLocalizationKey = "planNameEnterprise",
+                    DescriptionLocalizationKey = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -257,7 +262,8 @@ namespace Bit.Core.Utilities
                     HasSelfHost = true,
                     UsersGetPremium = true,
 
-                    SortOrder = 3,
+                    UpgradeSortOrder = 3,
+                    DisplaySortOrder = 3,
                     LegacyYear = 2020,
 
                     StripePlanId = null,
@@ -273,9 +279,9 @@ namespace Bit.Core.Utilities
                     Product = ProductType.Families,
                     Name = "Families",
                     IsAnnual = true,
-                    i18nNameItem = "planNameFamilies",
-                    i18nDescriptionItem = "planDescFamilies",
-                    BaseSeats = 5,
+                    NameLocalizationKey = "planNameFamilies",
+                    DescriptionLocalizationKey = "planDescFamilies",
+                    BaseSeats = 6,
                     BaseStorageGb = 1,
                     MaxUsers = 5,
 
@@ -283,12 +289,14 @@ namespace Bit.Core.Utilities
 
                     HasSelfHost = true,
                     HasTotp = true,
+                    UsersGetPremium = true,
 
-                    SortOrder = 1,
+                    UpgradeSortOrder = 1,
+                    DisplaySortOrder = 1,
 
                     StripePlanId = "personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 1,
+                    BasePrice = 3.33M,
                     AdditionalStoragePricePerGb = 0.33M,
                 },
                 new Plan
@@ -297,8 +305,8 @@ namespace Bit.Core.Utilities
                     Product = ProductType.Teams,
                     Name = "Teams (Annually)",
                     IsAnnual = true,
-                    i18nNameItem = "planNameTeams",
-                    i18nDescriptionItem = "planDescTeams",
+                    NameLocalizationKey = "planNameTeams",
+                    DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseStorageGb = 1,
 
@@ -307,8 +315,10 @@ namespace Bit.Core.Utilities
                     TrialPeriodDays = 7,
 
                     HasTotp = true,
+                    UsersGetPremium = true,
 
-                    SortOrder = 2,
+                    UpgradeSortOrder = 2,
+                    DisplaySortOrder = 2,
 
                     StripeSeatPlanId = "2020-teams-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
@@ -320,8 +330,8 @@ namespace Bit.Core.Utilities
                     Type = PlanType.TeamsMonthly,
                     Product = ProductType.Teams,
                     Name = "Teams (Monthly)",
-                    i18nNameItem = "planNameTeams",
-                    i18nDescriptionItem = "planDescTeams",
+                    NameLocalizationKey = "planNameTeams",
+                    DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
                     BaseStorageGb = 1,
 
@@ -330,8 +340,10 @@ namespace Bit.Core.Utilities
                     TrialPeriodDays = 7,
 
                     HasTotp = true,
+                    UsersGetPremium = true,
 
-                    SortOrder = 2,
+                    UpgradeSortOrder = 2,
+                    DisplaySortOrder = 2,
 
                     StripeSeatPlanId = "2020-teams-org-seat-monthly",
                     StripeStoragePlanId = "storage-gb-monthly",
@@ -344,8 +356,8 @@ namespace Bit.Core.Utilities
                     Name = "Enterprise (Annually)",
                     Product = ProductType.Enterprise,
                     IsAnnual = true,
-                    i18nNameItem = "planNameEnterprise",
-                    i18nDescriptionItem = "planDescEnterprise",
+                    NameLocalizationKey = "planNameEnterprise",
+                    DescriptionLocalizationKey = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -365,7 +377,8 @@ namespace Bit.Core.Utilities
                     HasSso = true,
                     UsersGetPremium = true,
 
-                    SortOrder = 3,
+                    UpgradeSortOrder = 3,
+                    DisplaySortOrder = 3,
 
                     StripeSeatPlanId = "2020-enterprise-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
@@ -378,8 +391,8 @@ namespace Bit.Core.Utilities
                     Type = PlanType.EnterpriseMonthly,
                     Product = ProductType.Enterprise,
                     Name = "Enterprise (Monthly)",
-                    i18nNameItem = "planNameEnterprise",
-                    i18nDescriptionItem = "planDescEnterprise",
+                    NameLocalizationKey = "planNameEnterprise",
+                    DescriptionLocalizationKey = "planDescEnterprise",
                     CanBeUsedByBusiness = true,
                     BaseSeats = 0,
                     BaseStorageGb = 1,
@@ -399,7 +412,8 @@ namespace Bit.Core.Utilities
                     HasSso = true,
                     UsersGetPremium = true,
 
-                    SortOrder = 3,
+                    UpgradeSortOrder = 3,
+                    DisplaySortOrder = 3,
 
                     StripeSeatPlanId = "2020-enterprise-org-seat-monthly",
                     StripeStoragePlanId = "storage-gb-monthly",

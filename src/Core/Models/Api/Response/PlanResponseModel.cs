@@ -19,8 +19,8 @@ namespace Bit.Core.Models.Api
             Product = plan.Product;
             Name = plan.Name;
             IsAnnual = plan.IsAnnual;
-            i18nNameItem = plan.i18nNameItem;
-            i18nDescriptionItem = plan.i18nDescriptionItem;
+            NameLocalizationKey = plan.NameLocalizationKey;
+            DescriptionLocalizationKey = plan.DescriptionLocalizationKey;
             CanBeUsedByBusiness = plan.CanBeUsedByBusiness;
             BaseSeats = plan.BaseSeats;
             BaseStorageGb = plan.BaseStorageGb;
@@ -39,7 +39,8 @@ namespace Bit.Core.Models.Api
             HasTotp = plan.HasTotp;
             Has2fa = plan.Has2fa;
             UsersGetPremium = plan.UsersGetPremium;
-            SortOrder = plan.SortOrder;
+            UpgradeSortOrder = plan.UpgradeSortOrder;
+            DisplaySortOrder = plan.DisplaySortOrder;
             LegacyYear = plan.LegacyYear;
             Disabled = plan.Disabled;
             StripePlanId = plan.StripePlanId;
@@ -55,8 +56,8 @@ namespace Bit.Core.Models.Api
         public ProductType Product { get; set; }
         public string Name { get; set; }
         public bool IsAnnual { get; set; }
-        public string i18nNameItem { get; set; }
-        public string i18nDescriptionItem { get; set; }
+        public string NameLocalizationKey { get; set; }
+        public string DescriptionLocalizationKey { get; set; }
         public bool CanBeUsedByBusiness { get; set; }
         public int BaseSeats { get; set; }
         public short? BaseStorageGb { get; set; }
@@ -81,7 +82,8 @@ namespace Bit.Core.Models.Api
         public bool HasSso { get; set; }
         public bool UsersGetPremium { get; set; }
 
-        public int SortOrder { get; set; }
+        public int UpgradeSortOrder { get; set; }
+        public int DisplaySortOrder { get; set; }
         public int? LegacyYear { get; set; }
         public bool Disabled { get; set; }
 
