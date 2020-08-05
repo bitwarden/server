@@ -8,7 +8,7 @@ namespace Bit.Api.Controllers
 {
     [Route("plans")]
     [Authorize("Web")]
-    public class PlanSController : Controller
+    public class PlansController : Controller
     {
         [HttpGet("")]
         public ListResponseModel<PlanResponseModel> Get()
