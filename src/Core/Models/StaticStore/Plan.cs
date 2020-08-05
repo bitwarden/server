@@ -8,8 +8,8 @@ namespace Bit.Core.Models.StaticStore
         public ProductType Product { get; set; }
         public string Name { get; set; }
         public bool IsAnnual { get; set; }
-        public string i18nNameItem { get; set; }
-        public string i18nDescriptionItem { get; set; }
+        public string NameLocalizationKey { get; set; }
+        public string DescriptionLocalizationKey { get; set; }
         public bool CanBeUsedByBusiness { get; set; }
         public int BaseSeats { get; set; }
         public short? BaseStorageGb { get; set; }
@@ -34,7 +34,8 @@ namespace Bit.Core.Models.StaticStore
         public bool HasSso { get; set; }
         public bool UsersGetPremium { get; set; }
 
-        public int SortOrder { get; set; }
+        public int UpgradeSortOrder { get; set; }
+        public int DisplaySortOrder { get; set; }
         public int? LegacyYear { get; set; }
         public bool Disabled { get; set; }
 
