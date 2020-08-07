@@ -56,19 +56,19 @@ namespace Bit.Identity.Controllers
         }
 
         [HttpGet]
-        public IActionResult ExternalChallenge(string organizationIdentifier, string returnUrl)
+        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl)
         {
             if (string.IsNullOrWhiteSpace(organizationIdentifier))
             {
                 throw new Exception("Invalid organization reference id.");
             }
 
-            var ssoConfig = _ssoConfigRepository.GetByIdentifierAsync(organizationIdentifier);
-            if (ssoConfig.Result == null || !ssoConfig.Result.Enabled)
+            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(organizationIdentifier);
+            if (ssoConfig == null || !ssoConfig.Enabled)
             {
                 throw new Exception("Organization not found or SSO configuration not enabled");
             }
-            var domainHint = ssoConfig.Result.OrganizationId.ToString();
+            var domainHint = ssoConfig.OrganizationId.ToString();
 
             var scheme = "sso";
             var props = new AuthenticationProperties
