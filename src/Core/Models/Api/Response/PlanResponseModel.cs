@@ -27,6 +27,7 @@ namespace Bit.Core.Models.Api
             MaxCollections = plan.MaxCollections;
             MaxUsers = plan.MaxUsers;
             HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
+            HasAdditionalStorageOption = plan.HasAdditionalStorageOption;
             MaxAdditionalSeats = plan.MaxAdditionalSeats;
             MaxAdditionalStorage = plan.MaxAdditionalStorage;
             HasPremiumAccessOption = plan.HasPremiumAccessOption;

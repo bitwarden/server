@@ -139,8 +139,8 @@ namespace Bit.Core.Utilities
                     StripePlanId = "personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     StripePremiumAccessPlanId = "personal-org-premium-access-annually",
-                    BasePrice = 1,
-                    AdditionalStoragePricePerGb = 0.33M,
+                    BasePrice = 12,
+                    AdditionalStoragePricePerGb = 4,
                     PremiumAccessOptionPrice = 40
                 },
                 new Plan
@@ -168,9 +168,9 @@ namespace Bit.Core.Utilities
                     StripePlanId = "teams-org-annually",
                     StripeSeatPlanId = "teams-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 5,
-                    SeatPrice = 2,
-                    AdditionalStoragePricePerGb = 0.33M
+                    BasePrice = 60,
+                    SeatPrice = 24,
+                    AdditionalStoragePricePerGb = 4
                 },
                 new Plan
                 {
@@ -234,8 +234,8 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "enterprise-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 0,
-                    SeatPrice = 3,
-                    AdditionalStoragePricePerGb = 0.33M
+                    SeatPrice = 36,
+                    AdditionalStoragePricePerGb = 4
                 },
                 new Plan
                 {
@@ -296,8 +296,8 @@ namespace Bit.Core.Utilities
 
                     StripePlanId = "personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    BasePrice = 3.33M,
-                    AdditionalStoragePricePerGb = 0.33M,
+                    BasePrice = 40,
+                    AdditionalStoragePricePerGb = 4
                 },
                 new Plan
                 {
@@ -323,8 +323,8 @@ namespace Bit.Core.Utilities
 
                     StripeSeatPlanId = "2020-teams-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
-                    SeatPrice = 3,
-                    AdditionalStoragePricePerGb = 0.33M
+                    SeatPrice = 36,
+                    AdditionalStoragePricePerGb = 4
                 },
                 new Plan
                 {
@@ -385,8 +385,8 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "2020-enterprise-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 0,
-                    SeatPrice = 5,
-                    AdditionalStoragePricePerGb = 0.33M
+                    SeatPrice = 60,
+                    AdditionalStoragePricePerGb = 4
                 },
                 new Plan
                 {
