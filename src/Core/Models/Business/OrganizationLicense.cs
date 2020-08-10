@@ -235,7 +235,7 @@ namespace Bit.Core.Models.Business
                 {
                     valid = organization.UsePolicies == UsePolicies;
                 }
-                
+
                 if (valid && Version >= 7)
                 {
                     valid = organization.UseSso == UseSso;

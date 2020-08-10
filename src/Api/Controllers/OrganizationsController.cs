@@ -471,7 +471,7 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
-        
+
         [HttpGet("{id}/tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<TaxInfoResponseModel> GetTaxInfo(string id)
@@ -491,7 +491,7 @@ namespace Bit.Api.Controllers
             var taxInfo = await _paymentService.GetTaxInfoAsync(organization);
             return new TaxInfoResponseModel(taxInfo);
         }
-        
+
         [HttpPut("{id}/tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task PutTaxInfo(string id, [FromBody]OrganizationTaxInfoUpdateRequestModel model)
