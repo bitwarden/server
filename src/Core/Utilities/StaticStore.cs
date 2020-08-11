@@ -93,6 +93,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.CedarFair, new List<string> { "cagreatamerica.com", "canadaswonderland.com", "carowinds.com", "cedarfair.com", "cedarpoint.com", "dorneypark.com", "kingsdominion.com", "knotts.com", "miadventure.com", "schlitterbahn.com", "valleyfair.com", "visitkingsisland.com", "worldsoffun.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubiquiti, new List<string> { "ubnt.com", "ui.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Discord, new List<string> { "discordapp.com", "discord.com" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Netcup, new List<string> { "netcup.de", "netcup.eu", "customercontrolpanel.de" });
             #endregion
 
             #region Plans
