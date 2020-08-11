@@ -1,4 +1,3 @@
-
 using System;
 using Bit.Core.Enums;
 using Bit.Core.Models.StaticStore;
@@ -39,6 +38,7 @@ namespace Bit.Core.Models.Api
             HasEvents = plan.HasEvents;
             HasTotp = plan.HasTotp;
             Has2fa = plan.Has2fa;
+            HasSso = plan.HasSso;
             UsersGetPremium = plan.UsersGetPremium;
             UpgradeSortOrder = plan.UpgradeSortOrder;
             DisplaySortOrder = plan.DisplaySortOrder;
