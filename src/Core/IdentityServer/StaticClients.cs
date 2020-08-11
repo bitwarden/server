@@ -54,8 +54,13 @@ namespace Bit.Core.IdentityServer
                 }
                 else if (id == "connector")
                 {
-                    RedirectUris = new[] { "bwdc://sso-callback" };
-                    PostLogoutRedirectUris = new[] { "bwdc://logged-out" };
+                    var connectorUris = new List<string>();
+                    for (var port = 8065; port <= 8070; port++)
+                    {
+                        connectorUris.Add(string.Format("http://localhost:{0}", port));
+                    }
+                    RedirectUris = connectorUris.Append("bwdc://sso-callback").ToList();
+                    PostLogoutRedirectUris = connectorUris.Append("bwdc://logged-out").ToList();
                 }
                 else if (id == "browser")
                 {
@@ -65,8 +70,13 @@ namespace Bit.Core.IdentityServer
                 }
                 else if (id == "cli")
                 {
-                    RedirectUris = new[] { "bitwardencli://sso-callback" };
-                    PostLogoutRedirectUris = new[] { "bitwardencli://logged-out" };
+                    var cliUris = new List<string>();
+                    for (var port = 8065; port <= 8070; port++)
+                    {
+                        cliUris.Add(string.Format("http://localhost:{0}", port));
+                    }
+                    RedirectUris = cliUris;
+                    PostLogoutRedirectUris = cliUris;
                 }
                 else if (id == "mobile")
                 {
