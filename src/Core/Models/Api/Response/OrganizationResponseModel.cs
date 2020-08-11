@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Linq;
 using Bit.Core.Models.Table;
-using System.Collections.Generic;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
+using System.Linq;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {
@@ -25,7 +26,7 @@ namespace Bit.Core.Models.Api
             BusinessCountry = organization.BusinessCountry;
             BusinessTaxNumber = organization.BusinessTaxNumber;
             BillingEmail = organization.BillingEmail;
-            Plan = organization.Plan;
+            Plan = new PlanResponseModel(Utilities.StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType));
             PlanType = organization.PlanType;
             Seats = organization.Seats;
             MaxCollections = organization.MaxCollections;
@@ -51,8 +52,8 @@ namespace Bit.Core.Models.Api
         public string BusinessCountry { get; set; }
         public string BusinessTaxNumber { get; set; }
         public string BillingEmail { get; set; }
-        public string Plan { get; set; }
-        public Enums.PlanType PlanType { get; set; }
+        public PlanResponseModel Plan { get; set; }
+        public PlanType PlanType { get; set; }
         public short? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }

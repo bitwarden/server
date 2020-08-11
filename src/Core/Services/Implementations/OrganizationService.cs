@@ -177,7 +177,7 @@ namespace Bit.Core.Services
             ValidateOrganizationUpgradeParameters(newPlan, upgrade);
 
             var newPlanSeats = (short)(newPlan.BaseSeats +
-                (newPlan.CanBuyAdditionalSeats ? upgrade.AdditionalSeats : 0));
+                (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
             if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
@@ -200,7 +200,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            if (!newPlan.UseGroups && organization.UseGroups)
+            if (!newPlan.HasGroups && organization.UseGroups)
             {
                 var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
                 if (groups.Any())
@@ -210,7 +210,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            if (!newPlan.UsePolicies && organization.UsePolicies)
+            if (!newPlan.HasPolicies && organization.UsePolicies)
             {
                 var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
                 if (policies.Any(p => p.Enabled))
@@ -219,8 +219,8 @@ namespace Bit.Core.Services
                         $"Disable your policies.");
                 }
             }
-            
-            if (!newPlan.UseSso && organization.UseSso)
+
+            if (!newPlan.HasSso && organization.UseSso)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
                 if (ssoConfig != null && ssoConfig.Enabled)
@@ -250,16 +250,25 @@ namespace Bit.Core.Services
             organization.PlanType = newPlan.Type;
             organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
             organization.MaxCollections = newPlan.MaxCollections;
-            organization.MaxStorageGb = !newPlan.MaxStorageGb.HasValue ?
-                (short?)null : (short)(newPlan.MaxStorageGb.Value + upgrade.AdditionalStorageGb);
-            organization.UseGroups = newPlan.UseGroups;
-            organization.UseDirectory = newPlan.UseDirectory;
-            organization.UseEvents = newPlan.UseEvents;
-            organization.UseTotp = newPlan.UseTotp;
-            organization.Use2fa = newPlan.Use2fa;
-            organization.UseApi = newPlan.UseApi;
-            organization.SelfHost = newPlan.SelfHost;
-            organization.UsePolicies = newPlan.UsePolicies;
+            organization.MaxStorageGb = !newPlan.BaseStorageGb.HasValue ?
+                (short?)null : (short)(newPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
+            organization.UseGroups = newPlan.HasGroups;
+            organization.UseDirectory = newPlan.HasDirectory;
+            organization.UseEvents = newPlan.HasEvents;
+            organization.UseTotp = newPlan.HasTotp;
+            organization.Use2fa = newPlan.Has2fa;
+            organization.UseApi = newPlan.HasApi;
+            organization.SelfHost = newPlan.HasSelfHost;
+            organization.UsePolicies = newPlan.HasPolicies;
+            organization.MaxStorageGb = !newPlan.MaxAdditionalStorage.HasValue ?
+                (short?)null : (short)(newPlan.MaxAdditionalStorage.Value + upgrade.AdditionalStorageGb);
+            organization.UseGroups = newPlan.HasGroups;
+            organization.UseDirectory = newPlan.HasDirectory;
+            organization.UseEvents = newPlan.HasEvents;
+            organization.UseTotp = newPlan.HasTotp;
+            organization.Use2fa = newPlan.Has2fa;
+            organization.UseApi = newPlan.HasApi;
+            organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;
             organization.Enabled = success;
@@ -293,7 +302,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            if (!plan.MaxStorageGb.HasValue)
+            if (!plan.HasAdditionalStorageOption)
             {
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
@@ -335,7 +344,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            if (!plan.CanBuyAdditionalSeats)
+            if (!plan.HasAdditionalSeatsOption)
             {
                 throw new BadRequestException("Plan does not allow additional seats.");
             }
@@ -515,17 +524,17 @@ namespace Bit.Core.Services
                 PlanType = plan.Type,
                 Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
                 MaxCollections = plan.MaxCollections,
-                MaxStorageGb = !plan.MaxStorageGb.HasValue ?
-                    (short?)null : (short)(plan.MaxStorageGb.Value + signup.AdditionalStorageGb),
-                UsePolicies = plan.UsePolicies,
-                UseSso = plan.UseSso,
-                UseGroups = plan.UseGroups,
-                UseEvents = plan.UseEvents,
-                UseDirectory = plan.UseDirectory,
-                UseTotp = plan.UseTotp,
-                Use2fa = plan.Use2fa,
-                UseApi = plan.UseApi,
-                SelfHost = plan.SelfHost,
+                MaxStorageGb = !plan.BaseStorageGb.HasValue ?
+                    (short?)null : (short)(plan.BaseStorageGb.Value + signup.AdditionalStorageGb),
+                UsePolicies = plan.HasPolicies,
+                UseSso = plan.HasSso,
+                UseGroups = plan.HasGroups,
+                UseEvents = plan.HasEvents,
+                UseDirectory = plan.HasDirectory,
+                UseTotp = plan.HasTotp,
+                Use2fa = plan.Has2fa,
+                UseApi = plan.HasApi,
+                SelfHost = plan.HasSelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
                 Gateway = null,
@@ -763,7 +772,7 @@ namespace Bit.Core.Services
                         $"policies. Your new license does not allow for the use of policies. Disable all policies.");
                 }
             }
-            
+
             if (!license.UseSso && organization.UseSso)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
@@ -1522,7 +1531,7 @@ namespace Bit.Core.Services
 
         private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
         {
-            if (!plan.MaxStorageGb.HasValue && upgrade.AdditionalStorageGb > 0)
+            if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
             {
                 throw new BadRequestException("Plan does not allow additional storage.");
             }
@@ -1532,7 +1541,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You can't subtract storage!");
             }
 
-            if (!plan.CanBuyPremiumAccessAddon && upgrade.PremiumAccessAddon)
+            if (!plan.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
             {
                 throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
             }
@@ -1547,12 +1556,12 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You can't subtract seats!");
             }
 
-            if (!plan.CanBuyAdditionalSeats && upgrade.AdditionalSeats > 0)
+            if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
             {
                 throw new BadRequestException("Plan does not allow additional users.");
             }
 
-            if (plan.CanBuyAdditionalSeats && plan.MaxAdditionalSeats.HasValue &&
+            if (plan.HasAdditionalSeatsOption && plan.MaxAdditionalSeats.HasValue &&
                 upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
