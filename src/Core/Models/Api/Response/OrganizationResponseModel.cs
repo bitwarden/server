@@ -18,6 +18,7 @@ namespace Bit.Core.Models.Api
             }
 
             Id = organization.Id.ToString();
+            Identifier = organization.Identifier;
             Name = organization.Name;
             BusinessName = organization.BusinessName;
             BusinessAddress1 = organization.BusinessAddress1;
@@ -44,6 +45,7 @@ namespace Bit.Core.Models.Api
         }
 
         public string Id { get; set; }
+        public string Identifier { get; set; }
         public string Name { get; set; }
         public string BusinessName { get; set; }
         public string BusinessAddress1 { get; set; }
