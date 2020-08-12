@@ -885,6 +885,15 @@ namespace Bit.Core.Services
                 throw new ApplicationException("Cannot create org this way. Call SignUpAsync.");
             }
 
+            if (!string.IsNullOrWhiteSpace(organization.Identifier))
+            {
+                var orgById = await _organizationRepository.GetByIdentifierAsync(organization.Identifier);
+                if (orgById != null && orgById.Id != organization.Id)
+                {
+                    throw new BadRequestException("Identifier already in use by another organization.");
+                }
+            }
+
             await ReplaceAndUpdateCache(organization, EventType.Organization_Updated);
 
             if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))

@@ -10,6 +10,8 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [StringLength(50)]
         public string BusinessName { get; set; }
+        [StringLength(50)]
+        public string Identifier { get; set; }
         [EmailAddress]
         [Required]
         [StringLength(50)]
@@ -20,6 +22,7 @@ namespace Bit.Core.Models.Api
             existingOrganization.Name = Name;
             existingOrganization.BusinessName = BusinessName;
             existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+            existingOrganization.Identifier = Identifier;
             return existingOrganization;
         }
     }
