@@ -216,7 +216,6 @@ namespace Bit.Api.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
 
