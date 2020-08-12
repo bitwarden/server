@@ -20,6 +20,18 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString, readOnlyConnectionString)
         { }
 
+        public async Task<Organization> GetByIdentifierAsync(string identifier)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Organization>(
+                    "[dbo].[Organization_ReadByIdentifier]",
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
         public async Task<ICollection<Organization>> GetManyByEnabledAsync()
         {
             using (var connection = new SqlConnection(ConnectionString))
