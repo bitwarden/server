@@ -14,6 +14,7 @@ using Bit.Core.Models.Business;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
@@ -192,6 +193,29 @@ namespace Bit.Api.Controllers
             }
 
             await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+        }
+        
+        [HttpPost("set-password")]
+        public async Task SetPasswordAsync([FromBody]SetPasswordRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.SetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
             throw new BadRequestException(ModelState);
         }
 
