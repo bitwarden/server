@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -16,6 +17,17 @@ namespace Bit.Core.Repositories.EntityFramework
         public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
         { }
+
+        public async Task<Organization> GetByIdentifierAsync(string identifier)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var organization = await GetDbSet(dbContext).Where(e => e.Identifier == identifier)
+                    .FirstOrDefaultAsync();
+                return organization;
+            }
+        }
 
         public async Task<ICollection<TableModel.Organization>> GetManyByEnabledAsync()
         {
