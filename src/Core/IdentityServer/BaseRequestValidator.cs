@@ -158,7 +158,7 @@ namespace Bit.Core.IdentityServer
         protected async Task BuildTwoFactorResultAsync(User user, Organization organization, T context)
         {
             var providerKeys = new List<byte>();
-            var providers = new Dictionary<byte, Dictionary<string, object>>();
+            var providers = new Dictionary<string, Dictionary<string, object>>();
 
             var enabledProviders = new List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>();
             if (organization?.GetTwoFactorProviders() != null)
@@ -188,7 +188,7 @@ namespace Bit.Core.IdentityServer
             {
                 providerKeys.Add((byte)provider.Key);
                 var infoDict = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
-                providers.Add((byte)provider.Key, infoDict);
+                providers.Add(((byte)provider.Key).ToString(), infoDict);
             }
 
             SetTwoFactorResult(context,
