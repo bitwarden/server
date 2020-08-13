@@ -293,8 +293,19 @@ namespace Bit.Core.Services
             if (result == IdentityResult.Success)
             {
                 await _mailService.SendWelcomeEmailAsync(user);
-                await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.Signup, user));
+                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            }
+
+            return result;
+        }
+
+        public async Task<IdentityResult> RegisterUserAsync(User user)
+        {
+            var result = await base.CreateAsync(user);
+            if (result == IdentityResult.Success)
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
             }
 
             return result;
@@ -567,7 +578,7 @@ namespace Bit.Core.Services
             Logger.LogWarning("Change password failed for user {userId}.", user.Id);
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
-        
+
         public async Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key)
         {
             if (user == null)
@@ -580,7 +591,7 @@ namespace Bit.Core.Services
                 Logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
-            
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
@@ -807,7 +818,7 @@ namespace Bit.Core.Services
                         PlanName = PremiumPlanId,
                     });
             }
-            catch when(!_globalSettings.SelfHosted)
+            catch when (!_globalSettings.SelfHosted)
             {
                 await paymentService.CancelAndRecoverChargesAsync(user);
                 throw;

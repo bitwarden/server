@@ -3,7 +3,7 @@
     [Name]                            NVARCHAR (50)    NULL,
     [Email]                           NVARCHAR (50)    NOT NULL,
     [EmailVerified]                   BIT              NOT NULL,
-    [MasterPassword]                  NVARCHAR (300)   NOT NULL,
+    [MasterPassword]                  NVARCHAR (300)   NULL,
     [MasterPasswordHint]              NVARCHAR (50)    NULL,
     [Culture]                         NVARCHAR (10)    NOT NULL,
     [SecurityStamp]                   NVARCHAR (50)    NOT NULL,
