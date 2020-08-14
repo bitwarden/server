@@ -13,6 +13,9 @@ using Bit.Core;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Utilities.Duo;
+using Fido2NetLib;
+using System.Collections.Generic;
+using Fido2NetLib.Objects;
 
 namespace Bit.Api.Controllers
 {
@@ -26,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
         private readonly CurrentContext _currentContext;
+        private readonly IFido2 _fido2;
 
         public TwoFactorController(
             IUserService userService,
@@ -33,7 +37,8 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             GlobalSettings globalSettings,
             UserManager<User> userManager,
-            CurrentContext currentContext)
+            CurrentContext currentContext,
+            IFido2 fido2)
         {
             _userService = userService;
             _organizationRepository = organizationRepository;
@@ -41,6 +46,7 @@ namespace Bit.Api.Controllers
             _globalSettings = globalSettings;
             _userManager = userManager;
             _currentContext = currentContext;
+            _fido2 = fido2;
         }
 
         [HttpGet("")]
@@ -215,6 +221,36 @@ namespace Bit.Api.Controllers
             await _organizationService.UpdateTwoFactorProviderAsync(organization,
                 TwoFactorProviderType.OrganizationDuo);
             var response = new TwoFactorDuoResponseModel(organization);
+            return response;
+        }
+
+        [HttpPost("get-webauthn-challenge")]
+        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] TwoFactorRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, true);
+            var fidoUser = new Fido2User
+            {
+                DisplayName = user.Name,
+                Name = user.Email,
+                Id = user.Id.ToByteArray(),
+            };
+
+            var options = _fido2.RequestNewCredential(fidoUser, new List<PublicKeyCredentialDescriptor>(), AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
+            return options;
+        }
+
+        [HttpPut("webauthn")]
+        [HttpPost("webauthn")]
+        public async Task<TwoFactorU2fResponseModel> PutWebAuthn([FromBody] TwoFactorU2fRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, true);
+            var success = await _userService.CompleteU2fRegistrationAsync(
+                user, model.Id.Value, model.Name, model.DeviceResponse);
+            if (!success)
+            {
+                throw new BadRequestException("Unable to complete WebAuthn key registration.");
+            }
+            var response = new TwoFactorU2fResponseModel(user);
             return response;
         }
 

@@ -111,6 +111,15 @@ namespace Bit.Api
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
 
+            // Fido2
+            services.AddFido2(options =>
+            {
+                options.ServerDomain = "localhost";
+                options.ServerName = "Bitwarden";
+                options.Origin = "https://localhost:4000";
+                options.TimestampDriftTolerance = 300000;
+            });
+
             // MVC
             services.AddMvc(config =>
             {
