@@ -135,7 +135,6 @@ namespace Bit.Core.Utilities
 
                     UpgradeSortOrder = 1,
                     DisplaySortOrder = 1,
-                    
                     LegacyYear = 2020,
 
                     StripePlanId = "personal-org-annually",
