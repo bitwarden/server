@@ -319,8 +319,8 @@ namespace Bit.Core.Utilities
                     Has2fa = true,
                     HasApi = true,
                     HasDirectory = true,
-                    HasGroups = true,
                     HasEvents = true,
+                    HasGroups = true,
                     HasTotp = true,
                     UsersGetPremium = true,
 
