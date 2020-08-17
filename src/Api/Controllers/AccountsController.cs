@@ -197,7 +197,7 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPost("set-password")]
-        public async Task SetPasswordAsync([FromBody]SetPasswordRequestModel model)
+        public async Task PostSetPasswordAsync([FromBody]SetPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -205,7 +205,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
                 return;

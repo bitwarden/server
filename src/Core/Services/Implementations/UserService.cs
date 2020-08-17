@@ -579,7 +579,7 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key)
         {
             if (user == null)
             {
@@ -592,7 +592,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
-            var result = await UpdatePasswordHash(user, newMasterPassword);
+            var result = await UpdatePasswordHash(user, masterPassword);
             if (!result.Succeeded)
             {
                 return result;
