@@ -316,6 +316,11 @@ namespace Bit.Core.Utilities
                     HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
+                    Has2fa = true,
+                    HasApi = true,
+                    HasDirectory = true,
+                    HasEvents = true,
+                    HasGroups = true,
                     HasTotp = true,
                     UsersGetPremium = true,
 
@@ -342,6 +347,11 @@ namespace Bit.Core.Utilities
                     HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
+                    Has2fa = true,
+                    HasApi = true,
+                    HasDirectory = true,
+                    HasEvents = true,
+                    HasGroups = true,
                     HasTotp = true,
                     UsersGetPremium = true,
 
