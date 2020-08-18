@@ -61,7 +61,8 @@ namespace Bit.Core.Services
         Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
         Task DisablePremiumAsync(User user, DateTime? expirationDate);
         Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
-        Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null);
+        Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+            int? version = null);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);

@@ -1298,7 +1298,8 @@ namespace Bit.Core.Services
             return await GenerateLicenseAsync(organization, installationId);
         }
 
-        public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId)
+        public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
+            int? version = null)
         {
             if (organization == null)
             {
