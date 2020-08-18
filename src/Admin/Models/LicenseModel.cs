@@ -30,7 +30,7 @@ namespace Bit.Admin.Models
 
             if (OrganizationId.HasValue && !InstallationId.HasValue)
             {
-                yield return new ValidationResult("Installation Is is required for organization licenses.");
+                yield return new ValidationResult("Installation Id is required for organization licenses.");
             }
         }
     }

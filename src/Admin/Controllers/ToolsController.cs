@@ -160,7 +160,7 @@ namespace Bit.Admin.Controllers
 
         public IActionResult PromoteAdmin()
         {
-            return View("PromoteAdmin");
+            return View();
         }
 
         [HttpPost]
@@ -168,7 +168,7 @@ namespace Bit.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return View("PromoteAdmin", model);
+                return View(model);
             }
 
             var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(
@@ -185,7 +185,7 @@ namespace Bit.Admin.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("PromoteAdmin", model);
+                return View(model);
             }
 
             user.Type = Core.Enums.OrganizationUserType.Owner;
@@ -195,7 +195,7 @@ namespace Bit.Admin.Controllers
 
         public IActionResult GenerateLicense()
         {
-            return View("GenerateLicense");
+            return View();
         }
 
         [HttpPost]
@@ -203,7 +203,7 @@ namespace Bit.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return View("GenerateLicense", model);
+                return View(model);
             }
 
             User user = null;
@@ -243,7 +243,7 @@ namespace Bit.Admin.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("GenerateLicense", model);
+                return View(model);
             }
 
             if (organization != null)
