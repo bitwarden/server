@@ -985,7 +985,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null)
+        public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+            int? version = null)
         {
             if (user == null)
             {
