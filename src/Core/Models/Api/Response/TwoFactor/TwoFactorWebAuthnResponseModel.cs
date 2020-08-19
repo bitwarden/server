@@ -4,12 +4,13 @@ using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using System.Collections.Generic;
 using System.Linq;
+using Fido2NetLib;
 
 namespace Bit.Core.Models.Api
 {
-    public class TwoFactorU2fResponseModel : ResponseModel
+    public class TwoFactorWebAuthnResponseModel : ResponseModel
     {
-        public TwoFactorU2fResponseModel(User user)
+        public TwoFactorWebAuthnResponseModel(User user)
             : base("twoFactorU2f")
         {
             if (user == null)
@@ -39,22 +40,6 @@ namespace Bit.Core.Models.Api
             public string Name { get; set; }
             public int Id { get; set; }
             public bool Compromised { get; set; }
-        }
-
-        public class ChallengeModel
-        {
-            public ChallengeModel(User user, U2fRegistration registration)
-            {
-                UserId = user.Id.ToString();
-                AppId = registration.AppId;
-                Challenge = registration.Challenge;
-                Version = registration.Version;
-            }
-
-            public string UserId { get; set; }
-            public string AppId { get; set; }
-            public string Challenge { get; set; }
-            public string Version { get; set; }
         }
     }
 }

@@ -116,7 +116,7 @@ namespace Bit.Api
             {
                 options.ServerDomain = "localhost";
                 options.ServerName = "Bitwarden";
-                options.Origin = "https://localhost:4000";
+                options.Origin = "https://localhost:8080";
                 options.TimestampDriftTolerance = 300000;
             });
 

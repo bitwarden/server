@@ -29,7 +29,6 @@ namespace Bit.Api.Controllers
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
         private readonly CurrentContext _currentContext;
-        private readonly IFido2 _fido2;
 
         public TwoFactorController(
             IUserService userService,
@@ -37,8 +36,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             GlobalSettings globalSettings,
             UserManager<User> userManager,
-            CurrentContext currentContext,
-            IFido2 fido2)
+            CurrentContext currentContext)
         {
             _userService = userService;
             _organizationRepository = organizationRepository;
@@ -46,7 +44,6 @@ namespace Bit.Api.Controllers
             _globalSettings = globalSettings;
             _userManager = userManager;
             _currentContext = currentContext;
-            _fido2 = fido2;
         }
 
         [HttpGet("")]
@@ -228,28 +225,72 @@ namespace Bit.Api.Controllers
         public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            var fidoUser = new Fido2User
-            {
-                DisplayName = user.Name,
-                Name = user.Email,
-                Id = user.Id.ToByteArray(),
-            };
-
-            var options = _fido2.RequestNewCredential(fidoUser, new List<PublicKeyCredentialDescriptor>(), AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
-            return options;
+            var reg = await _userService.StartWebAuthnRegistrationAsync(user);
+            return reg;
         }
 
         [HttpPut("webauthn")]
         [HttpPost("webauthn")]
-        public async Task<TwoFactorU2fResponseModel> PutWebAuthn([FromBody] TwoFactorU2fRequestModel model)
+        public async Task<TwoFactorU2fResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
+
+            var success = await _userService.CompleteWebAuthRegistrationAsync(
+                user, model.Id.Value, model.Name, model.DeviceResponse);
+            if (!success)
+            {
+                throw new BadRequestException("Unable to complete U2F key registration.");
+            }
+
+            /*
+             * try
+            {
+                // 1. get the options we sent the client
+                var jsonOptions = HttpContext.Session.GetString("fido2.attestationOptions");
+                var options = CredentialCreateOptions.FromJson(jsonOptions);
+
+                // 2. Create callback so that lib can verify credential id is unique to this user
+                IsCredentialIdUniqueToUserAsyncDelegate callback = async (IsCredentialIdUniqueToUserParams args) =>
+                {
+                    var users = await DemoStorage.GetUsersByCredentialIdAsync(args.CredentialId);
+                    if (users.Count > 0)
+                        return false;
+
+                    return true;
+                };
+
+                // 2. Verify and make the credentials
+                var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+
+                // 3. Store the credentials in db
+                DemoStorage.AddCredentialToUser(options.User, new StoredCredential
+                {
+                    Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
+                    PublicKey = success.Result.PublicKey,
+                    UserHandle = success.Result.User.Id,
+                    SignatureCounter = success.Result.Counter,
+                    CredType = success.Result.CredType,
+                    RegDate = DateTime.Now,
+                    AaGuid = success.Result.Aaguid
+                });
+
+                // 4. return "ok" to the client
+                return Json(success);
+            }
+            catch (Exception e)
+            {
+                return Json(new CredentialMakeResult { Status = "error", ErrorMessage = FormatException(e) });
+            }
+            */
+
+            /*
             var success = await _userService.CompleteU2fRegistrationAsync(
                 user, model.Id.Value, model.Name, model.DeviceResponse);
             if (!success)
             {
                 throw new BadRequestException("Unable to complete WebAuthn key registration.");
             }
+            */
             var response = new TwoFactorU2fResponseModel(user);
             return response;
         }

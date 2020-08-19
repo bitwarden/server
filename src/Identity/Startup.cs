@@ -55,6 +55,15 @@ namespace Bit.Identity
             // Caching
             services.AddMemoryCache();
 
+            // Fido2
+            services.AddFido2(options =>
+            {
+                options.ServerDomain = "localhost";
+                options.ServerName = "Bitwarden";
+                options.Origin = "https://localhost:4000";
+                options.TimestampDriftTolerance = 300000;
+            });
+
             // Mvc
             services.AddMvc();
 

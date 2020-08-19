@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using Fido2NetLib;
 
 namespace Bit.Core.Services
 {
@@ -23,7 +24,9 @@ namespace Bit.Core.Services
         Task SendMasterPasswordHintAsync(string email);
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
+        Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
         Task<U2fRegistration> StartU2fRegistrationAsync(User user);
+        Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
         Task<bool> DeleteU2fKeyAsync(User user, int id);
         Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse);
         Task SendEmailVerificationAsync(User user);

@@ -20,6 +20,8 @@ using System.IO;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.DataProtection;
 using U2F.Core.Exceptions;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 
 namespace Bit.Core.Services
 {
@@ -46,6 +48,7 @@ namespace Bit.Core.Services
         private readonly IPolicyRepository _policyRepository;
         private readonly IDataProtector _organizationServiceDataProtector;
         private readonly IReferenceEventService _referenceEventService;
+        private readonly IFido2 _fido2;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -73,6 +76,7 @@ namespace Bit.Core.Services
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
             IReferenceEventService referenceEventService,
+            IFido2 fido2,
             CurrentContext currentContext,
             GlobalSettings globalSettings)
             : base(
@@ -105,6 +109,7 @@ namespace Bit.Core.Services
             _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
                 "OrganizationServiceDataProtector");
             _referenceEventService = referenceEventService;
+            _fido2 = fido2;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -354,6 +359,95 @@ namespace Bit.Core.Services
             var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + email, token);
+        }
+
+        public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
+        {
+            await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
+
+            var fidoUser = new Fido2User
+            {
+                DisplayName = user.Name,
+                Name = user.Email,
+                Id = user.Id.ToByteArray(),
+            };
+
+            // TODO: We need to get the existing keys to exclude them from generation
+
+            var options = _fido2.RequestNewCredential(fidoUser, new List<PublicKeyCredentialDescriptor>(), AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
+
+            var providers = user.GetTwoFactorProviders();
+            if (providers == null)
+            {
+                providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            }
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+            if (provider == null)
+            {
+                provider = new TwoFactorProvider
+                {
+                    Enabled = false
+                };
+            }
+            if (provider.MetaData == null)
+            {
+                provider.MetaData = new Dictionary<string, object>();
+            }
+            provider.MetaData.Add("1", new TwoFactorProvider.WebAuthnData
+            {
+                Options = options.ToJson()
+            });
+
+
+            if (providers.ContainsKey(TwoFactorProviderType.WebAuthn))
+            {
+                providers.Remove(TwoFactorProviderType.WebAuthn);
+            }
+
+            providers.Add(TwoFactorProviderType.WebAuthn, provider);
+            user.SetTwoFactorProviders(providers);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+
+            return options;
+        }
+
+        public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse)
+        {
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+            if (!provider?.MetaData?.ContainsKey("1") ?? true)
+            {
+                return false;
+            }
+
+            var providerData = new TwoFactorProvider.WebAuthnData(provider.MetaData["1"]);
+            var options = CredentialCreateOptions.FromJson(providerData.Options);
+
+            // Callback to ensure credential id is unique
+            IsCredentialIdUniqueToUserAsyncDelegate callback = async (IsCredentialIdUniqueToUserParams args) =>
+            {
+                // TODO: Check other keys
+                return true;
+            };
+
+            var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+
+            providerData.Options = "";
+            providerData.Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId);
+            providerData.PublicKey = success.Result.PublicKey;
+            providerData.UserHandle = success.Result.User.Id;
+            providerData.SignatureCounter = success.Result.Counter;
+            providerData.CredType = success.Result.CredType;
+            providerData.RegDate = DateTime.Now;
+            providerData.AaGuid = success.Result.Aaguid;
+            provider.MetaData["1"] = providerData;
+
+            var providers = user.GetTwoFactorProviders();
+            providers.Remove(TwoFactorProviderType.WebAuthn);
+            providers.Add(TwoFactorProviderType.WebAuthn, provider);
+            user.SetTwoFactorProviders(providers);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+
+            return true;
         }
 
         public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
