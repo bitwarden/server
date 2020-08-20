@@ -1313,7 +1313,7 @@ namespace Bit.Core.Services
             }
 
             var subInfo = await _paymentService.GetSubscriptionAsync(organization);
-            return new OrganizationLicense(organization, subInfo, installationId, _licensingService);
+            return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
         }
 
         public async Task ImportAsync(Guid organizationId,
