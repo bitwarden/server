@@ -100,6 +100,7 @@ namespace Bit.Identity
                         {
                             // Pass domain_hint onto the sso idp
                             context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
+                            context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             return Task.FromResult(0);
                         }
                     };
