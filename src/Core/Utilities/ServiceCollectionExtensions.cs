@@ -375,11 +375,7 @@ namespace Bit.Core.Utilities
         public static IIdentityServerBuilder AddIdentityServerCertificate(
             this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            if (env.IsDevelopment())
-            {
-                identityServerBuilder.AddDeveloperSigningCredential(false);
-            }
-            else if (globalSettings.SelfHosted &&
+            if (globalSettings.SelfHosted &&
                 CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
                 && File.Exists("identity.pfx"))
             {
@@ -401,6 +397,10 @@ namespace Bit.Core.Utilities
                 var identityServerCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
                     "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
                 identityServerBuilder.AddSigningCredential(identityServerCert);
+            }
+            else if (env.IsDevelopment())
+            {
+                identityServerBuilder.AddDeveloperSigningCredential(false);
             }
             else
             {
