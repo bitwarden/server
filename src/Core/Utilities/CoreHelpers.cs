@@ -442,6 +442,21 @@ namespace Bit.Core.Utilities
                 return val.ToString().ToLowerInvariant();
             }
 
+            if (val is PlanType planType)
+            {
+                return planType switch
+                {
+                    PlanType.Free => "Free",
+                    PlanType.FamiliesAnnually2019 => "FamiliesAnnually",
+                    PlanType.TeamsMonthly2019 => "TeamsMonthly",
+                    PlanType.TeamsAnnually2019 => "TeamsAnnually",
+                    PlanType.EnterpriseMonthly2019 => "EnterpriseMonthly",
+                    PlanType.EnterpriseAnnually2019 => "EnterpriseAnnually",
+                    PlanType.Custom => "Custom",
+                    _ => ((byte)planType).ToString(),
+                };
+            }
+
             return val.ToString();
         }
 
