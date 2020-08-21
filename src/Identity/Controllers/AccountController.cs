@@ -47,7 +47,11 @@ namespace Bit.Identity.Controllers
                 !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
             {
                 return RedirectToAction(nameof(ExternalChallenge),
-                    new { organizationIdentifier = context.Parameters["domain_hint"], returnUrl = returnUrl });
+                    new { 
+                            organizationIdentifier = context.Parameters["domain_hint"],
+                            userIdentifier = context.Parameters["user_identifier"],
+                            returnUrl = returnUrl 
+                        });
             }
             else
             {
@@ -56,7 +60,7 @@ namespace Bit.Identity.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl)
+        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string userIdentifier, string returnUrl)
         {
             if (string.IsNullOrWhiteSpace(organizationIdentifier))
             {
@@ -78,6 +82,7 @@ namespace Bit.Identity.Controllers
                 {
                     { "return_url", returnUrl },
                     { "domain_hint", domainHint },
+                    { "user_identifier", userIdentifier },
                     { "scheme", scheme },
                 },
             };
