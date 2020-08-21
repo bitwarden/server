@@ -721,7 +721,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var ssoUser = new SsoUser()
+            var ssoUser = new SsoUser
             {
                 UserId = userId.Value,
                 OrganizationId = new Guid(organizationId),
