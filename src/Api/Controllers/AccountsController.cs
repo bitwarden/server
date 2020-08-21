@@ -29,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly IFolderRepository _folderRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
+        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly GlobalSettings _globalSettings;
 
         public AccountsController(
@@ -38,6 +39,7 @@ namespace Bit.Api.Controllers
             IFolderRepository folderRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
+            ISsoUserRepository ssoUserRepository,
             GlobalSettings globalSettings)
         {
             _userService = userService;
@@ -46,6 +48,7 @@ namespace Bit.Api.Controllers
             _folderRepository = folderRepository;
             _organizationUserRepository = organizationUserRepository;
             _paymentService = paymentService;
+            _ssoUserRepository = ssoUserRepository;
             _globalSettings = globalSettings;
         }
 
@@ -195,7 +198,7 @@ namespace Bit.Api.Controllers
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
-        
+
         [HttpPost("set-password")]
         public async Task PostSetPasswordAsync([FromBody]SetPasswordRequestModel model)
         {
@@ -707,6 +710,24 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(user, taxInfo);
+        }
+
+        [HttpDelete("sso/{organizationId}")]
+        public async Task DeleteSsoUser(string organizationId)
+        {
+            var userId = _userService.GetProperUserId(User);
+            if (!userId.HasValue)
+            {
+                throw new NotFoundException();
+            }
+
+            var ssoUser = new SsoUser()
+            {
+                UserId = userId.Value,
+                OrganizationId = new Guid(organizationId),
+            };
+
+            await _ssoUserRepository.DeleteAsync(ssoUser);
         }
     }
 }
