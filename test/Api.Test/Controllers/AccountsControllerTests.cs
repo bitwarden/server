@@ -26,6 +26,7 @@ namespace Bit.Api.Test.Controllers
         private readonly IFolderRepository _folderRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
+        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly GlobalSettings _globalSettings;
 
         public AccountsControllerTests()
@@ -36,6 +37,7 @@ namespace Bit.Api.Test.Controllers
             _folderRepository = Substitute.For<IFolderRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
+            _ssoUserRepository = Substitute.For<ISsoUserRepository>();
             _globalSettings = new GlobalSettings();
             _sut = new AccountsController(
                 _userService,
@@ -44,6 +46,7 @@ namespace Bit.Api.Test.Controllers
                 _folderRepository,
                 _organizationUserRepository,
                 _paymentService,
+                _ssoUserRepository,
                 _globalSettings
             );
         }
