@@ -19,10 +19,11 @@ namespace Bit.Core.Models.Api
             }
 
 
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
             Enabled = provider?.Enabled ?? false;
-            Keys = provider?.MetaData?.Select(k => new KeyModel(k.Key,
-                new TwoFactorProvider.U2fMetaData((dynamic)k.Value)));
+            Keys = provider?.MetaData?
+                .Where(k => k.Key.StartsWith("Key"))
+                .Select(k => new KeyModel(k.Key, new TwoFactorProvider.WebAuthnData((dynamic)k.Value)));
         }
 
         public bool Enabled { get; set; }
@@ -30,16 +31,14 @@ namespace Bit.Core.Models.Api
 
         public class KeyModel
         {
-            public KeyModel(string id, TwoFactorProvider.U2fMetaData data)
+            public KeyModel(string id, TwoFactorProvider.WebAuthnData data)
             {
                 Name = data.Name;
                 Id = Convert.ToInt32(id.Replace("Key", string.Empty));
-                Compromised = data.Compromised;
             }
 
             public string Name { get; set; }
             public int Id { get; set; }
-            public bool Compromised { get; set; }
         }
     }
 }

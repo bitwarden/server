@@ -50,9 +50,18 @@ namespace Bit.Core.Models
 
             public WebAuthnData(dynamic o)
             {
+                Name = o.Name;
                 Options = o.Options;
+                Descriptor = JsonConvert.DeserializeObject<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                PublicKey = o.PublicKey;
+                UserHandle = o.UserHandle;
+                SignatureCounter = o.SignatureCounter;
+                CredType = o.CredType;
+                RegDate = o.RegDate;
+                AaGuid = o.AaGuid;
             }
 
+            public string Name { get; set; }
             public string Options { get; set; }
             public PublicKeyCredentialDescriptor Descriptor { get; internal set; }
             public byte[] PublicKey { get; internal set; }

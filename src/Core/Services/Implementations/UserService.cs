@@ -393,7 +393,8 @@ namespace Bit.Core.Services
             {
                 provider.MetaData = new Dictionary<string, object>();
             }
-            provider.MetaData.Add("1", new TwoFactorProvider.WebAuthnData
+            provider.MetaData.Remove("pending");
+            provider.MetaData.Add("pending", new TwoFactorProvider.WebAuthnData
             {
                 Options = options.ToJson()
             });
@@ -406,20 +407,22 @@ namespace Bit.Core.Services
 
             providers.Add(TwoFactorProviderType.WebAuthn, provider);
             user.SetTwoFactorProviders(providers);
-            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
 
             return options;
         }
 
-        public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse)
+        public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int id, string name, AuthenticatorAttestationRawResponse attestationResponse)
         {
+            var keyId = $"Key{id}";
+
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-            if (!provider?.MetaData?.ContainsKey("1") ?? true)
+            if (!provider?.MetaData?.ContainsKey("pending") ?? true)
             {
                 return false;
             }
 
-            var providerData = new TwoFactorProvider.WebAuthnData(provider.MetaData["1"]);
+            var providerData = new TwoFactorProvider.WebAuthnData(provider.MetaData["pending"]);
             var options = CredentialCreateOptions.FromJson(providerData.Options);
 
             // Callback to ensure credential id is unique
@@ -432,6 +435,7 @@ namespace Bit.Core.Services
             var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
             providerData.Options = "";
+            providerData.Name = name;
             providerData.Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId);
             providerData.PublicKey = success.Result.PublicKey;
             providerData.UserHandle = success.Result.User.Id;
@@ -439,7 +443,9 @@ namespace Bit.Core.Services
             providerData.CredType = success.Result.CredType;
             providerData.RegDate = DateTime.Now;
             providerData.AaGuid = success.Result.Aaguid;
-            provider.MetaData["1"] = providerData;
+
+            provider.MetaData[keyId] = providerData;
+            provider.MetaData.Remove("pending");
 
             var providers = user.GetTwoFactorProviders();
             providers.Remove(TwoFactorProviderType.WebAuthn);
@@ -785,9 +791,9 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type)
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true)
         {
-            SetTwoFactorProvider(user, type);
+            SetTwoFactorProvider(user, type, setEnabled);
             await SaveUserAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
         }
@@ -1230,7 +1236,7 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
 
-        public void SetTwoFactorProvider(User user, TwoFactorProviderType type)
+        public void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true)
         {
             var providers = user.GetTwoFactorProviders();
             if (!providers?.ContainsKey(type) ?? true)
@@ -1238,7 +1244,10 @@ namespace Bit.Core.Services
                 return;
             }
 
-            providers[type].Enabled = true;
+            if (setEnabled)
+            {
+                providers[type].Enabled = true;
+            }
             user.SetTwoFactorProviders(providers);
 
             if (string.IsNullOrWhiteSpace(user.TwoFactorRecoveryCode))

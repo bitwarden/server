@@ -17,7 +17,6 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(user));
             }
 
-
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
             Enabled = provider?.Enabled ?? false;
             Keys = provider?.MetaData?.Select(k => new KeyModel(k.Key,
