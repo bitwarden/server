@@ -48,24 +48,23 @@ namespace Bit.Identity.Controllers
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") 
-                ? context.Parameters["domain_hint"]
+            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? context.Parameters["domain_hint"]
                 : null;
             if (string.IsNullOrWhiteSpace(domainHint))
             {
                 throw new Exception("No domain_hint provided");
             }
 
-            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier")
-                ? context.Parameters["user_identifier"]
+            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? context.Parameters["user_identifier"]
                 : null;
 
             return RedirectToAction(nameof(ExternalChallenge),
-                new { 
-                        organizationIdentifier = domainHint,
-                        returnUrl,
-                        userIdentifier
-                    });
+                new
+                {
+                    organizationIdentifier = domainHint,
+                    returnUrl,
+                    userIdentifier
+                });
         }
 
         [HttpGet]
@@ -96,7 +95,8 @@ namespace Bit.Identity.Controllers
                 },
             };
 
-            if (!string.IsNullOrWhiteSpace(userIdentifier)) {
+            if (!string.IsNullOrWhiteSpace(userIdentifier))
+            {
                 props.Items.Add("user_identifier", userIdentifier);
             }
 

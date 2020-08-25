@@ -1098,9 +1098,7 @@ namespace Bit.Core.Services
 
         public async Task<string> GenerateSignInTokenAsync(User user, TokenPurpose purpose)
         {
-            var token = await GenerateUserTokenAsync(
-                user, 
-                Options.Tokens.PasswordResetTokenProvider,
+            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
                 purpose.ToString());
             return token;
         }

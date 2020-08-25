@@ -207,7 +207,5 @@ src/Core/Properties/launchSettings.json
 **/*.DS_Store
 src/Admin/wwwroot/lib
 src/Admin/wwwroot/css
-.vscode/launch.json
-.vscode/tasks.json
-src/Identity/.vscode/launch.json
-src/Identity/.vscode/tasks.json
+.vscode/*
+**/.vscode/*

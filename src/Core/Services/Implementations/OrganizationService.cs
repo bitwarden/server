@@ -1500,9 +1500,10 @@ namespace Bit.Core.Services
             await ReplaceAndUpdateCache(organization);
         }
 
-        public async Task DeleteSsoUserAsync(SsoUser ssoUser) {
-            await _eventService.LogSsoUserEventAsync(ssoUser, EventType.SsoUser_Deleted);
+        public async Task DeleteSsoUserAsync(SsoUser ssoUser)
+        {
             await _ssoUserRepository.DeleteAsync(ssoUser);
+            await _eventService.LogSsoUserEventAsync(ssoUser, EventType.SsoUser_Deleted);
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
