@@ -1096,13 +1096,13 @@ namespace Bit.Core.Services
         }
 
 
-        public async Task<string> GenerateSignInTokenAsync(User user, TokenPurpose purpose)
+        public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
         {
             var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
-                purpose.ToString());
+                purpose);
             return token;
         }
-
+        
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {
