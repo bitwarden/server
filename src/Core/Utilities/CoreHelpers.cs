@@ -188,13 +188,13 @@ namespace Bit.Core.Utilities
         {
             var blobClient = cloudStorageAccount.CreateCloudBlobClient();
             var containerRef = blobClient.GetContainerReference(container);
-            if (await containerRef.ExistsAsync())
+            if (await containerRef.ExistsAsync().ConfigureAwait(false))
             {
                 var blobRef = containerRef.GetBlobReference(file);
-                if (await blobRef.ExistsAsync())
+                if (await blobRef.ExistsAsync().ConfigureAwait(false))
                 {
                     var blobBytes = new byte[blobRef.Properties.Length];
-                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0);
+                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0).ConfigureAwait(false);
                     return new X509Certificate2(blobBytes, password);
                 }
             }
@@ -620,6 +620,31 @@ namespace Bit.Core.Utilities
                 origin == "file://" ||
                 // Product website
                 (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
+        }
+
+        public static X509Certificate2 GetIdentityServerCertificate(GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted &&
+                SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
+                && File.Exists("identity.pfx"))
+            {
+                return GetCertificate("identity.pfx",
+                    globalSettings.IdentityServer.CertificatePassword);
+            }
+            else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+            {
+                return GetCertificate(
+                    globalSettings.IdentityServer.CertificateThumbprint);
+            }
+            else if (!globalSettings.SelfHosted &&
+                SettingHasValue(globalSettings.Storage?.ConnectionString) &&
+                SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                return GetBlobCertificateAsync(storageAccount, "certificates",
+                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+            }
+            return null;
         }
     }
 }

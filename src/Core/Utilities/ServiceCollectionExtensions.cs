@@ -375,28 +375,10 @@ namespace Bit.Core.Utilities
         public static IIdentityServerBuilder AddIdentityServerCertificate(
             this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            if (globalSettings.SelfHosted &&
-                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-                && File.Exists("identity.pfx"))
+            var certificate = CoreHelpers.GetIdentityServerCertificate(globalSettings);
+            if (certificate != null)
             {
-                var identityServerCert = CoreHelpers.GetCertificate("identity.pfx",
-                    globalSettings.IdentityServer.CertificatePassword);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
-            {
-                var identityServerCert = CoreHelpers.GetCertificate(
-                    globalSettings.IdentityServer.CertificateThumbprint);
-                identityServerBuilder.AddSigningCredential(identityServerCert);
-            }
-            else if (!globalSettings.SelfHosted &&
-                CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
-            {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                var identityServerCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
-                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
-                identityServerBuilder.AddSigningCredential(identityServerCert);
+                identityServerBuilder.AddSigningCredential(certificate);
             }
             else if (env.IsDevelopment())
             {
