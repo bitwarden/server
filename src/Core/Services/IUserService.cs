@@ -68,5 +68,6 @@ namespace Bit.Core.Services
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
         Task<string> GenerateEnterprisePortalSignInTokenAsync(User user);
+        Task<string> GenerateSignInTokenAsync(User user, TokenPurpose purpose);
     }
 }

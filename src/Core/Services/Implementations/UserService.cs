@@ -1087,10 +1087,21 @@ namespace Bit.Core.Services
             return await CanAccessPremium(user);
         }
 
+        //TODO refactor this to use the below method and enum
         public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
         {
             var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
                 "EnterprisePortalTokenSignIn");
+            return token;
+        }
+
+
+        public async Task<string> GenerateSignInTokenAsync(User user, TokenPurpose purpose)
+        {
+            var token = await GenerateUserTokenAsync(
+                user, 
+                Options.Tokens.PasswordResetTokenProvider,
+                purpose.ToString());
             return token;
         }
 
