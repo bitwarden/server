@@ -123,9 +123,9 @@ namespace Bit.Core.Utilities
                     IsAnnual = true,
                     NameLocalizationKey = "planNameFamilies",
                     DescriptionLocalizationKey = "planDescFamilies",
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
-                    MaxUsers = 6,
+                    MaxUsers = 5,
 
                     HasAdditionalStorageOption = true,
                     HasPremiumAccessOption = true,
@@ -287,6 +287,7 @@ namespace Bit.Core.Utilities
                     BaseStorageGb = 1,
                     MaxUsers = 6,
 
+                    HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
                     HasSelfHost = true,
