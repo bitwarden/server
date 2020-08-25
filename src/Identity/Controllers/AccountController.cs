@@ -59,13 +59,12 @@ namespace Bit.Identity.Controllers
             var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? 
                 context.Parameters["user_identifier"] : null;
 
-            return RedirectToAction(nameof(ExternalChallenge),
-                new
-                {
-                    organizationIdentifier = domainHint,
-                    returnUrl,
-                    userIdentifier
-                });
+            return RedirectToAction(nameof(ExternalChallenge), new
+            {
+                organizationIdentifier = domainHint,
+                returnUrl,
+                userIdentifier
+            });
         }
 
         [HttpGet]
