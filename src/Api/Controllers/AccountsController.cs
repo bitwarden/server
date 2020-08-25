@@ -32,6 +32,7 @@ namespace Bit.Api.Controllers
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+        private readonly IOrganizationService _organizationService;
 
         public AccountsController(
             GlobalSettings globalSettings,
@@ -41,7 +42,8 @@ namespace Bit.Api.Controllers
             IPaymentService paymentService,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
-            IUserService userService)
+            IUserService userService,
+            IOrganizationService organizationService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -51,6 +53,7 @@ namespace Bit.Api.Controllers
             _ssoUserRepository = ssoUserRepository;
             _userRepository = userRepository;
             _userService = userService;
+            _organizationService = organizationService;
         }
 
         [HttpPost("prelogin")]
@@ -728,7 +731,7 @@ namespace Bit.Api.Controllers
                 OrganizationId = new Guid(organizationId),
             };
 
-            await _ssoUserRepository.DeleteAsync(ssoUser);
+            await _organizationService.DeleteSsoUserAsync(ssoUser);
         }
 
         [HttpGet("sso/user-identifier")]

@@ -35,6 +35,7 @@ namespace Bit.Core.Services
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
 
@@ -56,6 +57,7 @@ namespace Bit.Core.Services
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
             ISsoConfigRepository ssoConfigRepository,
+            ISsoUserRepository ssoUserRepository,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings)
         {
@@ -76,6 +78,7 @@ namespace Bit.Core.Services
             _paymentService = paymentService;
             _policyRepository = policyRepository;
             _ssoConfigRepository = ssoConfigRepository;
+            _ssoUserRepository = ssoUserRepository;
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
         }
@@ -1495,6 +1498,11 @@ namespace Bit.Core.Services
             organization.ApiKey = CoreHelpers.SecureRandomString(30);
             organization.RevisionDate = DateTime.UtcNow;
             await ReplaceAndUpdateCache(organization);
+        }
+
+        public async Task DeleteSsoUserAsync(SsoUser ssoUser) {
+            await _eventService.LogSsoUserEventAsync(ssoUser, EventType.SsoUser_Deleted);
+            await _ssoUserRepository.DeleteAsync(ssoUser);
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,

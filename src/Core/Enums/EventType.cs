@@ -48,5 +48,7 @@
         // Organization_ClientExportedVault = 1602,
 
         Policy_Updated = 1700,
+
+        SsoUser_Deleted = 1800
     }
 }
