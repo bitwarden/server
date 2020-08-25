@@ -734,7 +734,7 @@ namespace Bit.Core.Services
             var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
-            
+
             var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
             {
                 Items = new List<SubscriptionItemOptions>
@@ -942,7 +942,7 @@ namespace Bit.Core.Services
                         {
                             throw new GatewayException("Failed to charge PayPal customer.");
                         }
-                        
+
                         braintreeTransaction = transactionResult.Target;
                         invoice = await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
                         {
@@ -1557,39 +1557,39 @@ namespace Bit.Core.Services
 
         public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
         {
-            if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            if (subscriber == null || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                var customerService = new CustomerService();
-                var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
-
-                if (customer == null)
-                {
-                    return null;
-                }
-
-                var address = customer.Address;
-                var taxId = customer.TaxIds?.FirstOrDefault();
-
-                // Line1 is required, so if missing we're using the subscriber name
-                // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
-                if (address != null && string.IsNullOrWhiteSpace(address.Line1))
-                {
-                    address.Line1 = null;
-                }
-
-                return new TaxInfo
-                {
-                    TaxIdNumber = taxId?.Value,
-                    BillingAddressLine1 = address?.Line1,
-                    BillingAddressLine2 = address?.Line2,
-                    BillingAddressCity = address?.City,
-                    BillingAddressState = address?.State,
-                    BillingAddressPostalCode = address?.PostalCode,
-                    BillingAddressCountry = address?.Country,
-                };
+                return null;
             }
 
-            return null;
+            var customerService = new CustomerService();
+            var customer = await customerService.GetAsync(subscriber.GatewayCustomerId);
+
+            if (customer == null)
+            {
+                return null;
+            }
+
+            var address = customer.Address;
+            var taxId = customer.TaxIds?.FirstOrDefault();
+
+            // Line1 is required, so if missing we're using the subscriber name
+            // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
+            if (address != null && string.IsNullOrWhiteSpace(address.Line1))
+            {
+                address.Line1 = null;
+            }
+
+            return new TaxInfo
+            {
+                TaxIdNumber = taxId?.Value,
+                BillingAddressLine1 = address?.Line1,
+                BillingAddressLine2 = address?.Line2,
+                BillingAddressCity = address?.City,
+                BillingAddressState = address?.State,
+                BillingAddressPostalCode = address?.PostalCode,
+                BillingAddressCountry = address?.Country,
+            };
         }
 
         public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
