@@ -224,7 +224,6 @@ namespace Bit.Core.Services
                 }
             }
 
-
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = ssoUser.OrganizationId,
