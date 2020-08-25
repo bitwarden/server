@@ -48,15 +48,16 @@ namespace Bit.Identity.Controllers
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? context.Parameters["domain_hint"]
-                : null;
+            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? 
+                context.Parameters["domain_hint"] : null;
+
             if (string.IsNullOrWhiteSpace(domainHint))
             {
                 throw new Exception("No domain_hint provided");
             }
 
-            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? context.Parameters["user_identifier"]
-                : null;
+            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? 
+                context.Parameters["user_identifier"] : null;
 
             return RedirectToAction(nameof(ExternalChallenge),
                 new
