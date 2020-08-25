@@ -27,33 +27,31 @@ namespace Bit.Api.Controllers
         private readonly GlobalSettings _globalSettings;
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
-        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
-        private readonly IOrganizationService _organizationService;
 
         public AccountsController(
             GlobalSettings globalSettings,
             ICipherRepository cipherRepository,
             IFolderRepository folderRepository,
+            IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
-            IUserService userService,
-            IOrganizationService organizationService)
+            IUserService userService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
             _globalSettings = globalSettings;
+            _organizationService = organizationService;
             _organizationUserRepository = organizationUserRepository;
             _paymentService = paymentService;
-            _ssoUserRepository = ssoUserRepository;
             _userRepository = userRepository;
             _userService = userService;
-            _organizationService = organizationService;
         }
 
         [HttpPost("prelogin")]
