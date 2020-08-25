@@ -92,7 +92,6 @@ namespace Bit.Identity.Controllers
                 {
                     { "return_url", returnUrl },
                     { "domain_hint", domainHint },
-                    { "user_identifier", userIdentifier },
                     { "scheme", scheme },
                 },
             };
