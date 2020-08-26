@@ -213,28 +213,6 @@ namespace Bit.Core.Services
             await _eventWriteService.CreateAsync(e);
         }
 
-        public async Task LogSsoUserEventAsync(SsoUser ssoUser, EventType type, DateTime? date)
-        {
-            if (ssoUser.OrganizationId.HasValue)
-            {
-                var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-                if (!CanUseEvents(orgAbilities, ssoUser.OrganizationId.Value))
-                {
-                    return;
-                }
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = ssoUser.OrganizationId,
-                UserId = ssoUser.UserId,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&

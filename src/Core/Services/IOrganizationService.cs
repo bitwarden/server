@@ -51,6 +51,6 @@ namespace Bit.Core.Services
             IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
             bool overwriteExisting);
         Task RotateApiKeyAsync(Organization organization);
-        Task DeleteSsoUserAsync(SsoUser ssoUser);
+        Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     }
 }

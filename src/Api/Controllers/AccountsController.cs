@@ -723,17 +723,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var ssoUser = new SsoUser()
-            {
-                UserId = userId.Value,
-                OrganizationId = new Guid(organizationId),
-            };
-
-            await _organizationService.DeleteSsoUserAsync(ssoUser);
+            await _organizationService.DeleteSsoUserAsync(userId.Value, new Guid(organizationId));
         }
 
         [HttpGet("sso/user-identifier")]
-        public async Task<string> GetSsoUserIdentifier(string authorizeUrl)
+        public async Task<string> GetSsoUserIdentifier()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var token = await _userService.GenerateSignInTokenAsync(user, TokenPurposes.LinkSso);

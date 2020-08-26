@@ -42,13 +42,12 @@
         OrganizationUser_Updated = 1502,
         OrganizationUser_Removed = 1503,
         OrganizationUser_UpdatedGroups = 1504,
+        OrganizationUser_UnlinkedSso = 1505,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,
         // Organization_ClientExportedVault = 1602,
 
         Policy_Updated = 1700,
-
-        SsoUser_Deleted = 1800
     }
 }

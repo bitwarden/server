@@ -16,6 +16,5 @@ namespace Bit.Core.Services
         Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null);
         Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
         Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
-        Task LogSsoUserEventAsync(SsoUser ssoUser, EventType type, DateTime? date = null);
     }
 }

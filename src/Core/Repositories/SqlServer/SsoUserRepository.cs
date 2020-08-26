@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Table;
+using Dapper;
+using System;
+using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Data;
-using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -16,13 +17,13 @@ namespace Bit.Core.Repositories.SqlServer
             : base(connectionString, readOnlyConnectionString)
         { }
 
-        public override async Task DeleteAsync(SsoUser ssoUser)
+        public async Task DeleteAsync(Guid userId, Guid? organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[SsoUser_Delete]",
-                    new { UserId = ssoUser.UserId, OrganizationId = ssoUser.OrganizationId },
+                    new { UserId = userId, OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
             }
         }

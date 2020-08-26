@@ -48,10 +48,5 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
-
-        public Task LogSsoUserEventAsync(SsoUser ssoUser, EventType type, DateTime? date = null)
-        {
-            return Task.FromResult(0);
-        }
     }
 }
