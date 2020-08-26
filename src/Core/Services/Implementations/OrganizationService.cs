@@ -1505,8 +1505,7 @@ namespace Bit.Core.Services
             await _ssoUserRepository.DeleteAsync(userId, organizationId);
             if (organizationId.HasValue)
             {
-                var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-                var organizationUser = organizationUsers.FirstOrDefault(orgUser => orgUser.OrganizationId == organizationId.Value);
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId.Value, userId);
                 if (organizationUser != null)
                 {
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UnlinkedSso);
