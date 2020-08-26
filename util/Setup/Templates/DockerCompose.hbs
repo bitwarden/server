@@ -87,22 +87,22 @@ services:
       - default
       - public
 
-#  sso:
-#    image: bitwarden/sso:{{{CoreVersion}}}
-#    container_name: bitwarden-sso
-#    restart: always
-#    volumes:
-#      - ../identity:/etc/bitwarden/identity
-#      - ../core:/etc/bitwarden/core
-#      - ../ca-certificates:/etc/bitwarden/ca-certificates
-#      - ../logs/sso:/etc/bitwarden/logs
-#    env_file:
-#      - global.env
-#      - ../env/uid.env
-#      - ../env/global.override.env
-#    networks:
-#      - default
-#      - public
+  sso:
+    image: bitwarden/sso:{{{CoreVersion}}}
+    container_name: bitwarden-sso
+    restart: always
+    volumes:
+      - ../identity:/etc/bitwarden/identity
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/sso:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   admin:
     image: bitwarden/admin:{{{CoreVersion}}}
@@ -114,6 +114,24 @@ services:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/admin:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  portal:
+    image: bitwarden/portal:{{{CoreVersion}}}
+    container_name: bitwarden-portal
+    restart: always
+    depends_on:
+      - mssql
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/portal:/etc/bitwarden/logs
     env_file:
       - global.env
       - ../env/uid.env
