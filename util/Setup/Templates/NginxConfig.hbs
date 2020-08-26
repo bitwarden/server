@@ -104,9 +104,13 @@ server {
     proxy_pass http://identity:5000/;
   }
 
-#  location /sso/ {
-#    proxy_pass http://sso:5000/;
-#  }
+  location /sso/ {
+    proxy_pass http://sso:5000/;
+  }
+
+  location /portal/ {
+    proxy_pass http://portal:5000/;
+  }
 
   location /icons/ {
     proxy_pass http://icons:5000/;

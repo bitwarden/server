@@ -27,6 +27,7 @@ namespace Bit.Setup
                 ["globalSettings__baseServiceUri__identity"] = "http://localhost/identity",
                 ["globalSettings__baseServiceUri__admin"] = "http://localhost/admin",
                 ["globalSettings__baseServiceUri__sso"] = "http://localhost/sso",
+                ["globalSettings__baseServiceUri__portal"] = "http://localhost/portal",
                 ["globalSettings__baseServiceUri__notifications"] = "http://localhost/notifications",
                 ["globalSettings__baseServiceUri__internalNotifications"] = "http://notifications:5000",
                 ["globalSettings__baseServiceUri__internalAdmin"] = "http://admin:5000",
@@ -34,6 +35,7 @@ namespace Bit.Setup
                 ["globalSettings__baseServiceUri__internalApi"] = "http://api:5000",
                 ["globalSettings__baseServiceUri__internalVault"] = "http://web:5000",
                 ["globalSettings__baseServiceUri__internalSso"] = "http://sso:5000",
+                ["globalSettings__baseServiceUri__internalPortal"] = "http://portal:5000",
                 ["globalSettings__pushRelayBaseUri"] = "https://push.bitwarden.com",
                 ["globalSettings__installation__identityUri"] = "https://identity.bitwarden.com",
             };
@@ -92,6 +94,7 @@ namespace Bit.Setup
                 ["globalSettings__baseServiceUri__admin"] = $"{_context.Config.Url}/admin",
                 ["globalSettings__baseServiceUri__notifications"] = $"{_context.Config.Url}/notifications",
                 ["globalSettings__baseServiceUri__sso"] = $"{_context.Config.Url}/sso",
+                ["globalSettings__baseServiceUri__portal"] = $"{_context.Config.Url}/portal",
                 ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString}\"",
                 ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
                 ["globalSettings__attachment__baseDirectory"] = $"{_context.OutputDir}/core/attachments",
