@@ -18,6 +18,7 @@ SELECT
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],
+    O.[Identifier],
     OU.[Key],
     OU.[Status],
     OU.[Type],

@@ -1,62 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Bit.Identity.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly IIdentityServerInteractionService _interaction;
-        private readonly IUserRepository _userRepository;
-        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IClientStore _clientStore;
+        private readonly IIdentityServerInteractionService _interaction;
         private readonly ILogger<AccountController> _logger;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IUserRepository _userRepository;
 
         public AccountController(
-            IIdentityServerInteractionService interaction,
-            IUserRepository userRepository,
-            ISsoConfigRepository ssoConfigRepository,
             IClientStore clientStore,
-            ILogger<AccountController> logger)
+            IIdentityServerInteractionService interaction,
+            ILogger<AccountController> logger,
+            IOrganizationUserRepository organizationUserRepository,
+            ISsoConfigRepository ssoConfigRepository,
+            IUserRepository userRepository,
+            IUserService userService)
         {
-            _interaction = interaction;
-            _userRepository = userRepository;
-            _ssoConfigRepository = ssoConfigRepository;
             _clientStore = clientStore;
+            _interaction = interaction;
             _logger = logger;
+            _ssoConfigRepository = ssoConfigRepository;
+            _userRepository = userRepository;
         }
 
         [HttpGet]
         public async Task<IActionResult> Login(string returnUrl)
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-            if (context.Parameters.AllKeys.Contains("domain_hint") &&
-                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+
+            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? 
+                context.Parameters["domain_hint"] : null;
+
+            if (string.IsNullOrWhiteSpace(domainHint))
             {
-                return RedirectToAction(nameof(ExternalChallenge),
-                    new { organizationIdentifier = context.Parameters["domain_hint"], returnUrl = returnUrl });
+                throw new Exception("No domain_hint provided");
             }
-            else
+
+            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? 
+                context.Parameters["user_identifier"] : null;
+
+            return RedirectToAction(nameof(ExternalChallenge), new
             {
-                throw new Exception("No domain_hint provided.");
-            }
+                organizationIdentifier = domainHint,
+                returnUrl,
+                userIdentifier
+            });
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl)
+        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl,
+            string userIdentifier)
         {
             if (string.IsNullOrWhiteSpace(organizationIdentifier))
             {
@@ -81,6 +94,11 @@ namespace Bit.Identity.Controllers
                     { "scheme", scheme },
                 },
             };
+
+            if (!string.IsNullOrWhiteSpace(userIdentifier))
+            {
+                props.Items.Add("user_identifier", userIdentifier);
+            }
 
             return Challenge(props, scheme);
         }

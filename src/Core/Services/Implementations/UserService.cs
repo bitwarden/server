@@ -1087,6 +1087,7 @@ namespace Bit.Core.Services
             return await CanAccessPremium(user);
         }
 
+        //TODO refactor this to use the below method and enum
         public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
         {
             var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
@@ -1094,6 +1095,14 @@ namespace Bit.Core.Services
             return token;
         }
 
+
+        public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
+        {
+            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+                purpose);
+            return token;
+        }
+        
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {

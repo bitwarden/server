@@ -28,6 +28,7 @@ namespace Bit.Core.Models.Api
             Type = organization.Type;
             Enabled = organization.Enabled;
             SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
+            Identifier = organization.Identifier;
         }
 
         public string Id { get; set; }
@@ -51,5 +52,6 @@ namespace Bit.Core.Models.Api
         public OrganizationUserType Type { get; set; }
         public bool Enabled { get; set; }
         public bool SsoBound { get; set; }
+        public string Identifier { get; set; }
     }
 }

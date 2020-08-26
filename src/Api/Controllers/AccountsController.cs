@@ -1,21 +1,22 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using Bit.Api.Utilities;
+using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Models.Api;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
-using Bit.Core.Enums;
-using System.Linq;
-using Bit.Core.Repositories;
-using Bit.Core.Utilities;
-using Bit.Core;
-using Bit.Core.Models.Business;
-using Bit.Api.Utilities;
-using Bit.Core.Models.Table;
+using System;
 using System.Collections.Generic;
-using Bit.Core.Models.Api.Request.Accounts;
-using Bit.Core.Models.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Bit.Api.Controllers
 {
@@ -23,30 +24,34 @@ namespace Bit.Api.Controllers
     [Authorize("Application")]
     public class AccountsController : Controller
     {
-        private readonly IUserService _userService;
-        private readonly IUserRepository _userRepository;
+        private readonly GlobalSettings _globalSettings;
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IUserRepository _userRepository;
+        private readonly IUserService _userService;
 
         public AccountsController(
-            IUserService userService,
-            IUserRepository userRepository,
+            GlobalSettings globalSettings,
             ICipherRepository cipherRepository,
             IFolderRepository folderRepository,
+            IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
-            GlobalSettings globalSettings)
+            ISsoUserRepository ssoUserRepository,
+            IUserRepository userRepository,
+            IUserService userService)
         {
-            _userService = userService;
-            _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
+            _globalSettings = globalSettings;
+            _organizationService = organizationService;
             _organizationUserRepository = organizationUserRepository;
             _paymentService = paymentService;
-            _globalSettings = globalSettings;
+            _userRepository = userRepository;
+            _userService = userService;
         }
 
         [HttpPost("prelogin")]
@@ -195,7 +200,7 @@ namespace Bit.Api.Controllers
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
-        
+
         [HttpPost("set-password")]
         public async Task PostSetPasswordAsync([FromBody]SetPasswordRequestModel model)
         {
@@ -707,6 +712,28 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(user, taxInfo);
+        }
+
+        [HttpDelete("sso/{organizationId}")]
+        public async Task DeleteSsoUser(string organizationId)
+        {
+            var userId = _userService.GetProperUserId(User);
+            if (!userId.HasValue)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.DeleteSsoUserAsync(userId.Value, new Guid(organizationId));
+        }
+
+        [HttpGet("sso/user-identifier")]
+        public async Task<string> GetSsoUserIdentifier()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            var token = await _userService.GenerateSignInTokenAsync(user, TokenPurposes.LinkSso);
+            var bytes = Encoding.UTF8.GetBytes($"{user.Id},{token}");
+            var userIdentifier = Convert.ToBase64String(bytes);
+            return userIdentifier;
         }
     }
 }
