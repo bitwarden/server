@@ -66,10 +66,16 @@ namespace Bit.Billing.Controllers
             }
 
             var invoice = await _bitPayClient.GetInvoiceAsync(model.Data.Id);
-            if (invoice == null || invoice.Status != "confirmed")
+            if (invoice == null)
             {
                 // Request forged...?
-                _logger.LogWarning("Forged invoice detected. #" + model.Data.Id);
+                _logger.LogWarning("Invoice not found. #" + model.Data.Id);
+                return new BadRequestResult();
+            }
+
+            if (invoice.Status != "confirmed" && invoice.Status != "completed")
+            {
+                _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
                 return new BadRequestResult();
             }
 
@@ -97,7 +103,7 @@ namespace Bit.Billing.Controllers
             var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
             if (transaction != null)
             {
-                _logger.LogWarning("Already processed this confirmed invoice. #" + invoice.Id);
+                _logger.LogWarning("Already processed this invoice. #" + invoice.Id);
                 return new OkResult();
             }
 
@@ -152,7 +158,7 @@ namespace Bit.Billing.Controllers
                 }
             }
             // Catch foreign key violations because user/org could have been deleted.
-            catch (SqlException e) when(e.Number == 547) { }
+            catch (SqlException e) when (e.Number == 547) { }
 
             return new OkResult();
         }
