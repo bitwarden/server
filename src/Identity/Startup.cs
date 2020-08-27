@@ -123,7 +123,7 @@ namespace Bit.Identity
             }
 
             // HttpClients
-            services.AddHttpClient<Controllers.AccountController>(client =>
+            services.AddHttpClient("InternalSso", client =>
             {
                 client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
             });

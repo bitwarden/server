@@ -29,8 +29,7 @@ namespace Bit.Identity.Controllers
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly II18nService _iI18nService;
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _clientFactory;
 
         public AccountController(
             IClientStore clientStore,
@@ -39,8 +38,7 @@ namespace Bit.Identity.Controllers
             ISsoConfigRepository ssoConfigRepository,
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
-            II18nService iI18nService,
-            HttpClient httpClient)
+            IHttpClientFactory clientFactory)
         {
             _clientStore = clientStore;
             _interaction = interaction;
@@ -48,8 +46,7 @@ namespace Bit.Identity.Controllers
             _ssoConfigRepository = ssoConfigRepository;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
-            _iI18nService = iI18nService;
-            _httpClient = httpClient;
+            _clientFactory = clientFactory;
         }
         
         [HttpGet]
@@ -64,7 +61,8 @@ namespace Bit.Identity.Controllers
             {
                 // Calls Sso Pre-Validate, assumes baseUri set
                 var requestPath = $"/Account/PreValidate?domainHint={domainHint}";
-                using var responseMessage = await _httpClient.GetAsync(requestPath);
+                var httpClient = _clientFactory.CreateClient("InternalSso");
+                using var responseMessage = await httpClient.GetAsync(requestPath);
                 if (responseMessage.IsSuccessStatusCode)
                 {
                     // All is good!
