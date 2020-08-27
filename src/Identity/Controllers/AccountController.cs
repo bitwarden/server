@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Api;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.Models;
@@ -7,13 +8,14 @@ using IdentityServer4;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -26,21 +28,63 @@ namespace Bit.Identity.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly II18nService _iI18nService;
+        private readonly HttpClient _httpClient;
 
         public AccountController(
             IClientStore clientStore,
             IIdentityServerInteractionService interaction,
             ILogger<AccountController> logger,
-            IOrganizationUserRepository organizationUserRepository,
             ISsoConfigRepository ssoConfigRepository,
             IUserRepository userRepository,
-            IUserService userService)
+            IOrganizationRepository organizationRepository,
+            II18nService iI18nService,
+            HttpClient httpClient)
         {
             _clientStore = clientStore;
             _interaction = interaction;
             _logger = logger;
             _ssoConfigRepository = ssoConfigRepository;
             _userRepository = userRepository;
+            _organizationRepository = organizationRepository;
+            _iI18nService = iI18nService;
+            _httpClient = httpClient;
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> PreValidate(string domainHint)
+        {
+            if (string.IsNullOrWhiteSpace(domainHint))
+            {
+                Response.StatusCode = 400;
+                return Json(new ErrorResponseModel("No domain hint was provided"));
+            }
+            try
+            {
+                // Calls Sso Pre-Validate, assumes baseUri set
+                var requestPath = $"/Account/PreValidate?domainHint={domainHint}";
+                using var responseMessage = await _httpClient.GetAsync(requestPath);
+                if (responseMessage.IsSuccessStatusCode)
+                {
+                    // All is good!
+                    return new EmptyResult();
+                }
+                Response.StatusCode = (int)responseMessage.StatusCode;
+                var responseJson = await responseMessage.Content.ReadAsStringAsync();
+                return Content(responseJson, "application/json");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error pre-validating against SSO service");
+                Response.StatusCode = 500;
+                return Json(new ErrorResponseModel("Error pre-validating SSO authentication")
+                {
+                    ExceptionMessage = ex.Message,
+                    ExceptionStackTrace = ex.StackTrace,
+                    InnerExceptionMessage = ex.InnerException?.Message,
+                });
+            }
         }
 
         [HttpGet]

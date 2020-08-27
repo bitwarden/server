@@ -121,6 +121,12 @@ namespace Bit.Identity
             {
                 services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
             }
+
+            // HttpClients
+            services.AddHttpClient<Controllers.AccountController>(client =>
+            {
+                client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
+            });
         }
 
         public void Configure(
