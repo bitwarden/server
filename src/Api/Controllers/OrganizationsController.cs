@@ -177,7 +177,6 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
@@ -192,10 +191,10 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var updatebilling = model.BusinessName != organization.BusinessName ||
-                model.BillingEmail != organization.BillingEmail;
+            var updatebilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+                model.BillingEmail != organization.BillingEmail);
 
-            await _organizationService.UpdateAsync(model.ToOrganization(organization), updatebilling);
+            await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updatebilling);
             return new OrganizationResponseModel(organization);
         }
 

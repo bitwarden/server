@@ -17,11 +17,15 @@ namespace Bit.Core.Models.Api
         [StringLength(50)]
         public string BillingEmail { get; set; }
 
-        public virtual Organization ToOrganization(Organization existingOrganization)
+        public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
         {
-            existingOrganization.Name = Name;
-            existingOrganization.BusinessName = BusinessName;
-            existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+            if (!globalSettings.SelfHosted)
+            {
+                // These items come from the license file
+                existingOrganization.Name = Name;
+                existingOrganization.BusinessName = BusinessName;
+                existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+            }
             existingOrganization.Identifier = Identifier;
             return existingOrganization;
         }
