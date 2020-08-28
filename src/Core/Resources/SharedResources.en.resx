@@ -1,0 +1,415 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Home" xml:space="preserve">
+    <value>Home</value>
+    <comment>Home page</comment>
+  </data>
+  <data name="Policies" xml:space="preserve">
+    <value>Policies</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="TwoStepLogin" xml:space="preserve">
+    <value>Two-step Login</value>
+  </data>
+  <data name="TwoStepLoginDescription" xml:space="preserve">
+    <value>Require users to set up two-step login on their personal accounts.</value>
+  </data>
+  <data name="MasterPassword" xml:space="preserve">
+    <value>Master Password</value>
+  </data>
+  <data name="MasterPasswordDescription" xml:space="preserve">
+    <value>Set minimum requirements for master password strength.</value>
+  </data>
+  <data name="PasswordGenerator" xml:space="preserve">
+    <value>Password Generator</value>
+  </data>
+  <data name="PasswordGeneratorDescription" xml:space="preserve">
+    <value>Set minimum requirements for password generator configuration.</value>
+  </data>
+  <data name="EditPolicy" xml:space="preserve">
+    <value>Edit Policy - {0}</value>
+  </data>
+  <data name="EditPolicyTwoStepLoginWarning" xml:space="preserve">
+    <value>Organization members who do not have two-step login enabled for their personal account will be removed from the organization and will receive an email notifying them about the change.</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MinimumComplexityScore" xml:space="preserve">
+    <value>Minimum Complexity Score</value>
+  </data>
+  <data name="MinimumLength" xml:space="preserve">
+    <value>Minimum Length</value>
+  </data>
+  <data name="Weak" xml:space="preserve">
+    <value>Weak</value>
+  </data>
+  <data name="Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="Strong" xml:space="preserve">
+    <value>Strong</value>
+  </data>
+  <data name="DefaultType" xml:space="preserve">
+    <value>Default Type</value>
+  </data>
+  <data name="UserPreference" xml:space="preserve">
+    <value>User Preference</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Passphrase" xml:space="preserve">
+    <value>Passphrase</value>
+  </data>
+  <data name="MinimumSpecial" xml:space="preserve">
+    <value>Minimum Special</value>
+  </data>
+  <data name="MinimumNumbers" xml:space="preserve">
+    <value>Minimum Numbers</value>
+  </data>
+  <data name="MinimumNumberOfWords" xml:space="preserve">
+    <value>Minimum Number of Words</value>
+  </data>
+  <data name="Capitalize" xml:space="preserve">
+    <value>Capitalize</value>
+  </data>
+  <data name="IncludeNumber" xml:space="preserve">
+    <value>Include Number</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="UppercaseAZ" xml:space="preserve">
+    <value>A-Z</value>
+  </data>
+  <data name="LowercaseAZ" xml:space="preserve">
+    <value>a-z</value>
+  </data>
+  <data name="Numbers09" xml:space="preserve">
+    <value>0-9</value>
+  </data>
+  <data name="SpecialCharacters" xml:space="preserve">
+    <value>!@#$%^&amp;*</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="MasterPasswordMinLengthError" xml:space="preserve">
+    <value>The field {0} must be greater than or equal to {1}.</value>
+  </data>
+  <data name="SingleSignOn" xml:space="preserve">
+    <value>Single Sign-On</value>
+  </data>
+  <data name="EditSsoConfig" xml:space="preserve">
+    <value>Edit SSO Configuration</value>
+  </data>
+  <data name="ConfigType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="OpenIdConnect" xml:space="preserve">
+    <value>OpenID Connect</value>
+  </data>
+  <data name="Saml2" xml:space="preserve">
+    <value>SAML 2.0</value>
+  </data>
+  <data name="SsoConfig" xml:space="preserve">
+    <value>SSO Configuration</value>
+  </data>
+  <data name="OpenIdConnectConfig" xml:space="preserve">
+    <value>OpenID Connect Configuration</value>
+  </data>
+  <data name="Authority" xml:space="preserve">
+    <value>Authority</value>
+  </data>
+  <data name="ClientId" xml:space="preserve">
+    <value>Client ID</value>
+  </data>
+  <data name="ClientSecret" xml:space="preserve">
+    <value>Client Secret</value>
+  </data>
+  <data name="CallbackPath" xml:space="preserve">
+    <value>Callback Path</value>
+  </data>
+  <data name="SignedOutCallbackPath" xml:space="preserve">
+    <value>Signed Out Callback Path</value>
+  </data>
+  <data name="SamlSpConfig" xml:space="preserve">
+    <value>SAML Service Provider Configuration</value>
+  </data>
+  <data name="EntityId" xml:space="preserve">
+    <value>Entity ID</value>
+  </data>
+  <data name="SpEntityId" xml:space="preserve">
+    <value>SP Entity ID</value>
+  </data>
+  <data name="NameIdFormat" xml:space="preserve">
+    <value>Name ID Format</value>
+  </data>
+  <data name="NotConfigured" xml:space="preserve">
+    <value>Not Configured</value>
+  </data>
+  <data name="Unspecified" xml:space="preserve">
+    <value>Unspecified</value>
+  </data>
+  <data name="EmailAddress" xml:space="preserve">
+    <value>Email Address</value>
+  </data>
+  <data name="X509SubjectName" xml:space="preserve">
+    <value>X.509 Subject Name</value>
+  </data>
+  <data name="WindowsDomainQualifiedName" xml:space="preserve">
+    <value>Windows Domain Qualified Name</value>
+  </data>
+  <data name="KerberosPrincipalName" xml:space="preserve">
+    <value>Kerberos Principal Name</value>
+  </data>
+  <data name="EntityIdentifier" xml:space="preserve">
+    <value>Entity Identifier</value>
+  </data>
+  <data name="Persistent" xml:space="preserve">
+    <value>Persistent</value>
+  </data>
+  <data name="Transient" xml:space="preserve">
+    <value>Transient</value>
+  </data>
+  <data name="PrivateKey" xml:space="preserve">
+    <value>Private Key</value>
+  </data>
+  <data name="SamlIdpConfig" xml:space="preserve">
+    <value>SAML Identity Provider Configuration</value>
+  </data>
+  <data name="SingleSignOnServiceUrl" xml:space="preserve">
+    <value>Single Sign On Service URL</value>
+  </data>
+  <data name="SingleLogoutServiceUrl" xml:space="preserve">
+    <value>Single Log Out Service URL</value>
+  </data>
+  <data name="PublicKey" xml:space="preserve">
+    <value>Public Key</value>
+  </data>
+  <data name="SpWantAssertionsSigned" xml:space="preserve">
+    <value>Sign Assertions</value>
+  </data>
+  <data name="SigningAlgorithm" xml:space="preserve">
+    <value>Signing Algorithm</value>
+  </data>
+  <data name="SigningBehavior" xml:space="preserve">
+    <value>Signing Behavior</value>
+  </data>
+  <data name="BindingType" xml:space="preserve">
+    <value>Binding Type</value>
+  </data>
+  <data name="ArtifactResolutionServiceUrl" xml:space="preserve">
+    <value>Artifact Resolution Service URL</value>
+  </data>
+  <data name="X509PublicCert" xml:space="preserve">
+    <value>X509 Public Certificate</value>
+  </data>
+  <data name="OutboundSigningAlgorithm" xml:space="preserve">
+    <value>Outbound Signing Algorithm</value>
+  </data>
+  <data name="AllowUnsolicitedAuthnResponse" xml:space="preserve">
+    <value>Allow Unsolicited Authentication Response</value>
+  </data>
+  <data name="DisableOutboundLogoutRequests" xml:space="preserve">
+    <value>Disable Outbound Logout Requests</value>
+  </data>
+  <data name="WantAuthnRequestsSigned" xml:space="preserve">
+    <value>Want Authentication Requests Signed</value>
+  </data>
+  <data name="MetadataAddress" xml:space="preserve">
+    <value>Metadata Address</value>
+  </data>
+  <data name="GetClaimsFromUserInfoEndpoint" xml:space="preserve">
+    <value>Get Claims From User Info Endpoint</value>
+  </data>
+  <data name="AuthorityValidationError" xml:space="preserve">
+    <value>The Authority field is required on a Open ID Connect configuration.</value>
+  </data>
+  <data name="ClientIdValidationError" xml:space="preserve">
+    <value>The Client ID field is required on a Open ID Connect configuration.</value>
+  </data>
+  <data name="ClientSecretValidationError" xml:space="preserve">
+    <value>The Client Secret field is required on a Open ID Connect configuration.</value>
+  </data>
+  <data name="CallbackPathValidationError" xml:space="preserve">
+    <value>The Callback Path field is required on a Open ID Connect configuration.</value>
+  </data>
+  <data name="SpEntityIdValidationError" xml:space="preserve">
+    <value>The Service Provider Configuration Entity Id field is required on a SAML configuration.</value>
+  </data>
+  <data name="IdpEntityIdValidationError" xml:space="preserve">
+    <value>The Identity Provider Configuration Entity Id field is required on a SAML configuration.</value>
+  </data>
+  <data name="Saml2SigningBehaviorValidationError" xml:space="preserve">
+    <value>If SAML Signing Behavior is set to never, public and private service provider keys are required.</value>
+  </data>
+  <data name="Saml2BindingTypeValidationError" xml:space="preserve">
+    <value>If SAML Binding Type is set to artifact, identity provider resolution service URL is required.</value>
+  </data>
+  <data name="IdpSingleSignOnServiceUrlValidationError" xml:space="preserve">
+    <value>If Identity Provider Entity ID is not a URL, single sign on service URL is required.</value>
+  </data>
+  <data name="InvalidSchemeConfigurationError" xml:space="preserve">
+    <value>The configured authentication scheme is not valid: "{0}"</value>
+  </data>
+  <data name="NoSchemeOrHandlerForSsoConfigurationFoundError" xml:space="preserve">
+    <value>No scheme or handler for this SSO configuration found.</value>
+  </data>
+  <data name="SsoNotEnabledForOrganizationError" xml:space="preserve">
+    <value>SSO is not yet enabled for this organization.</value>
+  </data>
+  <data name="SsoConfigurationNotFoundForOrganizationError" xml:space="preserve">
+    <value>No SSO configuration exists for this organization.</value>
+  </data>
+  <data name="SsoNotAllowedForOrganizationError" xml:space="preserve">
+    <value>SSO is not allowed for this organization.</value>
+  </data>
+  <data name="OrganizationNotFoundByIdentifierError" xml:space="preserve">
+    <value>Organization not found from identifier.</value>
+  </data>
+  <data name="NoOrganizationIdentifierProvidedError" xml:space="preserve">
+    <value>No organization identifier provided.</value>
+  </data>
+  <data name="InvalidAuthenticationOptionsForSaml2SchemeError" xml:space="preserve">
+    <value>Invalid authentication options provided to SAML2 scheme.</value>
+  </data>
+  <data name="InvalidAuthenticationOptionsForOidcSchemeError" xml:space="preserve">
+    <value>Invalid authentication options provided to OpenID Connect scheme.</value>
+  </data>
+  <data name="PostConfigurationNotExecutedError" xml:space="preserve">
+    <value>Post configuration not executed against OpenID Connect scheme.</value>
+  </data>
+  <data name="ReadingOpenIdConnectMetadataFailedError" xml:space="preserve">
+    <value>Reading OpenID Connect metadata failed.</value>
+  </data>
+  <data name="NoOpenIdConnectMetadataError" xml:space="preserve">
+    <value>No OpenID Connect metadata could be found or loaded.</value>
+  </data>
+  <data name="PreValidationError" xml:space="preserve">
+    <value>Error performing pre validation.</value>
+  </data>
+</root>

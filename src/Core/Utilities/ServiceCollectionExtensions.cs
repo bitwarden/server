@@ -32,6 +32,9 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Azure.Storage;
+using System.Reflection;
+using Bit.Core.Resources;
+using Microsoft.AspNetCore.Mvc.Localization;
 
 namespace Bit.Core.Utilities
 {
@@ -452,6 +455,33 @@ namespace Bit.Core.Utilities
                 options.ForwardLimit = null;
             }
             app.UseForwardedHeaders(options);
+        }
+
+        public static void AddLocalizationServices(this IServiceCollection services)
+        {
+            services.AddTransient<II18nService, I18nService>();
+            services.AddLocalization(options => options.ResourcesPath = "Resources");
+        }
+
+        public static IApplicationBuilder UseCoreLocalization(this IApplicationBuilder app)
+        {
+            var supportedCultures = new[] { "en" };
+            return app.UseRequestLocalization(options => options
+                .SetDefaultCulture(supportedCultures[0])
+                .AddSupportedCultures(supportedCultures)
+                .AddSupportedUICultures(supportedCultures));
+        }
+
+        public static IMvcBuilder AddViewAndDataAnnotationLocalization(this IMvcBuilder mvc)
+        {
+            mvc.Services.AddTransient<IViewLocalizer, I18nViewLocalizer>();
+            return mvc.AddViewLocalization(options => options.ResourcesPath = "Resources")
+                .AddDataAnnotationsLocalization(options => 
+                    options.DataAnnotationLocalizerProvider = (type, factory) =>
+                    {
+                        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
+                        return factory.Create("SharedResources", assemblyName.Name);
+                    });
         }
     }
 }
