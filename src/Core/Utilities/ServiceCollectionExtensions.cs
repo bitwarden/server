@@ -457,7 +457,7 @@ namespace Bit.Core.Utilities
             app.UseForwardedHeaders(options);
         }
 
-        public static void AddLocalizationServices(this IServiceCollection services)
+        public static void AddCoreLocalizationServices(this IServiceCollection services)
         {
             services.AddTransient<II18nService, I18nService>();
             services.AddLocalization(options => options.ResourcesPath = "Resources");

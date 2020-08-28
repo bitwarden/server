@@ -10,6 +10,7 @@ using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -60,7 +61,9 @@ namespace Bit.Identity.Controllers
             try
             {
                 // Calls Sso Pre-Validate, assumes baseUri set
-                var requestPath = $"/Account/PreValidate?domainHint={domainHint}";
+                var requestCultureFeature = Request.HttpContext.Features.Get<IRequestCultureFeature>();
+                var culture = requestCultureFeature.RequestCulture.Culture.Name;
+                var requestPath = $"/Account/PreValidate?domainHint={domainHint}&culture={culture}";
                 var httpClient = _clientFactory.CreateClient("InternalSso");
                 using var responseMessage = await httpClient.GetAsync(requestPath);
                 if (responseMessage.IsSuccessStatusCode)
