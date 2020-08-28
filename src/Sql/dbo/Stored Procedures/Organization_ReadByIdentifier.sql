@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_ReadByIdentifier]
-    @Identifier UNIQUEIDENTIFIER
+    @Identifier NVARCHAR(50)
 AS
 BEGIN
     SET NOCOUNT ON

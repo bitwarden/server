@@ -100,7 +100,10 @@ namespace Bit.Identity
                         {
                             // Pass domain_hint onto the sso idp
                             context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
-                            context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
+                            if (context.Properties.Items.ContainsKey("user_identifier"))
+                            {
+                                context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
+                            }
                             return Task.FromResult(0);
                         }
                     };
@@ -115,12 +118,19 @@ namespace Bit.Identity
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
+            services.AddCoreLocalizationServices();
 
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
             {
                 services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
             }
+
+            // HttpClients
+            services.AddHttpClient("InternalSso", client =>
+            {
+                client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
+            });
         }
 
         public void Configure(
@@ -152,6 +162,9 @@ namespace Bit.Identity
                 app.UseDeveloperExceptionPage();
                 app.UseCookiePolicy();
             }
+
+            // Add localization
+            app.UseCoreLocalization();
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();
