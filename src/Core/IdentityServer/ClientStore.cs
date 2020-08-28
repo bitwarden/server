@@ -4,7 +4,6 @@ using IdentityServer4.Models;
 using System.Collections.Generic;
 using Bit.Core.Repositories;
 using System;
-using System.Security.Claims;
 using IdentityModel;
 using Bit.Core.Utilities;
 
@@ -12,20 +11,21 @@ namespace Bit.Core.IdentityServer
 {
     public class ClientStore : IClientStore
     {
-        private static IDictionary<string, Client> _apiClients = StaticClients.GetApiClients();
-
         private readonly IInstallationRepository _installationRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly GlobalSettings _globalSettings;
+        private readonly StaticClientStore _staticClientStore;
 
         public ClientStore(
             IInstallationRepository installationRepository,
             IOrganizationRepository organizationRepository,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            StaticClientStore staticClientStore)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
             _globalSettings = globalSettings;
+            _staticClientStore = staticClientStore;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
@@ -47,7 +47,10 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = installation.Enabled,
-                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, installation.Id.ToString()) }
+                            Claims = new List<ClientClaim>
+                            {
+                                new ClientClaim(JwtClaimTypes.Subject, installation.Id.ToString())
+                            }
                         };
                     }
                 }
@@ -70,7 +73,10 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = true,
-                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, id) }
+                            Claims = new List<ClientClaim>
+                            {
+                                new ClientClaim(JwtClaimTypes.Subject, id)
+                            }
                         };
                     }
                 }
@@ -92,13 +98,17 @@ namespace Bit.Core.IdentityServer
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
                             Enabled = org.Enabled && org.UseApi,
-                            Claims = new List<ClientClaim> { new ClientClaim(JwtClaimTypes.Subject, org.Id.ToString()) }
+                            Claims = new List<ClientClaim>
+                            {
+                                new ClientClaim(JwtClaimTypes.Subject, org.Id.ToString())
+                            }
                         };
                     }
                 }
             }
 
-            return _apiClients.ContainsKey(clientId) ? _apiClients[clientId] : null;
+            return _staticClientStore.ApiClients.ContainsKey(clientId) ?
+                _staticClientStore.ApiClients[clientId] : null;
         }
     }
 }
