@@ -144,6 +144,12 @@ namespace Bit.Identity
 
             app.UseSerilog(env, appLifetime, globalSettings);
 
+            if (globalSettings.SelfHosted)
+            {
+                app.UsePathBase("/identity");
+                app.UseForwardedHeaders(globalSettings);
+            }
+
             // Default Middleware
             app.UseDefaultMiddleware(env, globalSettings);
 
@@ -151,10 +157,6 @@ namespace Bit.Identity
             {
                 // Rate limiting
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
-            }
-            else
-            {
-                app.UseForwardedHeaders(globalSettings);
             }
 
             if (env.IsDevelopment())
