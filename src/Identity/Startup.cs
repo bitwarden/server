@@ -86,7 +86,8 @@ namespace Bit.Identity
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
                     options.Authority = globalSettings.BaseServiceUri.Sso;
-                    options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso;
+                    options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso +
+                        "/.well-known/openid-configuration";
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
@@ -209,7 +210,7 @@ namespace Bit.Identity
                     options.Endpoints.EnableTokenRevocationEndpoint = false;
                     options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                     options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
-                    if(env.IsDevelopment())
+                    if (env.IsDevelopment())
                     {
                         options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                     }
