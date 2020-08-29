@@ -372,10 +372,6 @@ namespace Bit.Core.Services
                 Id = user.Id.ToByteArray(),
             };
 
-            // TODO: We need to get the existing keys to exclude them from generation
-
-            var options = _fido2.RequestNewCredential(fidoUser, new List<PublicKeyCredentialDescriptor>(), AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
-
             var providers = user.GetTwoFactorProviders();
             if (providers == null)
             {
@@ -393,6 +389,14 @@ namespace Bit.Core.Services
             {
                 provider.MetaData = new Dictionary<string, object>();
             }
+
+            var excludeCredentials = provider.MetaData
+                .Where(k => k.Key.StartsWith("Key"))
+                .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
+                .ToList();
+
+            var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
+
             provider.MetaData.Remove("pending");
             provider.MetaData.Add("pending", new TwoFactorProvider.WebAuthnData
             {
@@ -453,6 +457,33 @@ namespace Bit.Core.Services
             user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
 
+            return true;
+        }
+
+        public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)
+        {
+            var providers = user.GetTwoFactorProviders();
+            if (providers == null)
+            {
+                return false;
+            }
+
+            var keyName = $"Key{id}";
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+            if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
+            {
+                return false;
+            }
+
+            if (provider.MetaData.Count < 2)
+            {
+                return false;
+            }
+
+            provider.MetaData.Remove(keyName);
+            providers[TwoFactorProviderType.WebAuthn] = provider;
+            user.SetTwoFactorProviders(providers);
+            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
             return true;
         }
 

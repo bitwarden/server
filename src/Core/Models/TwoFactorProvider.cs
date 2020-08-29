@@ -52,7 +52,14 @@ namespace Bit.Core.Models
             {
                 Name = o.Name;
                 Options = o.Options;
-                Descriptor = JsonConvert.DeserializeObject<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                try
+                {
+                    Descriptor = o.Descriptor;
+                } catch
+                {
+                    // Handle newtonsoft parsing
+                    Descriptor = JsonConvert.DeserializeObject<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;
                 SignatureCounter = o.SignatureCounter;

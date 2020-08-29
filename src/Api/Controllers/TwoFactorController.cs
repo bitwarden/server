@@ -239,7 +239,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("webauthn")]
         [HttpPost("webauthn")]
-        public async Task<TwoFactorU2fResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+        public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
 
@@ -249,8 +249,16 @@ namespace Bit.Api.Controllers
             {
                 throw new BadRequestException("Unable to complete WebAuthn registration.");
             }
+            var response = new TwoFactorWebAuthnResponseModel(user);
+            return response;
+        }
 
-            var response = new TwoFactorU2fResponseModel(user);
+        [HttpDelete("webauthn")]
+        public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn([FromBody] TwoFactorU2fDeleteRequestModel model)
+        {
+            var user = await CheckAsync(model.MasterPasswordHash, true);
+            await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);
+            var response = new TwoFactorWebAuthnResponseModel(user);
             return response;
         }
 

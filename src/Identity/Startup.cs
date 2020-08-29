@@ -58,9 +58,9 @@ namespace Bit.Identity
             // Fido2
             services.AddFido2(options =>
             {
-                options.ServerDomain = "vault.bitwarden2.com";
+                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
                 options.ServerName = "Bitwarden";
-                options.Origin = "https://vault.bitwarden2.com:8080";
+                options.Origin = globalSettings.BaseServiceUri.Vault;
                 options.TimestampDriftTolerance = 300000;
             });
 
