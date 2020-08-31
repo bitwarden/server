@@ -88,6 +88,8 @@ namespace Bit.Identity
                     options.Authority = globalSettings.BaseServiceUri.Sso;
                     options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso +
                         "/.well-known/openid-configuration";
+                    options.Configuration.AuthorizationEndpoint = globalSettings.BaseServiceUri.Sso
+                        + "/connect/authorize";
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
