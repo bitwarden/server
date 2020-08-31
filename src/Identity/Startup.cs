@@ -90,10 +90,6 @@ namespace Bit.Identity
                     options.Authority = globalSettings.BaseServiceUri.Sso;
                     options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso +
                         "/.well-known/openid-configuration";
-                    options.Configuration = new OpenIdConnectConfiguration
-                    {
-                        AuthorizationEndpoint = globalSettings.BaseServiceUri.Sso + "/connect/authorize"
-                    };
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
@@ -148,12 +144,16 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
-            var identityUri = new Uri(globalSettings.BaseServiceUri.Identity);
-            app.Use(async (ctx, next) =>
+            if (globalSettings.SelfHosted)
             {
-                //ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
-                await next();
-            });
+                var identityUri = new Uri(globalSettings.BaseServiceUri.Identity);
+                app.Use(async (ctx, next) =>
+                {
+                    ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
+                    ctx.SetIdentityServerBasePath(identityUri.LocalPath);
+                    await next();
+                });
+            }
 
             IdentityModelEventSource.ShowPII = true;
 
