@@ -16,6 +16,7 @@ using IdentityServer4.Stores;
 using Bit.Core.IdentityServer;
 using IdentityServer4.Services;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using IdentityServer4.Extensions;
 
 namespace Bit.Identity
 {
@@ -147,6 +148,12 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
+            app.Use(async (ctx, next) =>
+            {
+                ctx.SetIdentityServerOrigin(globalSettings.BaseServiceUri.Identity);
+                await next();
+            });
+
             IdentityModelEventSource.ShowPII = true;
 
             app.UseSerilog(env, appLifetime, globalSettings);
