@@ -151,7 +151,7 @@ namespace Bit.Identity
             var identityUri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
+                //ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
                 await next();
             });
 
