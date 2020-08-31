@@ -148,9 +148,10 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
+            var identityUri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin(globalSettings.BaseServiceUri.Identity);
+                ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
                 await next();
             });
 
