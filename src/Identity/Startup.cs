@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using IdentityServer4.Stores;
 using Bit.Core.IdentityServer;
 using IdentityServer4.Services;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Bit.Identity
 {
@@ -88,8 +89,10 @@ namespace Bit.Identity
                     options.Authority = globalSettings.BaseServiceUri.Sso;
                     options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso +
                         "/.well-known/openid-configuration";
-                    options.Configuration.AuthorizationEndpoint = globalSettings.BaseServiceUri.Sso
-                        + "/connect/authorize";
+                    options.Configuration = new OpenIdConnectConfiguration
+                    {
+                        AuthorizationEndpoint = globalSettings.BaseServiceUri.Sso + "/connect/authorize"
+                    };
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
