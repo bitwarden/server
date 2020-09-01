@@ -87,9 +87,7 @@ namespace Bit.Identity
                 .AddAuthentication()
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
-                    options.Authority = globalSettings.BaseServiceUri.Sso;
-                    options.MetadataAddress = globalSettings.BaseServiceUri.InternalSso +
-                        "/.well-known/openid-configuration";
+                    options.Authority = globalSettings.BaseServiceUri.InternalSso;
                     options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
