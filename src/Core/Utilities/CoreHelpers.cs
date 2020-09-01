@@ -658,9 +658,9 @@ namespace Bit.Core.Utilities
                     var uri = new Uri(val);
                     dictReplace.Add(item.Key, string.Concat(publicServiceUri, uri.LocalPath));
                 }
-                else if (item.Key == "jwks_uri" && item.Value is string jwksVal)
+                else if ((item.Key == "jwks_uri" || item.Key.EndsWith("_endpoint")) && item.Value is string val2)
                 {
-                    var uri = new Uri(jwksVal);
+                    var uri = new Uri(val2);
                     dictReplace.Add(item.Key, string.Concat(internalServiceUri, uri.LocalPath));
                 }
             }
