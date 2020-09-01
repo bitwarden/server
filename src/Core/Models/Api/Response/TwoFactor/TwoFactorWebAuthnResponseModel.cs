@@ -11,13 +11,12 @@ namespace Bit.Core.Models.Api
     public class TwoFactorWebAuthnResponseModel : ResponseModel
     {
         public TwoFactorWebAuthnResponseModel(User user)
-            : base("twoFactorU2f")
+            : base("twoFactorWebAuthn")
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
-
 
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
             Enabled = provider?.Enabled ?? false;

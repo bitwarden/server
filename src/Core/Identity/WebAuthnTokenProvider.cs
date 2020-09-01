@@ -128,10 +128,7 @@ namespace Bit.Core.Identity
 
             var key = webAuthCred != null ? webAuthCred.Item2 : (TwoFactorProvider.BaseMetaData)u2fCred.Item2;
 
-            IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
-            {
-                return true;
-            };
+            IsUserHandleOwnerOfCredentialIdAsync callback = (args) => Task.FromResult(true);
 
             var res = await _fido2.MakeAssertionAsync(clientResponse, options, key.GetPublicKey(), key.GetSignatureCounter(), callback);
 
