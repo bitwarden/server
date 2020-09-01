@@ -3,22 +3,15 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Repositories;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
-using U2fLib = U2F.Core.Crypto.U2F;
-using U2F.Core.Models;
-using U2F.Core.Exceptions;
-using U2F.Core.Utils;
 using System;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Fido2NetLib.Objects;
 using Fido2NetLib;
 using Bit.Core.Utilities;
-using System.Text;
-using System.Security.Cryptography.X509Certificates;
 using PeterO.Cbor;
 using System.Security.Cryptography;
 
@@ -27,19 +20,12 @@ namespace Bit.Core.Identity
     public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly IU2fRepository _u2fRepository;
         private readonly IFido2 _fido2;
-        private readonly IUserService _userService;
         private readonly GlobalSettings _globalSettings;
 
-        public WebAuthnTokenProvider(
-            IServiceProvider serviceProvider,
-            IU2fRepository u2fRepository,
-            IFido2 fido2,
-            GlobalSettings globalSettings)
+        public WebAuthnTokenProvider(IServiceProvider serviceProvider, IFido2 fido2, GlobalSettings globalSettings)
         {
             _serviceProvider = serviceProvider;
-            _u2fRepository = u2fRepository;
             _fido2 = fido2;
             _globalSettings = globalSettings;
         }
@@ -52,8 +38,9 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-            if (!HasProperMetaData(provider))
+            var webAuthnProvider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+            var u2fProvider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
+            if (!HasProperMetaData(webAuthnProvider) && !HasProperMetaData(u2fProvider))
             {
                 return false;
             }
@@ -74,37 +61,29 @@ namespace Bit.Core.Identity
             var existingCredentials = keys.Select(key => key.Item2.Descriptor);
 
             // Old u2f tokens
-            var u2fProvider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            var u2fKeys = LoadU2fKeys(u2fProvider);
-            var existingU2fCredentials = u2fKeys.Select(key => new PublicKeyCredentialDescriptor{
-                Id = key.Item2.KeyHandleBytes,
-                Type = PublicKeyCredentialType.PublicKey
-            });
+            var existingU2fCredentials = LoadU2fKeys(user.GetTwoFactorProvider(TwoFactorProviderType.U2f))
+                .Select(key => new PublicKeyCredentialDescriptor
+                {
+                    Id = key.Item2.KeyHandleBytes,
+                    Type = PublicKeyCredentialType.PublicKey
+                });
 
-            var allCredentials = existingCredentials.Union(existingU2fCredentials).ToList();
-
-            if (allCredentials.Count == 0)
+            var allowedCredentials = existingCredentials.Union(existingU2fCredentials).ToList();
+            if (allowedCredentials.Count == 0)
             {
                 return null;
             }
 
             var exts = new AuthenticationExtensionsClientInputs()
             {
-                SimpleTransactionAuthorization = "FIDO",
-                GenericTransactionAuthorization = new TxAuthGenericArg
-                {
-                    ContentType = "text/plain",
-                    Content = new byte[] { 0x46, 0x49, 0x44, 0x4F }
-                },
                 UserVerificationIndex = true,
                 UserVerificationMethod = true,
                 AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
             };
 
-            var options = _fido2.GetAssertionOptions(allCredentials, UserVerificationRequirement.Preferred, exts);
+            var options = _fido2.GetAssertionOptions(allowedCredentials, UserVerificationRequirement.Preferred, exts);
 
-            provider.MetaData.Remove("login");
-            provider.MetaData.Add("login", options);
+            provider.MetaData["login"] = options;
 
             var providers = user.GetTwoFactorProviders();
             providers.Remove(TwoFactorProviderType.WebAuthn);
@@ -129,11 +108,6 @@ namespace Bit.Core.Identity
             var u2fProvider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
             var u2fKeys = LoadU2fKeys(u2fProvider);
 
-            if (keys.Count == 0 && u2fKeys.Count == 0)
-            {
-                return false;
-            }
-
             if (!provider.MetaData.ContainsKey("login"))
             {
                 return false;
@@ -147,58 +121,55 @@ namespace Bit.Core.Identity
             var webAuthCred = keys.Find(k => k.Item2.Descriptor.Id.SequenceEqual(clientResponse.Id));
             var u2fCred = u2fKeys.Find(k => k.Item2.KeyHandleBytes.SequenceEqual(clientResponse.Id));
 
-            uint storedCounter;
-            byte[] key;
-            if (webAuthCred != null)
+            if (webAuthCred == null && u2fCred == null)
             {
-                storedCounter = webAuthCred.Item2.SignatureCounter;
-                key = webAuthCred.Item2.PublicKey;
-            }
-            else
-            {
-                storedCounter = u2fCred.Item2.Counter;
-                key = CreatePublicKeyFromU2fRegistrationData(u2fCred.Item2.KeyHandleBytes, u2fCred.Item2.PublicKeyBytes).EncodeToBytes();
+                return false;
             }
 
-            // 4. Create callback to check if userhandle owns the credentialId
+            var key = webAuthCred != null ? webAuthCred.Item2 : (TwoFactorProvider.BaseMetaData)u2fCred.Item2;
+
             IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
             {
                 return true;
             };
 
-            var test = new CredentialPublicKey(key);
+            var res = await _fido2.MakeAssertionAsync(clientResponse, options, key.GetPublicKey(), key.GetSignatureCounter(), callback);
 
-            // 5. Make the assertion
-            var res = await _fido2.MakeAssertionAsync(clientResponse, options, key, storedCounter, callback);
+            provider.MetaData.Remove("login");
 
-            return res.Status == "ok";
-        }
+            // Update SignatureCounter
+            var providers = user.GetTwoFactorProviders();
 
-        public static CBORObject CreatePublicKeyFromU2fRegistrationData(byte[] keyHandleData, byte[] publicKeyData)
-        {
-            var x = new byte[32];
-            var y = new byte[32];
-            Buffer.BlockCopy(publicKeyData, 1, x, 0, 32);
-            Buffer.BlockCopy(publicKeyData, 33, y, 0, 32);
-
-            var point = new ECPoint
+            if (webAuthCred != null)
             {
-                X = x,
-                Y = y,
-            };
+                webAuthCred.Item2.SignatureCounter = res.Counter;
+                providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
+            }
+            providers.Remove(TwoFactorProviderType.WebAuthn);
+            providers.Add(TwoFactorProviderType.WebAuthn, provider);
 
-            var coseKey = CBORObject.NewMap();
+            if (u2fCred != null)
+            {
+                u2fCred.Item2.Counter = res.Counter;
 
-            coseKey.Add(COSE.KeyCommonParameter.KeyType, COSE.KeyType.EC2);
-            coseKey.Add(COSE.KeyCommonParameter.Alg, -7);
+                providers[TwoFactorProviderType.U2f].MetaData[u2fCred.Item1] = u2fCred.Item2;
+                providers.Remove(TwoFactorProviderType.U2f);
+                providers.Add(TwoFactorProviderType.U2f, u2fProvider);
+                user.SetTwoFactorProviders(providers);
+                await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            }
 
-            coseKey.Add(COSE.KeyTypeParameter.Crv, COSE.EllipticCurve.P256);
+            user.SetTwoFactorProviders(providers);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            if (u2fCred != null)
+            {
+                await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
+            }
 
-            coseKey.Add(COSE.KeyTypeParameter.X, point.X);
-            coseKey.Add(COSE.KeyTypeParameter.Y, point.Y);
-
-            return coseKey;
+             return res.Status == "ok";
         }
+
+        
 
         private bool HasProperMetaData(TwoFactorProvider provider)
         {

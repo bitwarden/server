@@ -2,8 +2,10 @@
 using Fido2NetLib.Objects;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using PeterO.Cbor;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using U2F.Core.Utils;
 
 namespace Bit.Core.Models
@@ -13,7 +15,14 @@ namespace Bit.Core.Models
         public bool Enabled { get; set; }
         public Dictionary<string, object> MetaData { get; set; } = new Dictionary<string, object>();
 
-        public class U2fMetaData
+        public abstract class BaseMetaData
+        {
+            public abstract uint GetSignatureCounter();
+
+            public abstract byte[] GetPublicKey();
+        }
+
+        public class U2fMetaData: BaseMetaData
         {
             public U2fMetaData() { }
 
@@ -42,9 +51,45 @@ namespace Bit.Core.Models
                 string.IsNullOrWhiteSpace(Certificate) ? null : Utils.Base64StringToByteArray(Certificate);
             public uint Counter { get; set; }
             public bool Compromised { get; set; }
+
+            public override byte[] GetPublicKey()
+            {
+                return CreatePublicKeyFromU2fRegistrationData(KeyHandleBytes, PublicKeyBytes).EncodeToBytes();
+            }
+
+            public override uint GetSignatureCounter()
+            {
+                return Counter;
+            }
+
+            private static CBORObject CreatePublicKeyFromU2fRegistrationData(byte[] keyHandleData, byte[] publicKeyData)
+            {
+                var x = new byte[32];
+                var y = new byte[32];
+                Buffer.BlockCopy(publicKeyData, 1, x, 0, 32);
+                Buffer.BlockCopy(publicKeyData, 33, y, 0, 32);
+
+                var point = new ECPoint
+                {
+                    X = x,
+                    Y = y,
+                };
+
+                var coseKey = CBORObject.NewMap();
+
+                coseKey.Add(COSE.KeyCommonParameter.KeyType, COSE.KeyType.EC2);
+                coseKey.Add(COSE.KeyCommonParameter.Alg, -7);
+
+                coseKey.Add(COSE.KeyTypeParameter.Crv, COSE.EllipticCurve.P256);
+
+                coseKey.Add(COSE.KeyTypeParameter.X, point.X);
+                coseKey.Add(COSE.KeyTypeParameter.Y, point.Y);
+
+                return coseKey;
+            }
         }
 
-        public class WebAuthnData
+        public class WebAuthnData: BaseMetaData
         {
             public WebAuthnData() { }
 
@@ -73,10 +118,20 @@ namespace Bit.Core.Models
             public PublicKeyCredentialDescriptor Descriptor { get; internal set; }
             public byte[] PublicKey { get; internal set; }
             public byte[] UserHandle { get; internal set; }
-            public uint SignatureCounter { get; internal set; }
+            public uint SignatureCounter { get; set; }
             public string CredType { get; internal set; }
             public DateTime RegDate { get; internal set; }
             public Guid AaGuid { get; internal set; }
+
+            public override uint GetSignatureCounter()
+            {
+                return SignatureCounter;
+            }
+
+            public override byte[] GetPublicKey()
+            {
+                return PublicKey;
+            }
         }
 
         public static bool RequiresPremium(TwoFactorProviderType type)
