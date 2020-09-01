@@ -164,10 +164,10 @@ namespace Bit.Identity
                 app.UseMiddleware<CustomIpRateLimitMiddleware>();
             }
 
+            app.UseDeveloperExceptionPage();
+            app.UseCookiePolicy();
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
-                app.UseCookiePolicy();
             }
 
             // Add localization
