@@ -12,10 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
-using IdentityServer4.Stores;
-using Bit.Core.IdentityServer;
-using IdentityServer4.Services;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Bit.Identity.Utilities;
 using IdentityServer4.Extensions;
 
 namespace Bit.Identity
@@ -112,7 +109,7 @@ namespace Bit.Identity
                 });
 
             // IdentityServer
-            AddCustomIdentityServerServices(services, Environment, globalSettings);
+            services.AddCustomIdentityServerServices(Environment, globalSettings);
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
@@ -148,6 +145,12 @@ namespace Bit.Identity
 
             if (globalSettings.SelfHosted)
             {
+                var uri = new Uri(globalSettings.BaseServiceUri.Identity);
+                app.Use(async (ctx, next) =>
+                {
+                    ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
+                    await next();
+                });
                 app.UsePathBase("/identity");
                 app.UseForwardedHeaders(globalSettings);
             }
@@ -191,43 +194,6 @@ namespace Bit.Identity
 
             // Log startup
             logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
-        }
-
-        public static IIdentityServerBuilder AddCustomIdentityServerServices(IServiceCollection services,
-            IWebHostEnvironment env, GlobalSettings globalSettings)
-        {
-            services.AddSingleton<StaticClientStore>();
-            services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
-
-            var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
-            var identityServerBuilder = services
-                .AddIdentityServer(options =>
-                {
-                    options.Endpoints.EnableIntrospectionEndpoint = false;
-                    options.Endpoints.EnableEndSessionEndpoint = false;
-                    options.Endpoints.EnableUserInfoEndpoint = false;
-                    options.Endpoints.EnableCheckSessionEndpoint = false;
-                    options.Endpoints.EnableTokenRevocationEndpoint = false;
-                    options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
-                    options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
-                    if (env.IsDevelopment())
-                    {
-                        options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
-                    }
-                })
-                .AddInMemoryCaching()
-                .AddInMemoryApiResources(ApiResources.GetApiResources())
-                .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
-                .AddClientStoreCache<ClientStore>()
-                .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
-                .AddProfileService<ProfileService>()
-                .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-                .AddPersistedGrantStore<PersistedGrantStore>()
-                .AddClientStore<ClientStore>()
-                .AddIdentityServerCertificate(env, globalSettings);
-
-            services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
-            return identityServerBuilder;
         }
     }
 }

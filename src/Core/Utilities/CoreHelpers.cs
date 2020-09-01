@@ -646,5 +646,30 @@ namespace Bit.Core.Utilities
             }
             return null;
         }
+
+        public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
+            string publicServiceUri, string internalServiceUri)
+        {
+            var dictReplace = new Dictionary<string, object>();
+            foreach (var item in configDict)
+            {
+                var change = item.Key.EndsWith("_endpoint") || item.Key.EndsWith("_iframe");
+                if (change && item.Value is string val)
+                {
+                    var uri = new Uri(val);
+                    dictReplace.Add(item.Key, string.Concat(publicServiceUri, uri.LocalPath));
+                }
+                else if (item.Key == "jwks_uri" && item.Value is string jwksVal)
+                {
+                    var uri = new Uri(jwksVal);
+                    dictReplace.Add(item.Key, string.Concat(internalServiceUri, uri.LocalPath));
+                }
+            }
+            foreach (var replace in dictReplace)
+            {
+                configDict[replace.Key] = replace.Value;
+            }
+            return configDict;
+        }
     }
 }
