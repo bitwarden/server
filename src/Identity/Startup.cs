@@ -144,17 +144,6 @@ namespace Bit.Identity
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
-            if (globalSettings.SelfHosted)
-            {
-                var identityUri = new Uri(globalSettings.BaseServiceUri.Identity);
-                app.Use(async (ctx, next) =>
-                {
-                    ctx.SetIdentityServerOrigin($"{identityUri.Scheme}://{identityUri.Host}");
-                    ctx.SetIdentityServerBasePath(identityUri.LocalPath);
-                    await next();
-                });
-            }
-
             IdentityModelEventSource.ShowPII = true;
 
             app.UseSerilog(env, appLifetime, globalSettings);
