@@ -653,8 +653,7 @@ namespace Bit.Core.Utilities
             var dictReplace = new Dictionary<string, object>();
             foreach (var item in configDict)
             {
-                var change = item.Key.EndsWith("_endpoint") || item.Key.EndsWith("_iframe");
-                if (change && item.Value is string val)
+                if (item.Key == "authorization_endpoint" && item.Value is string val)
                 {
                     var uri = new Uri(val);
                     dictReplace.Add(item.Key, string.Concat(publicServiceUri, uri.LocalPath));
