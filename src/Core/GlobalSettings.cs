@@ -278,6 +278,7 @@ namespace Bit.Core
 
         public class SsoSettings
         {
+            public int CacheLifetimeInSeconds { get; set; } = 60;
             public virtual SamlSettings Saml { get; set; } = new SamlSettings();
 
             public class SamlSettings

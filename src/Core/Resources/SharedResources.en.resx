@@ -412,4 +412,22 @@
   <data name="PreValidationError" xml:space="preserve">
     <value>Error performing pre validation.</value>
   </data>
+  <data name="Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SsoError" xml:space="preserve">
+    <value>There was an unexpected error during single sign-on. Please close this page and try again.</value>
+  </data>
+  <data name="SsoErrorWithRedirect" xml:space="preserve">
+    <value>There was an unexpected error during single sign-on. Please go back to &lt;a href="{0}"&gt;{0}&lt;/a&gt; or close this page and try again.</value>
+  </data>
+  <data name="RequestId" xml:space="preserve">
+    <value>Request ID</value>
+  </data>
+  <data name="Redirecting">
+    <value>Redirecting</value>
+  </data>
+  <data name="RedirectingMessage">
+    <value>You are now being returned to the application. Once complete, you may close this tab.</value>
+  </data>
 </root>

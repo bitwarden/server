@@ -436,6 +436,10 @@ namespace Bit.Core.Utilities
                     SeatPrice = 6,
                     AdditionalStoragePricePerGb = 0.5M
                 },
+                new Plan
+                {
+                    Type = PlanType.Custom
+                },
             };
 
             #endregion
