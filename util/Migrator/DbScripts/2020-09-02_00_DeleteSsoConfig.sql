@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+﻿IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -45,3 +51,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
