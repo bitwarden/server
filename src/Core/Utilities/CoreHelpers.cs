@@ -598,7 +598,6 @@ namespace Bit.Core.Utilities
 
         public static bool IsCorsOriginAllowed(string origin, GlobalSettings globalSettings)
         {
-            return true;
             return
                 // Web vault
                 origin == globalSettings.BaseServiceUri.Vault ||

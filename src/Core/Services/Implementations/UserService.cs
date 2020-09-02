@@ -363,15 +363,6 @@ namespace Bit.Core.Services
 
         public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
         {
-            await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-
-            var fidoUser = new Fido2User
-            {
-                DisplayName = user.Name,
-                Name = user.Email,
-                Id = user.Id.ToByteArray(),
-            };
-
             var providers = user.GetTwoFactorProviders();
             if (providers == null)
             {
@@ -389,6 +380,13 @@ namespace Bit.Core.Services
             {
                 provider.MetaData = new Dictionary<string, object>();
             }
+
+            var fidoUser = new Fido2User
+            {
+                DisplayName = user.Name,
+                Name = user.Email,
+                Id = user.Id.ToByteArray(),
+            };
 
             var excludeCredentials = provider.MetaData
                 .Where(k => k.Key.StartsWith("Key"))
