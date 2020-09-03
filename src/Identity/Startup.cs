@@ -89,6 +89,7 @@ namespace Bit.Identity
                         globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
                     options.ClientId = "oidc-identity";
                     options.ClientSecret = globalSettings.OidcIdentityClientKey;
+                    options.ResponseMode = "form_post";
 
                     options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
                     options.ResponseType = "code";
