@@ -1,0 +1,141 @@
+@using Bit.Core.Enums
+@model PolicyEditModel
+@inject Bit.Core.Services.II18nService i18nService
+@{
+    ViewData["Title"] = i18nService.T("EditPolicy", i18nService.T(Model.NameKey));
+}
+
+<div class="page-header">
+    <h1>@i18nService.T("EditPolicy", i18nService.T(Model.NameKey))</h1>
+</div>
+<p>@i18nService.T(Model.DescriptionKey)</p>
+
+<form method="post" id="edit-form">
+    @if (Model.PolicyType == PolicyType.TwoFactorAuthentication)
+    {
+        <div class="callout callout-warning" role="alert">
+            <h3 class="callout-heading">
+                <i class="fa fa-warning" *ngIf="icon" aria-hidden="true"></i>
+                @i18nService.T("Warning")
+            </h3>
+            @i18nService.T("EditPolicyTwoStepLoginWarning")
+        </div>
+    }
+
+    <div class="form-group">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="Enabled">
+            <label class="form-check-label" asp-for="Enabled"></label>
+        </div>
+    </div>
+
+    @if (Model.PolicyType == PolicyType.MasterPassword)
+    {
+        <div class="row">
+            <div class="col-6 form-group">
+                <label asp-for="MasterPasswordDataModel.MinComplexity"></label>
+                <select asp-for="MasterPasswordDataModel.MinComplexity" asp-items="Model.Complexities"
+                        class="form-control"></select>
+            </div>
+            <div class="col-6 form-group">
+                <label asp-for="MasterPasswordDataModel.MinLength"></label>
+                <input class="form-control" type="number" asp-for="MasterPasswordDataModel.MinLength">
+                <span asp-validation-for="MasterPasswordDataModel.MinLength" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="MasterPasswordDataModel.RequireUpper">
+                <label class="form-check-label" asp-for="MasterPasswordDataModel.RequireUpper"></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="MasterPasswordDataModel.RequireLower">
+                <label class="form-check-label" asp-for="MasterPasswordDataModel.RequireLower"></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="MasterPasswordDataModel.RequireNumbers">
+                <label class="form-check-label" asp-for="MasterPasswordDataModel.RequireNumbers"></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="MasterPasswordDataModel.RequireSpecial">
+                <label class="form-check-label" asp-for="MasterPasswordDataModel.RequireSpecial"></label>
+            </div>
+        </div>
+    }
+
+    @if (Model.PolicyType == PolicyType.PasswordGenerator)
+    {
+        <div class="row">
+            <div class="col-6 form-group  mb-0">
+                <label asp-for="PasswordGeneratorDataModel.DefaultType"></label>
+                <select asp-for="PasswordGeneratorDataModel.DefaultType" asp-items="Model.DefaultTypes"
+                        class="form-control"></select>
+            </div>
+        </div>
+        <div class="config-section">
+            <h2>@i18nService.T("Password")</h2>
+            <div class="row">
+                <div class="col-6 form-group">
+                    <label asp-for="PasswordGeneratorDataModel.MinLength"></label>
+                    <input class="form-control" type="number" asp-for="PasswordGeneratorDataModel.MinLength">
+                    <span asp-validation-for="PasswordGeneratorDataModel.MinLength" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6 form-group">
+                    <label asp-for="PasswordGeneratorDataModel.MinNumbers"></label>
+                    <input class="form-control" type="number" asp-for="PasswordGeneratorDataModel.MinNumbers">
+                    <span asp-validation-for="PasswordGeneratorDataModel.MinNumbers" class="text-danger"></span>
+                </div>
+                <div class="col-6 form-group">
+                    <label asp-for="PasswordGeneratorDataModel.MinSpecial"></label>
+                    <input class="form-control" type="number" asp-for="PasswordGeneratorDataModel.MinSpecial">
+                    <span asp-validation-for="PasswordGeneratorDataModel.MinSpecial" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.UseUpper">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.UseUpper"></label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.UseLower">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.UseLower"></label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.UseNumbers">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.UseNumbers"></label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.UseSpecial">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.UseSpecial"></label>
+                </div>
+            </div>
+        </div>
+        <div class="config-section">
+            <h2>@i18nService.T("Passphrase")</h2>
+            <div class="row">
+                <div class="col-6 form-group">
+                    <label asp-for="PasswordGeneratorDataModel.MinNumberWords"></label>
+                    <input class="form-control" type="number" asp-for="PasswordGeneratorDataModel.MinNumberWords">
+                    <span asp-validation-for="PasswordGeneratorDataModel.MinNumberWords" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.Capitalize">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.Capitalize"></label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="PasswordGeneratorDataModel.IncludeNumber">
+                    <label class="form-check-label" asp-for="PasswordGeneratorDataModel.IncludeNumber"></label>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="d-flex">
+        <button type="submit" class="btn btn-primary">@i18nService.T("Save")</button>
+        <a class="btn btn-outline-secondary ml-1" asp-controller="Policies" asp-action="Index">@i18nService.T("Cancel")</a>
+    </div>
+</form>

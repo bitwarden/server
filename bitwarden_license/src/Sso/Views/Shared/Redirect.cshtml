@@ -1,0 +1,12 @@
+﻿@model RedirectViewModel
+@section Head
+{
+    <meta http-equiv="refresh" content="0;url=@Model.RedirectUrl" data-url="@Model.RedirectUrl">
+    <script>
+        window.onload = function () {
+            window.location.href = document.querySelector("meta[http-equiv=refresh]").getAttribute("data-url");
+        }
+    </script>
+}
+<h1>@i18nService.T("Redirecting")</h1>
+<p>@i18nService.T("RedirectingMessage")</p>

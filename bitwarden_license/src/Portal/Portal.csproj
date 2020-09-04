@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Version>1.33.1</Version>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Bit.Portal</RootNamespace>
+    <UserSecretsId>bitwarden-Portal</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
+  </ItemGroup>
+
+</Project>

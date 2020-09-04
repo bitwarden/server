@@ -1,0 +1,8 @@
+﻿@inject Bit.Core.Services.II18nService i18nService
+@{
+    ViewData["Title"] = i18nService.T("LoggedOut");
+}
+
+<p>
+    @i18nService.T("LoggedOutMessage")
+</p>
