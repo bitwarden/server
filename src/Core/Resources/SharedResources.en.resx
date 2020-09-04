@@ -433,4 +433,13 @@
   <data name="RedirectingMessage">
     <value>You are now being returned to the application. Once complete, you may close this tab.</value>
   </data>
+  <data name="IfIdpWantAuthnRequestsSigned">
+    <value>If IdP Wants Authn Requests Signed</value>
+  </data>
+  <data name="Always">
+    <value>Always</value>
+  </data>
+  <data name="Never">
+    <value>Never</value>
+  </data>
 </root>
