@@ -279,18 +279,6 @@ namespace Bit.Core
         public class SsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
-            public virtual SamlSettings Saml { get; set; } = new SamlSettings();
-
-            public class SamlSettings
-            {
-                public Saml2NameIdFormat NameIdFormat { get; set; } =
-                    Saml2NameIdFormat.Persistent;
-                public bool WantAssertionsSigned { get; set; }
-                public string OutboundSigningAlgorithm { get; set; }
-                public Saml2SigningBehavior SigningBehavior { get; set; } =
-                    Saml2SigningBehavior.IfIdpWantAuthnRequestsSigned;
-                public bool ValidateCertificates { get; set; }
-            }
         }
     }
 }
