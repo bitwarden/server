@@ -11,9 +11,4 @@
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\css\" />
-    <Folder Include="wwwroot\lib\" />
-  </ItemGroup>
-
 </Project>
