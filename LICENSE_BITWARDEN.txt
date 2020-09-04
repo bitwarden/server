@@ -12,7 +12,7 @@ AGREEMENT ON BEHALF OF SUCH ENTITY. IF YOU DO NOT HAVE SUCH AUTHORITY, DO NOT
 COPY OR USE THE COMMERCIAL MODULES IN ANY MANNER.
 
 This Agreement is entered into by and between Bitwarden and you, or the legal
-entity on behalf of whom you are acting (as applicable," You" or "Your").
+entity on behalf of whom you are acting (as applicable, "You" or "Your").
 
 1. DEFINITIONS
 
