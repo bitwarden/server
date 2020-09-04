@@ -731,8 +731,7 @@ namespace Bit.Api.Controllers
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var token = await _userService.GenerateSignInTokenAsync(user, TokenPurposes.LinkSso);
-            var bytes = Encoding.UTF8.GetBytes($"{user.Id},{token}");
-            var userIdentifier = Convert.ToBase64String(bytes);
+            var userIdentifier = $"{user.Id},{token}";
             return userIdentifier;
         }
     }

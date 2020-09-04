@@ -374,8 +374,6 @@ namespace Bit.Sso.Controllers
             }
             else
             {
-                var bytes = System.Convert.FromBase64String(userIdentifier);
-                userIdentifier = System.Text.Encoding.UTF8.GetString(bytes);
                 var split = userIdentifier.Split(",");
                 if (split.Length < 2)
                 {
