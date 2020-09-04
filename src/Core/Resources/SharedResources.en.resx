@@ -265,6 +265,9 @@
   <data name="SpEntityId" xml:space="preserve">
     <value>SP Entity ID</value>
   </data>
+  <data name="SpValidateCertificates" xml:space="preserve">
+    <value>Validate Certificates</value>
+  </data>
   <data name="NameIdFormat" xml:space="preserve">
     <value>Name ID Format</value>
   </data>
@@ -311,7 +314,7 @@
     <value>Public Key</value>
   </data>
   <data name="SpWantAssertionsSigned" xml:space="preserve">
-    <value>Sign Assertions</value>
+    <value>Want Assertions Signed</value>
   </data>
   <data name="SigningAlgorithm" xml:space="preserve">
     <value>Signing Algorithm</value>
@@ -429,5 +432,14 @@
   </data>
   <data name="RedirectingMessage">
     <value>You are now being returned to the application. Once complete, you may close this tab.</value>
+  </data>
+  <data name="IfIdpWantAuthnRequestsSigned">
+    <value>If IdP Wants Authn Requests Signed</value>
+  </data>
+  <data name="Always">
+    <value>Always</value>
+  </data>
+  <data name="Never">
+    <value>Never</value>
   </data>
 </root>
