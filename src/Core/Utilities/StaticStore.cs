@@ -297,7 +297,7 @@ namespace Bit.Core.Utilities
                     UpgradeSortOrder = 1,
                     DisplaySortOrder = 1,
 
-                    StripePlanId = "personal-org-annually",
+                    StripePlanId = "2020-personal-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 40,
                     AdditionalStoragePricePerGb = 4
