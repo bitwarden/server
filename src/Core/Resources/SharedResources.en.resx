@@ -442,4 +442,7 @@
   <data name="Never">
     <value>Never</value>
   </data>
+  <data name="WelcomeToBusinessPortal">
+    <value>Welcome to the Bitwarden Business Portal</value>
+  </data>
 </root>
