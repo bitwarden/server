@@ -1,4 +1,4 @@
-## Bitwarden and Open Source
+# Bitwarden and Open Source
 
 The source code for all Bitwarden software products is hosted on GitHub and we welcome everyone to review, audit, and contribute to the Bitwarden codebase.
 
@@ -6,7 +6,7 @@ We believe that making our source code open and available is a defining feature 
 
 As an open solution, Bitwarden publishes the source code for various modules under different licenses.  We're providing this License Statement and FAQ document as an overview of our licensing philosophy, the specifics of module licensing, and to answer common questions regarding our licenses.
 
-## Bitwarden Software Licensing
+# Bitwarden Software Licensing
 
 We have two tiers of licensing for our software. The core products are offered under one of the GPL open source licenses: GPL 3 and  A-GPL 3. A select number of features, primarily those designed for use by larger organizations rather than individuals and families, are licensed under a "Source Available" commercial license [here](https://github.com/bitwarden/server/blob/master/LICENSE_BITWARDEN.txt).
 
@@ -18,7 +18,7 @@ Our current software products have the following licenses:
 
 *Business Portal and the SSO integration:* Code for certain new modules that are designed and developed for use by larger organizations and enterprise environments is released under the Bitwarden License, a "source available" license. The Bitwarden License provides users access to product source code for non-production purposes such as development and testing, but requires a paid subscription for production use of the product, and environments supporting production. At this time, the new Business Portal and the SSO integration are the only Bitwarden modules to which this license applies. 
 
-## Frequently Asked Questions
+# Frequently Asked Questions
 
 ***How can I contribute to Bitwarden open source projects?***
 
