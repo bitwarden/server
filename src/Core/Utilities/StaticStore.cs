@@ -154,7 +154,7 @@ namespace Bit.Core.Utilities
                     NameLocalizationKey = "planNameTeams",
                     DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
 
                     HasAdditionalSeatsOption = true,
@@ -182,7 +182,7 @@ namespace Bit.Core.Utilities
                     NameLocalizationKey = "planNameTeams",
                     DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
 
                     HasAdditionalSeatsOption = true,
