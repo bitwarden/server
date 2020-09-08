@@ -335,7 +335,7 @@ namespace Bit.Core.Business.Sso
             {
                 EntityId = spEntityId,
                 ModulePath = config.BuildSaml2ModulePath(),
-                NameIdPolicy = new Saml2NameIdPolicy(true, GetNameIdFormat(config.SpNameIdFormat)),
+                NameIdPolicy = new Saml2NameIdPolicy(null, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
                 ValidateCertificates = config.SpValidateCertificates,
