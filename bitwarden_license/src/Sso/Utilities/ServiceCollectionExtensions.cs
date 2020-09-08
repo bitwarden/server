@@ -46,10 +46,7 @@ namespace Bit.Sso.Utilities
         public static IIdentityServerBuilder AddSsoIdentityServerServices(this IServiceCollection services,
             IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            if (globalSettings.SelfHosted)
-            {
-                services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
-            }
+            services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
 
             var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalSso);
             var identityServerBuilder = services

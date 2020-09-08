@@ -16,10 +16,7 @@ namespace Bit.Identity.Utilities
         public static IIdentityServerBuilder AddCustomIdentityServerServices(this IServiceCollection services,
             IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            if (globalSettings.SelfHosted)
-            {
-                services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
-            }
+            services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
 
             services.AddSingleton<StaticClientStore>();
             services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
