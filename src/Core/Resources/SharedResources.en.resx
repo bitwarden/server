@@ -265,6 +265,9 @@
   <data name="SpEntityId" xml:space="preserve">
     <value>SP Entity ID</value>
   </data>
+  <data name="SpAcsUrl" xml:space="preserve">
+    <value>Assertion Consumer Service (ACS) URL</value>
+  </data>
   <data name="SpValidateCertificates" xml:space="preserve">
     <value>Validate Certificates</value>
   </data>

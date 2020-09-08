@@ -53,6 +53,11 @@ namespace Bit.Core.Models.Data
             return BuildSsoUrl(_saml2ModulePath, ssoUri);
         }
 
+        public string BuildSaml2AcsUrl(string ssoUri = null)
+        {
+            return string.Concat(BuildSaml2ModulePath(ssoUri), "/Acs");
+        }
+
         private string BuildSsoUrl(string relativePath, string ssoUri)
         {
             if (string.IsNullOrWhiteSpace(ssoUri) ||
