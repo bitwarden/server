@@ -115,6 +115,12 @@
             </div>
             <div class="row">
                 <div class="col-6 form-group">
+                    <label asp-for="Data.SpAcsUrl">@i18nService.T("SpAcsUrl")</label>
+                    <input asp-for="Data.SpAcsUrl" class="form-control" readonly>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6 form-group">
                     <label asp-for="Data.SpNameIdFormat">@i18nService.T("NameIdFormat")</label>
                     <select asp-for="Data.SpNameIdFormat" asp-items="Model.SpNameIdFormats"
                             class="form-control"></select>

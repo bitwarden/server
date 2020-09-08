@@ -24,6 +24,7 @@ namespace Bit.Portal.Models
             MetadataAddress = configurationData.MetadataAddress;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
             SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso);
             IdpEntityId = configurationData.IdpEntityId;
             IdpBindingType = configurationData.IdpBindingType;
             IdpSingleSignOnServiceUrl = configurationData.IdpSingleSignOnServiceUrl;
@@ -64,6 +65,8 @@ namespace Bit.Portal.Models
         // SAML2 SP
         [Display(Name = "SpEntityId")]
         public string SpEntityId { get; set; }
+        [Display(Name = "SpAcsUrl")]
+        public string SpAcsUrl { get; set; }
         [Display(Name = "NameIdFormat")]
         public Saml2NameIdFormat SpNameIdFormat { get; set; }
         [Display(Name = "OutboundSigningAlgorithm")]
