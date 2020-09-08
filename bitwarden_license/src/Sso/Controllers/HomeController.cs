@@ -6,20 +6,16 @@ using System.Threading.Tasks;
 using Bit.Sso.Models;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Sso.Controllers
 {
     public class HomeController : Controller
     {
         private readonly IIdentityServerInteractionService _interaction;
-        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(IIdentityServerInteractionService interaction,
-            ILogger<HomeController> logger)
+        public HomeController(IIdentityServerInteractionService interaction)
         {
             _interaction = interaction;
-            _logger = logger;
         }
 
         [HttpGet("~/alive")]
@@ -49,10 +45,6 @@ namespace Bit.Sso.Controllers
                 vm.RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
                 var exceptionHandlerPathFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
                 var exception = exceptionHandlerPathFeature?.Error;
-                if (exception != null)
-                {
-                    _logger.LogError(exception, "Unhandled Exception in SSO Service");
-                }
                 if (exception is InvalidOperationException opEx && opEx.Message.Contains("schemes are: "))
                 {
                     // Messages coming from aspnetcore with a message
