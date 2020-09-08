@@ -331,11 +331,16 @@ namespace Bit.Core.Business.Sso
 
             var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
                 config.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+            bool? allowCreate = null;
+            if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
+            {
+                allowCreate = true;
+            }
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
                 ModulePath = config.BuildSaml2ModulePath(),
-                NameIdPolicy = new Saml2NameIdPolicy(true, GetNameIdFormat(config.SpNameIdFormat)),
+                NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
                 ValidateCertificates = config.SpValidateCertificates,
