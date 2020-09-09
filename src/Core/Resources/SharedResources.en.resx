@@ -276,15 +276,19 @@
   </data>
   <data name="NotConfigured" xml:space="preserve">
     <value>Not Configured</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="Unspecified" xml:space="preserve">
     <value>Unspecified</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="EmailAddress" xml:space="preserve">
     <value>Email Address</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="X509SubjectName" xml:space="preserve">
     <value>X.509 Subject Name</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="WindowsDomainQualifiedName" xml:space="preserve">
     <value>Windows Domain Qualified Name</value>
@@ -297,9 +301,11 @@
   </data>
   <data name="Persistent" xml:space="preserve">
     <value>Persistent</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="Transient" xml:space="preserve">
     <value>Transient</value>
+    <comment>A SAML Name ID format</comment>
   </data>
   <data name="PrivateKey" xml:space="preserve">
     <value>Private Key</value>
@@ -447,5 +453,38 @@
   </data>
   <data name="WelcomeToBusinessPortal">
     <value>Welcome to the Bitwarden Business Portal</value>
+  </data>
+  <data name="IdpX509PublicCertValidationError" xml:space="preserve">
+    <value>The IdP public certificate provided is invalid: {0}</value>
+  </data>
+  <data name="IdpX509PublicCertInvalidFormatValidationError" xml:space="preserve">
+    <value>The IdP public certificate provided is not a valid Base64 encoded string, contains illegal characters or whitespace, or is incomplete.</value>
+  </data>
+  <data name="IdpX509PublicCertCryptographicExceptionValidationError" xml:space="preserve">
+    <value>The IdP public certificate provided does not appear to be a valid certificate, please ensure this is a valid, Base64 encoded PEM or CER format public certificate valid for signing: {0}</value>
+  </data>
+  <data name="CopyCallbackPath">
+    <value>Copy the OIDC callback path to your clipboard</value>
+  </data>
+  <data name="CopySignedOutCallbackPath">
+    <value>Copy the OIDC signed out callback path to your clipboard</value>
+  </data>
+  <data name="CopySpEntityId">
+    <value>Copy the SP Entity Id to your clipboard</value>
+  </data>
+  <data name="CopySpAcsUrl">
+    <value>Copy the Assertion Consumer Service (ACS) URL to your clipboard</value>
+  </data>
+  <data name="HttpRedirect">
+    <value>Redirect</value>
+    <comment>A SAML binding type, Redirect</comment>
+  </data>
+  <data name="HttpPost">
+    <value>HTTP POST</value>
+    <comment>A SAML binding type, HTTP POST</comment>
+  </data>
+  <data name="Artifact">
+    <value>Artifact</value>
+    <comment>A SAML binding type, Artifact</comment>
   </data>
 </root>
