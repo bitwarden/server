@@ -150,6 +150,12 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
+            var plan = StaticStore.Plans.FirstOrDefault(plan => plan.Type == model.PlanType);
+            if (plan == null || plan.LegacyYear != null)
+            {
+                throw new Exception("Invalid plan selected.");
+            }
+
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
