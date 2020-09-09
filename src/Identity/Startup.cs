@@ -144,7 +144,7 @@ namespace Bit.Identity
 
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if (globalSettings.SelfHosted)
+            if (!env.IsDevelopment())
             {
                 var uri = new Uri(globalSettings.BaseServiceUri.Identity);
                 app.Use(async (ctx, next) =>
@@ -152,6 +152,10 @@ namespace Bit.Identity
                     ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
                     await next();
                 });
+            }
+
+            if (globalSettings.SelfHosted)
+            {
                 app.UsePathBase("/identity");
                 app.UseForwardedHeaders(globalSettings);
             }
