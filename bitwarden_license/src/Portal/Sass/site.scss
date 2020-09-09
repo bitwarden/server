@@ -224,3 +224,8 @@ input, select, textarea {
 .alert.validation-summary-errors > ul {
     margin-bottom: 0;
 }
+
+.input-validation-error {
+    border: solid 1px $danger;
+    border-color: $danger;
+}

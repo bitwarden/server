@@ -25,6 +25,16 @@
             $('#Data_ConfigType').change(function () {
                 toggleVisibility();
             });
+
+            $('.copy-button').on('click', function () {
+                const $control = $(this).closest('.form-group').find('input[type="text"], textarea');
+                if ($control.length > 0) {
+                    const elem = $control[0];
+                    elem.select();
+                    elem.setSelectionRange(0, $control.val().length);
+                    document.execCommand('copy');
+                }
+            });
         });
     </script>
 }
@@ -42,7 +52,7 @@
     </div>
 
     <div class="row">
-        <div class="col-6 form-group">
+        <div class="col-7 form-group">
             <label asp-for="Data.ConfigType"></label>
             <select asp-for="Data.ConfigType" asp-items="Model.ConfigTypes" class="form-control"></select>
         </div>
@@ -53,47 +63,64 @@
         <div class="config-section">
             <h2>@i18nService.T("OpenIdConnectConfig")</h2>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.CallbackPath">@i18nService.T("CallbackPath")</label>
-                    <input asp-for="Data.CallbackPath" class="form-control" readonly>
+                    <div class="input-group">
+                        <input asp-for="Data.CallbackPath" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary copy-button"
+                                    aria-label="@i18nService.T("CopyCallbackPath")" title="@i18nService.T("CopyCallbackPath")"
+                                    tabindex="-1">
+                                <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SignedOutCallbackPath">@i18nService.T("SignedOutCallbackPath")</label>
-                    <input asp-for="Data.SignedOutCallbackPath" class="form-control" readonly>
+                    <div class="input-group">
+                        <input asp-for="Data.SignedOutCallbackPath" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary copy-button"
+                                    aria-label="@i18nService.T("CopySignedOutCallbackPath")" title="@i18nService.T("CopySignedOutCallbackPath")"
+                                    tabindex="-1">
+                                <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.Authority">@i18nService.T("Authority")</label>
                     <input asp-for="Data.Authority" class="form-control">
                     <span asp-validation-for="Data.Authority" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.ClientId">@i18nService.T("ClientId")</label>
                     <input asp-for="Data.ClientId" class="form-control">
                     <span asp-validation-for="Data.ClientId" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.ClientSecret">@i18nService.T("ClientSecret")</label>
                     <input asp-for="Data.ClientSecret" class="form-control">
                     <span asp-validation-for="Data.ClientSecret" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.MetadataAddress">@i18nService.T("MetadataAddress")</label>
                     <input asp-for="Data.MetadataAddress" class="form-control">
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <div class="form-check">
                         <input asp-for="Data.GetClaimsFromUserInfoEndpoint" type="checkbox" class="form-check-input">
                         <label asp-for="Data.GetClaimsFromUserInfoEndpoint" class="form-check-label"></label>
@@ -108,33 +135,53 @@
         <div class="config-section">
             <h2>@i18nService.T("SamlSpConfig")</h2>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpEntityId">@i18nService.T("SpEntityId")</label>
-                    <input asp-for="Data.SpEntityId" class="form-control" readonly>
+                    <div class="input-group">
+                        <input asp-for="Data.SpEntityId" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary copy-button"
+                                    aria-label="@i18nService.T("CopySpEntityId")" title="@i18nService.T("CopySpEntityId")"
+                                    tabindex="-1">
+                                <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpAcsUrl">@i18nService.T("SpAcsUrl")</label>
-                    <input asp-for="Data.SpAcsUrl" class="form-control" readonly>
+                    <div class="input-group">
+                        <input asp-for="Data.SpAcsUrl" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary copy-button"
+                                    aria-label="@i18nService.T("CopySpAcsUrl")" title="@i18nService.T("CopySpAcsUrl")"
+                                    tabindex="-1">
+                                <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-1">
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpNameIdFormat">@i18nService.T("NameIdFormat")</label>
                     <select asp-for="Data.SpNameIdFormat" asp-items="Model.SpNameIdFormats"
                             class="form-control"></select>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpOutboundSigningAlgorithm">@i18nService.T("OutboundSigningAlgorithm")</label>
                     <select asp-for="Data.SpOutboundSigningAlgorithm" asp-items="Model.SigningAlgorithms"
                             class="form-control"></select>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpSigningBehavior">@i18nService.T("SigningBehavior")</label>
                     <select asp-for="Data.SpSigningBehavior" asp-items="Model.SigningBehaviors"
                             class="form-control"></select>
@@ -159,46 +206,47 @@
             <h2>@i18nService.T("SamlIdpConfig")</h2>
 
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpEntityId">@i18nService.T("EntityId")</label>
                     <input asp-for="Data.IdpEntityId" class="form-control">
                     <span asp-validation-for="Data.IdpEntityId" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpBindingType"></label>
                     <select asp-for="Data.IdpBindingType" asp-items="Model.BindingTypes" class="form-control"></select>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpSingleSignOnServiceUrl">@i18nService.T("SingleSignOnServiceUrl")</label>
                     <input asp-for="Data.IdpSingleSignOnServiceUrl" class="form-control">
                     <span asp-validation-for="Data.IdpSingleSignOnServiceUrl" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpSingleLogoutServiceUrl">@i18nService.T("SingleLogoutServiceUrl")</label>
                     <input asp-for="Data.IdpSingleLogoutServiceUrl" class="form-control">
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpArtifactResolutionServiceUrl"></label>
                     <input asp-for="Data.IdpArtifactResolutionServiceUrl" class="form-control">
                     <span asp-validation-for="Data.IdpArtifactResolutionServiceUrl" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpX509PublicCert">@i18nService.T("X509PublicCert")</label>
-                    <textarea asp-for="Data.IdpX509PublicCert" class="form-control"></textarea>
+                    <textarea asp-for="Data.IdpX509PublicCert" class="form-control form-control-sm text-monospace" rows="6"></textarea>
+                    <span asp-validation-for="Data.IdpX509PublicCert" class="text-danger"></span>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 form-group">
+                <div class="col-7 form-group">
                     <label asp-for="Data.IdpOutboundSigningAlgorithm"></label>
                     <select asp-for="Data.IdpOutboundSigningAlgorithm" asp-items="Model.SigningAlgorithms"
                             class="form-control"></select>

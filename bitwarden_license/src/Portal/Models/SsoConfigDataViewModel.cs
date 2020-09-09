@@ -6,6 +6,10 @@ using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using U2F.Core.Utils;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 
 namespace Bit.Portal.Models
 {
@@ -144,6 +148,35 @@ namespace Bit.Portal.Models
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                         new[] { nameof(model.IdpSingleSignOnServiceUrl) });
                 }
+                if (!string.IsNullOrWhiteSpace(model.IdpX509PublicCert))
+                {
+                    // Validate the certificate is in a valid format
+                    ValidationResult failedResult = null;
+                    try
+                    {
+                        var certData = StripPemCertificateElements(model.IdpX509PublicCert).Base64StringToByteArray();
+                        new X509Certificate2(certData);
+                    }
+                    catch (FormatException)
+                    {
+                        failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertInvalidFormatValidationError"),
+                            new[] { nameof(model.IdpX509PublicCert) });
+                    }
+                    catch (CryptographicException cryptoEx)
+                    {
+                        failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertCryptographicExceptionValidationError", cryptoEx.Message),
+                            new[] { nameof(model.IdpX509PublicCert) });
+                    }
+                    catch (Exception ex)
+                    {
+                        failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertValidationError", ex.Message),
+                            new[] { nameof(model.IdpX509PublicCert) });
+                    }
+                    if (failedResult != null)
+                    {
+                        yield return failedResult;
+                    }
+                }
             }
         }
 
@@ -162,7 +195,7 @@ namespace Bit.Portal.Models
                 IdpSingleSignOnServiceUrl = IdpSingleSignOnServiceUrl,
                 IdpSingleLogoutServiceUrl = IdpSingleLogoutServiceUrl,
                 IdpArtifactResolutionServiceUrl = IdpArtifactResolutionServiceUrl,
-                IdpX509PublicCert = IdpX509PublicCert,
+                IdpX509PublicCert = StripPemCertificateElements(IdpX509PublicCert),
                 IdpOutboundSigningAlgorithm = IdpOutboundSigningAlgorithm,
                 IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse,
                 IdpDisableOutboundLogoutRequests = IdpDisableOutboundLogoutRequests,
@@ -173,6 +206,14 @@ namespace Bit.Portal.Models
                 SpWantAssertionsSigned = SpWantAssertionsSigned,
                 SpValidateCertificates = SpValidateCertificates,
             };
+        }
+
+        private string StripPemCertificateElements(string certificateText)
+        {
+            return Regex.Replace(certificateText,
+                @"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
+                string.Empty,
+                RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
     }
 }
