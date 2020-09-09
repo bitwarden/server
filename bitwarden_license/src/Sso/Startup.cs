@@ -80,7 +80,10 @@ namespace Bit.Sso
             GlobalSettings globalSettings,
             ILogger<Startup> logger)
         {
-            IdentityModelEventSource.ShowPII = true;
+            if (env.IsDevelopment() || globalSettings.SelfHosted)
+            {
+                IdentityModelEventSource.ShowPII = true;
+            }
 
             app.UseSerilog(env, appLifetime, globalSettings);
 
@@ -100,6 +103,10 @@ namespace Bit.Sso
             {
                 app.UseDeveloperExceptionPage();
                 app.UseCookiePolicy();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Error");
             }
 
             app.UseCoreLocalization();
