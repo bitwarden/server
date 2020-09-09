@@ -210,6 +210,10 @@ namespace Bit.Portal.Models
 
         private string StripPemCertificateElements(string certificateText)
         {
+            if (string.IsNullOrWhiteSpace(certificateText))
+            {
+                return null;
+            }
             return Regex.Replace(certificateText,
                 @"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
                 string.Empty,
