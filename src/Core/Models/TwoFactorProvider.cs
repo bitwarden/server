@@ -71,7 +71,7 @@ namespace Bit.Core.Models
                 return coseKey;
             }
 
-            public WebAuthnData ToWebAuthnKey()
+            public WebAuthnData ToWebAuthnData()
             {
                 return new WebAuthnData
                 {

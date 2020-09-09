@@ -47,7 +47,7 @@ namespace Bit.Migrator.DbScripts
                     }
 
                     var u2fKeys = LoadKeys(u2fProvider);
-                    var webAuthnKeys = u2fKeys.Select(key => (key.Item1, key.Item2.ToWebAuthnKey()));
+                    var webAuthnKeys = u2fKeys.Select(key => (key.Item1, key.Item2.ToWebAuthnData()));
 
                     var webAuthnProvider = new TwoFactorProvider
                     {

@@ -74,8 +74,7 @@ namespace Bit.Core.Identity
             provider.MetaData["login"] = options;
 
             var providers = user.GetTwoFactorProviders();
-            providers.Remove(TwoFactorProviderType.WebAuthn);
-            providers.Add(TwoFactorProviderType.WebAuthn, provider);
+            providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
             await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
 
