@@ -15,14 +15,7 @@ namespace Bit.Core.Models
         public bool Enabled { get; set; }
         public Dictionary<string, object> MetaData { get; set; } = new Dictionary<string, object>();
 
-        public abstract class BaseMetaData
-        {
-            public abstract uint GetSignatureCounter();
-
-            public abstract byte[] GetPublicKey();
-        }
-
-        public class U2fMetaData: BaseMetaData
+        public class U2fMetaData
         {
             public U2fMetaData() { }
 
@@ -52,16 +45,6 @@ namespace Bit.Core.Models
             public uint Counter { get; set; }
             public bool Compromised { get; set; }
 
-            public override byte[] GetPublicKey()
-            {
-                return CreatePublicKeyFromU2fRegistrationData(KeyHandleBytes, PublicKeyBytes).EncodeToBytes();
-            }
-
-            public override uint GetSignatureCounter()
-            {
-                return Counter;
-            }
-
             private static CBORObject CreatePublicKeyFromU2fRegistrationData(byte[] keyHandleData, byte[] publicKeyData)
             {
                 var x = new byte[32];
@@ -87,9 +70,25 @@ namespace Bit.Core.Models
 
                 return coseKey;
             }
+
+            public WebAuthnData ToWebAuthnKey()
+            {
+                return new WebAuthnData
+                {
+                    Name = Name,
+                    Descriptor = new PublicKeyCredentialDescriptor
+                    {
+                        Id = KeyHandleBytes,
+                        Type = PublicKeyCredentialType.PublicKey
+                    },
+                    PublicKey = CreatePublicKeyFromU2fRegistrationData(KeyHandleBytes, PublicKeyBytes).EncodeToBytes(),
+                    SignatureCounter = Counter,
+                    Migrated = true,
+                };
+            }
         }
 
-        public class WebAuthnData: BaseMetaData
+        public class WebAuthnData
         {
             public WebAuthnData() { }
 
@@ -111,6 +110,7 @@ namespace Bit.Core.Models
                 CredType = o.CredType;
                 RegDate = o.RegDate;
                 AaGuid = o.AaGuid;
+                Migrated = o.Migrated;
             }
 
             public string Name { get; set; }
@@ -122,16 +122,7 @@ namespace Bit.Core.Models
             public string CredType { get; internal set; }
             public DateTime RegDate { get; internal set; }
             public Guid AaGuid { get; internal set; }
-
-            public override uint GetSignatureCounter()
-            {
-                return SignatureCounter;
-            }
-
-            public override byte[] GetPublicKey()
-            {
-                return PublicKey;
-            }
+            public bool Migrated { get; internal set; }
         }
 
         public static bool RequiresPremium(TwoFactorProviderType type)

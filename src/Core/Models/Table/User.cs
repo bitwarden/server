@@ -95,12 +95,6 @@ namespace Bit.Core.Models.Table
                             TwoFactorProviders);
                 }
 
-                // Enable WebAuthn if user has U2f tokens.
-                if (!_twoFactorProviders.ContainsKey(TwoFactorProviderType.WebAuthn) && _twoFactorProviders.ContainsKey(TwoFactorProviderType.U2f))
-                {
-                    _twoFactorProviders.Add(TwoFactorProviderType.WebAuthn, new TwoFactorProvider { Enabled = true });
-                }
-
                 return _twoFactorProviders;
             }
             catch (JsonSerializationException)
