@@ -95,7 +95,6 @@ namespace Bit.Core.Models
             public WebAuthnData(dynamic o)
             {
                 Name = o.Name;
-                Options = o.Options;
                 try
                 {
                     Descriptor = o.Descriptor;
@@ -114,7 +113,6 @@ namespace Bit.Core.Models
             }
 
             public string Name { get; set; }
-            public string Options { get; set; }
             public PublicKeyCredentialDescriptor Descriptor { get; internal set; }
             public byte[] PublicKey { get; internal set; }
             public byte[] UserHandle { get; internal set; }

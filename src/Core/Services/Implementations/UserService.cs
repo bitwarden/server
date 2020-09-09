@@ -395,15 +395,9 @@ namespace Bit.Core.Services
 
             var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
 
-            provider.MetaData["pending"] = new TwoFactorProvider.WebAuthnData{ Options = options.ToJson() };
+            provider.MetaData["pending"] = options.ToJson();
 
-
-            if (providers.ContainsKey(TwoFactorProviderType.WebAuthn))
-            {
-                providers.Remove(TwoFactorProviderType.WebAuthn);
-            }
-
-            providers.Add(TwoFactorProviderType.WebAuthn, provider);
+            providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
 
@@ -420,30 +414,28 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var providerData = new TwoFactorProvider.WebAuthnData(provider.MetaData["pending"]);
-            var options = CredentialCreateOptions.FromJson(providerData.Options);
+            var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
             // Callback to ensure credential id is unique
             IsCredentialIdUniqueToUserAsyncDelegate callback = (IsCredentialIdUniqueToUserParams args) => Task.FromResult(true);
 
             var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
-            providerData.Options = "";
-            providerData.Name = name;
-            providerData.Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId);
-            providerData.PublicKey = success.Result.PublicKey;
-            providerData.UserHandle = success.Result.User.Id;
-            providerData.SignatureCounter = success.Result.Counter;
-            providerData.CredType = success.Result.CredType;
-            providerData.RegDate = DateTime.Now;
-            providerData.AaGuid = success.Result.Aaguid;
-
-            provider.MetaData[keyId] = providerData;
             provider.MetaData.Remove("pending");
+            provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
+            {
+                Name = name,
+                Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
+                PublicKey = success.Result.PublicKey,
+                UserHandle = success.Result.User.Id,
+                SignatureCounter = success.Result.Counter,
+                CredType = success.Result.CredType,
+                RegDate = DateTime.Now,
+                AaGuid = success.Result.Aaguid
+            };
 
             var providers = user.GetTwoFactorProviders();
-            providers.Remove(TwoFactorProviderType.WebAuthn);
-            providers.Add(TwoFactorProviderType.WebAuthn, provider);
+            providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
 
