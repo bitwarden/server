@@ -87,7 +87,7 @@ namespace Bit.Sso
 
             app.UseSerilog(env, appLifetime, globalSettings);
 
-            if (globalSettings.SelfHosted)
+            if (!env.IsDevelopment())
             {
                 var uri = new Uri(globalSettings.BaseServiceUri.Sso);
                 app.Use(async (ctx, next) =>
@@ -95,6 +95,10 @@ namespace Bit.Sso
                     ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
                     await next();
                 });
+            }
+
+            if (globalSettings.SelfHosted)
+            {
                 app.UsePathBase("/sso");
                 app.UseForwardedHeaders(globalSettings);
             }
