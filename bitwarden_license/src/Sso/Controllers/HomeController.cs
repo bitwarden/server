@@ -26,6 +26,13 @@ namespace Bit.Sso.Controllers
             return DateTime.UtcNow;
         }
 
+        [HttpGet("~/exception")]
+        [AllowAnonymous]
+        public DateTime GetException()
+        {
+            throw new Exception("this is a test exception");
+        }
+
         [Route("~/Error")]
         [Route("~/Home/Error")]
         [AllowAnonymous]
