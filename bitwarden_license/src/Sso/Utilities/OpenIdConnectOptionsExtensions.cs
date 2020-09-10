@@ -25,16 +25,6 @@ namespace Bit.Sso.Utilities
                 return true;
             }
 
-            // Determine if the Authority matches the Referrer (short-cut)
-            var referrer = context.Request.Headers["Referer"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(referrer) &&
-                Uri.TryCreate(options.Authority, UriKind.Absolute, out var authorityUri) &&
-                Uri.TryCreate(referrer, UriKind.Absolute, out var referrerUri) &&
-                (referrerUri.IsBaseOf(authorityUri) || authorityUri.IsBaseOf(referrerUri)))
-            {
-                return true;
-            }
-
             try
             {
                 // Parse out the message
