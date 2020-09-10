@@ -32,20 +32,6 @@ namespace Bit.Sso.Utilities
                 return true;
             }
 
-            // Determine if the Authority matches the Referrer (short-cut)
-            var referrer = context.Request.Headers["Referer"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(referrer) &&
-                Uri.TryCreate(referrer, UriKind.Absolute, out var referrerUri) &&
-                (referrerUri.IsBaseOf(idp.SingleSignOnServiceUrl) ||
-                idp.SingleSignOnServiceUrl.IsBaseOf(referrerUri) ||
-                referrerUri.IsBaseOf(idp.SingleLogoutServiceUrl) ||
-                idp.SingleLogoutServiceUrl.IsBaseOf(referrerUri) ||
-                referrerUri.IsBaseOf(idp.SingleLogoutServiceResponseUrl) ||
-                idp.SingleLogoutServiceResponseUrl.IsBaseOf(referrerUri)))
-            {
-                return true;
-            }
-
             // We need to pull out and parse the response or request SAML envelope
             XmlElement assertion = null;
             try
