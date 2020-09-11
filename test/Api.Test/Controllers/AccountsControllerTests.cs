@@ -1,6 +1,3 @@
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Bit.Api.Controllers;
 using Bit.Core;
 using Bit.Core.Enums;
@@ -12,21 +9,26 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers
 {
     public class AccountsControllerTests : IDisposable
     {
-        private readonly AccountsController _sut;
 
-        private readonly IUserService _userService;
-        private readonly IUserRepository _userRepository;
+        private readonly AccountsController _sut;
+        private readonly GlobalSettings _globalSettings;
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
-        private readonly GlobalSettings _globalSettings;
+        private readonly ISsoUserRepository _ssoUserRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IUserService _userService;
 
         public AccountsControllerTests()
         {
@@ -34,17 +36,20 @@ namespace Bit.Api.Test.Controllers
             _userRepository = Substitute.For<IUserRepository>();
             _cipherRepository = Substitute.For<ICipherRepository>();
             _folderRepository = Substitute.For<IFolderRepository>();
+            _organizationService = Substitute.For<IOrganizationService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
             _globalSettings = new GlobalSettings();
             _sut = new AccountsController(
-                _userService,
-                _userRepository,
+                _globalSettings,
                 _cipherRepository,
                 _folderRepository,
+                _organizationService,
                 _organizationUserRepository,
                 _paymentService,
-                _globalSettings
+                _ssoUserRepository,
+                _userRepository,
+                _userService
             );
         }
 

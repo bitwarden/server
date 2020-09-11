@@ -72,6 +72,13 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Delete SSO Users
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [UserId] = @Id
+
     -- Finally, delete the user
     DELETE
     FROM

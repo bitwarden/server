@@ -15,6 +15,7 @@ namespace Bit.Core.Models.Data
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UseApi{ get; set; }
+        public bool UseBusinessPortal => UsePolicies || UseSso;
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public int Seats { get; set; }
@@ -25,5 +26,6 @@ namespace Bit.Core.Models.Data
         public Enums.OrganizationUserType Type { get; set; }
         public bool Enabled { get; set; }
         public string SsoExternalId { get; set; }
+        public string Identifier { get; set; }
     }
 }

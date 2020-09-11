@@ -111,6 +111,7 @@ namespace Bit.Api
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
+            services.AddCoreLocalizationServices();
 
             // Fido2
             services.AddFido2(options =>
@@ -171,6 +172,9 @@ namespace Bit.Api
             {
                 app.UseForwardedHeaders(globalSettings);
             }
+
+            // Add localization
+            app.UseCoreLocalization();
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();

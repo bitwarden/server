@@ -558,7 +558,7 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key)
         {
             if (user == null)
             {
@@ -571,7 +571,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
-            var result = await UpdatePasswordHash(user, newMasterPassword);
+            var result = await UpdatePasswordHash(user, masterPassword);
             if (!result.Succeeded)
             {
                 return result;
@@ -964,7 +964,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null)
+        public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+            int? version = null)
         {
             if (user == null)
             {
@@ -1065,6 +1066,7 @@ namespace Bit.Core.Services
             return await CanAccessPremium(user);
         }
 
+        //TODO refactor this to use the below method and enum
         public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
         {
             var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
@@ -1072,6 +1074,14 @@ namespace Bit.Core.Services
             return token;
         }
 
+
+        public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
+        {
+            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
+                purpose);
+            return token;
+        }
+        
         private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
             bool validatePassword = true, bool refreshStamp = true)
         {

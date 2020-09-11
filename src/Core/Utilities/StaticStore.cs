@@ -30,7 +30,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Avon, new List<string> { "avon.com", "youravon.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Diapers, new List<string> { "diapers.com", "soap.com", "wag.com", "yoyo.com", "beautybar.com", "casa.com", "afterschool.com", "vine.com", "bookworm.com", "look.com", "vinemarket.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Contacts, new List<string> { "1800contacts.com", "800contacts.com" });
-            GlobalDomains.Add(GlobalEquivalentDomainsType.Amazon, new List<string> { "amazon.com", "amazon.ae", "amazon.ca", "amazon.co.uk", "amazon.com.au", "amazon.com.br", "amazon.com.mx", "amazon.com.tr", "amazon.de", "amazon.es", "amazon.fr", "amazon.in", "amazon.it", "amazon.nl", "amazon.sa", "amazon.sg", "amazon.co.nz" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Amazon, new List<string> { "amazon.com", "amazon.ae", "amazon.ca", "amazon.co.uk", "amazon.com.au", "amazon.com.br", "amazon.com.mx", "amazon.com.tr", "amazon.de", "amazon.es", "amazon.fr", "amazon.in", "amazon.it", "amazon.nl", "amazon.sa", "amazon.sg" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Cox, new List<string> { "cox.com", "cox.net", "coxbusiness.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Norton, new List<string> { "mynortonaccount.com", "norton.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Verizon, new List<string> { "verizon.com", "verizon.net" });
@@ -76,7 +76,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Belkin, new List<string> { "belkin.com", "seedonk.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Turbotax, new List<string> { "turbotax.com", "intuit.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Shopify, new List<string> { "shopify.com", "myshopify.com" });
-            GlobalDomains.Add(GlobalEquivalentDomainsType.Ebay, new List<string> { "ebay.com", "ebay.at", "ebay.be", "ebay.ca", "ebay.ch", "ebay.cn", "ebay.co.jp", "ebay.co.th", "ebay.co.uk", "ebay.com.au", "ebay.com.hk", "ebay.com.my", "ebay.com.sg", "ebay.com.tw", "ebay.de", "ebay.es", "ebay.fr", "ebay.ie", "ebay.it", "ebay.nl", "ebay.ph", "ebay.pl" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Ebay, new List<string> { "ebay.com", "ebay.at", "ebay.be", "ebay.ca", "ebay.ch", "ebay.cn", "ebay.co.jp", "ebay.co.th", "ebay.co.uk", "ebay.com.au", "ebay.com.hk", "ebay.com.my", "ebay.com.sg", "ebay.com.tw", "ebay.de", "ebay.es", "ebay.fr", "ebay.ie", "ebay.in", "ebay.it", "ebay.nl", "ebay.ph", "ebay.pl" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Techdata, new List<string> { "techdata.com", "techdata.ch" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Schwab, new List<string> { "schwab.com", "schwabplan.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Tesla, new List<string> { "tesla.com", "teslamotors.com" });
@@ -94,6 +94,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubiquiti, new List<string> { "ubnt.com", "ui.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Discord, new List<string> { "discordapp.com", "discord.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Netcup, new List<string> { "netcup.de", "netcup.eu", "customercontrolpanel.de" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Yandex, new List<string> { "yandex.com", "ya.ru", "yandex.az", "yandex.by", "yandex.co.il", "yandex.com.am", "yandex.com.ge", "yandex.com.tr", "yandex.ee", "yandex.fi", "yandex.fr", "yandex.kg", "yandex.kz", "yandex.lt", "yandex.lv", "yandex.md", "yandex.pl", "yandex.ru", "yandex.tj", "yandex.tm", "yandex.ua", "yandex.uz" });
             #endregion
 
             #region Plans
@@ -122,9 +123,9 @@ namespace Bit.Core.Utilities
                     IsAnnual = true,
                     NameLocalizationKey = "planNameFamilies",
                     DescriptionLocalizationKey = "planDescFamilies",
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
-                    MaxUsers = 6,
+                    MaxUsers = 5,
 
                     HasAdditionalStorageOption = true,
                     HasPremiumAccessOption = true,
@@ -153,7 +154,7 @@ namespace Bit.Core.Utilities
                     NameLocalizationKey = "planNameTeams",
                     DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
 
                     HasAdditionalSeatsOption = true,
@@ -181,7 +182,7 @@ namespace Bit.Core.Utilities
                     NameLocalizationKey = "planNameTeams",
                     DescriptionLocalizationKey = "planDescTeams",
                     CanBeUsedByBusiness = true,
-                    BaseSeats = 6,
+                    BaseSeats = 5,
                     BaseStorageGb = 1,
 
                     HasAdditionalSeatsOption = true,
@@ -286,6 +287,7 @@ namespace Bit.Core.Utilities
                     BaseStorageGb = 1,
                     MaxUsers = 6,
 
+                    HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
                     HasSelfHost = true,
@@ -295,7 +297,7 @@ namespace Bit.Core.Utilities
                     UpgradeSortOrder = 1,
                     DisplaySortOrder = 1,
 
-                    StripePlanId = "personal-org-annually",
+                    StripePlanId = "2020-families-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 40,
                     AdditionalStoragePricePerGb = 4
@@ -316,6 +318,11 @@ namespace Bit.Core.Utilities
                     HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
+                    Has2fa = true,
+                    HasApi = true,
+                    HasDirectory = true,
+                    HasEvents = true,
+                    HasGroups = true,
                     HasTotp = true,
                     UsersGetPremium = true,
 
@@ -342,6 +349,11 @@ namespace Bit.Core.Utilities
                     HasAdditionalStorageOption = true,
                     TrialPeriodDays = 7,
 
+                    Has2fa = true,
+                    HasApi = true,
+                    HasDirectory = true,
+                    HasEvents = true,
+                    HasGroups = true,
                     HasTotp = true,
                     UsersGetPremium = true,
 
@@ -423,6 +435,10 @@ namespace Bit.Core.Utilities
                     BasePrice = 0,
                     SeatPrice = 6,
                     AdditionalStoragePricePerGb = 0.5M
+                },
+                new Plan
+                {
+                    Type = PlanType.Custom
                 },
             };
 

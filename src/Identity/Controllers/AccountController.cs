@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -12,51 +9,112 @@ using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Bit.Identity.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly IIdentityServerInteractionService _interaction;
-        private readonly IUserRepository _userRepository;
-        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IClientStore _clientStore;
+        private readonly IIdentityServerInteractionService _interaction;
         private readonly ILogger<AccountController> _logger;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IHttpClientFactory _clientFactory;
 
         public AccountController(
-            IIdentityServerInteractionService interaction,
-            IUserRepository userRepository,
-            ISsoConfigRepository ssoConfigRepository,
             IClientStore clientStore,
-            ILogger<AccountController> logger)
+            IIdentityServerInteractionService interaction,
+            ILogger<AccountController> logger,
+            ISsoConfigRepository ssoConfigRepository,
+            IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
+            IHttpClientFactory clientFactory)
         {
-            _interaction = interaction;
-            _userRepository = userRepository;
-            _ssoConfigRepository = ssoConfigRepository;
             _clientStore = clientStore;
+            _interaction = interaction;
             _logger = logger;
+            _ssoConfigRepository = ssoConfigRepository;
+            _userRepository = userRepository;
+            _organizationRepository = organizationRepository;
+            _clientFactory = clientFactory;
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> PreValidate(string domainHint)
+        {
+            if (string.IsNullOrWhiteSpace(domainHint))
+            {
+                Response.StatusCode = 400;
+                return Json(new ErrorResponseModel("No domain hint was provided"));
+            }
+            try
+            {
+                // Calls Sso Pre-Validate, assumes baseUri set
+                var requestCultureFeature = Request.HttpContext.Features.Get<IRequestCultureFeature>();
+                var culture = requestCultureFeature.RequestCulture.Culture.Name;
+                var requestPath = $"/Account/PreValidate?domainHint={domainHint}&culture={culture}";
+                var httpClient = _clientFactory.CreateClient("InternalSso");
+                using var responseMessage = await httpClient.GetAsync(requestPath);
+                if (responseMessage.IsSuccessStatusCode)
+                {
+                    // All is good!
+                    return new EmptyResult();
+                }
+                Response.StatusCode = (int)responseMessage.StatusCode;
+                var responseJson = await responseMessage.Content.ReadAsStringAsync();
+                return Content(responseJson, "application/json");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error pre-validating against SSO service");
+                Response.StatusCode = 500;
+                return Json(new ErrorResponseModel("Error pre-validating SSO authentication")
+                {
+                    ExceptionMessage = ex.Message,
+                    ExceptionStackTrace = ex.StackTrace,
+                    InnerExceptionMessage = ex.InnerException?.Message,
+                });
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> Login(string returnUrl)
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-            if (context.Parameters.AllKeys.Contains("domain_hint") &&
-                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+
+            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? 
+                context.Parameters["domain_hint"] : null;
+
+            if (string.IsNullOrWhiteSpace(domainHint))
             {
-                return RedirectToAction(nameof(ExternalChallenge),
-                    new { organizationIdentifier = context.Parameters["domain_hint"], returnUrl = returnUrl });
+                throw new Exception("No domain_hint provided");
             }
-            else
+
+            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? 
+                context.Parameters["user_identifier"] : null;
+
+            return RedirectToAction(nameof(ExternalChallenge), new
             {
-                throw new Exception("No domain_hint provided.");
-            }
+                organizationIdentifier = domainHint,
+                returnUrl,
+                userIdentifier
+            });
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl)
+        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl,
+            string userIdentifier)
         {
             if (string.IsNullOrWhiteSpace(organizationIdentifier))
             {
@@ -81,6 +139,11 @@ namespace Bit.Identity.Controllers
                     { "scheme", scheme },
                 },
             };
+
+            if (!string.IsNullOrWhiteSpace(userIdentifier))
+            {
+                props.Items.Add("user_identifier", userIdentifier);
+            }
 
             return Challenge(props, scheme);
         }

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src - AGPL", "src - AGPL", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}"
 EndProject
@@ -18,6 +18,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.github\workflows\build.yml = .github\workflows\build.yml
 		dotnet-tools.json = dotnet-tools.json
 		LICENSE.txt = LICENSE.txt
+		LICENSE_AGPL.txt = LICENSE_AGPL.txt
+		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
 		NuGet.Config = NuGet.Config
 		README.md = README.md
 		SECURITY.md = SECURITY.md
@@ -52,6 +54,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Migrator", "util\Migrator\Migrator.csproj", "{54DED792-A022-417E-9804-21FCC9C7C610}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Api.Test", "test\Api.Test\Api.Test.csproj", "{860DE301-0B3E-4717-9C21-A9B4C3C2B121}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src - Bitwarden License", "src - Bitwarden License", "{4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Portal", "bitwarden_license\src\Portal\Portal.csproj", "{BA852F18-852F-4154-973B-77D577B8CA04}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sso", "bitwarden_license\src\Sso\Sso.csproj", "{4866AF64-6640-4C65-A662-A31E02FF9064}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -121,6 +129,14 @@ Global
 		{860DE301-0B3E-4717-9C21-A9B4C3C2B121}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{860DE301-0B3E-4717-9C21-A9B4C3C2B121}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{860DE301-0B3E-4717-9C21-A9B4C3C2B121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA852F18-852F-4154-973B-77D577B8CA04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA852F18-852F-4154-973B-77D577B8CA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA852F18-852F-4154-973B-77D577B8CA04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA852F18-852F-4154-973B-77D577B8CA04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4866AF64-6640-4C65-A662-A31E02FF9064}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4866AF64-6640-4C65-A662-A31E02FF9064}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4866AF64-6640-4C65-A662-A31E02FF9064}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4866AF64-6640-4C65-A662-A31E02FF9064}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -141,6 +157,8 @@ Global
 		{79BB453F-D0D8-4DDF-9809-A405C56692BD} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{54DED792-A022-417E-9804-21FCC9C7C610} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{860DE301-0B3E-4717-9C21-A9B4C3C2B121} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
+		{BA852F18-852F-4154-973B-77D577B8CA04} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
+		{4866AF64-6640-4C65-A662-A31E02FF9064} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

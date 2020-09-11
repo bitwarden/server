@@ -26,6 +26,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<Organization>(
                     "[dbo].[Organization_ReadByIdentifier]",
+                    new { Identifier = identifier },
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();

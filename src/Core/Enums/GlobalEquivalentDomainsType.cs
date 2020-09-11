@@ -85,5 +85,6 @@
         Ubiquiti = 80,
         Discord = 81,
         Netcup = 82,
+        Yandex = 83,
     }
 }

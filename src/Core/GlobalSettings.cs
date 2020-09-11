@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Enums;
 
 namespace Bit.Core
 {
@@ -42,6 +43,7 @@ namespace Bit.Core
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
+        public virtual SsoSettings Sso { get; set; } = new SsoSettings();
 
         public class BaseServiceUriSettings
         {
@@ -272,6 +274,11 @@ namespace Bit.Core
         {
             public string Password { get; set; }
             public bool AppInReview { get; set; }
+        }
+
+        public class SsoSettings
+        {
+            public int CacheLifetimeInSeconds { get; set; } = 60;
         }
     }
 }

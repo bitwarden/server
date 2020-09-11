@@ -33,13 +33,14 @@ namespace Bit.Core.Test.Services
             var paymentService = Substitute.For<IPaymentService>();
             var policyRepo = Substitute.For<IPolicyRepository>();
             var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
+            var ssoUserRepo = Substitute.For<ISsoUserRepository>();
             var referenceEventService = Substitute.For<IReferenceEventService>();
             var globalSettings = Substitute.For<GlobalSettings>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
                 groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
                 licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
-                ssoConfigRepo, referenceEventService, globalSettings);
+                ssoConfigRepo, ssoUserRepo, referenceEventService, globalSettings);
 
             var id = Guid.NewGuid();
             var userId = Guid.NewGuid();
@@ -93,13 +94,14 @@ namespace Bit.Core.Test.Services
             var paymentService = Substitute.For<IPaymentService>();
             var policyRepo = Substitute.For<IPolicyRepository>();
             var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
+            var ssoUserRepo = Substitute.For<ISsoUserRepository>();
             var referenceEventService = Substitute.For<IReferenceEventService>();
             var globalSettings = Substitute.For<GlobalSettings>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
                 groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
                 licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
-                ssoConfigRepo, referenceEventService, globalSettings);
+                ssoConfigRepo, ssoUserRepo, referenceEventService, globalSettings);
 
             var id = Guid.NewGuid();
             var userId = Guid.NewGuid();

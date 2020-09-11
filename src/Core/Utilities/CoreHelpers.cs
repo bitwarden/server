@@ -188,13 +188,13 @@ namespace Bit.Core.Utilities
         {
             var blobClient = cloudStorageAccount.CreateCloudBlobClient();
             var containerRef = blobClient.GetContainerReference(container);
-            if (await containerRef.ExistsAsync())
+            if (await containerRef.ExistsAsync().ConfigureAwait(false))
             {
                 var blobRef = containerRef.GetBlobReference(file);
-                if (await blobRef.ExistsAsync())
+                if (await blobRef.ExistsAsync().ConfigureAwait(false))
                 {
                     var blobBytes = new byte[blobRef.Properties.Length];
-                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0);
+                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0).ConfigureAwait(false);
                     return new X509Certificate2(blobBytes, password);
                 }
             }
@@ -442,6 +442,21 @@ namespace Bit.Core.Utilities
                 return val.ToString().ToLowerInvariant();
             }
 
+            if (val is PlanType planType)
+            {
+                return planType switch
+                {
+                    PlanType.Free => "Free",
+                    PlanType.FamiliesAnnually2019 => "FamiliesAnnually",
+                    PlanType.TeamsMonthly2019 => "TeamsMonthly",
+                    PlanType.TeamsAnnually2019 => "TeamsAnnually",
+                    PlanType.EnterpriseMonthly2019 => "EnterpriseMonthly",
+                    PlanType.EnterpriseAnnually2019 => "EnterpriseAnnually",
+                    PlanType.Custom => "Custom",
+                    _ => ((byte)planType).ToString(),
+                };
+            }
+
             return val.ToString();
         }
 
@@ -605,6 +620,55 @@ namespace Bit.Core.Utilities
                 origin == "file://" ||
                 // Product website
                 (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
+        }
+
+        public static X509Certificate2 GetIdentityServerCertificate(GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted &&
+                SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
+                && File.Exists("identity.pfx"))
+            {
+                return GetCertificate("identity.pfx",
+                    globalSettings.IdentityServer.CertificatePassword);
+            }
+            else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+            {
+                return GetCertificate(
+                    globalSettings.IdentityServer.CertificateThumbprint);
+            }
+            else if (!globalSettings.SelfHosted &&
+                SettingHasValue(globalSettings.Storage?.ConnectionString) &&
+                SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            {
+                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
+                return GetBlobCertificateAsync(storageAccount, "certificates",
+                    "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+            }
+            return null;
+        }
+
+        public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
+            string publicServiceUri, string internalServiceUri)
+        {
+            var dictReplace = new Dictionary<string, object>();
+            foreach (var item in configDict)
+            {
+                if (item.Key == "authorization_endpoint" && item.Value is string val)
+                {
+                    var uri = new Uri(val);
+                    dictReplace.Add(item.Key, string.Concat(publicServiceUri, uri.LocalPath));
+                }
+                else if ((item.Key == "jwks_uri" || item.Key.EndsWith("_endpoint")) && item.Value is string val2)
+                {
+                    var uri = new Uri(val2);
+                    dictReplace.Add(item.Key, string.Concat(internalServiceUri, uri.LocalPath));
+                }
+            }
+            foreach (var replace in dictReplace)
+            {
+                configDict[replace.Key] = replace.Value;
+            }
+            return configDict;
         }
     }
 }

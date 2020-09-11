@@ -35,6 +35,7 @@ namespace Bit.Core.Services
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
 
@@ -56,6 +57,7 @@ namespace Bit.Core.Services
             IPaymentService paymentService,
             IPolicyRepository policyRepository,
             ISsoConfigRepository ssoConfigRepository,
+            ISsoUserRepository ssoUserRepository,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings)
         {
@@ -76,6 +78,7 @@ namespace Bit.Core.Services
             _paymentService = paymentService;
             _policyRepository = policyRepository;
             _ssoConfigRepository = ssoConfigRepository;
+            _ssoUserRepository = ssoUserRepository;
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
         }
@@ -1298,7 +1301,8 @@ namespace Bit.Core.Services
             return await GenerateLicenseAsync(organization, installationId);
         }
 
-        public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId)
+        public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
+            int? version = null)
         {
             if (organization == null)
             {
@@ -1312,7 +1316,7 @@ namespace Bit.Core.Services
             }
 
             var subInfo = await _paymentService.GetSubscriptionAsync(organization);
-            return new OrganizationLicense(organization, subInfo, installationId, _licensingService);
+            return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
         }
 
         public async Task ImportAsync(Guid organizationId,
@@ -1494,6 +1498,19 @@ namespace Bit.Core.Services
             organization.ApiKey = CoreHelpers.SecureRandomString(30);
             organization.RevisionDate = DateTime.UtcNow;
             await ReplaceAndUpdateCache(organization);
+        }
+
+        public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
+        {
+            await _ssoUserRepository.DeleteAsync(userId, organizationId);
+            if (organizationId.HasValue)
+            {
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId.Value, userId);
+                if (organizationUser != null)
+                {
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UnlinkedSso);
+                }
+            }
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
