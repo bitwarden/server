@@ -224,21 +224,14 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class TwoFactorWebAuthnRequestModel : TwoFactorU2fDeleteRequestModel
+    public class TwoFactorWebAuthnRequestModel : TwoFactorWebAuthnDeleteRequestModel
     {
         [Required]
         public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
         public string Name { get; set; }
     }
 
-    public class TwoFactorU2fRequestModel : TwoFactorU2fDeleteRequestModel
-    {
-        [Required]
-        public string DeviceResponse { get; set; }
-        public string Name { get; set; }
-    }
-
-    public class TwoFactorU2fDeleteRequestModel : TwoFactorRequestModel, IValidatableObject
+    public class TwoFactorWebAuthnDeleteRequestModel : TwoFactorRequestModel, IValidatableObject
     {
         [Required]
         public int? Id { get; set; }

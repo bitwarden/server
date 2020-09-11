@@ -27,9 +27,6 @@ namespace Bit.Core.Services
         Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
         Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
         Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
-        Task<U2fRegistration> StartU2fRegistrationAsync(User user);
-        Task<bool> DeleteU2fKeyAsync(User user, int id);
-        Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse);
         Task SendEmailVerificationAsync(User user);
         Task<IdentityResult> ConfirmEmailAsync(User user, string token);
         Task InitiateEmailChangeAsync(User user, string newEmail);
