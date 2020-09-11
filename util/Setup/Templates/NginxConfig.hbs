@@ -92,6 +92,10 @@ server {
     proxy_pass http://web:5000/u2f-connector.html;
   }
 
+  location = /webauthn-connector.html {
+    proxy_pass http://web:5000/webauthn-connector.html;
+  }
+
   location /attachments/ {
     proxy_pass http://attachments:5000/;
   }

@@ -5,7 +5,6 @@ using System.Linq;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using DbUp.Engine;
-using Microsoft.VisualBasic.CompilerServices;
 using Newtonsoft.Json;
 
 namespace Bit.Migrator.DbScripts
