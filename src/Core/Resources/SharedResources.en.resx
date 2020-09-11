@@ -487,4 +487,43 @@
     <value>Artifact</value>
     <comment>A SAML binding type, Artifact</comment>
   </data>
+  <data name="NoDomainHintProvided" xml:space="preserve">
+    <value>No domain_hint provided.</value>
+  </data>
+  <data name="InvalidReturnUrl" xml:space="preserve">
+    <value>invalid return URL</value>
+  </data>
+  <data name="ExternalAuthenticationError" xml:space="preserve">
+    <value>External authentication error</value>
+  </data>
+  <data name="UnknownUserId" xml:space="preserve">
+    <value>Unknown userid</value>
+  </data>
+  <data name="OrganizationOrSsoConfigNotFound" xml:space="preserve">
+    <value>Organization not found or SSO configuration not enabled</value>
+  </data>
+  <data name="SSOProviderIsNotAnOrgId" xml:space="preserve">
+    <value>SSO provider, {0} is not an organization id</value>
+  </data>
+  <data name="CannotFindEmailClaim" xml:space="preserve">
+    <value>Cannot find email claim</value>
+  </data>
+  <data name="InvalidUserIdentifier" xml:space="preserve">
+    <value>Invalid user identifier.</value>
+  </data>
+  <data name="UserIdAndTokenMismatch" xml:space="preserve">
+    <value>Supplied userId and token did not match.</value>
+  </data>
+  <data name="CouldNotFindOrganization" xml:space="preserve">
+    <value>Could not find organization for '{0}'</value>
+  </data>
+  <data name="NoSeatsAvailable" xml:space="preserve">
+    <value>No seats available for organization, '{0}'</value>
+  </data>
+  <data name="UserAlreadyInvited" xml:space="preserve">
+    <value>User, '{0}', has already been invited to this organization, '{1}'</value>
+  </data>
+  <data name="NoDomainHintProvided" xml:space="preserve">
+    <value>User already exists, please link account to SSO after logging in</value>
+  </data>
 </root>

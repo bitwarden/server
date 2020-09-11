@@ -164,7 +164,7 @@ namespace Bit.Sso.Controllers
             }
             else
             {
-                throw new Exception("No domain_hint provided.");
+                throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
         }
 
@@ -178,7 +178,7 @@ namespace Bit.Sso.Controllers
 
             if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
             {
-                throw new Exception("invalid return URL");
+                throw new Exception(_i18nService.T("InvalidReturnUrl"));
             }
 
             var props = new AuthenticationProperties
@@ -205,7 +205,7 @@ namespace Bit.Sso.Controllers
                 IdentityServerConstants.ExternalCookieAuthenticationScheme);
             if (result?.Succeeded != true)
             {
-                throw new Exception("External authentication error");
+                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
             }
 
             // Debugging
@@ -325,7 +325,7 @@ namespace Bit.Sso.Controllers
                               externalUser.FindFirst("uid") ??
                               externalUser.FindFirst("upn") ??
                               externalUser.FindFirst("eppn") ??
-                              throw new Exception("Unknown userid");
+                              throw new Exception(_i18nService.T("UnknownUserId"));
 
             // Remove the user id claim so we don't include it as an extra claim if/when we provision the user
             var claims = externalUser.Claims.ToList();
@@ -339,7 +339,7 @@ namespace Bit.Sso.Controllers
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
             if (ssoConfig == null || !ssoConfig.Enabled)
             {
-                throw new Exception("Organization not found or SSO configuration not enabled");
+                throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
             }
             var user = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
 
@@ -360,7 +360,7 @@ namespace Bit.Sso.Controllers
             else
             {
                 // TODO: support non-org (server-wide) SSO in the future?
-                throw new Exception($"SSO provider, '{provider}' is not an organization id");
+                throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
             }
 
             User existingUser = null;
@@ -368,7 +368,7 @@ namespace Bit.Sso.Controllers
             {
                 if (string.IsNullOrWhiteSpace(email))
                 {
-                    throw new Exception("Cannot find email claim");
+                    throw new Exception(_i18nService.T("CannotFindEmailClaim"));
                 }
                 existingUser = await _userRepository.GetByEmailAsync(email);
             }
@@ -377,7 +377,7 @@ namespace Bit.Sso.Controllers
                 var split = userIdentifier.Split(",");
                 if (split.Length < 2)
                 {
-                    throw new Exception("Invalid user identifier.");
+                    throw new Exception(_i18nService.T("InvalidUserIdentifier"));
                 }
                 var userId = split[0];
                 var token = split[1];
@@ -395,7 +395,7 @@ namespace Bit.Sso.Controllers
                     }
                     else
                     {
-                        throw new Exception("Supplied userId and token did not match.");
+                        throw new Exception(_i18nService.T("UserIdAndTokenMismatch"));
                     }
                 }
             }
@@ -406,7 +406,7 @@ namespace Bit.Sso.Controllers
                 var organization = await _organizationRepository.GetByIdAsync(orgId.Value);
                 if (organization == null)
                 {
-                    throw new Exception($"Could not find organization for '{orgId}'");
+                    throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
                 }
 
                 if (existingUser != null)
@@ -425,7 +425,7 @@ namespace Bit.Sso.Controllers
                         if (availableSeats < 1)
                         {
                             // No seats are available
-                            throw new Exception($"No seats available for organization, '{organization.Name}'");
+                            throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
                         }
                     }
 
@@ -434,7 +434,7 @@ namespace Bit.Sso.Controllers
                         orgId.Value, email, false);
                     if (existingOrgUserCount > 0)
                     {
-                        throw new Exception($"User, '{email}', has already been invited to this organization, '{organization.Name}'");
+                        throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
                     }
                 }
             }
@@ -445,7 +445,7 @@ namespace Bit.Sso.Controllers
                 if (existingUser != null)
                 {
                     // TODO: send an email inviting this user to link SSO to their account?
-                    throw new Exception("User already exists, please link account to SSO after logging in");
+                    throw new Exception(_i18nService.T("NoDomainHintProvided"));
                 }
 
                 // Create user record
