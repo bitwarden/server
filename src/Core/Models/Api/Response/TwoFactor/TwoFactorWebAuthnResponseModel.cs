@@ -34,10 +34,12 @@ namespace Bit.Core.Models.Api
             {
                 Name = data.Name;
                 Id = Convert.ToInt32(id.Replace("Key", string.Empty));
+                Migrated = data.Migrated;
             }
 
             public string Name { get; set; }
             public int Id { get; set; }
+            public bool Migrated { get; set; }
         }
     }
 }
