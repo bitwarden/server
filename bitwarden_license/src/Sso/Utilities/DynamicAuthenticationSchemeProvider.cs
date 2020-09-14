@@ -75,7 +75,7 @@ namespace Bit.Core.Business.Sso
             _ssoConfigRepository = ssoConfigRepository;
             _logger = logger;
             _globalSettings = globalSettings;
-            _schemeCacheLifetime = TimeSpan.FromSeconds(_globalSettings.Sso?.CacheLifetimeInSeconds ?? 60);
+            _schemeCacheLifetime = TimeSpan.FromSeconds(_globalSettings.Sso?.CacheLifetimeInSeconds ?? 30);
             _samlEnvironment = samlEnvironment;
             _cachedSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
