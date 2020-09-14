@@ -592,7 +592,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
-            var result = await UpdatePasswordHash(user, masterPassword);
+            var result = await UpdatePasswordHash(user, masterPassword, true, false);
             if (!result.Succeeded)
             {
                 return result;
