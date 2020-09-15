@@ -351,6 +351,10 @@ namespace Bit.Sso.Controllers
         {
             var name = GetName(claims);
             var email = GetEmailAddress(claims);
+            if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
+            {
+                email = providerUserId;
+            }
 
             Guid? orgId = null;
             if (Guid.TryParse(provider, out var oId))
