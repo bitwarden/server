@@ -112,6 +112,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<Services.IEventService, EventService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
+            services.AddSingleton<ISsoConfigService, SsoConfigService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)

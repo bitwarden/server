@@ -11,17 +11,20 @@ namespace Bit.Portal.Controllers
     [Authorize]
     public class SsoController : Controller
     {
+        private readonly ISsoConfigService _ssoConfigService;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly EnterprisePortalCurrentContext _enterprisePortalCurrentContext;
         private readonly II18nService _i18nService;
         private readonly GlobalSettings _globalSettings;
 
         public SsoController(
+            ISsoConfigService ssoConfigService,
             ISsoConfigRepository ssoConfigRepository,
             EnterprisePortalCurrentContext enterprisePortalCurrentContext,
             II18nService i18nService,
             GlobalSettings globalSettings)
         {
+            _ssoConfigService = ssoConfigService;
             _ssoConfigRepository = ssoConfigRepository;
             _enterprisePortalCurrentContext = enterprisePortalCurrentContext;
             _i18nService = i18nService;
@@ -76,13 +79,12 @@ namespace Bit.Portal.Controllers
             {
                 ssoConfig = model.ToSsoConfig();
                 ssoConfig.OrganizationId = orgId.GetValueOrDefault();
-                await _ssoConfigRepository.CreateAsync(ssoConfig);
             }
             else
             {
                 ssoConfig = model.ToSsoConfig(ssoConfig);
-                await _ssoConfigRepository.ReplaceAsync(ssoConfig);
             }
+            await _ssoConfigService.SaveAsync(ssoConfig);
 
             return View(model);
         }

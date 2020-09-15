@@ -39,6 +39,7 @@ namespace Bit.Api.Test.Controllers
             _organizationService = Substitute.For<IOrganizationService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
+            _ssoUserRepository = Substitute.For<ISsoUserRepository>();
             _globalSettings = new GlobalSettings();
             _sut = new AccountsController(
                 _globalSettings,
