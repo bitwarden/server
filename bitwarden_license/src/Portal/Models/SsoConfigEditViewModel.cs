@@ -55,9 +55,9 @@ namespace Bit.Portal.Models
         public List<SelectListItem> SigningBehaviors { get; set; }
         public List<SelectListItem> SigningAlgorithms { get; set; }
 
-        public SsoConfig ToSsoConfig()
+        public SsoConfig ToSsoConfig(Guid organizationId)
         {
-            return ToSsoConfig(new SsoConfig());
+            return ToSsoConfig(new SsoConfig { OrganizationId = organizationId });
         }
 
         public SsoConfig ToSsoConfig(SsoConfig existingConfig)
