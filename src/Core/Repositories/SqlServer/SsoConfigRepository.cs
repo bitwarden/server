@@ -57,5 +57,17 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public override async Task CreateAsync(SsoConfig obj)
+        {
+            obj.CreationDate = obj.RevisionDate = DateTime.UtcNow;
+            await base.CreateAsync(obj);
+        }
+
+        public override async Task ReplaceAsync(SsoConfig obj)
+        {
+            obj.RevisionDate = DateTime.UtcNow;
+            await base.ReplaceAsync(obj);
+        }
     }
 }
