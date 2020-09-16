@@ -449,7 +449,7 @@ namespace Bit.Sso.Controllers
                 if (existingUser != null)
                 {
                     // TODO: send an email inviting this user to link SSO to their account?
-                    throw new Exception(_i18nService.T("NoDomainHintProvided"));
+                    throw new Exception(_i18nService.T("UserAlreadyExistsUseLinkViaSso"));
                 }
 
                 // Create user record
