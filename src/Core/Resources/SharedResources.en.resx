@@ -523,7 +523,7 @@
   <data name="UserAlreadyInvited" xml:space="preserve">
     <value>User, '{0}', has already been invited to this organization, '{1}'</value>
   </data>
-  <data name="NoDomainHintProvided" xml:space="preserve">
+  <data name="UserAlreadyExistsUseLinkViaSso" xml:space="preserve">
     <value>User already exists, please link account to SSO after logging in</value>
   </data>
 </root>
