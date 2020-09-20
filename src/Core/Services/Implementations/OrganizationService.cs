@@ -1068,20 +1068,46 @@ namespace Bit.Core.Services
             IUserService userService)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            
             if (orgUser == null)
             {
                 throw new BadRequestException("User invalid.");
             }
-
-            if (orgUser.Status != OrganizationUserStatusType.Invited)
+            
+            if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
-                throw new BadRequestException("Already accepted.");
+                throw new BadRequestException("Invalid token.");
             }
-
+            
             if (string.IsNullOrWhiteSpace(orgUser.Email) ||
                 !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadRequestException("User email does not match invite.");
+            }
+            
+            return await AcceptUserAsync(orgUser, user, userService);
+        }
+        
+        public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
+        {
+            var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+            var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
+            
+            if (orgUser == null)
+            {
+                throw new BadRequestException("User invalid.");
+            }
+            
+            return await AcceptUserAsync(orgUser, user, userService);
+        }
+        
+        private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user, 
+            IUserService userService)
+        {
+            if (orgUser.Status != OrganizationUserStatusType.Invited)
+            {
+                throw new BadRequestException("Already accepted.");
             }
 
             if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
@@ -1097,19 +1123,14 @@ namespace Bit.Core.Services
                     }
                 }
             }
-
+            
             var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
                 orgUser.OrganizationId, user.Email, true);
             if (existingOrgUserCount > 0)
             {
                 throw new BadRequestException("You are already part of this organization.");
             }
-
-            if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
-            {
-                throw new BadRequestException("Invalid token.");
-            }
-
+            
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
                 var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
@@ -1119,14 +1140,14 @@ namespace Bit.Core.Services
                         "two-step login on your user account.");
                 }
             }
-
+            
             orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.UserId = user.Id;
             orgUser.Email = null;
+            
             await _organizationUserRepository.ReplaceAsync(orgUser);
-
+            
             // TODO: send notification emails to org admins and accepting user?
-
             return orgUser;
         }
 

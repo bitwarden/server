@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using IdentityServer4.Extensions;
 
 namespace Bit.Api.Controllers
 {
@@ -213,6 +214,13 @@ namespace Bit.Api.Controllers
             var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
+                if (!model.OrgIdentifier.IsNullOrEmpty())
+                {
+                    var acceptResult =
+                        await _organizationService.AcceptUserAsync(model.OrgIdentifier, model.ToUser(user),
+                            _userService);
+                }
+
                 return;
             }
 
