@@ -220,7 +220,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-webauthn")]
-        public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] TwoFactorRequestModel model)
+        public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
             var response = new TwoFactorWebAuthnResponseModel(user);
@@ -228,7 +228,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-webauthn-challenge")]
-        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] TwoFactorRequestModel model)
+        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
             var reg = await _userService.StartWebAuthnRegistrationAsync(user);
@@ -237,7 +237,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("webauthn")]
         [HttpPost("webauthn")]
-        public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+        public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody]TwoFactorWebAuthnRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
 
@@ -252,7 +252,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("webauthn")]
-        public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn([FromBody] TwoFactorWebAuthnDeleteRequestModel model)
+        public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn([FromBody]TwoFactorWebAuthnDeleteRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
             await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);

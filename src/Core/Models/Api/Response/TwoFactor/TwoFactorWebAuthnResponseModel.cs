@@ -4,7 +4,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using System.Collections.Generic;
 using System.Linq;
-using Fido2NetLib;
 
 namespace Bit.Core.Models.Api
 {
