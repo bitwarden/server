@@ -1085,6 +1085,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User email does not match invite.");
             }
             
+            var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
+                orgUser.OrganizationId, user.Email, true);
+            if (existingOrgUserCount > 0)
+            {
+                throw new BadRequestException("You are already part of this organization.");
+            }
+            
             return await AcceptUserAsync(orgUser, user, userService);
         }
         
@@ -1123,14 +1130,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            
-            var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-                orgUser.OrganizationId, user.Email, true);
-            if (existingOrgUserCount > 0)
-            {
-                throw new BadRequestException("You are already part of this organization.");
-            }
-            
+
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
                 var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
