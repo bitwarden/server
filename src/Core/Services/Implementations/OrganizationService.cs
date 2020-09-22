@@ -1072,7 +1072,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("User invalid.");
             }
-            
+
             if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
