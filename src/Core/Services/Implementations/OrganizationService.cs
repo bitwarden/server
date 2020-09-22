@@ -1093,7 +1093,7 @@ namespace Bit.Core.Services
 
             return await AcceptUserAsync(orgUser, user, userService);
         }
-        
+
         public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
         {
             var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
@@ -1111,7 +1111,7 @@ namespace Bit.Core.Services
 
             return await AcceptUserAsync(orgUser, user, userService);
         }
-        
+
         private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user, 
             IUserService userService)
         {
