@@ -1068,7 +1068,6 @@ namespace Bit.Core.Services
             IUserService userService)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            
             if (orgUser == null)
             {
                 throw new BadRequestException("User invalid.");
@@ -1098,12 +1097,16 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
         {
             var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+            if (org == null)
+            {
+                throw new BadRequestException("Organization invalid.");
+            }
+            
             var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
-            
             if (orgUser == null)
             {
-                throw new BadRequestException("User invalid.");
+                throw new BadRequestException("User not found within organization.");
             }
             
             return await AcceptUserAsync(orgUser, user, userService);
