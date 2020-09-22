@@ -1077,20 +1077,20 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Invalid token.");
             }
-            
+
             if (string.IsNullOrWhiteSpace(orgUser.Email) ||
                 !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadRequestException("User email does not match invite.");
             }
-            
+
             var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
                 orgUser.OrganizationId, user.Email, true);
             if (existingOrgUserCount > 0)
             {
                 throw new BadRequestException("You are already part of this organization.");
             }
-            
+
             return await AcceptUserAsync(orgUser, user, userService);
         }
         
@@ -1101,14 +1101,14 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Organization invalid.");
             }
-            
+
             var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
             if (orgUser == null)
             {
                 throw new BadRequestException("User not found within organization.");
             }
-            
+
             return await AcceptUserAsync(orgUser, user, userService);
         }
         
@@ -1143,13 +1143,13 @@ namespace Bit.Core.Services
                         "two-step login on your user account.");
                 }
             }
-            
+
             orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.UserId = user.Id;
             orgUser.Email = null;
-            
+
             await _organizationUserRepository.ReplaceAsync(orgUser);
-            
+
             // TODO: send notification emails to org admins and accepting user?
             return orgUser;
         }
