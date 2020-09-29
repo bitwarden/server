@@ -9,6 +9,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Sso;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Bit.Portal.Models
@@ -54,6 +55,7 @@ namespace Bit.Portal.Models
         public List<SelectListItem> BindingTypes { get; set; }
         public List<SelectListItem> SigningBehaviors { get; set; }
         public List<SelectListItem> SigningAlgorithms { get; set; }
+        public List<SelectListItem> RedirectBehaviors { get; set; }
 
         public SsoConfig ToSsoConfig(Guid organizationId)
         {
@@ -103,6 +105,13 @@ namespace Bit.Portal.Models
 
             SigningAlgorithms = SamlSigningAlgorithms.GetEnumerable().Select(a =>
                 new SelectListItem(a, a)).ToList();
+
+            RedirectBehaviors = Enum.GetNames(typeof(OpenIdConnectRedirectBehavior))
+                .Select(behavior => new SelectListItem
+                {
+                    Value = behavior,
+                    Text = i18nService.T(behavior),
+                }).ToList();
         }
     }
 }

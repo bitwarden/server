@@ -10,6 +10,7 @@ using U2F.Core.Utils;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Portal.Models
 {
@@ -26,6 +27,7 @@ namespace Bit.Portal.Models
             CallbackPath = configurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
             SignedOutCallbackPath = configurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
             MetadataAddress = configurationData.MetadataAddress;
+            RedirectBehavior = configurationData.RedirectBehavior;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
             SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
             SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso);
@@ -63,6 +65,8 @@ namespace Bit.Portal.Models
         public string SignedOutCallbackPath { get; set; }
         [Display(Name = "MetadataAddress")]
         public string MetadataAddress { get; set; }
+        [Display(Name = "RedirectBehavior")]
+        public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; }
         [Display(Name = "GetClaimsFromUserInfoEndpoint")]
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
 
@@ -190,6 +194,7 @@ namespace Bit.Portal.Models
                 ClientSecret = ClientSecret,
                 MetadataAddress = MetadataAddress,
                 GetClaimsFromUserInfoEndpoint = GetClaimsFromUserInfoEndpoint,
+                RedirectBehavior = RedirectBehavior,
                 IdpEntityId = IdpEntityId,
                 IdpBindingType = IdpBindingType,
                 IdpSingleSignOnServiceUrl = IdpSingleSignOnServiceUrl,
