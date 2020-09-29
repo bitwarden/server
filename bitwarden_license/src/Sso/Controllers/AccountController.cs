@@ -21,9 +21,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Models.Api;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
-using System.Net;
 
 namespace Bit.Sso.Controllers
 {

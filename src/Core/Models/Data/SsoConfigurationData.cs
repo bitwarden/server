@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Core.Models.Data
 {
@@ -17,6 +18,7 @@ namespace Bit.Core.Models.Data
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
         public string MetadataAddress { get; set; }
+        public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; } = OpenIdConnectRedirectBehavior.FormPost;
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
 
         // SAML2 IDP

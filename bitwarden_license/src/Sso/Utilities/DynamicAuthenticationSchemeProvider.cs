@@ -315,6 +315,7 @@ namespace Bit.Core.Business.Sso
                 SignedOutCallbackPath = config.BuildSignedOutCallbackPath(),
                 MetadataAddress = config.MetadataAddress,
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
+                AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
 
