@@ -340,7 +340,7 @@ namespace Bit.Core.Business.Sso
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
-                ModulePath = config.BuildSaml2ModulePath(),
+                ModulePath = config.BuildSaml2ModulePath(null, name),
                 NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
