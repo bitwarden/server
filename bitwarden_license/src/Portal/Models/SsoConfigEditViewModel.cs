@@ -41,7 +41,7 @@ namespace Bit.Portal.Models
                 configurationData = new SsoConfigurationData();
             }
 
-            Data = new SsoConfigDataViewModel(configurationData, globalSettings);
+            Data = new SsoConfigDataViewModel(configurationData, globalSettings, ssoConfig.OrganizationId);
             BuildLists(i18nService);
         }
 

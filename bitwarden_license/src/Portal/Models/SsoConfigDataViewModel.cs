@@ -18,7 +18,8 @@ namespace Bit.Portal.Models
     {
         public SsoConfigDataViewModel() { }
 
-        public SsoConfigDataViewModel(SsoConfigurationData configurationData, GlobalSettings globalSettings)
+        public SsoConfigDataViewModel(SsoConfigurationData configurationData, GlobalSettings globalSettings,
+            Guid organizationId)
         {
             ConfigType = configurationData.ConfigType;
             Authority = configurationData.Authority;
@@ -30,7 +31,7 @@ namespace Bit.Portal.Models
             RedirectBehavior = configurationData.RedirectBehavior;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
             SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
-            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso);
+            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
             IdpEntityId = configurationData.IdpEntityId;
             IdpBindingType = configurationData.IdpBindingType;
             IdpSingleSignOnServiceUrl = configurationData.IdpSingleSignOnServiceUrl;

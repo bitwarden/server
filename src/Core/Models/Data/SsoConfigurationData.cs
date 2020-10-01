@@ -50,14 +50,15 @@ namespace Bit.Core.Models.Data
             return BuildSsoUrl(_oidcSignedOutPath, ssoUri);
         }
 
-        public string BuildSaml2ModulePath(string ssoUri = null)
+        public string BuildSaml2ModulePath(string ssoUri = null, string scheme = null)
         {
-            return BuildSsoUrl(_saml2ModulePath, ssoUri);
+            return string.Concat(BuildSsoUrl(_saml2ModulePath, ssoUri),
+                string.IsNullOrWhiteSpace(scheme) ? string.Empty : $"/{scheme}");
         }
 
-        public string BuildSaml2AcsUrl(string ssoUri = null)
+        public string BuildSaml2AcsUrl(string ssoUri = null, string scheme = null)
         {
-            return string.Concat(BuildSaml2ModulePath(ssoUri), "/Acs");
+            return string.Concat(BuildSaml2ModulePath(ssoUri, scheme), "/Acs");
         }
 
         private string BuildSsoUrl(string relativePath, string ssoUri)
