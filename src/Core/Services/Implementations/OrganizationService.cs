@@ -1110,10 +1110,32 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
+            ICollection<Policy> orgPolicies = null;
+            var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            if (userOrgs.Count > 0)
+            {   
+                orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+                {
+                    throw new BadRequestException("You cannot join this organization until you are not a " +
+                        "part of any other organizations");
+                }
+
+                var userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+                if (userPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+                {
+                    throw new BadRequestException("You cannot join this organization because you are already " +
+                        "part of another organization that restricts multiple organizations.");
+                }
+            }
+
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                if (policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                if (orgPolicies == null) 
+                {
+                    orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                }
+                if (orgPolicies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
                 {
                     throw new BadRequestException("You cannot join this organization until you enable " +
                         "two-step login on your user account.");
