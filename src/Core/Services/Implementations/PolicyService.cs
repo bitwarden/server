@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
@@ -53,25 +54,49 @@ namespace Bit.Core.Services
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
                 if (!currentPolicy?.Enabled ?? true)
                 {
-                    if (currentPolicy.Type == Enums.PolicyType.TwoFactorAuthentication)
+                    var kickableOffenses = new List<Enums.PolicyType>() {
+                        Enums.PolicyType.TwoFactorAuthentication,
+                        Enums.PolicyType.OnlyOrg
+                    };
+
+                    if (kickableOffenses.Contains(currentPolicy.Type))
                     {
                         Organization organization = null;
                         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                             policy.OrganizationId);
                         foreach (var orgUser in orgUsers.Where(ou =>
                             ou.Status != Enums.OrganizationUserStatusType.Invited &&
-                            ou.Type != Enums.OrganizationUserType.Owner))
+                            ou.Type != Enums.OrganizationUserType.Owner && ou.UserId != savingUserId))
                         {
-                            if (orgUser.UserId != savingUserId && !await userService.TwoFactorIsEnabledAsync(orgUser))
+                            switch (currentPolicy.Type)
                             {
-                                if (organization == null)
-                                {
-                                    organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-                                }
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    organization.Name, orgUser.Email);
+                                case Enums.PolicyType.TwoFactorAuthentication:
+                                    if (!await userService.TwoFactorIsEnabledAsync(orgUser))
+                                    {
+                                        if (organization == null)
+                                        {
+                                            organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                        }
+                                        await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                            savingUserId);
+                                        await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                            organization.Name, orgUser.Email);
+                                    }
+                                    break;
+                                case Enums.PolicyType.OnlyOrg:
+                                    var userOrgs = await _organizationUserRepository.GetManyByUserAsync(orgUser.Id);
+                                    if (userOrgs.Count > 1)
+                                    {
+                                        if (organization == null)
+                                        {
+                                            organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                        }
+                                        await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                            savingUserId);
+                                        await _mailService.SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(
+                                            organization.Name, orgUser.Email);
+                                    }
+                                break;
                             }
                         }
                     }
