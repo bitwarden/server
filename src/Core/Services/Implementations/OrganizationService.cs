@@ -1115,17 +1115,17 @@ namespace Bit.Core.Services
             if (userOrgs.Count > 0)
             {   
                 orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+                if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg && policy.Enabled))
                 {
                     throw new BadRequestException("You cannot join this organization until you are not a " +
-                        "part of any other organizations");
+                        "part of any other organizations.");
                 }
 
                 var userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
                 if (userPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
                 {
                     throw new BadRequestException("You cannot join this organization because you are already " +
-                        "part of another organization that restricts multiple organizations.");
+                        "part of another organization that restricts having multiple organizations.");
                 }
             }
 

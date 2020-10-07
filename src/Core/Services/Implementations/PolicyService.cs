@@ -84,17 +84,20 @@ namespace Bit.Core.Services
                                     }
                                     break;
                                 case Enums.PolicyType.OnlyOrg:
-                                    var userOrgs = await _organizationUserRepository.GetManyByUserAsync(orgUser.Id);
-                                    if (userOrgs.Count > 1)
+                                    if (orgUser.UserId.HasValue)
                                     {
-                                        if (organization == null)
+                                        var userOrgs = await _organizationUserRepository.GetManyByUserAsync(orgUser.UserId.Value);
+                                        if (userOrgs.Count > 1)
                                         {
-                                            organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                            if (organization == null)
+                                            {
+                                                organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                            }
+                                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                                savingUserId);
+                                            await _mailService.SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(
+                                                organization.Name, orgUser.Email);
                                         }
-                                        await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                            savingUserId);
-                                        await _mailService.SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(
-                                            organization.Name, orgUser.Email);
                                     }
                                 break;
                             }
