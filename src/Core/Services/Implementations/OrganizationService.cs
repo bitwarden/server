@@ -1182,6 +1182,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
 
+            var usingOnlyOrgPolicy = policies.Any(p => p.Type == PolicyType.OnlyOrg && p.Enabled);
+            if (usingOnlyOrgPolicy)
+            {
+                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                if (userOrgs.Count > 1)
+                {
+                    throw new BadRequestException("User is part of another organization.");
+                }
+            }
+
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
             orgUser.Email = null;
