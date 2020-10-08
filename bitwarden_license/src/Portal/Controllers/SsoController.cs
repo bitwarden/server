@@ -47,7 +47,7 @@ namespace Bit.Portal.Controllers
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId.Value);
-            var model = new SsoConfigEditViewModel(ssoConfig, _i18nService, _globalSettings);
+            var model = new SsoConfigEditViewModel(ssoConfig, orgId.Value, _i18nService, _globalSettings);
 
             return View(model);
         }
