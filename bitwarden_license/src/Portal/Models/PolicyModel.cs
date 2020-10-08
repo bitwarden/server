@@ -32,6 +32,11 @@ namespace Bit.Portal.Models
                     DescriptionKey = "PasswordGeneratorDescription";
                     break;
 
+                case PolicyType.OnlyOrg:
+                    NameKey = "OnlyOrg";
+                    DescriptionKey = "OnlyOrganizationDescription";
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
