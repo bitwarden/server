@@ -33,7 +33,7 @@ namespace Bit.Portal.Models
                     break;
 
                 case PolicyType.OnlyOrg:
-                    NameKey = "OnlyOrg";
+                    NameKey = "OnlyOrganization";
                     DescriptionKey = "OnlyOrganizationDescription";
                     break;
 
