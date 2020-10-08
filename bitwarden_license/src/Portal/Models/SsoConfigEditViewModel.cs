@@ -18,8 +18,8 @@ namespace Bit.Portal.Models
     {
         public SsoConfigEditViewModel() { }
 
-        public SsoConfigEditViewModel(SsoConfig ssoConfig, II18nService i18nService,
-            GlobalSettings globalSettings)
+        public SsoConfigEditViewModel(SsoConfig ssoConfig, Guid organizationId,
+            II18nService i18nService, GlobalSettings globalSettings)
         {
             if (ssoConfig != null)
             {
@@ -41,7 +41,7 @@ namespace Bit.Portal.Models
                 configurationData = new SsoConfigurationData();
             }
 
-            Data = new SsoConfigDataViewModel(configurationData, globalSettings, ssoConfig.OrganizationId);
+            Data = new SsoConfigDataViewModel(configurationData, globalSettings, organizationId);
             BuildLists(i18nService);
         }
 
