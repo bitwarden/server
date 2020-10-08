@@ -37,6 +37,19 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    DELETE cu
+    FROM 
+        [dbo].[CollectionUser] cu
+    INNER JOIN 
+        [dbo].[OrganizationUser] ou ON [cu].[OrganizationUserId] = [ou].[Id]
+    WHERE 
+        [ou].[OrganizationId] = @Id
+
+    DELETE
+    FROM 
+        [dbo].[OrganizationUser]
+    WHERE [OrganizationId] = @Id
+
     DELETE
     FROM
         [dbo].[Organization]
