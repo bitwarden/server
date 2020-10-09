@@ -37,18 +37,19 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    DELETE cu
+    DELETE CU
     FROM 
-        [dbo].[CollectionUser] cu
+        [dbo].[CollectionUser] CU
     INNER JOIN 
-        [dbo].[OrganizationUser] ou ON [cu].[OrganizationUserId] = [ou].[Id]
+        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
     WHERE 
-        [ou].[OrganizationId] = @Id
+        [OU].[OrganizationId] = @Id
 
     DELETE
     FROM 
         [dbo].[OrganizationUser]
-    WHERE [OrganizationId] = @Id
+    WHERE 
+        [OrganizationId] = @Id
 
     DELETE
     FROM
