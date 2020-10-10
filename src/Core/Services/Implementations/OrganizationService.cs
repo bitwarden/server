@@ -1112,7 +1112,7 @@ namespace Bit.Core.Services
 
             ICollection<Policy> orgPolicies = null;
             var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-            if (userOrgs.Count > 0)
+            if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
             {   
                 orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
                 if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg && policy.Enabled))
@@ -1120,12 +1120,11 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You cannot join this organization until you are not a " +
                         "part of any other organizations.");
                 }
-
                 var userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
                 if (userPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
                 {
                     throw new BadRequestException("You cannot join this organization because you are already " +
-                        "part of another organization that restricts having multiple organizations.");
+                        "member of another organization that restricts having multiple organizations.");
                 }
             }
 
@@ -1186,9 +1185,9 @@ namespace Bit.Core.Services
             if (usingOnlyOrgPolicy)
             {
                 var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                if (userOrgs.Count > 1)
+                if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
                 {
-                    throw new BadRequestException("User is part of another organization.");
+                    throw new BadRequestException("User is a member of another organization.");
                 }
             }
 

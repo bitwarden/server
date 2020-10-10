@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -87,7 +88,7 @@ namespace Bit.Core.Services
                                     if (orgUser.UserId.HasValue)
                                     {
                                         var userOrgs = await _organizationUserRepository.GetManyByUserAsync(orgUser.UserId.Value);
-                                        if (userOrgs.Count > 1)
+                                        if (userOrgs.Any(ou => ou.Status != OrganizationUserStatusType.Invited))
                                         {
                                             if (organization == null)
                                             {

@@ -164,7 +164,7 @@ namespace Bit.Api.Controllers
             if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
             {
                throw new Exception("You cannot create an organization. You are already in an organization " + 
-                    "that prohibits multiple organizations.");
+                    "that has a policy that prohibits you from being a member of multiple organizations.");
             }
 
             var organizationSignup = model.ToOrganizationSignup(user);
@@ -192,7 +192,7 @@ namespace Bit.Api.Controllers
             if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
             {
                throw new Exception("You cannot create an organization. You are already in an organization " + 
-                    "that prohibits multiple organizations.");
+                    "that has a policy that prohibits you from being a member of multiple organizations.");
             }
 
             var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
