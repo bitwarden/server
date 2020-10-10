@@ -1118,7 +1118,7 @@ namespace Bit.Core.Services
                 if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg && policy.Enabled))
                 {
                     throw new BadRequestException("You cannot join this organization until you are not a " +
-                        "part of any other organizations.");
+                        "member of any other organizations.");
                 }
                 var userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
                 if (userPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
