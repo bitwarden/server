@@ -55,7 +55,7 @@ namespace Bit.Core.Services
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
                 if (!currentPolicy?.Enabled ?? true)
                 {
-                    var kickableOffenses = new List<Enums.PolicyType>() {
+                    var kickableOffenses = new List<Enums.PolicyType> {
                         Enums.PolicyType.TwoFactorAuthentication,
                         Enums.PolicyType.OnlyOrg
                     };
