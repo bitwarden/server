@@ -121,6 +121,13 @@
             </div>
             <div class="row">
                 <div class="col-7 form-group">
+                    <label asp-for="Data.RedirectBehavior">@i18nService.T("RedirectBehavior")</label>
+                    <select asp-for="Data.RedirectBehavior" asp-items="Model.RedirectBehaviors"
+                            class="form-control"></select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-7 form-group">
                     <div class="form-check">
                         <input asp-for="Data.GetClaimsFromUserInfoEndpoint" type="checkbox" class="form-check-input">
                         <label asp-for="Data.GetClaimsFromUserInfoEndpoint" class="form-check-label"></label>

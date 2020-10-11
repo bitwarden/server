@@ -526,4 +526,17 @@
   <data name="UserAlreadyExistsUseLinkViaSso" xml:space="preserve">
     <value>User already exists, please link account to SSO after logging in</value>
   </data>
+  <data name="RedirectGet" xml:space="preserve">
+    <value>Redirect GET</value>
+    <comment>An OIDC Connect Redirect Behavior, Redirect; Emits a 302 response 
+    to redirect the user agent to the OpenID Connect provider using a GET request.</comment>
+  </data>
+  <data name="FormPost" xml:space="preserve">
+    <value>Form POST</value>
+    <comment>An OIDC Connect Redirect Behavior, Form POST; Emits an HTML form to
+      redirect the user agent to the OpenID Connect provider using a POST request.</comment>
+  </data>
+  <data name="RedirectBehavior" xml:space="preserve">
+    <value>OIDC Redirect Behavior</value>
+  </data>
 </root>

@@ -20,7 +20,7 @@ namespace Bit.Portal.Models
 
             foreach (var type in Enum.GetValues(typeof(PolicyType)).Cast<PolicyType>())
             {
-                var enabled = policyDict?.ContainsKey(type) ?? false && policyDict[type].Enabled;
+                var enabled = policyDict.ContainsKey(type) ? policyDict[type].Enabled : false;
                 Policies.Add(new PolicyModel(type, enabled));
             }
         }

@@ -269,6 +269,7 @@ namespace Bit.Core.Services
             organization.UseTotp = newPlan.HasTotp;
             organization.Use2fa = newPlan.Has2fa;
             organization.UseApi = newPlan.HasApi;
+            organization.UseSso = newPlan.HasSso;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;

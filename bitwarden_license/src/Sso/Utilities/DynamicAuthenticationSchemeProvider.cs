@@ -315,6 +315,7 @@ namespace Bit.Core.Business.Sso
                 SignedOutCallbackPath = config.BuildSignedOutCallbackPath(),
                 MetadataAddress = config.MetadataAddress,
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
+                AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
 
@@ -339,7 +340,7 @@ namespace Bit.Core.Business.Sso
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
-                ModulePath = config.BuildSaml2ModulePath(),
+                ModulePath = config.BuildSaml2ModulePath(null, name),
                 NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
