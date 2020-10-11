@@ -31,10 +31,11 @@ namespace Bit.Core.IdentityServer
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
             CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
         }
@@ -77,6 +78,9 @@ namespace Bit.Core.IdentityServer
             context.Result.IsError = true;
             context.Result.CustomResponse = customResponse;
         }
+
+        protected override void SetSsoResult(CustomTokenRequestValidationContext context, 
+            Dictionary<string, object> customResponse) => throw new System.NotImplementedException();
 
         protected override void SetErrorResult(CustomTokenRequestValidationContext context,
             Dictionary<string, object> customResponse)
