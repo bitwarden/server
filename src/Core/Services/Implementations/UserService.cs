@@ -48,6 +48,7 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IOrganizationService _organizationService;
 
         public UserService(
             IUserRepository userRepository,
@@ -74,7 +75,8 @@ namespace Bit.Core.Services
             IPolicyRepository policyRepository,
             IReferenceEventService referenceEventService,
             CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IOrganizationService organizationService)
             : base(
                   store,
                   optionsAccessor,
@@ -107,6 +109,7 @@ namespace Bit.Core.Services
             _referenceEventService = referenceEventService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _organizationService = organizationService;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -579,7 +582,8 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key)
+        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key, 
+            string orgIdentifier = null)
         {
             if (user == null)
             {
@@ -603,7 +607,12 @@ namespace Bit.Core.Services
 
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
+            
+            if (!string.IsNullOrWhiteSpace(orgIdentifier))
+            {
+                await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
+            }
+            
             return IdentityResult.Success;
         }
 

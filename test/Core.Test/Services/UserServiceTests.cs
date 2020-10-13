@@ -41,6 +41,7 @@ namespace Bit.Core.Test.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IOrganizationService _organizationService;
 
         public UserServiceTests()
         {
@@ -69,6 +70,7 @@ namespace Bit.Core.Test.Services
             _referenceEventService = Substitute.For<IReferenceEventService>();
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
+            _organizationService = Substitute.For<IOrganizationService>();
 
             _sut = new UserService(
                 _userRepository,
@@ -95,7 +97,8 @@ namespace Bit.Core.Test.Services
                 _policyRepository,
                 _referenceEventService,
                 _currentContext,
-                _globalSettings
+                _globalSettings,
+                _organizationService
             );
         }
 
