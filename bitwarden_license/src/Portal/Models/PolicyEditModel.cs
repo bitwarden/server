@@ -81,7 +81,8 @@ namespace Bit.Portal.Models
                 case PolicyType.PasswordGenerator:
                     existingPolicy.Data = JsonSerializer.Serialize(PasswordGeneratorDataModel, options);
                     break;
-                case PolicyType.OnlyOrg: case PolicyType.TwoFactorAuthentication:
+                case PolicyType.OnlyOrg: 
+                case PolicyType.TwoFactorAuthentication:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

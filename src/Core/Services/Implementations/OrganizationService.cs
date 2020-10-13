@@ -1111,30 +1111,47 @@ namespace Bit.Core.Services
             }
 
             ICollection<Policy> orgPolicies = null;
+            ICollection<Policy> userPolicies = null;
+            async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
+            {
+                ICollection<Policy> policies = null;
+                if (useUserPolicies) 
+                {
+                    if (userPolicies == null)
+                    {
+                        userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+                    }
+                    policies = userPolicies;
+                } 
+                else
+                {
+                    if (orgPolicies == null)
+                    {
+                        orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                    }
+                    policies = orgPolicies;
+                }
+                
+                return policies.Any(p => p.Type == policyType && p.Enabled);
+            }
             var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
             {   
-                orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                if (orgPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg && policy.Enabled))
+                if (await hasPolicyAsync(PolicyType.OnlyOrg))
                 {
-                    throw new BadRequestException("You cannot join this organization until you are not a " +
-                        "member of any other organizations.");
+                    throw new BadRequestException("You may not join this organization until you leave or remove " +
+                        "all other organizations.");
                 }
-                var userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-                if (userPolicies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+                if (await hasPolicyAsync(PolicyType.OnlyOrg, true))
                 {
-                    throw new BadRequestException("You cannot join this organization because you are already " +
-                        "member of another organization that restricts having multiple organizations.");
+                    throw new BadRequestException("You cannot join this organization because you are a member of " + 
+                        "an organization which forbids it");
                 }
             }
 
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                if (orgPolicies == null) 
-                {
-                    orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                }
-                if (orgPolicies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                if (await hasPolicyAsync(PolicyType.TwoFactorAuthentication))
                 {
                     throw new BadRequestException("You cannot join this organization until you enable " +
                         "two-step login on your user account.");

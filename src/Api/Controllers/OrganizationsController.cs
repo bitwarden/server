@@ -163,8 +163,8 @@ namespace Bit.Api.Controllers
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
             if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
             {
-               throw new Exception("You cannot create an organization. You are already in an organization " + 
-                    "that has a policy that prohibits you from being a member of multiple organizations.");
+                throw new Exception("You may not create an organization. You belong to an organization " +
+                     "which has a policy that prohibits you from being a member of any other organization.");
             }
 
             var organizationSignup = model.ToOrganizationSignup(user);
@@ -191,8 +191,8 @@ namespace Bit.Api.Controllers
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
             if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
             {
-               throw new Exception("You cannot create an organization. You are already in an organization " + 
-                    "that has a policy that prohibits you from being a member of multiple organizations.");
+                throw new Exception("You may not create an organization. You belong to an organization " +
+                     "which has a policy that prohibits you from being a member of any other organization.");
             }
 
             var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
