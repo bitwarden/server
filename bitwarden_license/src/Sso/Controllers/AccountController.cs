@@ -465,7 +465,7 @@ namespace Bit.Sso.Controllers
                         OrganizationId = orgId.Value,
                         UserId = user.Id,
                         Type = OrganizationUserType.User,
-                        Status = OrganizationUserStatusType.Accepted
+                        Status = OrganizationUserStatusType.Invited
                     };
                     await _organizationUserRepository.CreateAsync(orgUser);
                 }
