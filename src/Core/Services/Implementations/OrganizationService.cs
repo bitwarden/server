@@ -1114,23 +1114,9 @@ namespace Bit.Core.Services
             ICollection<Policy> userPolicies = null;
             async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
             {
-                ICollection<Policy> policies = null;
-                if (useUserPolicies) 
-                {
-                    if (userPolicies == null)
-                    {
-                        userPolicies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-                    }
-                    policies = userPolicies;
-                } 
-                else
-                {
-                    if (orgPolicies == null)
-                    {
-                        orgPolicies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                    }
-                    policies = orgPolicies;
-                }
+                var policies = useUserPolicies ? 
+                    userPolicies = userPolicies ?? await _policyRepository.GetManyByUserIdAsync(user.Id) : 
+                    orgPolicies = orgPolicies ?? await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
                 
                 return policies.Any(p => p.Type == policyType && p.Enabled);
             }
