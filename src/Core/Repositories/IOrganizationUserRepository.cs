@@ -26,5 +26,6 @@ namespace Bit.Core.Repositories
         Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
         Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
+        Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
     }
 }
