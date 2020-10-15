@@ -15,7 +15,7 @@ BEGIN
         RETURN(-1)
     END
 
-SELECT
+    SELECT
         *
     FROM
         [dbo].[OrganizationUserView]
