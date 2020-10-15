@@ -14,5 +14,5 @@ BEGIN
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        [UserId] IN (SELECT * FROM @UserIds)
+        [UserId] IN (SELECT [Id] FROM @UserIds)
 END
