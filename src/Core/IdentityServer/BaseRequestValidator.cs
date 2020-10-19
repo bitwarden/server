@@ -122,7 +122,11 @@ namespace Bit.Core.IdentityServer
             }
             else
             {
-                SetSsoResult(context, null); // Do we need to add custom response parameters?
+                SetSsoResult(context,
+                    new Dictionary<string, object>
+                {{
+                    "ErrorModel", new ErrorResponseModel("SSO authentication is required.")
+                }});
             }
         }
 
