@@ -48,7 +48,8 @@ namespace Bit.Admin
             services.AddScoped<CurrentContext>();
 
             // Identity
-            services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
+            services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings,
+                globalSettings.SelfHosted ? "/admin" : null);
             services.Configure<SecurityStampValidatorOptions>(options =>
             {
                 options.ValidationInterval = TimeSpan.FromMinutes(5);

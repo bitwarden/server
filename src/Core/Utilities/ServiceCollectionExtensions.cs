@@ -278,7 +278,8 @@ namespace Bit.Core.Utilities
         }
 
         public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
-            this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
+            this IServiceCollection services, GlobalSettings globalSettings,
+            string basePath = null) where TUserStore : class
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             services.Configure<DataProtectionTokenProviderOptions>(options =>
@@ -298,9 +299,9 @@ namespace Bit.Core.Utilities
 
             services.ConfigureApplicationCookie(options =>
             {
-                options.LoginPath = "/login";
-                options.LogoutPath = "/";
-                options.AccessDeniedPath = "/login?accessDenied=true";
+                options.LoginPath = $"{basePath}/login";
+                options.LogoutPath = $"{basePath}/";
+                options.AccessDeniedPath = $"{basePath}/login?accessDenied=true";
                 options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}";
                 options.Cookie.HttpOnly = true;
                 options.ExpireTimeSpan = TimeSpan.FromDays(2);

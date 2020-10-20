@@ -10,7 +10,7 @@ namespace Bit.Portal.Utilities
     public static class EnterprisePortalServiceCollectionExtensions
     {
         public static (IdentityBuilder, IdentityBuilder) AddEnterprisePortalTokenIdentityServices(
-            this IServiceCollection services)
+            this IServiceCollection services, string basePath = null)
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
             var passwordlessIdentityBuilder = services.AddIdentity<User, Role>()
@@ -25,9 +25,9 @@ namespace Bit.Portal.Utilities
 
             services.ConfigureApplicationCookie(options =>
             {
-                options.LoginPath = "/login";
-                options.LogoutPath = "/logout";
-                options.AccessDeniedPath = "/access-denied";
+                options.LoginPath = $"{basePath}/login";
+                options.LogoutPath = $"{basePath}/logout";
+                options.AccessDeniedPath = $"{basePath}/access-denied";
                 options.Cookie.Name = $"Bitwarden_BusinessPortal";
                 options.Cookie.HttpOnly = true;
                 options.ExpireTimeSpan = TimeSpan.FromDays(2);

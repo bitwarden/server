@@ -44,7 +44,7 @@ namespace Bit.Portal
                 serviceProvider.GetService<EnterprisePortalCurrentContext>());
 
             // Identity
-            services.AddEnterprisePortalTokenIdentityServices();
+            services.AddEnterprisePortalTokenIdentityServices(globalSettings.SelfHosted ? "/portal" : null);
             if (globalSettings.SelfHosted)
             {
                 services.ConfigureApplicationCookie(options =>
