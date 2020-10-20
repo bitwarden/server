@@ -281,7 +281,7 @@ namespace Bit.Core.IdentityServer
                 return true; // Already using SSO to authorize, finish successfully
             }
             
-            // Is user apart of any orgs?
+            // Is user apart of any orgs? Use cache for initial checks.
             var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
                 .ToList();
             if (orgs.Any())
@@ -297,12 +297,12 @@ namespace Bit.Core.IdentityServer
                     var requiresSso = false;
                     foreach (var org in userOrgs)
                     {
-                        if (!org.Enabled || !org.UseSso)
+                        if (!(org.Enabled && org.UseSso))
                         {
                             continue;
                         }
                         
-                        var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SsoAuthentication);
+                        var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
                         if (orgPolicy != null && orgPolicy.Enabled)
                         {
                             requiresSso = true;
