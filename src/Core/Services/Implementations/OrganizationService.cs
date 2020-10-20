@@ -1135,10 +1135,34 @@ namespace Bit.Core.Services
                 }
             }
 
+            ICollection<Policy> orgPolicies = null;
+            ICollection<Policy> userPolicies = null;
+            async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
+            {
+                var policies = useUserPolicies ? 
+                    userPolicies = userPolicies ?? await _policyRepository.GetManyByUserIdAsync(user.Id) : 
+                    orgPolicies = orgPolicies ?? await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                
+                return policies.Any(p => p.Type == policyType && p.Enabled);
+            }
+            var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
+            {   
+                if (await hasPolicyAsync(PolicyType.OnlyOrg))
+                {
+                    throw new BadRequestException("You may not join this organization until you leave or remove " +
+                        "all other organizations.");
+                }
+                if (await hasPolicyAsync(PolicyType.OnlyOrg, true))
+                {
+                    throw new BadRequestException("You cannot join this organization because you are a member of " + 
+                        "an organization which forbids it");
+                }
+            }
+
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                if (policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                if (await hasPolicyAsync(PolicyType.TwoFactorAuthentication))
                 {
                     throw new BadRequestException("You cannot join this organization until you enable " +
                         "two-step login on your user account.");
@@ -1183,6 +1207,16 @@ namespace Bit.Core.Services
             if (usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
             {
                 throw new BadRequestException("User does not have two-step login enabled.");
+            }
+
+            var usingOnlyOrgPolicy = policies.Any(p => p.Type == PolicyType.OnlyOrg && p.Enabled);
+            if (usingOnlyOrgPolicy)
+            {
+                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
+                {
+                    throw new BadRequestException("User is a member of another organization.");
+                }
             }
 
             orgUser.Status = OrganizationUserStatusType.Confirmed;

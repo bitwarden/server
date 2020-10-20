@@ -231,5 +231,18 @@ namespace Bit.Core.Repositories.SqlServer
         {
             public DataTable Collections { get; set; }
         }
+
+        public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByUserIds]",
+                    new { UserIds = userIds.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }

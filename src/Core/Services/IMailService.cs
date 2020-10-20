@@ -28,5 +28,6 @@ namespace Bit.Core.Services
         Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null);
         Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
         Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
+        Task SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(string organizationName, string email);
     }
 }

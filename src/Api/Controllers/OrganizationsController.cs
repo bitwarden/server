@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -25,6 +26,7 @@ namespace Bit.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IPolicyRepository _policyRepository;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -33,7 +35,8 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IPaymentService paymentService,
             CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -42,6 +45,7 @@ namespace Bit.Api.Controllers
             _paymentService = paymentService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _policyRepository = policyRepository;
         }
 
         [HttpGet("{id}")]
@@ -156,6 +160,13 @@ namespace Bit.Api.Controllers
                 throw new Exception("Invalid plan selected.");
             }
 
+            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+            if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+            {
+                throw new Exception("You may not create an organization. You belong to an organization " +
+                     "which has a policy that prohibits you from being a member of any other organization.");
+            }
+
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
@@ -175,6 +186,13 @@ namespace Bit.Api.Controllers
             if (license == null)
             {
                 throw new BadRequestException("Invalid license");
+            }
+
+            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+            if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+            {
+                throw new Exception("You may not create an organization. You belong to an organization " +
+                     "which has a policy that prohibits you from being a member of any other organization.");
             }
 
             var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
