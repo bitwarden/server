@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+IF OBJECT_ID('[dbo].[Organization_ReadAbilities]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_ReadAbilities]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -19,3 +25,4 @@ BEGIN
     FROM
         [dbo].[Organization]
 END
+GO
