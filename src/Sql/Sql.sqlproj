@@ -285,5 +285,6 @@
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadManyByNotBeforeRevisionDate.sql" />
     <Build Include="dbo\Tables\Send.sql" />
     <Build Include="dbo\Views\SendView.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIds.sql" />
   </ItemGroup>
 </Project>
