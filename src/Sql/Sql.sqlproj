@@ -274,5 +274,16 @@
     <Build Include="dbo\Stored Procedures\User_ReadBySsoUserOrganizationIdExternalId.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_DeleteByIdsOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_SoftDeleteByIdsOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByIdentifier.sql" />
+    <Build Include="dbo\Stored Procedures\Send_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Send_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Send_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Send_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Send_Update.sql" />
+    <Build Include="dbo\Stored Procedures\SsoConfig_ReadManyByNotBeforeRevisionDate.sql" />
+    <Build Include="dbo\Tables\Send.sql" />
+    <Build Include="dbo\Views\SendView.sql" />
   </ItemGroup>
 </Project>
