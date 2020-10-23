@@ -548,4 +548,19 @@
   <data name="OnlyOrganizationPolicyWarning" xml:space="preserve">
     <value>Organization members who are already a part of another organization will be removed from this organization and will receive an email notifying them about the change.</value>
   </data>
+  <data name="RequireSso" xml:space="preserve">
+    <value>Single Sign-On Authentication</value>
+  </data>
+  <data name="RequireSsoDescription" xml:space="preserve">
+    <value>Require users to log in with the Enterprise Single Sign-On method.</value>
+  </data>
+  <data name="Prerequisite" xml:space="preserve">
+    <value>Prerequisite</value>
+  </data>
+  <data name="RequireSsoPolicyReq" xml:space="preserve">
+    <value>The Single Organization enterprise policy must be enabled before activating this policy.</value>
+  </data>
+  <data name="RequireSsoPolicyReqError" xml:space="preserve">
+    <value>Single Organization policy not enabled.</value>
+  </data>
 </root>
