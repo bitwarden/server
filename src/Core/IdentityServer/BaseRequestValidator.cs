@@ -115,15 +115,14 @@ namespace Bit.Core.IdentityServer
                 twoFactorToken = null;
             }
 
-            if (await RequiresSsoAuthAsync(user, request.GrantType)) // Returns true if can finish validation process
+            if (await IsValidAuthTypeAsync(user, request.GrantType)) // Returns true if can finish validation process
             {
                 var device = await SaveDeviceAsync(user, request);
                 await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
             }
             else
             {
-                SetSsoResult(context,
-                    new Dictionary<string, object>
+                SetSsoResult(context, new Dictionary<string, object>
                 {{
                     "ErrorModel", new ErrorResponseModel("SSO authentication is required.")
                 }});
@@ -274,7 +273,7 @@ namespace Bit.Core.IdentityServer
             return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
         }
 
-        private async Task<bool> RequiresSsoAuthAsync(User user, string grantType)
+        private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
         {
             if (grantType == "authorization_code")
             {
@@ -294,7 +293,6 @@ namespace Bit.Core.IdentityServer
                 {
                     // Parse users orgs and determine if require sso policy is enabled
                     var userOrgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
-                    var requiresSso = false;
                     foreach (var org in userOrgs)
                     {
                         if (!(org.Enabled && org.UseSso))
@@ -305,14 +303,15 @@ namespace Bit.Core.IdentityServer
                         var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
                         if (orgPolicy != null && orgPolicy.Enabled)
                         {
-                            requiresSso = true;
-                            break;
+                            var userType = await _organizationUserRepository.GetByIdAsync(user.Id);
+                            // Owners and Admins are exempt from this policy
+                            if (userType != null 
+                                && userType.Type != OrganizationUserType.Owner 
+                                && userType.Type != OrganizationUserType.Admin)
+                            {
+                                return false;
+                            }
                         }
-                    }
-
-                    if (requiresSso)
-                    {
-                        return false; 
                     }
                 }
             }
