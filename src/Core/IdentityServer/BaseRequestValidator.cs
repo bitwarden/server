@@ -303,7 +303,7 @@ namespace Bit.Core.IdentityServer
                         var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
                         if (orgPolicy != null && orgPolicy.Enabled)
                         {
-                            var userType = await _organizationUserRepository.GetByIdAsync(user.Id);
+                            var userType = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
                             // Owners and Admins are exempt from this policy
                             if (userType != null 
                                 && userType.Type != OrganizationUserType.Owner 
