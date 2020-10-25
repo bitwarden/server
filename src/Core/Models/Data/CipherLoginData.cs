@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Data
             Password = cipher.Login.Password;
             PasswordRevisionDate = cipher.Login.PasswordRevisionDate;
             Totp = cipher.Login.Totp;
+            AutofillOnPageLoad = cipher.Login.AutofillOnPageLoad;
         }
 
         public string Uri
@@ -32,6 +33,7 @@ namespace Bit.Core.Models.Data
         public string Password { get; set; }
         public DateTime? PasswordRevisionDate { get; set; }
         public string Totp { get; set; }
+        public AutofillOnPageLoadOptions AutofillOnPageLoad { get; set; }
 
         public class CipherLoginUriData
         {
