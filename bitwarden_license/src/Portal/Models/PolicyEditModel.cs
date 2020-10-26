@@ -83,6 +83,7 @@ namespace Bit.Portal.Models
                     break;
                 case PolicyType.OnlyOrg: 
                 case PolicyType.TwoFactorAuthentication:
+                case PolicyType.RequireSso:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

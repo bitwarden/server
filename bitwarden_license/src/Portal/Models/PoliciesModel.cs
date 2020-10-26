@@ -8,7 +8,7 @@ namespace Bit.Portal.Models
 {
     public class PoliciesModel
     {
-        public PoliciesModel(ICollection<Policy> policies)
+        public PoliciesModel(ICollection<Policy> policies, bool useSso)
         {
             if (policies == null)
             {
@@ -20,6 +20,10 @@ namespace Bit.Portal.Models
 
             foreach (var type in Enum.GetValues(typeof(PolicyType)).Cast<PolicyType>())
             {
+                if (type == PolicyType.RequireSso && !useSso)
+                {
+                    continue;
+                }
                 var enabled = policyDict.ContainsKey(type) ? policyDict[type].Enabled : false;
                 Policies.Add(new PolicyModel(type, enabled));
             }

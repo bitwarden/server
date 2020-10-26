@@ -31,10 +31,11 @@ namespace Bit.Core.IdentityServer
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
             CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
             _userService = userService;
@@ -74,6 +75,13 @@ namespace Bit.Core.IdentityServer
             Dictionary<string, object> customResponse)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
+                customResponse);
+        }
+
+        protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
+            Dictionary<string, object> customResponse)
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
                 customResponse);
         }
 

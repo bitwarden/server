@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Data
                 organization.TwoFactorProviders != "{}";
             UsersGetPremium = organization.UsersGetPremium;
             Enabled = organization.Enabled;
+            UseSso = organization.UseSso;
         }
 
         public Guid Id { get; set; }
@@ -24,5 +25,6 @@ namespace Bit.Core.Models.Data
         public bool Using2fa { get; set; }
         public bool UsersGetPremium { get; set; }
         public bool Enabled { get; set; }
+        public bool UseSso { get; set; }
     }
 }

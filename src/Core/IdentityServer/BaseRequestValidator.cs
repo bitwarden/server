@@ -35,6 +35,7 @@ namespace Bit.Core.IdentityServer
         private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IPolicyRepository _policyRepository;
 
         public BaseRequestValidator(
             UserManager<User> userManager,
@@ -49,7 +50,8 @@ namespace Bit.Core.IdentityServer
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
             CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -64,6 +66,7 @@ namespace Bit.Core.IdentityServer
             _logger = logger;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _policyRepository = policyRepository;
         }
 
         protected async Task ValidateAsync(T context, ValidatedTokenRequest request)
@@ -112,9 +115,18 @@ namespace Bit.Core.IdentityServer
                 twoFactorToken = null;
             }
 
-            var device = await SaveDeviceAsync(user, request);
-            await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
-            return;
+            if (await IsValidAuthTypeAsync(user, request.GrantType)) // Returns true if can finish validation process
+            {
+                var device = await SaveDeviceAsync(user, request);
+                await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
+            }
+            else
+            {
+                SetSsoResult(context, new Dictionary<string, object>
+                {{
+                    "ErrorModel", new ErrorResponseModel("SSO authentication is required.")
+                }});
+            }
         }
 
         protected abstract Task<(User, bool)> ValidateContextAsync(T context);
@@ -229,6 +241,8 @@ namespace Bit.Core.IdentityServer
         }
 
         protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
+        
+        protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
 
         protected abstract void SetSuccessResult(T context, User user, List<Claim> claims,
             Dictionary<string, object> customResponse);
@@ -259,10 +273,62 @@ namespace Bit.Core.IdentityServer
             return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
         }
 
+        private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
+        {
+            if (grantType == "authorization_code")
+            {
+                return true; // Already using SSO to authorize, finish successfully
+            }
+            
+            // Is user apart of any orgs? Use cache for initial checks.
+            var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+                .ToList();
+            if (orgs.Any())
+            {
+                // Get all org abilities
+                var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+                // Parse all user orgs that are enabled and have the ability to use sso
+                var ssoOrgs = orgs.Where(o => OrgCanUseSso(orgAbilities, o.Id));
+                if (ssoOrgs.Any())
+                {
+                    // Parse users orgs and determine if require sso policy is enabled
+                    var userOrgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+                    foreach (var org in userOrgs)
+                    {
+                        if (!(org.Enabled && org.UseSso))
+                        {
+                            continue;
+                        }
+                        
+                        var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
+                        if (orgPolicy != null && orgPolicy.Enabled)
+                        {
+                            var userType = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
+                            // Owners and Admins are exempt from this policy
+                            if (userType != null 
+                                && userType.Type != OrganizationUserType.Owner 
+                                && userType.Type != OrganizationUserType.Admin)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return true; // Default - continue validation process
+        }
+
         private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                 orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
+        }
+        
+        private bool OrgCanUseSso(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+        {
+            return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
+                   orgAbilities[orgId].Enabled && orgAbilities[orgId].UseSso;
         }
 
         private Device GetDeviceFromRequest(ValidatedRequest request)

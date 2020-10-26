@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -50,7 +51,8 @@ namespace Bit.Portal.Controllers
             }
             
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId.Value);
-            return View(new PoliciesModel(policies));
+            var selectedOrgUseSso = _enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso;
+            return View(new PoliciesModel(policies, selectedOrgUseSso));
         }
         
         [HttpGet("/edit/{type}")]
@@ -88,6 +90,7 @@ namespace Bit.Portal.Controllers
                 return Redirect("~/");
             }
 
+            await ValidateDependentPolicies(type, orgId, model.Enabled);
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, type);
             if (!ModelState.IsValid)
             {
@@ -117,6 +120,38 @@ namespace Bit.Portal.Controllers
             else
             {
                 return View(new PolicyEditModel(policy, _i18nService));
+            }
+        }
+
+        private async Task ValidateDependentPolicies(PolicyType type, Guid? orgId, bool enabled)
+        {
+            if (orgId == null)
+            {
+                throw new ArgumentNullException(nameof(orgId), "OrgId cannot be null");
+            }
+            
+            switch(type)
+            {
+                case PolicyType.MasterPassword:
+                case PolicyType.PasswordGenerator:
+                case PolicyType.TwoFactorAuthentication:
+                case PolicyType.OnlyOrg:
+                    break;
+                
+                case PolicyType.RequireSso:
+                    if (!enabled)
+                    {
+                        break;
+                    }
+                    var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, type);
+                    if (singleOrg?.Enabled != true)
+                    {
+                        ModelState.AddModelError(string.Empty, _i18nService.T("RequireSsoPolicyReqError"));
+                    }
+                    break;
+                
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
     }

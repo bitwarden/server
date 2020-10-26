@@ -36,6 +36,11 @@ namespace Bit.Portal.Models
                     NameKey = "OnlyOrganization";
                     DescriptionKey = "OnlyOrganizationDescription";
                     break;
+                
+                case PolicyType.RequireSso:
+                    NameKey = "RequireSso";
+                    DescriptionKey = "RequireSsoDescription";
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -6,5 +6,6 @@
         MasterPassword = 1,
         PasswordGenerator = 2,
         OnlyOrg = 3,
+        RequireSso = 4,
     }
 }
