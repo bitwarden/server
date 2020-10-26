@@ -34,15 +34,15 @@
     }
     
     @if (Model.PolicyType == PolicyType.RequireSso)
-        {
-            <div class="callout callout-info" role="alert">
-                <h3 class="callout-heading">
-                    <i class="fa fa-info" *ngIf="icon" aria-hidden="true"></i>
-                    @i18nService.T("Prerequisite")
-                </h3>
-                @i18nService.T("RequireSsoPolicyReq")
-            </div>
-        }
+    {
+        <div class="callout callout-success" role="alert">
+            <h3 class="callout-heading">
+                <i class="fa fa-lightbulb-o" *ngIf="icon" aria-hidden="true"></i>
+                @i18nService.T("Prerequisite")
+            </h3>
+            @i18nService.T("RequireSsoPolicyReq")
+        </div>
+    }
     
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
