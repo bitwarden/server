@@ -76,7 +76,7 @@ namespace Bit.Core.Services
                                 }
                             }
                         break;
-                        case Enums.PolicyType.OnlyOrg:
+                        case Enums.PolicyType.SingleOrg:
                             var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                                     removableOrgUsers.Select(ou => ou.UserId.Value));
                             foreach (var orgUser in removableOrgUsers)
@@ -86,7 +86,7 @@ namespace Bit.Core.Services
                                     organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                                     await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
-                                    await _mailService.SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(
+                                    await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                         organization.Name, orgUser.Email);
                                 }
                             }

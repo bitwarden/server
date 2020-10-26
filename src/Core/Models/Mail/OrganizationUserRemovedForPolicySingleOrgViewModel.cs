@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Models.Mail
 {
-    public class OrganizationUserRemovedForPolicyOnlyOrgViewModel : BaseMailModel
+    public class OrganizationUserRemovedForPolicySingleOrgViewModel : BaseMailModel
     {
         public string OrganizationName { get; set; }
     }
