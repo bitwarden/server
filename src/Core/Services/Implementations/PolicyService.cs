@@ -44,6 +44,24 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("This organization cannot use policies.");
             }
+            
+            // Handle dependent policy checks
+            switch(policy.Type)
+            {
+               case PolicyType.RequireSso:
+                   if (policy.Enabled)
+                   {
+                       var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.OnlyOrg);
+                       if (singleOrg?.Enabled != true)
+                       {
+                           throw new BadRequestException("Single Organization policy not enabled.");
+                       }
+                   }
+                   break;
+                   
+                default:
+                    break;
+            }
 
             var now = DateTime.UtcNow;
             if (policy.Id == default(Guid))
