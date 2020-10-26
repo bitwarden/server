@@ -93,6 +93,10 @@ BEGIN
 
     IF @UserId IS NOT NULL
     BEGIN
+        IF @Type = 1 --File
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
     -- TODO: OrganizationId bump?
@@ -111,7 +115,18 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @UserId UNIQUEIDENTIFIER = (SELECT TOP 1 [UserId] FROM [dbo].[Folder] WHERE [Id] = @Id)
+    DECLARE @UserId UNIQUEIDENTIFIER
+    DECLARE @OrganizationId UNIQUEIDENTIFIER
+    DECLARE @Type TINYINT
+
+    SELECT TOP 1
+        @UserId = [UserId],
+        @OrganizationId = [OrganizationId],
+        @Type = [Type]
+    FROM
+        [dbo].[Send]
+    WHERE
+        [Id] = @Id
 
     DELETE
     FROM
@@ -121,6 +136,10 @@ BEGIN
 
     IF @UserId IS NOT NULL
     BEGIN
+        IF @Type = 1 --File
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
     -- TODO: OrganizationId bump?
@@ -219,5 +238,153 @@ BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
     -- TODO: OrganizationId bump?
+END
+GO
+
+IF OBJECT_ID('[dbo].[Organization_UpdateStorage]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_UpdateStorage]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_UpdateStorage]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @AttachmentStorage BIGINT
+    DECLARE @SendStorage BIGINT
+
+    CREATE TABLE #OrgStorageUpdateTemp
+    ( 
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [Attachments] VARCHAR(MAX) NULL
+    )
+
+    INSERT INTO #OrgStorageUpdateTemp
+    SELECT
+        [Id],
+        [Attachments]
+    FROM
+        [dbo].[Cipher]
+    WHERE
+        [UserId] IS NULL
+        AND [OrganizationId] = @Id
+
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            (
+                SELECT
+                    SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
+                FROM
+                    OPENJSON([Attachments])
+            ) [Size]
+        FROM
+            #OrgStorageUpdateTemp
+    )
+    SELECT
+        @AttachmentStorage = SUM([Size])
+    FROM
+        [CTE]
+
+    DROP TABLE #OrgStorageUpdateTemp
+
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            CAST(JSON_VALUE([Data],'$.Size') AS BIGINT) [Size]
+        FROM
+            [Send]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+    )
+    SELECT
+        @SendStorage = SUM([CTE].[Size])
+    FROM
+        [CTE]
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Storage] = (@AttachmentStorage + @SendStorage),
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[User_UpdateStorage]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_UpdateStorage]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_UpdateStorage]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DECLARE @AttachmentStorage BIGINT
+    DECLARE @SendStorage BIGINT
+
+    CREATE TABLE #UserStorageUpdateTemp
+    ( 
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [Attachments] VARCHAR(MAX) NULL
+    )
+
+    INSERT INTO #UserStorageUpdateTemp
+    SELECT
+        [Id],
+        [Attachments]
+    FROM
+        [dbo].[Cipher]
+    WHERE
+        [UserId] = @Id
+
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            (
+                SELECT
+                    SUM(CAST(JSON_VALUE(value,'$.Size') AS BIGINT))
+                FROM
+                    OPENJSON([Attachments])
+            ) [Size]
+        FROM
+            #UserStorageUpdateTemp
+    )
+    SELECT
+        @AttachmentStorage = SUM([CTE].[Size])
+    FROM
+        [CTE]
+
+    DROP TABLE #UserStorageUpdateTemp
+
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            CAST(JSON_VALUE([Data],'$.Size') AS BIGINT) [Size]
+        FROM
+            [Send]
+        WHERE
+            [UserId] = @Id
+    )
+    SELECT
+        @SendStorage = SUM([CTE].[Size])
+    FROM
+        [CTE]
+
+    UPDATE
+        [dbo].[User]
+    SET
+        [Storage] = (@AttachmentStorage + @SendStorage),
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @Id
 END
 GO

@@ -110,7 +110,6 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [HttpPost("{id}")]
         public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
@@ -124,8 +123,22 @@ namespace Bit.Api.Controllers
             return new SendResponseModel(send, _globalSettings);
         }
 
+        [HttpPut("{id}/remove-password")]
+        public async Task<SendResponseModel> PutRemovePassword(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var send = await _sendRepository.GetByIdAsync(new Guid(id));
+            if (send == null || send.UserId != userId)
+            {
+                throw new NotFoundException();
+            }
+
+            send.Password = null;
+            await _sendService.SaveSendAsync(send);
+            return new SendResponseModel(send, _globalSettings);
+        }
+
         [HttpDelete("{id}")]
-        [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;

@@ -54,6 +54,10 @@ BEGIN
 
     IF @UserId IS NOT NULL
     BEGIN
+        IF @Type = 1 --File
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
     -- TODO: OrganizationId bump?
