@@ -38,10 +38,16 @@ namespace Bit.Api.Controllers
         [HttpPost("access/{id}")]
         public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
         {
-            var (send, passwordRequired) = await _sendService.AccessAsync(new Guid(id), model.Password);
+            var (send, passwordRequired, passwordInvalid) =
+                await _sendService.AccessAsync(new Guid(id), model.Password);
             if (passwordRequired)
             {
                 return new UnauthorizedResult();
+            }
+            if (passwordInvalid)
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Invalid password.");
             }
             if (send == null)
             {

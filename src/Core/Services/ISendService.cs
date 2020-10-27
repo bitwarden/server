@@ -11,7 +11,7 @@ namespace Bit.Core.Services
         Task DeleteSendAsync(Send send);
         Task SaveSendAsync(Send send);
         Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength);
-        Task<(Send, bool)> AccessAsync(Guid sendId, string password);
+        Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password);
         string HashPassword(string password);
     }
 }

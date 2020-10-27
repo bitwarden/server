@@ -124,7 +124,8 @@ namespace Bit.Core.Services
             await _sendRepository.DeleteAsync(send);
         }
 
-        public async Task<(Send, bool)> AccessAsync(Guid sendId, string password)
+        // Response: Send, password required, password invalid
+        public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
         {
             var send = await _sendRepository.GetByIdAsync(sendId);
             var now = DateTime.UtcNow;
@@ -132,13 +133,13 @@ namespace Bit.Core.Services
                 send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
                 send.DeletionDate < now)
             {
-                return (null, false);
+                return (null, false, false);
             }
             if (!string.IsNullOrWhiteSpace(send.Password))
             {
                 if (string.IsNullOrWhiteSpace(password))
                 {
-                    return (null, true);
+                    return (null, true, false);
                 }
                 var passwordResult = _passwordHasher.VerifyHashedPassword(new User(), send.Password, password);
                 if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -147,13 +148,13 @@ namespace Bit.Core.Services
                 }
                 if (passwordResult == PasswordVerificationResult.Failed)
                 {
-                    throw new BadRequestException("Invalid password.");
+                    return (null, false, true);
                 }
             }
             // TODO: maybe move this to a simple ++ sproc?
             send.AccessCount++;
             await _sendRepository.ReplaceAsync(send);
-            return (send, false);
+            return (send, false, false);
         }
 
         public string HashPassword(string password)
