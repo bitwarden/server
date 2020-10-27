@@ -51,7 +51,7 @@ namespace Bit.Core.Services
                case PolicyType.RequireSso:
                    if (policy.Enabled)
                    {
-                       var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.OnlyOrg);
+                       var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
                        if (singleOrg?.Enabled != true)
                        {
                            throw new BadRequestException("Single Organization policy not enabled.");
