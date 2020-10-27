@@ -161,7 +161,7 @@ namespace Bit.Api.Controllers
             }
 
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+            if (policies.Any(policy => policy.Type == PolicyType.SingleOrg))
             {
                 throw new Exception("You may not create an organization. You belong to an organization " +
                      "which has a policy that prohibits you from being a member of any other organization.");
@@ -189,7 +189,7 @@ namespace Bit.Api.Controllers
             }
 
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            if (policies.Any(policy => policy.Type == PolicyType.OnlyOrg))
+            if (policies.Any(policy => policy.Type == PolicyType.SingleOrg))
             {
                 throw new Exception("You may not create an organization. You belong to an organization " +
                      "which has a policy that prohibits you from being a member of any other organization.");

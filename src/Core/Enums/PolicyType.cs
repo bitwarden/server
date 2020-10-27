@@ -5,7 +5,7 @@
         TwoFactorAuthentication = 0,
         MasterPassword = 1,
         PasswordGenerator = 2,
-        OnlyOrg = 3,
+        SingleOrg = 3,
         RequireSso = 4,
     }
 }

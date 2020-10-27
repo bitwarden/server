@@ -32,9 +32,9 @@ namespace Bit.Portal.Models
                     DescriptionKey = "PasswordGeneratorDescription";
                     break;
 
-                case PolicyType.OnlyOrg:
-                    NameKey = "OnlyOrganization";
-                    DescriptionKey = "OnlyOrganizationDescription";
+                case PolicyType.SingleOrg:
+                    NameKey = "SingleOrganization";
+                    DescriptionKey = "SingleOrganizationDescription";
                     break;
                 
                 case PolicyType.RequireSso:
