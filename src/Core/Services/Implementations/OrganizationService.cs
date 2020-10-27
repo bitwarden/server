@@ -1148,12 +1148,12 @@ namespace Bit.Core.Services
             var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
             {   
-                if (await hasPolicyAsync(PolicyType.OnlyOrg))
+                if (await hasPolicyAsync(PolicyType.SingleOrg))
                 {
                     throw new BadRequestException("You may not join this organization until you leave or remove " +
                         "all other organizations.");
                 }
-                if (await hasPolicyAsync(PolicyType.OnlyOrg, true))
+                if (await hasPolicyAsync(PolicyType.SingleOrg, true))
                 {
                     throw new BadRequestException("You cannot join this organization because you are a member of " + 
                         "an organization which forbids it");
@@ -1209,8 +1209,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
 
-            var usingOnlyOrgPolicy = policies.Any(p => p.Type == PolicyType.OnlyOrg && p.Enabled);
-            if (usingOnlyOrgPolicy)
+            var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
+            if (usingSingleOrgPolicy)
             {
                 var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
                 if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))

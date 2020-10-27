@@ -103,7 +103,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationUserRemovedForPolicyOnlyOrgEmailAsync(string organizationName, string email)
+        public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
         {
             return Task.FromResult(0);
         }

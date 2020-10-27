@@ -81,7 +81,7 @@ namespace Bit.Portal.Models
                 case PolicyType.PasswordGenerator:
                     existingPolicy.Data = JsonSerializer.Serialize(PasswordGeneratorDataModel, options);
                     break;
-                case PolicyType.OnlyOrg: 
+                case PolicyType.SingleOrg: 
                 case PolicyType.TwoFactorAuthentication:
                 case PolicyType.RequireSso:
                     break;

@@ -22,14 +22,14 @@
         </div>
     }
 
-    @if (Model.PolicyType == PolicyType.OnlyOrg)
+    @if (Model.PolicyType == PolicyType.SingleOrg)
     {
         <div class="callout callout-warning" role="alert">
             <h3 class="callout-heading">
                 <i class="fa fa-warning" *ngIf="icon" aria-hidden="true"></i>
                 @i18nService.T("Warning")
             </h3>
-            @i18nService.T("OnlyOrganizationPolicyWarning")
+            @i18nService.T("SingleOrganizationPolicyWarning")
         </div>
     }
     

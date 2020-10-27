@@ -135,7 +135,7 @@ namespace Bit.Portal.Controllers
                 case PolicyType.MasterPassword:
                 case PolicyType.PasswordGenerator:
                 case PolicyType.TwoFactorAuthentication:
-                case PolicyType.OnlyOrg:
+                case PolicyType.SingleOrg:
                     break;
                 
                 case PolicyType.RequireSso:

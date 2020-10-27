@@ -539,13 +539,13 @@
   <data name="RedirectBehavior" xml:space="preserve">
     <value>OIDC Redirect Behavior</value>
   </data>
-  <data name="OnlyOrganization" xml:space="preserve">
-    <value>Only Organization</value>
+  <data name="SingleOrganization" xml:space="preserve">
+    <value>Single Organization</value>
   </data>
-  <data name="OnlyOrganizationDescription" xml:space="preserve">
+  <data name="SingleOrganizationDescription" xml:space="preserve">
     <value>Restrict users from being able to join any other organizations.</value>
   </data>
-  <data name="OnlyOrganizationPolicyWarning" xml:space="preserve">
+  <data name="SingleOrganizationPolicyWarning" xml:space="preserve">
     <value>Organization members who are already a part of another organization will be removed from this organization and will receive an email notifying them about the change.</value>
   </data>
   <data name="RequireSso" xml:space="preserve">
