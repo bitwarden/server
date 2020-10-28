@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
@@ -17,6 +18,7 @@ namespace Bit.Core.Models.Api
             }
 
             Id = send.Id.ToString();
+            AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
             Type = send.Type;
             Key = send.Key;
             MaxAccessCount = send.MaxAccessCount;
@@ -49,6 +51,7 @@ namespace Bit.Core.Models.Api
         }
 
         public string Id { get; set; }
+        public string AccessId { get; set; }
         public SendType Type { get; set; }
         public string Name { get; set; }
         public string Notes { get; set; }

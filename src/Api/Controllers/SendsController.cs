@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Controllers
 {
@@ -38,8 +39,9 @@ namespace Bit.Api.Controllers
         [HttpPost("access/{id}")]
         public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
         {
+            var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
             var (send, passwordRequired, passwordInvalid) =
-                await _sendService.AccessAsync(new Guid(id), model.Password);
+                await _sendService.AccessAsync(guid, model.Password);
             if (passwordRequired)
             {
                 return new UnauthorizedResult();

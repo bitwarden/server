@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
@@ -16,7 +17,7 @@ namespace Bit.Core.Models.Api
                 throw new ArgumentNullException(nameof(send));
             }
 
-            Id = send.Id.ToString();
+            Id = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
             Type = send.Type;
 
             SendData sendData;
