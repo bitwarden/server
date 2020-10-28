@@ -13,17 +13,20 @@ namespace Bit.Core.IdentityServer
     {
         private readonly IInstallationRepository _installationRepository;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IUserRepository _userRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly StaticClientStore _staticClientStore;
 
         public ClientStore(
             IInstallationRepository installationRepository,
             IOrganizationRepository organizationRepository,
+            IUserRepository userRepository,
             GlobalSettings globalSettings,
             StaticClientStore staticClientStore)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
+            _userRepository = userRepository;
             _globalSettings = globalSettings;
             _staticClientStore = staticClientStore;
         }
@@ -103,6 +106,19 @@ namespace Bit.Core.IdentityServer
                                 new ClientClaim(JwtClaimTypes.Subject, org.Id.ToString())
                             }
                         };
+                    }
+                }
+            }
+            else if (clientId.Contains("user."))
+            {
+                var idParts = clientId.Split('.');
+                if (idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
+                {
+                    var user = await _userRepository.GetByIdAsync(id);
+                    if (user != null)
+                    {
+                        var client = new ApiClient(_globalSettings, clientId, 30, 1, null,
+                                new List<Secret>{ new Secret(user.ApiKey.Sha256()) });
                     }
                 }
             }
