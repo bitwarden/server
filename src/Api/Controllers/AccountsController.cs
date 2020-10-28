@@ -756,5 +756,27 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
+
+        [HttpPost("rotate-api-key")]
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]ApiKeyRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                await _userService.RotateApiKeyAsync(user);
+                var response = new ApiKeyResponseModel(user);
+                return response;
+            }
+        }
     }
 }
