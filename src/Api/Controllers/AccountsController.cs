@@ -734,5 +734,27 @@ namespace Bit.Api.Controllers
             var userIdentifier = $"{user.Id},{token}";
             return userIdentifier;
         }
+
+
+        [HttpPost("api-key")]
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var response = new ApiKeyResponseModel(user);
+                return response;
+            }
+        }
     }
 }
