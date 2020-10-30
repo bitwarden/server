@@ -31,5 +31,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Send>(
+                    $"[{Schema}].[Send_ReadByDeletionDateBefore]",
+                    new { DeletionDate = deletionDateBefore },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }

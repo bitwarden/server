@@ -23,4 +23,7 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Send_UserId_OrganizationId]
     ON [dbo].[Send]([UserId] ASC, [OrganizationId] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_Send_DeletionDate]
+    ON [dbo].[Send]([DeletionDate] ASC);
 

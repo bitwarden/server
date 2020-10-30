@@ -122,6 +122,11 @@ namespace Bit.Core.Services
         public async Task DeleteSendAsync(Send send)
         {
             await _sendRepository.DeleteAsync(send);
+            if (send.Type == Enums.SendType.File)
+            {
+                var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+                await _sendFileStorageService.DeleteFileAsync(data.Id);
+            }
         }
 
         // Response: Send, password required, password invalid

@@ -23,6 +23,10 @@ CREATE NONCLUSTERED INDEX [IX_Send_UserId_OrganizationId]
     ON [dbo].[Send]([UserId] ASC, [OrganizationId] ASC);
 GO
 
+CREATE NONCLUSTERED INDEX [IX_Send_DeletionDate]
+    ON [dbo].[Send]([DeletionDate] ASC);
+GO
+
 CREATE VIEW [dbo].[SendView]
 AS
 SELECT
@@ -386,5 +390,26 @@ BEGIN
         [RevisionDate] = GETUTCDATE()
     WHERE
         [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[Send_ReadByDeletionDateBefore]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Send_ReadByDeletionDateBefore]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Send_ReadByDeletionDateBefore]
+    @DeletionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[SendView]
+    WHERE
+        [DeletionDate] < @DeletionDate
 END
 GO

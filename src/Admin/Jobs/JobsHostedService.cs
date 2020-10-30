@@ -39,6 +39,10 @@ namespace Bit.Admin.Jobs
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
+            var everyFiveMinutesTrigger = TriggerBuilder.Create()
+                .StartNow()
+                .WithCronSchedule("0 */5 * * * ?")
+                .Build();
             var everyFridayAt10pmTrigger = TriggerBuilder.Create()
                 .StartNow()
                 .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
@@ -54,6 +58,7 @@ namespace Bit.Admin.Jobs
 
             var jobs = new List<Tuple<Type, ITrigger>>
             {
+                new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger)
