@@ -261,3 +261,19 @@ BEGIN
         [Id] = @Id
 END
 GO
+
+-- Refresh dbo.UserView so it has access to ApiKey
+IF OBJECT_ID('[dbo].[UserView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[UserView]
+END
+GO
+
+CREATE VIEW [dbo].[UserView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[User]
+
+GO
