@@ -208,8 +208,7 @@ namespace Bit.Core.Utilities
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
             {
-                // TODO
-                // services.AddSingleton<ISendFileStorageService, LocalAttachmentStorageService>();
+                services.AddSingleton<ISendFileStorageService, LocalSendStorageService>();
             }
             else
             {
