@@ -58,7 +58,7 @@ BEGIN
     UPDATE
         [dbo].[User]
     SET
-        [Storage] = (@AttachmentStorage + @SendStorage),
+        [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
         [RevisionDate] = GETUTCDATE()
     WHERE
         [Id] = @Id
