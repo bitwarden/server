@@ -30,15 +30,16 @@ namespace Bit.Admin.Jobs
         {
             var sends = await _sendRepository.GetManyByDeletionDateAsync(DateTime.UtcNow);
             _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} sends.", sends.Count);
-            if (sends.Any())
+            if (!sends.Any())
             {
-                using (var scope = _serviceProvider.CreateScope())
+                return;
+            }
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var sendService = scope.ServiceProvider.GetRequiredService<ISendService>();
+                foreach (var send in sends)
                 {
-                    var sendService = _serviceProvider.GetRequiredService<ISendService>();
-                    foreach (var send in sends)
-                    {
-                        await sendService.DeleteSendAsync(send);
-                    }
+                    await sendService.DeleteSendAsync(send);
                 }
             }
         }

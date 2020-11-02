@@ -82,6 +82,7 @@ namespace Bit.Admin.Jobs
             services.AddTransient<DatabaseUpdateStatisticsJob>();
             services.AddTransient<DatabaseRebuildlIndexesJob>();
             services.AddTransient<DatabaseExpiredGrantsJob>();
+            services.AddTransient<DeleteSendsJob>();
         }
     }
 }
