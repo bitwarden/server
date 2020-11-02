@@ -29,7 +29,8 @@ namespace Bit.Core
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
-        public virtual AttachmentSettings Attachment { get; set; } = new AttachmentSettings();
+        public virtual FileStorageSettings Attachment { get; set; } = new FileStorageSettings();
+        public virtual FileStorageSettings Send { get; set; } = new FileStorageSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
@@ -101,7 +102,7 @@ namespace Bit.Core
             }
         }
 
-        public class AttachmentSettings
+        public class FileStorageSettings
         {
             private string _connectionString;
 

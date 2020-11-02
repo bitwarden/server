@@ -78,6 +78,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
                 services.AddSingleton<ISsoConfigRepository, SqlServerRepos.SsoConfigRepository>();
                 services.AddSingleton<ISsoUserRepository, SqlServerRepos.SsoUserRepository>();
+                services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
             }
 
             if (globalSettings.SelfHosted)
@@ -113,6 +114,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddSingleton<ISsoConfigService, SsoConfigService>();
+            services.AddScoped<ISendService, SendService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -198,6 +200,19 @@ namespace Bit.Core.Utilities
             else
             {
                 services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.Send.ConnectionString))
+            {
+                services.AddSingleton<ISendFileStorageService, AzureSendFileStorageService>();
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
+            {
+                services.AddSingleton<ISendFileStorageService, LocalSendStorageService>();
+            }
+            else
+            {
+                services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
             }
 
             if (globalSettings.SelfHosted)
