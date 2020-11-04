@@ -11,11 +11,10 @@ namespace Bit.Core.IdentityServer
             string id,
             int refreshTokenSlidingDays,
             int accessTokenLifetimeHours,
-            string[] scopes = null,
-            ICollection<Secret> clientSecrets = null)
+            string[] scopes = null)
         {
             ClientId = id;
-            AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode };
+            AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, GrantType.ClientCredentials };
             RefreshTokenExpiration = TokenExpiration.Sliding;
             RefreshTokenUsage = TokenUsage.ReUse;
             SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
@@ -54,7 +53,7 @@ namespace Bit.Core.IdentityServer
                 PostLogoutRedirectUris = new[] { globalSettings.BaseServiceUri.Vault };
                 AllowedCorsOrigins = new[] { globalSettings.BaseServiceUri.Vault };
             }
-            else if (id.StartsWith("cli"))
+            else if (id == "cli")
             {
                 var cliUris = new List<string>();
                 for (var port = 8065; port <= 8070; port++)
@@ -63,11 +62,6 @@ namespace Bit.Core.IdentityServer
                 }
                 RedirectUris = cliUris;
                 PostLogoutRedirectUris = cliUris;
-                
-                if (clientSecrets != null) 
-                {
-                  ClientSecrets = clientSecrets;
-                }
             }
             else if (id == "mobile")
             {

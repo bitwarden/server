@@ -6,6 +6,7 @@ using Bit.Core.Repositories;
 using System;
 using IdentityModel;
 using Bit.Core.Utilities;
+using System.Security.Claims;
 
 namespace Bit.Core.IdentityServer
 {
@@ -112,13 +113,37 @@ namespace Bit.Core.IdentityServer
             else if (clientId.Contains("user."))
             {
                 var idParts = clientId.Split('.');
-                if (idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
+                if (idParts.Length > 2 && Guid.TryParse(idParts[2], out var id))
                 {
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
                     {
-                        var client = new ApiClient(_globalSettings, clientId, 30, 1, null,
-                                new List<Secret>{ new Secret(user.ApiKey.Sha256()) });
+                        var cliUris = new List<string>();
+                        for (var port = 8065; port <= 8070; port++)
+                        {
+                            cliUris.Add(string.Format("http://localhost:{0}", port));
+                        }
+
+                        Console.WriteLine(user.Id);
+                        return new Client
+                        {
+                            ClientId = clientId,
+                            RequireClientSecret = true,
+                            ClientSecrets = { new Secret(user.ApiKey.Sha256()) },
+                            AllowedScopes = new string[] { "api" },
+                            AllowedGrantTypes = GrantTypes.ClientCredentials,
+                            AccessTokenLifetime = 3600 * 1,
+                            RedirectUris = cliUris,
+                            PostLogoutRedirectUris = cliUris,
+                            Claims = new List<ClientClaim>
+                            {
+                                new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()),
+                                new ClientClaim(JwtClaimTypes.Email, user.Email),
+                                new ClientClaim(JwtClaimTypes.EmailVerified, user.EmailVerified.ToString()),
+                                new ClientClaim(JwtClaimTypes.Name, user.Name),
+                                new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external")
+                            },
+                        };
                     }
                 }
             }
