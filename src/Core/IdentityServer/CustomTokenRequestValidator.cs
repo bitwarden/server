@@ -43,7 +43,8 @@ namespace Bit.Core.IdentityServer
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
         {
-            if (context.Result.ValidatedRequest.GrantType != "authorization_code" && context.Result.ValidatedRequest.GrantType != "client_credentials")
+            string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
+            if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType))
             {
                 return;
             }

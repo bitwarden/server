@@ -124,7 +124,6 @@ namespace Bit.Core.IdentityServer
                             cliUris.Add(string.Format("http://localhost:{0}", port));
                         }
 
-                        Console.WriteLine(user.Id);
                         return new Client
                         {
                             ClientId = clientId,
