@@ -292,6 +292,7 @@ namespace Bit.Core.Services
                 }
             }
 
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
             var result = await base.CreateAsync(user, masterPassword);
             if (result == IdentityResult.Success)
             {
