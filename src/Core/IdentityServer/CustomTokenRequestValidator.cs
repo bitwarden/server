@@ -10,6 +10,7 @@ using System.Linq;
 using Bit.Core.Identity;
 using Microsoft.Extensions.Logging;
 using IdentityServer4.Extensions;
+using IdentityModel;
 
 namespace Bit.Core.IdentityServer
 {
@@ -42,7 +43,7 @@ namespace Bit.Core.IdentityServer
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
         {
-            if (context.Result.ValidatedRequest.GrantType != "authorization_code")
+            if (context.Result.ValidatedRequest.GrantType != "authorization_code" && context.Result.ValidatedRequest.GrantType != "client_credentials")
             {
                 return;
             }
@@ -51,7 +52,9 @@ namespace Bit.Core.IdentityServer
 
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
         {
-            var user = await _userManager.FindByEmailAsync(context.Result.ValidatedRequest.Subject.GetDisplayName());
+            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
+                ?? context.Result.ValidatedRequest.ClientClaims.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email).Value;
+            var user = await _userManager.FindByEmailAsync(email);
             return (user, user != null);
         }
 
