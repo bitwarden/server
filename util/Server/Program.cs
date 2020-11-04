@@ -24,7 +24,7 @@ namespace Bit.Server
                 .ConfigureKestrel((context, options) => { });
 
             var contentRoot = config.GetValue<string>("contentRoot");
-            if (string.IsNullOrWhiteSpace(contentRoot))
+            if (!string.IsNullOrWhiteSpace(contentRoot))
             {
                 builder.UseContentRoot(contentRoot);
             }
