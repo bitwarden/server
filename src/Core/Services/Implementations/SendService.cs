@@ -63,6 +63,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("No file data.");
             }
 
+            /*
             var storageBytesRemaining = 0L;
             if (send.UserId.HasValue)
             {
@@ -99,6 +100,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Not enough storage available.");
             }
+            */
 
             var fileId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
             await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
