@@ -34,4 +34,4 @@ mkdir -p /etc/bitwarden/core/attachments
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
 exec gosu $USERNAME:$GROUPNAME dotnet /bitwarden_server/Server.dll \
-    /webRoot=/etc/bitwarden/core/attachments /serveUnknown=true
+    /contentRoot=/etc/bitwarden/core/attachments /webRoot=. /serveUnknown=true
