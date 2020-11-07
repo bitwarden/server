@@ -78,7 +78,8 @@ namespace Bit.Core.Services
                         policy.OrganizationId);
                     var removableOrgUsers = orgUsers.Where(ou =>
                         ou.Status != Enums.OrganizationUserStatusType.Invited &&
-                        ou.Type != Enums.OrganizationUserType.Owner && ou.UserId != savingUserId);
+                        ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin && 
+                        ou.UserId != savingUserId);
                     switch (currentPolicy.Type)
                     {
                         case Enums.PolicyType.TwoFactorAuthentication:
