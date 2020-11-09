@@ -113,7 +113,7 @@ namespace Bit.Core.IdentityServer
             else if (clientId.StartsWith("user."))
             {
                 var idParts = clientId.Split('.');
-                if (idParts.Length > 2 && Guid.TryParse(idParts[2], out var id))
+                if (idParts.Length > 1 && Guid.TryParse(idParts[1], out var id))
                 {
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
