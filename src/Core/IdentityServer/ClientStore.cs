@@ -1,4 +1,5 @@
-﻿using IdentityServer4.Stores;
+﻿using System.Linq;
+using IdentityServer4.Stores;
 using System.Threading.Tasks;
 using IdentityServer4.Models;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System;
 using IdentityModel;
 using Bit.Core.Utilities;
 using System.Security.Claims;
+using Bit.Core.Services;
 
 namespace Bit.Core.IdentityServer
 {
@@ -17,19 +19,28 @@ namespace Bit.Core.IdentityServer
         private readonly IUserRepository _userRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly StaticClientStore _staticClientStore;
+        private readonly ILicensingService _licensingService;
+        private readonly CurrentContext _currentContext;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
 
         public ClientStore(
             IInstallationRepository installationRepository,
             IOrganizationRepository organizationRepository,
             IUserRepository userRepository,
             GlobalSettings globalSettings,
-            StaticClientStore staticClientStore)
+            StaticClientStore staticClientStore,
+            ILicensingService licensingService,
+            CurrentContext currentContext,
+            IOrganizationUserRepository organizationUserRepository)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
             _userRepository = userRepository;
             _globalSettings = globalSettings;
             _staticClientStore = staticClientStore;
+            _licensingService = licensingService; 
+            _currentContext = currentContext;
+            _organizationUserRepository = organizationUserRepository;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
@@ -118,6 +129,62 @@ namespace Bit.Core.IdentityServer
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
                     {
+                        var claims = new List<ClientClaim>();
+                        claims.Add(new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()));
+                        claims.Add(new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external"));
+                        var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
+                        claims.AddRange(new List<ClientClaim>
+                        {
+                            new ClientClaim("premium", isPremium ? "true" : "false", ClaimValueTypes.Boolean),
+                            new ClientClaim(JwtClaimTypes.Email, user.Email),
+                            new ClientClaim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false",
+                                ClaimValueTypes.Boolean),
+                            new ClientClaim("sstamp", user.SecurityStamp)
+                        });
+
+                        if (!string.IsNullOrWhiteSpace(user.Name))
+                        {
+                            claims.Add(new ClientClaim(JwtClaimTypes.Name, user.Name));
+                        }
+
+                        // Orgs that this user belongs to
+                        var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
+                        if (orgs.Any())
+                        {
+                            foreach (var group in orgs.GroupBy(o => o.Type))
+                            {
+                                switch (group.Key)
+                                {
+                                    case Enums.OrganizationUserType.Owner:
+                                        foreach (var org in group)
+                                        {
+                                            claims.Add(new ClientClaim("orgowner", org.Id.ToString()));
+                                        }
+                                        break;
+                                    case Enums.OrganizationUserType.Admin:
+                                        foreach (var org in group)
+                                        {
+                                            claims.Add(new ClientClaim("orgadmin", org.Id.ToString()));
+                                        }
+                                        break;
+                                    case Enums.OrganizationUserType.Manager:
+                                        foreach (var org in group)
+                                        {
+                                            claims.Add(new ClientClaim("orgmanager", org.Id.ToString()));
+                                        }
+                                        break;
+                                    case Enums.OrganizationUserType.User:
+                                        foreach (var org in group)
+                                        {
+                                            claims.Add(new ClientClaim("orguser", org.Id.ToString()));
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+
                         return new Client
                         {
                             ClientId = clientId,
@@ -126,14 +193,8 @@ namespace Bit.Core.IdentityServer
                             AllowedScopes = new string[] { "api" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
-                            Claims = new List<ClientClaim>
-                            {
-                                new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()),
-                                new ClientClaim(JwtClaimTypes.Email, user.Email),
-                                new ClientClaim(JwtClaimTypes.EmailVerified, user.EmailVerified.ToString()),
-                                new ClientClaim(JwtClaimTypes.Name, user.Name),
-                                new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external")
-                            },
+                            ClientClaimsPrefix = null,
+                            Claims = claims
                         };
                     }
                 }
