@@ -110,7 +110,7 @@ namespace Bit.Core.IdentityServer
                     }
                 }
             }
-            else if (clientId.Contains("user."))
+            else if (clientId.StartsWith("user."))
             {
                 var idParts = clientId.Split('.');
                 if (idParts.Length > 2 && Guid.TryParse(idParts[2], out var id))
