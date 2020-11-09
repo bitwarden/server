@@ -735,7 +735,6 @@ namespace Bit.Api.Controllers
             return userIdentifier;
         }
 
-
         [HttpPost("api-key")]
         public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
         {

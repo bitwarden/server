@@ -118,12 +118,6 @@ namespace Bit.Core.IdentityServer
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
                     {
-                        var cliUris = new List<string>();
-                        for (var port = 8065; port <= 8070; port++)
-                        {
-                            cliUris.Add(string.Format("http://localhost:{0}", port));
-                        }
-
                         return new Client
                         {
                             ClientId = clientId,
@@ -132,8 +126,6 @@ namespace Bit.Core.IdentityServer
                             AllowedScopes = new string[] { "api" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,
-                            RedirectUris = cliUris,
-                            PostLogoutRedirectUris = cliUris,
                             Claims = new List<ClientClaim>
                             {
                                 new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()),
