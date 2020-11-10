@@ -149,7 +149,7 @@
     <value>Edit Policy - {0}</value>
   </data>
   <data name="EditPolicyTwoStepLoginWarning" xml:space="preserve">
-    <value>Organization Users and Managers who do not have two-step login enabled for their personal account will be removed from the organization and will receive an email notifying them about the change.</value>
+    <value>Organization members who are not Owners or Administrators and do not have two-step login enabled for their personal account will be removed from the organization and will receive an email notifying them about the change.</value>
   </data>
   <data name="Save" xml:space="preserve">
     <value>Save</value>
@@ -546,7 +546,7 @@
     <value>Restrict users from being able to join any other organizations.</value>
   </data>
   <data name="SingleOrganizationPolicyWarning" xml:space="preserve">
-    <value>Organization Users and Managers who are already a part of another organization will be removed from this organization and will receive an email notifying them about the change.</value>
+    <value>Organization members who are not Owners or Administrators and are already a part of another organization will be removed from this organization and will receive an email notifying them about the change.</value>
   </data>
   <data name="RequireSso" xml:space="preserve">
     <value>Single Sign-On Authentication</value>
@@ -564,6 +564,6 @@
     <value>Single Organization policy not enabled.</value>
   </data>
   <data name="RequireSsoExemption" xml:space="preserve">
-    <value>Organization Owners and Admins are exempt from this policy's enforcement.</value>
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
 </root>
