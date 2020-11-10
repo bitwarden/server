@@ -9,6 +9,7 @@ using IdentityModel;
 using Bit.Core.Utilities;
 using System.Security.Claims;
 using Bit.Core.Services;
+using System.Collections.ObjectModel;
 
 namespace Bit.Core.IdentityServer
 {
@@ -129,60 +130,21 @@ namespace Bit.Core.IdentityServer
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
                     {
-                        var claims = new List<ClientClaim>();
-                        claims.Add(new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()));
-                        claims.Add(new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external"));
-                        var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
-                        claims.AddRange(new List<ClientClaim>
+                        var claims = new Collection<ClientClaim>() 
                         {
-                            new ClientClaim("premium", isPremium ? "true" : "false", ClaimValueTypes.Boolean),
-                            new ClientClaim(JwtClaimTypes.Email, user.Email),
-                            new ClientClaim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false",
-                                ClaimValueTypes.Boolean),
-                            new ClientClaim("sstamp", user.SecurityStamp)
-                        });
-
-                        if (!string.IsNullOrWhiteSpace(user.Name))
-                        {
-                            claims.Add(new ClientClaim(JwtClaimTypes.Name, user.Name));
-                        }
-
-                        // Orgs that this user belongs to
+                            new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()),
+                            new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external")
+                        }; 
                         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
-                        if (orgs.Any())
+                        var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
+                        foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, isPremium))
                         {
-                            foreach (var group in orgs.GroupBy(o => o.Type))
-                            {
-                                switch (group.Key)
-                                {
-                                    case Enums.OrganizationUserType.Owner:
-                                        foreach (var org in group)
-                                        {
-                                            claims.Add(new ClientClaim("orgowner", org.Id.ToString()));
-                                        }
-                                        break;
-                                    case Enums.OrganizationUserType.Admin:
-                                        foreach (var org in group)
-                                        {
-                                            claims.Add(new ClientClaim("orgadmin", org.Id.ToString()));
-                                        }
-                                        break;
-                                    case Enums.OrganizationUserType.Manager:
-                                        foreach (var org in group)
-                                        {
-                                            claims.Add(new ClientClaim("orgmanager", org.Id.ToString()));
-                                        }
-                                        break;
-                                    case Enums.OrganizationUserType.User:
-                                        foreach (var org in group)
-                                        {
-                                            claims.Add(new ClientClaim("orguser", org.Id.ToString()));
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
+                            var upperValue = claim.Value.ToUpperInvariant();
+                            var isBool = upperValue == "TRUE" || upperValue == "FALSE";
+                            claims.Add(isBool ?
+                                new ClientClaim(claim.Key, claim.Value, ClaimValueTypes.Boolean) :
+                                new ClientClaim(claim.Key, claim.Value)
+                            );
                         }
 
                         return new Client
