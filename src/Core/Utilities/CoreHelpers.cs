@@ -18,6 +18,8 @@ using Bit.Core.Enums;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Bit.Core.Models.Table;
+using IdentityModel;
 
 namespace Bit.Core.Utilities
 {
@@ -669,6 +671,60 @@ namespace Bit.Core.Utilities
                 configDict[replace.Key] = replace.Value;
             }
             return configDict;
+        }
+
+        public static Dictionary<string, string> BuildIdentityClaims(User user, ICollection<CurrentContext.CurrentContentOrganization> orgs, bool isPremium) 
+        {
+            var claims = new Dictionary<string, string>()
+            {
+                {"premium", isPremium ? "true" : "false"},
+                {JwtClaimTypes.Email, user.Email},
+                {JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"},
+                {"sstamp", user.SecurityStamp}
+            };
+
+            if (!string.IsNullOrWhiteSpace(user.Name))
+            {
+                claims.Add(JwtClaimTypes.Name, user.Name);
+            }
+
+            // Orgs that this user belongs to
+            if (orgs.Any())
+            {
+                foreach (var group in orgs.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case Enums.OrganizationUserType.Owner:
+                            foreach (var org in group)
+                            {
+                                claims.Add("orgowner", org.Id.ToString());
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Admin:
+                            foreach (var org in group)
+                            {
+                                claims.Add("orgadmin", org.Id.ToString());
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Manager:
+                            foreach (var org in group)
+                            {
+                                claims.Add("orgmanager", org.Id.ToString());
+                            }
+                            break;
+                        case Enums.OrganizationUserType.User:
+                            foreach (var org in group)
+                            {
+                                claims.Add("orguser", org.Id.ToString());
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            return claims;
         }
     }
 }
