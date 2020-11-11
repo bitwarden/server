@@ -673,19 +673,19 @@ namespace Bit.Core.Utilities
             return configDict;
         }
 
-        public static Dictionary<string, string> BuildIdentityClaims(User user, ICollection<CurrentContext.CurrentContentOrganization> orgs, bool isPremium) 
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContext.CurrentContentOrganization> orgs, bool isPremium) 
         {
-            var claims = new Dictionary<string, string>()
+            var claims = new List<KeyValuePair<string, string>>()
             {
-                {"premium", isPremium ? "true" : "false"},
-                {JwtClaimTypes.Email, user.Email},
-                {JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"},
-                {"sstamp", user.SecurityStamp}
+                new KeyValuePair<string, string>("premium", isPremium ? "true" : "false"),
+                new KeyValuePair<string, string>(JwtClaimTypes.Email, user.Email),
+                new KeyValuePair<string, string>(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+                new KeyValuePair<string, string>("sstamp", user.SecurityStamp)
             };
 
             if (!string.IsNullOrWhiteSpace(user.Name))
             {
-                claims.Add(JwtClaimTypes.Name, user.Name);
+                claims.Add(new KeyValuePair<string, string>(JwtClaimTypes.Name, user.Name));
             }
 
             // Orgs that this user belongs to
@@ -698,25 +698,25 @@ namespace Bit.Core.Utilities
                         case Enums.OrganizationUserType.Owner:
                             foreach (var org in group)
                             {
-                                claims.Add("orgowner", org.Id.ToString());
+                                claims.Add(new KeyValuePair<string, string>("orgowner", org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.Admin:
                             foreach (var org in group)
                             {
-                                claims.Add("orgadmin", org.Id.ToString());
+                                claims.Add(new KeyValuePair<string, string>("orgadmin", org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.Manager:
                             foreach (var org in group)
                             {
-                                claims.Add("orgmanager", org.Id.ToString());
+                                claims.Add(new KeyValuePair<string, string>("orgmanager", org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.User:
                             foreach (var org in group)
                             {
-                                claims.Add("orguser", org.Id.ToString());
+                                claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
                             }
                             break;
                         default:
