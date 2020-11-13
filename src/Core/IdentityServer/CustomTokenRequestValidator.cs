@@ -45,7 +45,7 @@ namespace Bit.Core.IdentityServer
         {
             string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
             if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType) ||
-                context.Result.ValidatedRequest.ClientId.StartsWith("org"))
+                context.Result.ValidatedRequest.ClientId.StartsWith("organization"))
             {
                 return;
             }
