@@ -38,6 +38,7 @@ namespace Bit.Core.Models.Api
         public CipherCardModel Card { get; set; }
         public CipherIdentityModel Identity { get; set; }
         public CipherSecureNoteModel SecureNote { get; set; }
+        public DateTime? LastKnownRevisionDate { get; set; } = null;
 
         public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -57,8 +57,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
-            bool skipPermissionCheck = false, bool limitCollectionScope = true)
+        public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
+             IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false, bool limitCollectionScope = true)
         {
             if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
             {
@@ -91,6 +91,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
+                await ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -100,7 +101,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId,
+        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
             IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false)
         {
             if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
@@ -136,6 +137,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
+                await ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -394,7 +396,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId,
-            IEnumerable<Guid> collectionIds, Guid sharingUserId)
+            IEnumerable<Guid> collectionIds, Guid sharingUserId, DateTime? lastKnownRevisionDate)
         {
             var attachments = cipher.GetAttachments();
             var hasAttachments = attachments?.Any() ?? false;
@@ -429,6 +431,13 @@ namespace Bit.Core.Services
                 if (org.StorageBytesRemaining() < storageAdjustment)
                 {
                     throw new BadRequestException("Not enough storage available for this organization.");
+                }
+
+                if (lastKnownRevisionDate != null && originalCipher.RevisionDate != lastKnownRevisionDate)
+                {
+                    throw new BadRequestException(
+                        "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
+                    );
                 }
 
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
@@ -789,6 +798,19 @@ namespace Bit.Core.Services
             }
 
             return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
+        }
+
+        private async Task ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
+        {
+            if (cipher.Id == default || !lastKnownRevisionDate.HasValue) return;
+
+            var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
+            if (existingCipher.RevisionDate != lastKnownRevisionDate)
+            {
+                throw new BadRequestException(
+                    "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
+                );
+            }
         }
     }
 }
