@@ -84,6 +84,7 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<SendResponseModel> Post([FromBody] SendRequestModel model)
         {
+            throw new NotFoundException();
             var userId = _userService.GetProperUserId(User).Value;
             var send = model.ToSend(userId, _sendService);
             await _sendService.SaveSendAsync(send);
