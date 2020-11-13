@@ -54,7 +54,7 @@ namespace Bit.Core.IdentityServer
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
         {
             var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
-                ?? context.Result.ValidatedRequest.ClientClaims.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email).Value;
+                ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
             var user = await _userManager.FindByEmailAsync(email);
             return (user, user != null);
         }
