@@ -56,7 +56,7 @@ namespace Bit.Core.IdentityServer
         {
             var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
                 ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
             return (user, user != null);
         }
 
