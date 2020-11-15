@@ -34,12 +34,12 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
 
     internal class UserCipherAutoDataAttribute : CustomAutoDataAttribute
     {
-        public UserCipherAutoDataAttribute() : base(typeof(UserCipher))
+        public UserCipherAutoDataAttribute() : base(typeof(SutProviderCustomization), typeof(UserCipher))
         { }
     }
     internal class InlineUserCipherAutoData : InlineCustomAutoDataAttribute
     {
-        public InlineUserCipherAutoData(params object[] values) : base(new[] { typeof(UserCipher) }, values)
+        public InlineUserCipherAutoData(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(UserCipher) }, values)
         { }
     }
 }

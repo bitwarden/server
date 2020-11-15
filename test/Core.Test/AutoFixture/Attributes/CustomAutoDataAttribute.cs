@@ -6,8 +6,7 @@ namespace Bit.Core.Test.AutoFixture.Attributes
 {
     internal class CustomAutoDataAttribute : AutoDataAttribute
     {
-        public CustomAutoDataAttribute(params Type[] iCustomizationTypes)
-        : base(() =>
+        public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : base(() =>
         {
             var fixture = new Fixture();
             foreach (Type iCustomizationType in iCustomizationTypes)
