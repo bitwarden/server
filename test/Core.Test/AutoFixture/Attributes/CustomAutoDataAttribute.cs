@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AutoFixture;
 using AutoFixture.Xunit2;
 
@@ -6,12 +7,16 @@ namespace Bit.Core.Test.AutoFixture.Attributes
 {
     internal class CustomAutoDataAttribute : AutoDataAttribute
     {
-        public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : base(() =>
+        public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : this(iCustomizationTypes
+            .Select(t => (ICustomization)Activator.CreateInstance(t)).ToArray())
+        { }
+
+        public CustomAutoDataAttribute(params ICustomization[] customizations) : base(() =>
         {
             var fixture = new Fixture();
-            foreach (Type iCustomizationType in iCustomizationTypes)
+            foreach (var customization in customizations)
             {
-                fixture.Customize((ICustomization)Activator.CreateInstance(iCustomizationType));
+                fixture.Customize(customization);
             }
             return fixture;
         })

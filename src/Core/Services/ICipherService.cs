@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Core.Models.Data;
@@ -26,8 +26,8 @@ namespace Bit.Core.Services
         Task DeleteFolderAsync(Folder folder);
         Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds,
             Guid userId, DateTime? lastKnownRevisionDate);
-        Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId, IEnumerable<Guid> collectionIds,
-            Guid sharingUserId);
+        Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> ciphers, Guid organizationId,
+            IEnumerable<Guid> collectionIds, Guid sharingUserId);
         Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
         Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships);

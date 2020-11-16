@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -503,7 +503,7 @@ namespace Bit.Api.Controllers
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
             var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
-            var shareCiphers = new List<Cipher>();
+            var shareCiphers = new List<(Cipher, DateTime?)>();
             foreach (var cipher in model.Ciphers)
             {
                 if (!ciphersDict.ContainsKey(cipher.Id.Value))
@@ -511,7 +511,7 @@ namespace Bit.Api.Controllers
                     throw new BadRequestException("Trying to share ciphers that you do not own.");
                 }
 
-                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipher.Id.Value]));
+                shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
             }
 
             await _cipherService.ShareManyAsync(shareCiphers, organizationId,
