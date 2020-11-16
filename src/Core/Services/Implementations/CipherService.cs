@@ -91,7 +91,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
-                await ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -137,7 +137,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
-                await ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -433,12 +433,7 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Not enough storage available for this organization.");
                 }
 
-                if (lastKnownRevisionDate != null && originalCipher.RevisionDate != lastKnownRevisionDate)
-                {
-                    throw new BadRequestException(
-                        "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
-                    );
-                }
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
 
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
                 cipher.UserId = sharingUserId;
@@ -800,12 +795,11 @@ namespace Bit.Core.Services
             return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
         }
 
-        private async Task ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
+        private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
         {
             if (cipher.Id == default || !lastKnownRevisionDate.HasValue) return;
 
-            var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-            if (existingCipher.RevisionDate != lastKnownRevisionDate)
+            if (cipher.RevisionDate - lastKnownRevisionDate > TimeSpan.FromSeconds(1))
             {
                 throw new BadRequestException(
                     "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
