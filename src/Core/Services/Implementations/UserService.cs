@@ -292,6 +292,7 @@ namespace Bit.Core.Services
                 }
             }
 
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
             var result = await base.CreateAsync(user, masterPassword);
             if (result == IdentityResult.Success)
             {
@@ -1203,6 +1204,13 @@ namespace Bit.Core.Services
                     new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
             }
             return result;
+        }
+
+        public async Task RotateApiKeyAsync(User user)
+        {
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
         }
     }
 }

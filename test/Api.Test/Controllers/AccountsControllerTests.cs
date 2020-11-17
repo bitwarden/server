@@ -304,6 +304,66 @@ namespace Bit.Api.Test.Controllers
             );
         }
 
+        [Fact]
+        public async Task GetApiKey_ShouldReturnApiKeyResponse()
+        {
+            var user = GenerateExampleUser();
+            ConfigureUserServiceToReturnValidPrincipalFor(user);
+            ConfigureUserServiceToAcceptPasswordFor(user);
+            await _sut.ApiKey(new ApiKeyRequestModel());
+        }
+
+        [Fact]
+        public async Task GetApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
+        {
+            ConfigureUserServiceToReturnNullPrincipal();
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => _sut.ApiKey(new ApiKeyRequestModel())
+            );
+        }
+
+        [Fact]
+        public async Task GetApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException()
+        {
+            var user = GenerateExampleUser();
+            ConfigureUserServiceToReturnValidPrincipalFor(user);
+            ConfigureUserServiceToRejectPasswordFor(user);
+            await Assert.ThrowsAsync<BadRequestException>(
+                () => _sut.ApiKey(new ApiKeyRequestModel())
+            );
+        }
+
+        [Fact]
+        public async Task PostRotateApiKey_ShouldRotateApiKey()
+        {
+            var user = GenerateExampleUser();
+            ConfigureUserServiceToReturnValidPrincipalFor(user);
+            ConfigureUserServiceToAcceptPasswordFor(user);
+            await _sut.RotateApiKey(new ApiKeyRequestModel());
+        }
+
+        [Fact]
+        public async Task PostRotateApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
+        {
+            ConfigureUserServiceToReturnNullPrincipal();
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => _sut.ApiKey(new ApiKeyRequestModel())
+            );
+        }
+
+        [Fact]
+        public async Task PostRotateApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException()
+        {
+            var user = GenerateExampleUser();
+            ConfigureUserServiceToReturnValidPrincipalFor(user);
+            ConfigureUserServiceToRejectPasswordFor(user);
+            await Assert.ThrowsAsync<BadRequestException>(
+                () => _sut.ApiKey(new ApiKeyRequestModel())
+            );
+        }
+
         // Below are helper functions that currently belong to this
         // test class, but ultimately may need to be split out into
         // something greater in order to share common test steps with
