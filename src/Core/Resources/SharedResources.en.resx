@@ -566,4 +566,13 @@
   <data name="RequireSsoExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
+  <data name="PersonalOwnership" xml:space="preserve">
+    <value>Personal Ownership</value>
+  </data>
+  <data name="PersonalOwnershipDescription" xml:space="preserve">
+    <value>Require users to save vault items to an organization by removing the personal ownership option.</value>
+  </data>
+  <data name="PersonalOwnershipExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
 </root>

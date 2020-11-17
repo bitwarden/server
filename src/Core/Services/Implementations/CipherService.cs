@@ -27,6 +27,7 @@ namespace Bit.Core.Services
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly IEventService _eventService;
         private readonly IUserService _userService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public CipherService(
@@ -41,6 +42,7 @@ namespace Bit.Core.Services
             IAttachmentStorageService attachmentStorageService,
             IEventService eventService,
             IUserService userService,
+            IPolicyRepository policyRepository,
             GlobalSettings globalSettings)
         {
             _cipherRepository = cipherRepository;
@@ -54,6 +56,7 @@ namespace Bit.Core.Services
             _attachmentStorageService = attachmentStorageService;
             _eventService = eventService;
             _userService = userService;
+            _policyRepository = policyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -118,6 +121,15 @@ namespace Bit.Core.Services
                 }
                 else
                 {
+                    // Make sure the user can save new ciphers to their personal vault
+                    var userPolicies = await _policyRepository.GetManyByUserIdAsync(savingUserId);
+                    if (userPolicies != null)
+                    {
+                        if (userPolicies.Any(policy => policy.Type == PolicyType.PersonalOwnership && policy.Enabled))
+                        {
+                            throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
+                        }
+                    }
                     await _cipherRepository.CreateAsync(cipher);
                 }
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Created);
