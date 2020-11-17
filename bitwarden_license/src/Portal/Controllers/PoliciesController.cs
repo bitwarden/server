@@ -143,7 +143,7 @@ namespace Bit.Portal.Controllers
                     {
                         break;
                     }
-                    var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, type);
+                    var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, PolicyType.SingleOrg);
                     if (singleOrg?.Enabled != true)
                     {
                         ModelState.AddModelError(string.Empty, _i18nService.T("RequireSsoPolicyReqError"));
