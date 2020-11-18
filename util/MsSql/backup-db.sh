@@ -1,9 +1,14 @@
 #!/bin/sh
+BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
+BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
 
 while true
 do
   # Sleep until next day
-  [ "$1" = "loop" ] && sleep $((24 * 3600 - (`date +%_H` * 3600 + `date +%_M` * 60 + `date +%_S`)))
+  if [ "$1" = "loop" ]; then
+    interval_start=`date -u "+${BACKUP_INTERVAL_FORMAT}" -d "${BACKUP_INTERVAL}"`
+    sleep $((`date -u +%_s -d "${interval_start}"` - `date -u +%_s`))
+  fi
 
   # Backup timestamp
   export now=$(date +%Y%m%d_%H%M%S)
