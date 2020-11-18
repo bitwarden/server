@@ -79,6 +79,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<ISsoConfigRepository, SqlServerRepos.SsoConfigRepository>();
                 services.AddSingleton<ISsoUserRepository, SqlServerRepos.SsoUserRepository>();
                 services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
+                services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
             }
 
             if (globalSettings.SelfHosted)
@@ -111,6 +112,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
             services.AddScoped<Services.IEventService, EventService>();
+            services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddSingleton<ISsoConfigService, SsoConfigService>();

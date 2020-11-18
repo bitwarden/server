@@ -549,13 +549,19 @@ namespace Bit.Core.Utilities
         public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
             Guid orgUserId, GlobalSettings globalSettings)
         {
+            return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId, globalSettings);
+        }
+        
+        public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
+            Guid id, GlobalSettings globalSettings)
+        {
             var invalid = true;
             try
             {
                 var unprotectedData = protector.Unprotect(token);
                 var dataParts = unprotectedData.Split(' ');
-                if (dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
-                    new Guid(dataParts[1]) == orgUserId &&
+                if (dataParts.Length == 4 && dataParts[0] == firstTokenPart &&
+                    new Guid(dataParts[1]) == id &&
                     dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
                     var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
