@@ -21,6 +21,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Sso.Controllers
 {
@@ -453,7 +454,8 @@ namespace Bit.Sso.Controllers
                 user = new User
                 {
                     Name = name,
-                    Email = email
+                    Email = email,
+                    ApiKey = CoreHelpers.SecureRandomString(30)
                 };
                 await _userService.RegisterUserAsync(user);
 
