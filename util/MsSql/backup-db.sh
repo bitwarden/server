@@ -6,8 +6,8 @@ while true
 do
   # Sleep until next day
   if [ "$1" = "loop" ]; then
-    interval_start=`date -u "+${BACKUP_INTERVAL_FORMAT}" -d "${BACKUP_INTERVAL}"`
-    sleep $((`date -u +%_s -d "${interval_start}"` - `date -u +%_s`))
+    interval_start=`date "+${BACKUP_INTERVAL_FORMAT} %z" -d "${BACKUP_INTERVAL}"`
+    sleep $((`date +%_s -d "${interval_start}"` - `date +%_s`))
   fi
 
   # Backup timestamp
