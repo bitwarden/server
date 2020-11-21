@@ -210,7 +210,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key);
+            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key, 
+                model.OrgIdentifier);
             if (result.Succeeded)
             {
                 return;
