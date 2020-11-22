@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 
@@ -37,6 +38,7 @@ namespace Bit.Sso.Controllers
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IUserService _userService;
         private readonly II18nService _i18nService;
         private readonly UserManager<User> _userManager;
@@ -51,6 +53,7 @@ namespace Bit.Sso.Controllers
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
+            IPolicyRepository policyRepository,
             IUserService userService,
             II18nService i18nService,
             UserManager<User> userManager)
@@ -64,6 +67,7 @@ namespace Bit.Sso.Controllers
             _userRepository = userRepository;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoUserRepository = ssoUserRepository;
+            _policyRepository = policyRepository;
             _userService = userService;
             _i18nService = i18nService;
             _userManager = userManager;
@@ -461,6 +465,22 @@ namespace Bit.Sso.Controllers
 
                 if (orgId.HasValue)
                 {
+                    // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
+                    var twoFactorPolicy =
+                        await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, PolicyType.TwoFactorAuthentication);
+                    if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+                    {
+                        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                        {
+
+                            [TwoFactorProviderType.Email] = new TwoFactorProvider
+                            {
+                                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                                Enabled = true
+                            }
+                        });
+                        await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+                    }
                     // Create organization user record
                     orgUser = new OrganizationUser
                     {
