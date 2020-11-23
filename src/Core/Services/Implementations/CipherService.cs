@@ -57,8 +57,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
-            bool skipPermissionCheck = false, bool limitCollectionScope = true)
+        public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
+             IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false, bool limitCollectionScope = true)
         {
             if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
             {
@@ -91,6 +91,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -100,7 +101,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId,
+        public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
             IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false)
         {
             if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
@@ -136,6 +137,7 @@ namespace Bit.Core.Services
                 {
                     throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
                 }
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
@@ -394,7 +396,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId,
-            IEnumerable<Guid> collectionIds, Guid sharingUserId)
+            IEnumerable<Guid> collectionIds, Guid sharingUserId, DateTime? lastKnownRevisionDate)
         {
             var attachments = cipher.GetAttachments();
             var hasAttachments = attachments?.Any() ?? false;
@@ -430,6 +432,8 @@ namespace Bit.Core.Services
                 {
                     throw new BadRequestException("Not enough storage available for this organization.");
                 }
+
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
 
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
                 cipher.UserId = sharingUserId;
@@ -490,11 +494,11 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId,
-            IEnumerable<Guid> collectionIds, Guid sharingUserId)
+        public async Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
+            Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId)
         {
             var cipherIds = new List<Guid>();
-            foreach (var cipher in ciphers)
+            foreach (var (cipher, lastKnownRevisionDate) in cipherInfos)
             {
                 if (cipher.Id == default(Guid))
                 {
@@ -511,18 +515,20 @@ namespace Bit.Core.Services
                     throw new BadRequestException("One or more ciphers do not belong to you.");
                 }
 
+                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+
                 cipher.UserId = null;
                 cipher.OrganizationId = organizationId;
                 cipher.RevisionDate = DateTime.UtcNow;
                 cipherIds.Add(cipher.Id);
             }
 
-            await _cipherRepository.UpdateCiphersAsync(sharingUserId, ciphers);
+            await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
             await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
                 organizationId, collectionIds);
 
-            var events = ciphers.Select(c =>
-                new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Shared, null));
+            var events = cipherInfos.Select(c =>
+                new Tuple<Cipher, EventType, DateTime?>(c.cipher, EventType.Cipher_Shared, null));
             foreach (var eventsBatch in events.Batch(100))
             {
                 await _eventService.LogCipherEventsAsync(eventsBatch);
@@ -789,6 +795,21 @@ namespace Bit.Core.Services
             }
 
             return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
+        }
+
+        private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
+        {
+            if (cipher.Id == default || !lastKnownRevisionDate.HasValue)
+            {
+                return;
+            }
+
+            if ((cipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
+            {
+                throw new BadRequestException(
+                    "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
+                );
+            }
         }
     }
 }

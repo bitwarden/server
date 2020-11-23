@@ -113,7 +113,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveDetailsAsync(cipher, userId, null, cipher.OrganizationId.HasValue);
+            await _cipherService.SaveDetailsAsync(cipher, userId, model.LastKnownRevisionDate, null, cipher.OrganizationId.HasValue);
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
         }
@@ -128,7 +128,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveDetailsAsync(cipher, userId, model.CollectionIds, cipher.OrganizationId.HasValue);
+            await _cipherService.SaveDetailsAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, cipher.OrganizationId.HasValue);
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
         }
@@ -143,7 +143,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.SaveAsync(cipher, userId, model.CollectionIds, true, false);
+            await _cipherService.SaveAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, true, false);
 
             var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
             return response;
@@ -168,7 +168,7 @@ namespace Bit.Api.Controllers
                     "then try again.");
             }
 
-            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId);
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate);
 
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
@@ -188,7 +188,7 @@ namespace Bit.Api.Controllers
 
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = CoreHelpers.CloneObject(model.ToCipher(cipher));
-            await _cipherService.SaveAsync(cipherClone, userId, null, true, false);
+            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
@@ -277,8 +277,8 @@ namespace Bit.Api.Controllers
             }
 
             var original = CoreHelpers.CloneObject(cipher);
-            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), 
-                new Guid(model.Cipher.OrganizationId), model.CollectionIds.Select(c => new Guid(c)), userId);
+            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+                model.CollectionIds.Select(c => new Guid(c)), userId, model.Cipher.LastKnownRevisionDate);
 
             var sharedCipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
             var response = new CipherResponseModel(sharedCipher, _globalSettings);
@@ -503,7 +503,7 @@ namespace Bit.Api.Controllers
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
             var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
-            var shareCiphers = new List<Cipher>();
+            var shareCiphers = new List<(Cipher, DateTime?)>();
             foreach (var cipher in model.Ciphers)
             {
                 if (!ciphersDict.ContainsKey(cipher.Id.Value))
@@ -511,7 +511,7 @@ namespace Bit.Api.Controllers
                     throw new BadRequestException("Trying to share ciphers that you do not own.");
                 }
 
-                shareCiphers.Add(cipher.ToCipher(ciphersDict[cipher.Id.Value]));
+                shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
             }
 
             await _cipherService.ShareManyAsync(shareCiphers, organizationId,
