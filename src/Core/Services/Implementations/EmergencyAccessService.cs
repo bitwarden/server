@@ -64,7 +64,8 @@ namespace Bit.Core.Services
         public async Task<EmergencyAccessDetails> GetAsync(Guid emergencyAccessId, Guid userId)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetDetailsByIdGrantorIdAsync(emergencyAccessId, userId);
-            if (emergencyAccess == null) {
+            if (emergencyAccess == null)
+            {
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
@@ -173,10 +174,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
+            var now = DateTime.UtcNow;
             emergencyAccess.Status = EmergencyAccessStatusType.RecoveryInitiated;
-            emergencyAccess.RevisionDate = DateTime.UtcNow;
-            emergencyAccess.RecoveryInitiatedAt = DateTime.UtcNow;
-            emergencyAccess.LastNotificationAt = DateTime.UtcNow;
+            emergencyAccess.RevisionDate = now;
+            emergencyAccess.RecoveryInitiatedDate = now;
+            emergencyAccess.LastNotificationDate = now;
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
@@ -260,7 +262,7 @@ namespace Bit.Core.Services
             foreach (var notify in toNotify)
             {
                 var ea = notify.ToEmergencyAccess();
-                ea.LastNotificationAt = DateTime.UtcNow;
+                ea.LastNotificationDate = DateTime.UtcNow;
                 await _emergencyAccessRepository.ReplaceAsync(ea);
                 
                 await _mailService.SendEmergencyAccessRecoveryReminder(ea, notify.GranteeName, notify.GrantorEmail);

@@ -539,7 +539,7 @@ namespace Bit.Core.Services
         {
             var message = CreateDefaultMessage("Emergency Access Initiated", email);
             
-            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedAt.GetValueOrDefault();
+            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
 
             var model = new EmergencyAccessRecoveryViewModel
             {
@@ -580,7 +580,7 @@ namespace Bit.Core.Services
         {
             var message = CreateDefaultMessage("Pending Emergency Access Request", email);
 
-            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedAt.GetValueOrDefault();
+            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
             
             var model = new EmergencyAccessRecoveryViewModel
             {

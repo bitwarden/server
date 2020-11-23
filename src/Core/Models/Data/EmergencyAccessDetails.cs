@@ -16,11 +16,7 @@ namespace Bit.Core.Models.Data
         public bool? GranteePremium { get; set; }
         public string GrantorName { get; set; }
         public string GrantorEmail { get; set; }
-
-        public string TwoFactorProviders
-        {
-            get { return GranteeTwoFactorProviders; }
-        }
+        public string TwoFactorProviders => GranteeTwoFactorProviders;
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {

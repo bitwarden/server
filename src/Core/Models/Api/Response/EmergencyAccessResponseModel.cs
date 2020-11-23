@@ -44,7 +44,6 @@ namespace Bit.Core.Models.Api.Response
 
     public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessResponseModel
     {
-
         public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess, bool twoFactorEnabled)
             : base(emergencyAccess, "emergencyAccessGranteeDetails")
         {
@@ -67,7 +66,6 @@ namespace Bit.Core.Models.Api.Response
 
     public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel
     {
-
         public EmergencyAccessGrantorDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
             : base(emergencyAccess, "emergencyAccessGrantorDetails")
         {
@@ -101,9 +99,7 @@ namespace Bit.Core.Models.Api.Response
         }
 
         public int KdfIterations { get; private set; }
-
         public KdfType Kdf { get; private set; }
-
         public string KeyEncrypted { get; private set; }
     }
 
@@ -120,8 +116,6 @@ namespace Bit.Core.Models.Api.Response
         }
         
         public string KeyEncrypted { get; set; }
-        
         public IEnumerable<CipherResponseModel> Ciphers { get; set; }
-
     }
 }

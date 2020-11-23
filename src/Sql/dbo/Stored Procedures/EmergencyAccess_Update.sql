@@ -7,8 +7,8 @@
     @Type TINYINT,
     @Status TINYINT,
     @WaitTimeDays SMALLINT,
-    @RecoveryInitiatedAt DATETIME2(7),
-    @LastNotificationAt DATETIME2(7),
+    @RecoveryInitiatedDate DATETIME2(7),
+    @LastNotificationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -25,8 +25,8 @@ BEGIN
         [Type] = @Type,
         [Status] = @Status,
         [WaitTimeDays] = @WaitTimeDays,
-        [RecoveryInitiatedAt] = @RecoveryInitiatedAt,
-        [LastNotificationAt] = @LastNotificationAt,
+        [RecoveryInitiatedDate] = @RecoveryInitiatedDate,
+        [LastNotificationDate] = @LastNotificationDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

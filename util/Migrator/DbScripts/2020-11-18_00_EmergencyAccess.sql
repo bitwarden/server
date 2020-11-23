@@ -2,18 +2,18 @@
  * Add support for Emergency Access
  */
 CREATE TABLE [dbo].[EmergencyAccess] (
-    [Id]                  UNIQUEIDENTIFIER NOT NULL,
-    [GrantorId]           UNIQUEIDENTIFIER NOT NULL,
-    [GranteeId]           UNIQUEIDENTIFIER NULL,
-    [Email]               NVARCHAR (50)    NULL,
-    [KeyEncrypted]        VARCHAR (MAX)    NULL,
-    [WaitTimeDays]        SMALLINT         NULL,
-    [Type]                TINYINT          NOT NULL,
-    [Status]              TINYINT          NOT NULL,
-    [RecoveryInitiatedAt] DATETIME2 (7)    NULL,
-    [LastNotificationAt]  DATETIME2 (7)    NULL,
-    [CreationDate]        DATETIME2 (7)    NOT NULL,
-    [RevisionDate]        DATETIME2 (7)    NOT NULL,
+    [Id]                    UNIQUEIDENTIFIER NOT NULL,
+    [GrantorId]             UNIQUEIDENTIFIER NOT NULL,
+    [GranteeId]             UNIQUEIDENTIFIER NULL,
+    [Email]                 NVARCHAR (50)    NULL,
+    [KeyEncrypted]          VARCHAR (MAX)    NULL,
+    [WaitTimeDays]          SMALLINT         NULL,
+    [Type]                  TINYINT          NOT NULL,
+    [Status]                TINYINT          NOT NULL,
+    [RecoveryInitiatedDate] DATETIME2 (7)    NULL,
+    [LastNotificationDate]  DATETIME2 (7)    NULL,
+    [CreationDate]          DATETIME2 (7)    NOT NULL,
+    [RevisionDate]          DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_EmergencyAccess] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 GO
@@ -154,8 +154,8 @@ CREATE PROCEDURE [dbo].[EmergencyAccess_Create]
     @Type TINYINT,
     @Status TINYINT,
     @WaitTimeDays SMALLINT,
-    @RecoveryInitiatedAt DATETIME2(7),
-    @LastNotificationAt DATETIME2(7),
+    @RecoveryInitiatedDate DATETIME2(7),
+    @LastNotificationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -172,8 +172,8 @@ BEGIN
         [Type],
         [Status],
         [WaitTimeDays],
-        [RecoveryInitiatedAt],
-        [LastNotificationAt],
+        [RecoveryInitiatedDate],
+        [LastNotificationDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -187,8 +187,8 @@ BEGIN
         @Type,
         @Status,
         @WaitTimeDays,
-        @RecoveryInitiatedAt,
-        @LastNotificationAt,
+        @RecoveryInitiatedDate,
+        @LastNotificationDate,
         @CreationDate,
         @RevisionDate
     )
@@ -251,9 +251,9 @@ BEGIN
     WHERE
         EA.[Status] = 3
     AND
-        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedAt]) <= GETDATE()
+        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedDate]) <= GETDATE()
     AND
-        DATEADD(DAY, 1, EA.[LastNotificationAt]) <= GETDATE()
+        DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETDATE()
 END
 GO
 
@@ -266,8 +266,8 @@ CREATE PROCEDURE [dbo].[EmergencyAccess_Update]
     @Type TINYINT,
     @Status TINYINT,
     @WaitTimeDays SMALLINT,
-    @RecoveryInitiatedAt DATETIME2(7),
-    @LastNotificationAt DATETIME2(7),
+    @RecoveryInitiatedDate DATETIME2(7),
+    @LastNotificationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -284,8 +284,8 @@ BEGIN
         [Type] = @Type,
         [Status] = @Status,
         [WaitTimeDays] = @WaitTimeDays,
-        [RecoveryInitiatedAt] = @RecoveryInitiatedAt,
-        [LastNotificationAt] = @LastNotificationAt,
+        [RecoveryInitiatedDate] = @RecoveryInitiatedDate,
+        [LastNotificationDate] = @LastNotificationDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
@@ -355,7 +355,7 @@ BEGIN
     WHERE
         [Status] = 3
     AND
-        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedAt]) <= GETDATE()
+        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedDate]) <= GETDATE()
 END
 GO
 

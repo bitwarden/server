@@ -14,8 +14,8 @@ namespace Bit.Core.Models.Table
         public EmergencyAccessType Type { get; set; }
         public EmergencyAccessStatusType Status { get; set; }
         public int WaitTimeDays { get; set; }
-        public DateTime? RecoveryInitiatedAt { get; internal set; }
-        public DateTime? LastNotificationAt { get; internal set; }
+        public DateTime? RecoveryInitiatedDate { get; internal set; }
+        public DateTime? LastNotificationDate { get; internal set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
@@ -36,8 +36,8 @@ namespace Bit.Core.Models.Table
                 Type = Type,
                 Status = Status,
                 WaitTimeDays = WaitTimeDays,
-                RecoveryInitiatedAt = RecoveryInitiatedAt,
-                LastNotificationAt = LastNotificationAt,
+                RecoveryInitiatedDate = RecoveryInitiatedDate,
+                LastNotificationDate = LastNotificationDate,
                 CreationDate = CreationDate,
                 RevisionDate = RevisionDate,
             };
