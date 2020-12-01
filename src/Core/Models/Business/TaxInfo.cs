@@ -14,6 +14,7 @@
                 _taxIdType = null;
             }
         }
+        public string StripeTaxRateId { get; set; }
         public string BillingAddressLine1 { get; set; }
         public string BillingAddressLine2 { get; set; }
         public string BillingAddressCity { get; set; }

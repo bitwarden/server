@@ -26,6 +26,8 @@ namespace Bit.Admin.Controllers
         private readonly ITransactionRepository _transactionRepository;
         private readonly IInstallationRepository _installationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPaymentService _paymentService;
+        private readonly ITaxRateRepository _taxRateRepository;
 
         public ToolsController(
             GlobalSettings globalSettings,
@@ -34,7 +36,9 @@ namespace Bit.Admin.Controllers
             IUserService userService,
             ITransactionRepository transactionRepository,
             IInstallationRepository installationRepository,
-            IOrganizationUserRepository organizationUserRepository)
+            IOrganizationUserRepository organizationUserRepository,
+            ITaxRateRepository taxRateRepository,
+            IPaymentService paymentService)
         {
             _globalSettings = globalSettings;
             _organizationRepository = organizationRepository;
@@ -43,6 +47,8 @@ namespace Bit.Admin.Controllers
             _transactionRepository = transactionRepository;
             _installationRepository = installationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _taxRateRepository = taxRateRepository;
+            _paymentService = paymentService;
         }
 
         public IActionResult ChargeBraintree()
@@ -263,6 +269,89 @@ namespace Bit.Admin.Controllers
             {
                 throw new Exception("No license to generate.");
             }
+        }
+
+        public async Task<IActionResult> TaxRate(string message = null, int page = 1, int count = 25)
+        {
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (count < 1)
+            {
+                count = 1;
+            }
+            
+            var skip = (page - 1) * count;
+            var rates = await _taxRateRepository.SearchAsync(skip, count);
+            return View(new TaxRatesModel
+            {
+                Message = message,
+                Items = rates.ToList(),
+                Page = page,
+                Count = count
+            });
+        }
+
+        public IActionResult TaxRateAddEdit(string stripeTaxRateId = null, string country = null, string state = null, string postalCode = null, decimal rate = 0) 
+        {
+            var model = new TaxRateAddEditModel()
+            {
+                StripeTaxRateId = stripeTaxRateId,
+                Country = country,
+                State = state,
+                PostalCode = postalCode,
+                Rate = rate
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model) 
+        {
+            var taxRate = new TaxRate()
+            {
+                Id = model.StripeTaxRateId,
+                Country = model.Country,
+                State = model.State,
+                PostalCode = model.PostalCode,
+                Rate = model.Rate
+            };
+
+            if (!string.IsNullOrWhiteSpace(model.StripeTaxRateId))
+            {
+                await _paymentService.UpdateTaxRateAsync(taxRate);
+            }
+            else
+            {
+                await _paymentService.CreateTaxRateAsync(taxRate);
+            }
+
+            return RedirectToAction("TaxRate");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> TaxRateUpdate(TaxRate model) 
+        {
+            if (!string.IsNullOrWhiteSpace(model.Id))
+            {
+                await _paymentService.UpdateTaxRateAsync(model);
+            }
+
+            return RedirectToAction("TaxRate");
+        }
+
+        public async Task<bool> TaxRateArchive(string stripeTaxRateId) 
+        {
+            if (!string.IsNullOrWhiteSpace(stripeTaxRateId))
+            {
+                await _paymentService.ArchiveTaxRateAsync(new TaxRate() { Id = stripeTaxRateId });
+                return true;
+            }
+
+            return false;
         }
     }
 }
