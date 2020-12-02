@@ -293,15 +293,21 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public IActionResult TaxRateAddEdit(string stripeTaxRateId = null, string country = null, string state = null, string postalCode = null, decimal rate = 0) 
+        public async Task<IActionResult> TaxRateAddEdit(string stripeTaxRateId = null) 
         {
+            if (string.IsNullOrWhiteSpace(stripeTaxRateId))
+            {
+                return View(new TaxRateAddEditModel());
+            }
+            
+            var rate = await _taxRateRepository.GetByIdAsync(stripeTaxRateId);
             var model = new TaxRateAddEditModel()
             {
                 StripeTaxRateId = stripeTaxRateId,
-                Country = country,
-                State = state,
-                PostalCode = postalCode,
-                Rate = rate
+                Country = rate.Country,
+                State = rate.State,
+                PostalCode = rate.PostalCode,
+                Rate = rate.Rate
             };
 
             return View(model);
@@ -353,15 +359,14 @@ namespace Bit.Admin.Controllers
             return RedirectToAction("TaxRate");
         }
 
-        public async Task<bool> TaxRateArchive(string stripeTaxRateId) 
+        public async Task<IActionResult> TaxRateArchive(string stripeTaxRateId) 
         {
             if (!string.IsNullOrWhiteSpace(stripeTaxRateId))
             {
                 await _paymentService.ArchiveTaxRateAsync(new TaxRate() { Id = stripeTaxRateId });
-                return true;
             }
 
-            return false;
+            return RedirectToAction("TaxRate");
         }
     }
 }

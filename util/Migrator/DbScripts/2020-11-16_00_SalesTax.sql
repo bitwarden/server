@@ -19,6 +19,23 @@ ON [dbo].[TaxRate](Country,PostalCode)
 WHERE Active = 1;
 GO
 
+IF OBJECT_ID('[dbo].[TaxRate_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[TaxRate_ReadById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[TaxRate_ReadById]
+    @Id VARCHAR(40)
+AS
+BEGIN
+    SET NOCOUNT ON 
+    
+    SELECT * FROM [dbo].[TaxRate]
+    WHERE Id = @Id
+END
+GO
+
 IF OBJECT_ID('[dbo].[TaxRate_Search]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[TaxRate_Search]

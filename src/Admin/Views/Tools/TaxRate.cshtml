@@ -37,11 +37,7 @@
                                 var taxRateToEdit = new Dictionary<string, string>
                                 {
                                     { "id", rate.Id },
-                                    { "stripeTaxRateId", rate.Id },
-                                    { "country", rate.Country },
-                                    { "state", rate.State },
-                                    { "postalCode", rate.PostalCode },
-                                    { "rate", rate.Rate.ToString() }
+                                    { "stripeTaxRateId", rate.Id }
                                 };
                             }
                             <a asp-controller="Tools" asp-action="TaxRateAddEdit" asp-all-route-data="taxRateToEdit">@rate.Id</a>
