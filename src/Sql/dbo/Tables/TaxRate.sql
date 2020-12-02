@@ -8,6 +8,6 @@ CREATE TABLE [dbo].[TaxRate] (
 );
 GO
 
-ALTER TABLE [dbo].[TaxRate]
-ADD CONSTRAINT Unique_Country_PostalCode
-UNIQUE NONCLUSTERED (Country,PostalCode) 
+CREATE UNIQUE INDEX IX_TaxRate_Country_PostalCode_Active_Uniqueness
+ON [dbo].[TaxRate](Country,PostalCode)
+WHERE Active = 1;
