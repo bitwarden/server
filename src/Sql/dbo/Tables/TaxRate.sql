@@ -6,3 +6,8 @@ CREATE TABLE [dbo].[TaxRate] (
     [Rate]              DECIMAL(5,2)        NOT NULL,
     [Active]        BIT                 NOT NULL
 );
+GO
+
+ALTER TABLE [dbo].[TaxRate]
+ADD CONSTRAINT Unique_Country_PostalCode
+UNIQUE NONCLUSTERED (Country,PostalCode) 

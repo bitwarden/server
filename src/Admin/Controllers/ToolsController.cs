@@ -271,7 +271,7 @@ namespace Bit.Admin.Controllers
             }
         }
 
-        public async Task<IActionResult> TaxRate(string message = null, int page = 1, int count = 25)
+        public async Task<IActionResult> TaxRate(int page = 1, int count = 25)
         {
             if (page < 1)
             {
@@ -287,7 +287,6 @@ namespace Bit.Admin.Controllers
             var rates = await _taxRateRepository.SearchAsync(skip, count);
             return View(new TaxRatesModel
             {
-                Message = message,
                 Items = rates.ToList(),
                 Page = page,
                 Count = count
@@ -311,6 +310,17 @@ namespace Bit.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model) 
         {
+            var existingRateCheck = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = model.Country, PostalCode = model.PostalCode });
+            if (existingRateCheck.FirstOrDefault() != null) 
+            {
+               ModelState.AddModelError(nameof(model.PostalCode), "A tax rate already exists for this Country/Postal Code combination.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
             var taxRate = new TaxRate()
             {
                 Id = model.StripeTaxRateId,

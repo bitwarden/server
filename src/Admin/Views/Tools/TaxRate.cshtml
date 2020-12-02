@@ -13,18 +13,18 @@
         <thead>
             <tr>
                 <th style="width: 190px;">Id</th>
-                <th style="width: 190px;">Country</th>
+                <th style="width: 80px;">Country</th>
                 <th style="width: 80px;">State</th>
                 <th style="width: 150px;">Postal Code</th>
-                <th style="width: 170px;">Tax Rate</th>
-                <th style="width: 170px;"></th>
+                <th style="width: 160px;">Tax Rate</th>
+                <th style="width: 80px;"></th>
             </tr>
         </thead>
         <tbody>
             @if(!Model.Items.Any())
             {
                 <tr>
-                    <td colspan="5">No results to list.</td>
+                    <td colspan="6">No results to list.</td>
                 </tr>
             }
             else
@@ -34,7 +34,7 @@
                     <tr>
                         <td>
                             @{
-                                var parms = new Dictionary<string, string>
+                                var taxRateToEdit = new Dictionary<string, string>
                                 {
                                     { "id", rate.Id },
                                     { "stripeTaxRateId", rate.Id },
@@ -44,7 +44,7 @@
                                     { "rate", rate.Rate.ToString() }
                                 };
                             }
-                            <a asp-controller="Tools" asp-action="TaxRateAddEdit" asp-all-route-data="parms">@rate.Id</a>
+                            <a asp-controller="Tools" asp-action="TaxRateAddEdit" asp-all-route-data="taxRateToEdit">@rate.Id</a>
                         </td>
                         <td>
                             @rate.Country
@@ -59,7 +59,9 @@
                             @rate.Rate%
                         </td>
                         <td>
-                            <a class="delete-button" data-id="@rate.Id" asp-controller="Tools" asp-action="TaxRateArchive" asp-route-stripeTaxRateId="@rate.Id"><i class="fa fa-trash fa-lg fa-fw"></i></a>
+                            <a class="delete-button" data-id="@rate.Id" asp-controller="Tools" asp-action="TaxRateArchive" asp-route-stripeTaxRateId="@rate.Id">
+                                <i class="fa fa-trash fa-lg fa-fw"></i>
+                            </a>
                         </td>
                     </tr>
                 }

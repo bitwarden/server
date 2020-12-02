@@ -14,6 +14,11 @@ CREATE TABLE [dbo].[TaxRate] (
 );
 GO
 
+ALTER TABLE [dbo].[TaxRate]
+ADD CONSTRAINT Unique_Country_PostalCode
+UNIQUE NONCLUSTERED (Country,PostalCode) 
+GO
+
 IF OBJECT_ID('[dbo].[TaxRate_Search]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[TaxRate_Search]
@@ -48,6 +53,26 @@ BEGIN
     
     SELECT * FROM [dbo].[TaxRate]
     WHERE Active = 1
+END
+GO
+
+IF OBJECT_ID('[dbo].[TaxRate_ReadByLocation]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[TaxRate_ReadByLocation]
+END
+GO
+
+CREATE PROCEDURE [dbo].[TaxRate_ReadByLocation]
+    @Country VARCHAR(50),
+    @PostalCode VARCHAR(10)
+AS
+BEGIN
+    SET NOCOUNT ON 
+    
+    SELECT * FROM [dbo].[TaxRate]
+    WHERE Active = 1
+        AND [Country] = @Country
+        AND [PostalCode] = @PostalCode
 END
 GO
 

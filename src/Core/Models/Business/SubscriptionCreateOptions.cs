@@ -6,7 +6,6 @@ namespace Bit.Core.Models.Business
 {
     public class OrganizationSubscriptionOptionsBase: Stripe.SubscriptionCreateOptions
     {
-
         public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
         {
             Items = new List<SubscriptionItemOptions>();
@@ -14,7 +13,6 @@ namespace Bit.Core.Models.Business
             {
                 [org.GatewayIdField()] = org.Id.ToString()
             };
-
 
             if (plan.StripePlanId != null)
             {
@@ -67,7 +65,6 @@ namespace Bit.Core.Models.Business
                     int additionalStorageGb = 0, bool premiumAccessAddon = false
                 ): base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
         {
-
             OffSession = true;
             TrialPeriodDays = plan.TrialPeriodDays;
         }
