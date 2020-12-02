@@ -88,7 +88,7 @@ namespace Bit.Api.Controllers
         public async Task Invite([FromBody] EmergencyAccessInviteRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.InviteAsync(user.Id, user.Name, model.Email, model.Type.Value, model.WaitTimeDays);
+            await _emergencyAccessService.InviteAsync(user, user.Name, model.Email, model.Type.Value, model.WaitTimeDays);
         }
 
         [HttpPost("{id}/reinvite")]

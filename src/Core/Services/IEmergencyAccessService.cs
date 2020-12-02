@@ -9,7 +9,7 @@ namespace Bit.Core.Services
 {
     public interface IEmergencyAccessService
     {
-        Task<EmergencyAccess> InviteAsync(Guid invitingUserId, string invitingUsersName, string email, EmergencyAccessType type, int waitTime);
+        Task<EmergencyAccess> InviteAsync(User invitingUser, string invitingUsersName, string email, EmergencyAccessType type, int waitTime);
         Task ResendInviteAsync(Guid invitingUserId, Guid emergencyAccessId, string invitingUsersName);
         Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User user, string token, IUserService userService);
         Task DeleteAsync(Guid emergencyAccessId, Guid grantorId);

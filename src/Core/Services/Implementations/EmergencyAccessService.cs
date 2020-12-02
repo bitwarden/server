@@ -42,11 +42,16 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task<EmergencyAccess> InviteAsync(Guid invitingUserId, string invitingUsersName, string email, EmergencyAccessType type, int waitTime)
+        public async Task<EmergencyAccess> InviteAsync(User invitingUser, string invitingUsersName, string email, EmergencyAccessType type, int waitTime)
         {
+            if (!invitingUser.Premium)
+            {
+                throw new BadRequestException("Not a premium user.");
+            }
+            
             var emergencyAccess = new EmergencyAccess
             {
-                GrantorId = invitingUserId,
+                GrantorId = invitingUser.Id,
                 Email = email.ToLowerInvariant(),
                 Status = EmergencyAccessStatusType.Invited,
                 Type = type,
