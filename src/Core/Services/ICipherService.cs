@@ -9,10 +9,10 @@ namespace Bit.Core.Services
 {
     public interface ICipherService
     {
-        Task SaveAsync(Cipher cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
+        Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate, IEnumerable<Guid> collectionIds = null,
             bool skipPermissionCheck = false, bool limitCollectionScope = true);
-        Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, IEnumerable<Guid> collectionIds = null,
-            bool skipPermissionCheck = false);
+        Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
+            IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false);
         Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
             long requestLength, Guid savingUserId, bool orgAdmin = false);
         Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
@@ -25,9 +25,9 @@ namespace Bit.Core.Services
         Task SaveFolderAsync(Folder folder);
         Task DeleteFolderAsync(Folder folder);
         Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds,
-            Guid userId);
-        Task ShareManyAsync(IEnumerable<Cipher> ciphers, Guid organizationId, IEnumerable<Guid> collectionIds,
-            Guid sharingUserId);
+            Guid userId, DateTime? lastKnownRevisionDate);
+        Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> ciphers, Guid organizationId,
+            IEnumerable<Guid> collectionIds, Guid sharingUserId);
         Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
         Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships);

@@ -1,65 +1,120 @@
 using System;
+using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Table;
+using Core.Models.Data;
+using Bit.Core.Test.AutoFixture.CipherFixtures;
+using System.Collections.Generic;
+using Bit.Core.Test.AutoFixture;
+using System.Linq;
+using Castle.Core.Internal;
 
 namespace Bit.Core.Test.Services
 {
     public class CipherServiceTests
     {
-        private readonly CipherService _sut;
-
-        private readonly ICipherRepository _cipherRepository;
-        private readonly IFolderRepository _folderRepository;
-        private readonly ICollectionRepository _collectionRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ICollectionCipherRepository _collectionCipherRepository;
-        private readonly IPushNotificationService _pushService;
-        private readonly IAttachmentStorageService _attachmentStorageService;
-        private readonly IEventService _eventService;
-        private readonly IUserService _userService;
-        private readonly GlobalSettings _globalSettings;
-
-        public CipherServiceTests()
+        [Theory, UserCipherAutoData]
+        public async Task SaveAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher)
         {
-            _cipherRepository = Substitute.For<ICipherRepository>();
-            _folderRepository = Substitute.For<IFolderRepository>();
-            _collectionRepository = Substitute.For<ICollectionRepository>();
-            _userRepository = Substitute.For<IUserRepository>();
-            _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _collectionCipherRepository = Substitute.For<ICollectionCipherRepository>();
-            _pushService = Substitute.For<IPushNotificationService>();
-            _attachmentStorageService = Substitute.For<IAttachmentStorageService>();
-            _eventService = Substitute.For<IEventService>();
-            _userService = Substitute.For<IUserService>();
-            _globalSettings = new GlobalSettings();
+            var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
 
-            _sut = new CipherService(
-                _cipherRepository,
-                _folderRepository,
-                _collectionRepository,
-                _userRepository,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionCipherRepository,
-                _pushService,
-                _attachmentStorageService,
-                _eventService,
-                _userService,
-                _globalSettings
-            );
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(cipher, cipher.UserId.Value, lastKnownRevisionDate));
+            Assert.Contains("out of date", exception.Message);
         }
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact]
-        public void ServiceExists()
+        [Theory, UserCipherAutoData]
+        public async Task SaveDetailsAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
+            CipherDetails cipherDetails)
         {
-            Assert.NotNull(_sut);
+            var lastKnownRevisionDate = cipherDetails.RevisionDate.AddDays(-1);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate));
+            Assert.Contains("out of date", exception.Message);
+        }
+
+        [Theory, UserCipherAutoData]
+        public async Task ShareAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher,
+            Organization organization, List<Guid> collectionIds)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+                lastKnownRevisionDate));
+            Assert.Contains("out of date", exception.Message);
+        }
+
+        [Theory, UserCipherAutoData("99ab4f6c-44f8-4ff5-be7a-75c37c33c69e")]
+        public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
+            IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        {
+            var cipherInfos = ciphers.Select(c => (c, (DateTime?)c.RevisionDate.AddDays(-1)));
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, ciphers.First().UserId.Value));
+            Assert.Contains("out of date", exception.Message);
+        }
+
+        [Theory]
+        [InlineUserCipherAutoData("")]
+        [InlineUserCipherAutoData("Correct Time")]
+        public async Task SaveAsync_CorrectRevisionDate_Passes(string revisionDateString,
+            SutProvider<CipherService> sutProvider, Cipher cipher)
+        {
+            var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+
+            await sutProvider.Sut.SaveAsync(cipher, cipher.UserId.Value, lastKnownRevisionDate);
+            await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipher);
+        }
+
+        [Theory]
+        [InlineUserCipherAutoData("")]
+        [InlineUserCipherAutoData("Correct Time")]
+        public async Task SaveDetailsAsync_CorrectRevisionDate_Passes(string revisionDateString,
+            SutProvider<CipherService> sutProvider, CipherDetails cipherDetails)
+        {
+            var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipherDetails.RevisionDate;
+
+            await sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate);
+            await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipherDetails);
+        }
+
+        [Theory]
+        [InlineUserCipherAutoData("")]
+        [InlineUserCipherAutoData("Correct Time")]
+        public async Task ShareAsync_CorrectRevisionDate_Passes(string revisionDateString,
+            SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+        {
+            var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+            var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+            cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+            await sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+                lastKnownRevisionDate);
+            await cipherRepository.Received(1).ReplaceAsync(cipher, collectionIds);
+        }
+
+        [Theory]
+        [InlineKnownUserCipherAutoData(userId: "99ab4f6c-44f8-4ff5-be7a-75c37c33c69e", "")]
+        [InlineKnownUserCipherAutoData(userId: "99ab4f6c-44f8-4ff5-be7a-75c37c33c69e", "CorrectTime")]
+        public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
+            SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
+        {
+            var cipherInfos = ciphers.Select(c => (c,
+                string.IsNullOrEmpty(revisionDateString) ? null : (DateTime?)c.RevisionDate));
+            var sharingUserId = ciphers.First().UserId.Value;
+
+            await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
+            await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+                Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
         }
     }
 }
