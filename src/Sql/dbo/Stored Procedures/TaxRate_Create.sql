@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[TaxRate_Create]
     @State VARCHAR(2),
     @PostalCode VARCHAR(10),
     @Rate DECIMAL(5,2),
-    @Active bit
+    @Active BIT
 AS
 BEGIN
     SET NOCOUNT ON

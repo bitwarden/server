@@ -317,7 +317,7 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model) 
         {
             var existingRateCheck = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = model.Country, PostalCode = model.PostalCode });
-            if (existingRateCheck.FirstOrDefault() != null) 
+            if (existingRateCheck.Any()) 
             {
                ModelState.AddModelError(nameof(model.PostalCode), "A tax rate already exists for this Country/Postal Code combination.");
             }

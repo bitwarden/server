@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Models.Business
 {
-    public class OrganizationSubscriptionOptionsBase: Stripe.SubscriptionCreateOptions
+    public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
     {
         public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
         {
@@ -57,27 +57,27 @@ namespace Bit.Core.Models.Business
         }
     }
 
-    public class OrganizationPurchaseSubscriptionOptions: OrganizationSubscriptionOptionsBase 
+    public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase 
     {
         public OrganizationPurchaseSubscriptionOptions(
-                    Organization org, StaticStore.Plan plan,
-                    TaxInfo taxInfo, int additionalSeats = 0,
-                    int additionalStorageGb = 0, bool premiumAccessAddon = false
-                ): base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+            Organization org, StaticStore.Plan plan,
+            TaxInfo taxInfo, int additionalSeats = 0,
+            int additionalStorageGb = 0, bool premiumAccessAddon = false) :
+            base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
         {
             OffSession = true;
             TrialPeriodDays = plan.TrialPeriodDays;
         }
     }
 
-    public class OrganizationUpgradeSubscriptionOptions: OrganizationSubscriptionOptionsBase
+    public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOptionsBase
     {
         public OrganizationUpgradeSubscriptionOptions(
-                    string customerId, Organization org,
-                    StaticStore.Plan plan, TaxInfo taxInfo,
-                    int additionalSeats = 0, int additionalStorageGb = 0,
-                    bool premiumAccessAddon = false
-                ): base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+            string customerId, Organization org,
+            StaticStore.Plan plan, TaxInfo taxInfo,
+            int additionalSeats = 0, int additionalStorageGb = 0,
+            bool premiumAccessAddon = false) : 
+            base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
         {
             Customer = customerId;
         }

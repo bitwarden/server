@@ -103,13 +103,21 @@ namespace Bit.Core.Services
                 throw new GatewayException("Payment method is not supported at this time.");
             }
 
-            var taxRates = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = taxInfo.BillingAddressCountry, PostalCode = taxInfo.BillingAddressPostalCode });
-
-            // should only be one tax rate per country/zip combo
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null)
+            if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                taxInfo.StripeTaxRateId = taxRate.Id;
+                var taxRateSearch = new TaxRate() 
+                {
+                    Country = taxInfo.BillingAddressCountry,
+                    PostalCode = taxInfo.BillingAddressPostalCode
+                };
+                var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
+
+                // should only be one tax rate per country/zip combo
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null)
+                {
+                    taxInfo.StripeTaxRateId = taxRate.Id;
+                }
             }
 
             var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
@@ -210,14 +218,23 @@ namespace Bit.Core.Services
                 throw new GatewayException("Could not find customer payment profile.");
             }
 
-            var taxRates = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = taxInfo.BillingAddressCountry, PostalCode = taxInfo.BillingAddressPostalCode });
-
-            // should only be one tax rate per country/zip combo
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null)
+            if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                taxInfo.StripeTaxRateId = taxRate.Id;
+                var taxRateSearch = new TaxRate() 
+                {
+                    Country = taxInfo.BillingAddressCountry,
+                    PostalCode = taxInfo.BillingAddressPostalCode
+                };
+                var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
+
+                // should only be one tax rate per country/zip combo
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null)
+                {
+                    taxInfo.StripeTaxRateId = taxRate.Id;
+                }
             }
+
             var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
             var stripePaymentMethod = false;
             var paymentMethodType = PaymentMethodType.Credit;
