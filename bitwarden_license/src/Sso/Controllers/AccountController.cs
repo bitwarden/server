@@ -420,8 +420,7 @@ namespace Bit.Sso.Controllers
                 if (orgUser == null)
                 {
                     // Org User is not created - no invite has been sent
-                    // In order to join this organization, contact an admin to send you an invite.
-                    throw new Exception(_i18nService.T("UserAlreadyExistsUseLinkViaSso"));
+                    throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
                 }
                 
                 if (orgUser.Status == OrganizationUserStatusType.Invited)
