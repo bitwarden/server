@@ -408,13 +408,23 @@ namespace Bit.Sso.Controllers
                 throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
             }
             
-            // Try to find OrgUser via existing User Id (accepted/confirmed user) or Email + OrgId (invited user)
-            var orgUsersByOrgId = await _organizationUserRepository.GetManyByOrganizationAsync(orgId, null);
-            orgUser = orgUsersByOrgId.SingleOrDefault(ou =>
-                (existingUser != null && ou.UserId != null && existingUser.Id == ou.UserId.Value) ||
-                (!string.IsNullOrEmpty(ou.Email) &&
-                ou.Email.Equals(email, StringComparison.InvariantCultureIgnoreCase)));
+            // Try to find OrgUser via existing User Id (accepted/confirmed user)
+            if (existingUser != null)
+            {
+                var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
+                orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+            }
 
+            // If no Org User found by Existing User Id - search all organization users via email
+            if (orgUser == null)
+            {
+                var orgUsersByOrgId = await _organizationUserRepository.GetManyByOrganizationAsync(orgId, null);
+                orgUser = orgUsersByOrgId.SingleOrDefault(ou =>
+                    !string.IsNullOrEmpty(ou.Email) && 
+                    ou.Email.Equals(email, StringComparison.InvariantCultureIgnoreCase));
+            }
+            
+            // All Existing User flows handled below
             if (existingUser != null)
             {
                 if (orgUser == null)
