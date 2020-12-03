@@ -413,7 +413,7 @@ namespace Bit.Sso.Controllers
             orgUser = orgUsersByOrgId.SingleOrDefault(ou =>
                 (existingUser != null && ou.UserId != null && existingUser.Id == ou.UserId.Value) ||
                 (!string.IsNullOrEmpty(ou.Email) &&
-                !ou.Email.Equals(email, StringComparison.InvariantCultureIgnoreCase)));
+                ou.Email.Equals(email, StringComparison.InvariantCultureIgnoreCase)));
 
             if (existingUser != null)
             {
