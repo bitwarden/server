@@ -16,6 +16,7 @@ namespace Bit.Core.Test.Services
         private readonly IAppleIapService _appleIapService;
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<StripePaymentService> _logger;
+        private readonly ITaxRateRepository _taxRateRepository;
 
         public StripePaymentServiceTests()
         {
@@ -24,13 +25,15 @@ namespace Bit.Core.Test.Services
             _appleIapService = Substitute.For<IAppleIapService>();
             _globalSettings = new GlobalSettings();
             _logger = Substitute.For<ILogger<StripePaymentService>>();
+            _taxRateRepository = Substitute.For<ITaxRateRepository>();
 
             _sut = new StripePaymentService(
                 _transactionRepository,
                 _userRepository,
                 _globalSettings,
                 _appleIapService,
-                _logger
+                _logger,
+                _taxRateRepository
             );
         }
 
