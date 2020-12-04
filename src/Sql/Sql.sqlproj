@@ -288,4 +288,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Send_ReadByDeletionDateBefore.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
+  </ItemGroup>
 </Project>

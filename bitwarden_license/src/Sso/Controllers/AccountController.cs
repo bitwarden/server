@@ -416,13 +416,7 @@ namespace Bit.Sso.Controllers
             }
 
             // If no Org User found by Existing User Id - search all organization users via email
-            if (orgUser == null)
-            {
-                var orgUsersByOrgId = await _organizationUserRepository.GetManyByOrganizationAsync(orgId, null);
-                orgUser = orgUsersByOrgId.SingleOrDefault(ou =>
-                    !string.IsNullOrEmpty(ou.Email) && 
-                    ou.Email.Equals(email, StringComparison.InvariantCultureIgnoreCase));
-            }
+            orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
             
             // All Existing User flows handled below
             if (existingUser != null)
@@ -440,8 +434,7 @@ namespace Bit.Sso.Controllers
                 }
                 
                 // Accepted or Confirmed - create SSO link and return;
-                await _ssoUserRepository.CreateAsync(
-                    CreateSsoUserObject(providerUserId, existingUser.Id, orgId));
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
                 return existingUser;
             }
 
@@ -500,7 +493,7 @@ namespace Bit.Sso.Controllers
             }
             
             // Create sso user record
-            await _ssoUserRepository.CreateAsync(CreateSsoUserObject(providerUserId, user.Id, orgId));
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
             
             return user;
         }
@@ -549,15 +542,15 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private SsoUser CreateSsoUserObject(string providerUserId, Guid userId, Guid orgId)
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
         {
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,
                 UserId = userId,
                 OrganizationId = orgId
-            };
-            return ssoUser;
+            }; 
+            await _ssoUserRepository.CreateAsync(ssoUser);
         }
 
         private void ProcessLoginCallback(AuthenticateResult externalResult,
