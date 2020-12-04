@@ -29,30 +29,30 @@ $webVersion = "2.17.1"
 
 # Functions
 
-function Download-Self {
+function Get-Self {
     Invoke-RestMethod -OutFile $scriptPath -Uri "${githubBaseUrl}/scripts/bitwarden.ps1"
 }
 
-function Download-Run-File {
+function Get-Run-File {
     if (!(Test-Path -Path $scriptsDir)) {
         New-Item -ItemType directory -Path $scriptsDir | Out-Null
     }
     Invoke-RestMethod -OutFile $scriptsDir\run.ps1 -Uri "${githubBaseUrl}/scripts/run.ps1"
 }
 
-function Check-Output-Dir-Exists {
+function Test-Output-Dir-Exists {
     if (!(Test-Path -Path $output)) {
         throw "Cannot find a Bitwarden installation at $output."
     }
 }
 
-function Check-Output-Dir-Not-Exists {
+function Test-Output-Dir-Not-Exists {
     if (Test-Path -Path "$output\docker") {
         throw "Looks like Bitwarden is already installed at $output."
     }
 }
 
-function List-Commands {
+function Show-Commands {
     Write-Line "
 Available commands:
 
@@ -109,53 +109,53 @@ Write-Line ""
 # Commands
 
 if ($install) {
-    Check-Output-Dir-Not-Exists
+    Test-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output -ErrorAction Ignore | Out-Null
-    Download-Run-File
-    Invoke-Expression "& `"$scriptsDir\run.ps1`" -install -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
+    Get-Run-File
+    #Invoke-Expression "& `"$scriptsDir\run.ps1`" -install -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($start -Or $restart) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -restart -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($update) {
-    Check-Output-Dir-Exists
-    Download-Run-File
+    Test-Output-Dir-Exists
+    Get-Run-File
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -update -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($rebuild) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -rebuild -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($updateconf) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -updateconf -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($updatedb) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -updatedb -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($stop) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -stop -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($renewcert) {
-    Check-Output-Dir-Exists
+    Test-Output-Dir-Exists
     Invoke-Expression "& `"$scriptsDir\run.ps1`" -renewcert -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($updaterun) {
-    Check-Output-Dir-Exists
-    Download-Run-File
+    Test-Output-Dir-Exists
+    Get-Run-File
 }
 elseif ($updateself) {
-    Download-Self
+    Get-Self
     Write-Line "Updated self."
 }
 elseif ($help) {
-    List-Commands
+    Show-Commands
 }
 else {
     Write-Line "No command found."
     Write-Line ""
-    List-Commands
+    Show-Commands
 }
