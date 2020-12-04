@@ -357,13 +357,8 @@ namespace Bit.Sso.Controllers
             {
                 email = providerUserId;
             }
-
-            Guid? orgId = null;
-            if (Guid.TryParse(provider, out var oId))
-            {
-                orgId = oId;
-            }
-            else
+            
+            if (!Guid.TryParse(provider, out var orgId))
             {
                 // TODO: support non-org (server-wide) SSO in the future?
                 throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
@@ -407,106 +402,99 @@ namespace Bit.Sso.Controllers
             }
 
             OrganizationUser orgUser = null;
-            if (orgId.HasValue)
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            if (organization == null)
             {
-                var organization = await _organizationRepository.GetByIdAsync(orgId.Value);
-                if (organization == null)
-                {
-                    throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
-                }
+                throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
+            }
+            
+            // Try to find OrgUser via existing User Id (accepted/confirmed user)
+            if (existingUser != null)
+            {
+                var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
+                orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+            }
 
-                if (existingUser != null)
-                {
-                    var orgUsers = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
-                    orgUser = orgUsers.SingleOrDefault(u => u.OrganizationId == orgId.Value &&
-                        u.Status != OrganizationUserStatusType.Invited);
-                }
-
+            // If no Org User found by Existing User Id - search all organization users via email
+            orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
+            
+            // All Existing User flows handled below
+            if (existingUser != null)
+            {
                 if (orgUser == null)
                 {
-                    if (organization.Seats.HasValue)
-                    {
-                        var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId.Value);
-                        var availableSeats = organization.Seats.Value - userCount;
-                        if (availableSeats < 1)
-                        {
-                            // No seats are available
-                            throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
-                        }
-                    }
+                    // Org User is not created - no invite has been sent
+                    throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
+                }
+                
+                if (orgUser.Status == OrganizationUserStatusType.Invited)
+                {
+                    // Org User is invited - they must manually accept the invite via email and authenticate with MP
+                    throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
+                }
+                
+                // Accepted or Confirmed - create SSO link and return;
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                return existingUser;
+            }
 
-                    // Make sure user is not already invited to this org
-                    var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-                        orgId.Value, email, false);
-                    if (existingOrgUserCount > 0)
-                    {
-                        throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
-                    }
+            // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
+            if (orgUser == null && organization.Seats.HasValue)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId);
+                var availableSeats = organization.Seats.Value - userCount;
+                if (availableSeats < 1)
+                {
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
                 }
             }
 
-            User user = null;
+            // Create user record - all existing user flows are handled above
+            var user = new User
+            {
+                Name = name,
+                Email = email,
+                ApiKey = CoreHelpers.SecureRandomString(30)
+            };
+            await _userService.RegisterUserAsync(user);
+            
+            // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
+            var twoFactorPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.TwoFactorAuthentication);
+            if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+            {
+                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                {
+                    [TwoFactorProviderType.Email] = new TwoFactorProvider
+                        {
+                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                            Enabled = true
+                        }
+                });
+                await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            }
+            
+            // Create Org User if null or else update existing Org User
             if (orgUser == null)
             {
-                if (existingUser != null)
+                orgUser = new OrganizationUser
                 {
-                    // TODO: send an email inviting this user to link SSO to their account?
-                    throw new Exception(_i18nService.T("UserAlreadyExistsUseLinkViaSso"));
-                }
-
-                // Create user record
-                user = new User
-                {
-                    Name = name,
-                    Email = email,
-                    ApiKey = CoreHelpers.SecureRandomString(30)
+                    OrganizationId = orgId,
+                    UserId = user.Id,
+                    Type = OrganizationUserType.User,
+                    Status = OrganizationUserStatusType.Invited
                 };
-                await _userService.RegisterUserAsync(user);
-
-                if (orgId.HasValue)
-                {
-                    // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
-                    var twoFactorPolicy =
-                        await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, PolicyType.TwoFactorAuthentication);
-                    if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
-                    {
-                        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                        {
-
-                            [TwoFactorProviderType.Email] = new TwoFactorProvider
-                            {
-                                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                                Enabled = true
-                            }
-                        });
-                        await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-                    }
-                    // Create organization user record
-                    orgUser = new OrganizationUser
-                    {
-                        OrganizationId = orgId.Value,
-                        UserId = user.Id,
-                        Type = OrganizationUserType.User,
-                        Status = OrganizationUserStatusType.Invited
-                    };
-                    await _organizationUserRepository.CreateAsync(orgUser);
-                }
+                await _organizationUserRepository.CreateAsync(orgUser);
             }
             else
             {
-                // Since the user is already a member of this organization, let's link their existing user account
-                user = existingUser;
+                orgUser.UserId = user.Id;
+                await _organizationUserRepository.ReplaceAsync(orgUser);
             }
-
+            
             // Create sso user record
-            var ssoUser = new SsoUser
-            {
-                ExternalId = providerUserId,
-                UserId = user.Id,
-                OrganizationId = orgId
-            };
-            await _ssoUserRepository.CreateAsync(ssoUser);
-
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
+            
             return user;
         }
 
@@ -552,6 +540,17 @@ namespace Bit.Sso.Controllers
             }
 
             return null;
+        }
+
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
+        {
+            var ssoUser = new SsoUser
+            {
+                ExternalId = providerUserId,
+                UserId = userId,
+                OrganizationId = orgId
+            }; 
+            await _ssoUserRepository.CreateAsync(ssoUser);
         }
 
         private void ProcessLoginCallback(AuthenticateResult externalResult,
