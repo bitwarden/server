@@ -240,7 +240,7 @@ namespace Bit.Core.Services
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
-                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
+                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
                 success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
             else
