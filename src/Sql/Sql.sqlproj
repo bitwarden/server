@@ -287,5 +287,12 @@
     <Build Include="dbo\Views\SendView.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Send_ReadByDeletionDateBefore.sql" />
+    <Build Include="dbo\Tables\TaxRate.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_Search.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_ReadByLocation.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_ReadAllActive.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_Create.sql" />
+    <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
   </ItemGroup>
 </Project>
