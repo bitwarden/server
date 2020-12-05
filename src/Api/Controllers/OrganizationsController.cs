@@ -136,12 +136,12 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<OrganizationResponseModel>> GetUser()
+        public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetUser()
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var organizations = await _organizationRepository.GetManyByUserIdAsync(userId);
-            var responses = organizations.Select(o => new OrganizationResponseModel(o));
-            return new ListResponseModel<OrganizationResponseModel>(responses);
+            var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId);
+            var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
+            return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
         }
 
         [HttpPost("")]

@@ -14,6 +14,8 @@ namespace Bit.Core.Models.Api
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
         public bool PremiumAccessAddon { get; set; }
+        public string BillingAddressCountry { get; set; }
+        public string BillingAddressPostalCode { get; set; }
 
         public OrganizationUpgrade ToOrganizationUpgrade()
         {
@@ -23,7 +25,12 @@ namespace Bit.Core.Models.Api
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(),
                 BusinessName = BusinessName,
                 Plan = PlanType,
-                PremiumAccessAddon = PremiumAccessAddon
+                PremiumAccessAddon = PremiumAccessAddon,
+                TaxInfo = new TaxInfo()
+                {
+                    BillingAddressCountry = BillingAddressCountry,
+                    BillingAddressPostalCode = BillingAddressPostalCode
+                }
             };
         }
     }

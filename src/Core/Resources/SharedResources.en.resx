@@ -521,10 +521,10 @@
     <value>No seats available for organization, '{0}'</value>
   </data>
   <data name="UserAlreadyInvited" xml:space="preserve">
-    <value>User, '{0}', has already been invited to this organization, '{1}'</value>
+    <value>User, '{0}', has already been invited to this organization, '{1}'. Accept the invite in order to log in with SSO.</value>
   </data>
-  <data name="UserAlreadyExistsUseLinkViaSso" xml:space="preserve">
-    <value>User already exists, please link account to SSO after logging in</value>
+  <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
+    <value>In order to join this organization, contact an admin to send you an invite and follow the instructions within to accept.</value>
   </data>
   <data name="RedirectGet" xml:space="preserve">
     <value>Redirect GET</value>

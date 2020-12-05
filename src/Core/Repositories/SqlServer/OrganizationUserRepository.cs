@@ -244,5 +244,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+        
+        public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByOrganizationIdEmail]",
+                    new { OrganizationId = organizationId, Email = email },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
     }
 }
