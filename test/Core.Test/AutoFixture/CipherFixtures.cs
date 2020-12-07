@@ -61,9 +61,9 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         { }
     }
 
-    internal class InlineOrganizationCipherAuthoDataAttribute : InlineCustomAutoDataAttribute
+    internal class InlineOrganizationCipherAutoDataAttribute : InlineCustomAutoDataAttribute
     {
-        public InlineOrganizationCipherAuthoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        public InlineOrganizationCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(OrganizationCipher) }, values)
         { }
     }

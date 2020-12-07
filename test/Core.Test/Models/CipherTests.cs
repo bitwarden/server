@@ -9,7 +9,7 @@ namespace Core.Test.Models
     {
         [Theory]
         [InlineUserCipherAutoData]
-        [InlineOrganizationCipherAuthoData]
+        [InlineOrganizationCipherAutoData]
         public void Clone_CreatesExactCopy(Cipher cipher)
         {
             Assert.Equal(JsonConvert.SerializeObject(cipher), JsonConvert.SerializeObject(cipher.Clone()));

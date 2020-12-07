@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Models.Table
 {
-    public class Cipher : ITableObject<Guid>
+    public class Cipher : ITableObject<Guid>, ICloneable
     {
         private Dictionary<string, CipherAttachment.MetaData> _attachmentData;
 
@@ -93,6 +93,7 @@ namespace Bit.Core.Models.Table
             return attachments?.ContainsKey(id) ?? false;
         }
 
+        object ICloneable.Clone() => Clone();
         public Cipher Clone()
         {
             var clone = CoreHelpers.CloneObject(this);
