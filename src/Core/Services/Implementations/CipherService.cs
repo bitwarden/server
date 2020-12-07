@@ -130,7 +130,7 @@ namespace Bit.Core.Services
                             var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
                                 OrganizationUserStatusType.Confirmed);
                             if(org != null && org.Enabled && org.UsePolicies 
-                               && !(org.Type == OrganizationUserType.Admin || org.Type == OrganizationUserType.Owner))
+                               && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
                             {
                                 throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                             }
