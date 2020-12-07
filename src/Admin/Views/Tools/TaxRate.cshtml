@@ -71,7 +71,7 @@
         @if(Model.PreviousPage.HasValue)
         {
             <li class="page-item">
-                <a class="page-link" asp-controller="Tools" asp-action-"TaxRate" asp-route-page="@Model.PreviousPage.Value" asp-route-count="@Model.Count">Previous</a>
+                <a class="page-link" asp-controller="Tools" asp-action="TaxRate" asp-route-page="@Model.PreviousPage.Value" asp-route-count="@Model.Count">Previous</a>
             </li>
         }
         else
