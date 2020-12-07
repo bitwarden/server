@@ -295,6 +295,7 @@
     <Build Include="dbo\Stored Procedures\TaxRate_Create.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId.sql" />
   </ItemGroup>
 </Project>
 

@@ -125,9 +125,15 @@ namespace Bit.Core.Services
                     var userPolicies = await _policyRepository.GetManyByUserIdAsync(savingUserId);
                     if (userPolicies != null)
                     {
-                        if (userPolicies.Any(policy => policy.Type == PolicyType.PersonalOwnership && policy.Enabled))
+                        foreach (var policy in userPolicies.Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership))
                         {
-                            throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
+                            var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
+                                OrganizationUserStatusType.Confirmed);
+                            if(org != null && org.Enabled && org.UsePolicies 
+                               && !(org.Type == OrganizationUserType.Admin || org.Type == OrganizationUserType.Owner))
+                            {
+                                throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
+                            }
                         }
                     }
                     await _cipherRepository.CreateAsync(cipher);
