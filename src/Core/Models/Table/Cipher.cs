@@ -92,5 +92,14 @@ namespace Bit.Core.Models.Table
             var attachments = GetAttachments();
             return attachments?.ContainsKey(id) ?? false;
         }
+
+        public Cipher Clone()
+        {
+            var clone = CoreHelpers.CloneObject(this);
+            clone.CreationDate = CreationDate;
+            clone.RevisionDate = RevisionDate;
+
+            return clone;
+        }
     }
 }
