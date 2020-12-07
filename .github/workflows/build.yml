@@ -9,6 +9,13 @@ on:
     types:
       - published
 
+#######################################################
+# NOTE: DO NOT APPROVE IF IF THIS BLOCK IS STILL HERE #
+#       JOSEPH FORGOT TO REMOVE THE CI/CD TESTS...    #
+#######################################################
+env:
+  temp_test: True
+
 jobs:
 
   cloc:
@@ -54,14 +61,14 @@ jobs:
           GITHUB_EVENT: ${{ github.event_name }}
 
       - name: Log into docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || $temp_test == True
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || $temp_test == True
         run: |
           echo "${{ secrets.DOCKER_DELEGATION_KEY }}" > ~/.docker/trust/private/$DOCKER_DELEGATION_KEY_ID.key
           echo "${{ secrets.DOCKER_REPO_API_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_API_ID.key
@@ -105,7 +112,7 @@ jobs:
           ./build.sh
 
       - name: Tag dev
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || $temp_test == True
         run: ./build.sh tag dev
 
       - name: Tag beta
@@ -124,7 +131,7 @@ jobs:
         run: docker images
 
       - name: Push dev images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || $temp_test == True
         run: ./build.sh push dev
         env:
           DOCKER_CONTENT_TRUST: 1
@@ -188,7 +195,7 @@ jobs:
           path: ./swagger.json
 
       - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || $temp_test == True
         run: docker logout
 
       - name: Upload release assets
