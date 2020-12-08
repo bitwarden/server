@@ -187,7 +187,7 @@ namespace Bit.Api.Controllers
             }
 
             // object cannot be a descendant of CipherDetails, so let's clone it.
-            var cipherClone = CoreHelpers.CloneObject(model.ToCipher(cipher));
+            var cipherClone = cipher.Clone();
             await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
@@ -276,7 +276,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var original = CoreHelpers.CloneObject(cipher);
+            var original = cipher.Clone();
             await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
                 model.CollectionIds.Select(c => new Guid(c)), userId, model.Cipher.LastKnownRevisionDate);
 
