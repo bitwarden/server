@@ -1,0 +1,7 @@
+{
+  "release": {
+    "head": {
+      "ref": "master"
+    }
+  }
+}
