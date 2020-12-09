@@ -395,9 +395,9 @@ namespace Bit.Core.Services
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
 
-            var subUpdateOptions = new SubscriptionUpdateOptions()
+            var subUpdateOptions = new SubscriptionUpdateOptions
             {
-                Items = new List<SubscriptionItemOptions>()
+                Items = new List<SubscriptionItemOptions>
                 {
                     new SubscriptionItemOptions
                     {
@@ -424,9 +424,9 @@ namespace Bit.Core.Services
             var taxRate = taxRates.FirstOrDefault();
             if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
             {
-                subUpdateOptions.DefaultTaxRates = new List<string>() 
+                subUpdateOptions.DefaultTaxRates = new List<string>(1) 
                 { 
-                    taxRates.First().Id 
+                    taxRate.Id 
                 };
             }
 

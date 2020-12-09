@@ -749,25 +749,27 @@ namespace Bit.Billing.Controllers
 
         private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
         {
-            var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                new Bit.Core.Models.Table.TaxRate() 
-                { 
-                    Country = invoice.CustomerAddress.Country,
-                    PostalCode = invoice.CustomerAddress.PostalCode 
-                }
-            );
-
-            if (localBitwardenTaxRates.Any())
+            if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
             {
-                var stripeTaxRate = await new TaxRateService().GetAsync(localBitwardenTaxRates.First().Id);
-                if (stripeTaxRate != null && !subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
+                var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
+                    new Bit.Core.Models.Table.TaxRate() 
+                    { 
+                        Country = invoice.CustomerAddress.Country,
+                        PostalCode = invoice.CustomerAddress.PostalCode 
+                    }
+                );
+
+                if (localBitwardenTaxRates.Any())
                 {
-                    subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
-                    var subscriptionOptions = new SubscriptionUpdateOptions() { DefaultTaxRates = new List<string>() { stripeTaxRate.Id } };
-                    subscription = await new SubscriptionService().UpdateAsync(subscription.Id, subscriptionOptions);
+                    var stripeTaxRate = await new TaxRateService().GetAsync(localBitwardenTaxRates.First().Id);
+                    if (stripeTaxRate != null && !subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
+                    {
+                        subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
+                        var subscriptionOptions = new SubscriptionUpdateOptions() { DefaultTaxRates = new List<string>() { stripeTaxRate.Id } };
+                        subscription = await new SubscriptionService().UpdateAsync(subscription.Id, subscriptionOptions);
+                    }
                 }
             }
-
             return subscription;
         }
     }
