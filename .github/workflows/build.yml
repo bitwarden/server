@@ -68,6 +68,7 @@ jobs:
       - name: Setup Docker Trust
         if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/add-docker-notary'
         run: |
+          mkdir -p ~/.docker/trust/private
           ls -alht ~/.docker/trust/private
 
           echo "${{ secrets.DOCKER_DELEGATION_KEY }}" > ~/.docker/trust/private/$DOCKER_DELEGATION_KEY_ID.key
