@@ -301,7 +301,8 @@ namespace Bit.Core.IdentityServer
                 if (ssoOrgs.Any())
                 {
                     // Parse users orgs and determine if require sso policy is enabled
-                    var userOrgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+                    var userOrgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+                        OrganizationUserStatusType.Confirmed);
                     foreach (var userOrg in userOrgs.Where(o => o.Enabled && o.UseSso))
                     {
                         var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(userOrg.OrganizationId,
