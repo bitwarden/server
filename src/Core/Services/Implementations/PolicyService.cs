@@ -48,6 +48,18 @@ namespace Bit.Core.Services
             // Handle dependent policy checks
             switch(policy.Type)
             {
+                case PolicyType.SingleOrg:
+                    if (!policy.Enabled)
+                    {
+                        var requireSso =
+                            await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
+                        if (requireSso?.Enabled == true)
+                        {
+                            throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
+                        }
+                    }
+                    break;
+                
                case PolicyType.RequireSso:
                    if (policy.Enabled)
                    {
@@ -58,9 +70,6 @@ namespace Bit.Core.Services
                        }
                    }
                    break;
-                   
-                default:
-                    break;
             }
 
             var now = DateTime.UtcNow;

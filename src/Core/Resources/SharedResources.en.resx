@@ -575,4 +575,7 @@
   <data name="PersonalOwnershipExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
+  <data name="DisableRequireSsoError" xml:space="preserve">
+    <value>You must manually disable the Single Sign-On Authentication policy before this policy can be disabled.</value>
+  </data>
 </root>
