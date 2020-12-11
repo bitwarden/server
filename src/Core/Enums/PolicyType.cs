@@ -7,5 +7,6 @@
         PasswordGenerator = 2,
         SingleOrg = 3,
         RequireSso = 4,
+        PersonalOwnership = 5,
     }
 }

@@ -84,6 +84,7 @@ namespace Bit.Portal.Models
                 case PolicyType.SingleOrg: 
                 case PolicyType.TwoFactorAuthentication:
                 case PolicyType.RequireSso:
+                case PolicyType.PersonalOwnership:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
