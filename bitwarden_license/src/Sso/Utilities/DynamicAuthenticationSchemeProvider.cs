@@ -301,7 +301,7 @@ namespace Bit.Core.Business.Sso
                 Authority = config.Authority,
                 ClientId = config.ClientId,
                 ClientSecret = config.ClientSecret,
-                ResponseType = "code",
+                ResponseType = "code", // id_token
                 ResponseMode = "form_post",
                 SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
@@ -318,6 +318,18 @@ namespace Bit.Core.Business.Sso
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.OpenId);
+            }
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Email))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.Email);
+            }
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Profile))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
+            }
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
