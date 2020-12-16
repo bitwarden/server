@@ -359,6 +359,11 @@ namespace Bit.Core.Utilities
             return readable.ToString("0.## ") + suffix;
         }
 
+        /// <summary>
+        /// Creates a clone of the given object through serializing to json and deserializing.
+        /// This method is subject to the limitations of Newstonsoft. For example, properties with
+        /// inaccessible setters will not be set.
+        /// </summary>
         public static T CloneObject<T>(T obj)
         {
             return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(obj));

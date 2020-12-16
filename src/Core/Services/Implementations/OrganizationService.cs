@@ -38,6 +38,7 @@ namespace Bit.Core.Services
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
+        private readonly ITaxRateRepository _taxRateRepository;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -59,7 +60,8 @@ namespace Bit.Core.Services
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IReferenceEventService referenceEventService,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ITaxRateRepository taxRateRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -81,6 +83,7 @@ namespace Bit.Core.Services
             _ssoUserRepository = ssoUserRepository;
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
+            _taxRateRepository = taxRateRepository;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -240,7 +243,7 @@ namespace Bit.Core.Services
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
-                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
+                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
                 success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
             else
@@ -392,7 +395,7 @@ namespace Bit.Core.Services
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
 
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+            var subUpdateOptions = new SubscriptionUpdateOptions
             {
                 Items = new List<SubscriptionItemOptions>
                 {
@@ -408,7 +411,26 @@ namespace Bit.Core.Services
                 DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,
-            });
+            };
+
+            var customer = await new CustomerService().GetAsync(sub.CustomerId);
+            var taxRates = await _taxRateRepository.GetByLocationAsync(
+                new Bit.Core.Models.Table.TaxRate()
+                {
+                    Country = customer.Address.Country,
+                    PostalCode = customer.Address.PostalCode
+                }
+            );
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+            {
+                subUpdateOptions.DefaultTaxRates = new List<string>(1) 
+                { 
+                    taxRate.Id 
+                };
+            }
+
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
 
             string paymentIntentClientSecret = null;
             if (additionalSeats > 0)

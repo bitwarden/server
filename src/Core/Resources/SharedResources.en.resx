@@ -521,10 +521,10 @@
     <value>No seats available for organization, '{0}'</value>
   </data>
   <data name="UserAlreadyInvited" xml:space="preserve">
-    <value>User, '{0}', has already been invited to this organization, '{1}'</value>
+    <value>User, '{0}', has already been invited to this organization, '{1}'. Accept the invite in order to log in with SSO.</value>
   </data>
-  <data name="UserAlreadyExistsUseLinkViaSso" xml:space="preserve">
-    <value>User already exists, please link account to SSO after logging in</value>
+  <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
+    <value>In order to join this organization, contact an admin to send you an invite and follow the instructions within to accept.</value>
   </data>
   <data name="RedirectGet" xml:space="preserve">
     <value>Redirect GET</value>
@@ -564,6 +564,15 @@
     <value>Single Organization policy not enabled.</value>
   </data>
   <data name="RequireSsoExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
+  <data name="PersonalOwnership" xml:space="preserve">
+    <value>Personal Ownership</value>
+  </data>
+  <data name="PersonalOwnershipDescription" xml:space="preserve">
+    <value>Require users to save vault items to an organization by removing the personal ownership option.</value>
+  </data>
+  <data name="PersonalOwnershipExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
 </root>

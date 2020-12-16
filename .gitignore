@@ -213,3 +213,4 @@ bitwarden_license/src/Portal/wwwroot/lib
 bitwarden_license/src/Portal/wwwroot/css
 bitwarden_license/src/Sso/wwwroot/lib
 bitwarden_license/src/Sso/wwwroot/css
+.github/test/build.secrets
