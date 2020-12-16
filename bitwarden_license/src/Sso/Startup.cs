@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core;
+using Bit.Core.Identity;
 using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;
@@ -66,6 +67,15 @@ namespace Bit.Sso
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
+
+            // Handle Big Cookies
+            services.ConfigureApplicationCookie(options =>
+            {
+                if (globalSettings.SelfHosted)
+                {
+                    options.SessionStore = new MemoryCacheTicketStore();
+                }
+            });
 
             // Services
             services.AddBaseServices();
