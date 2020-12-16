@@ -44,7 +44,7 @@ namespace Bit.Core.Models.Api.Response
 
     public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessResponseModel
     {
-        public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess, bool twoFactorEnabled)
+        public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
             : base(emergencyAccess, "emergencyAccessGranteeDetails")
         {
             if (emergencyAccess == null)
@@ -55,13 +55,11 @@ namespace Bit.Core.Models.Api.Response
             GranteeId = emergencyAccess.GranteeId.ToString();
             Email = emergencyAccess.GranteeEmail;
             Name = emergencyAccess.GranteeName;
-            TwoFactorEnabled = twoFactorEnabled;
         }
 
         public string GranteeId { get; private set; }
         public string Name { get; private set; }
         public string Email { get; private set; }
-        public bool TwoFactorEnabled { get; private set; }
     }
 
     public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel

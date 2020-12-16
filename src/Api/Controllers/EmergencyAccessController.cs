@@ -36,9 +36,8 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             var granteeDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(userId.Value);
 
-            var responseTasks = granteeDetails.Select(async detail =>
-                new EmergencyAccessGranteeDetailsResponseModel(detail, await _userService.TwoFactorIsEnabledAsync(detail)));
-            var responses = await Task.WhenAll(responseTasks);
+            var responses = granteeDetails.Select(d =>
+                new EmergencyAccessGranteeDetailsResponseModel(d));
 
             return new ListResponseModel<EmergencyAccessGranteeDetailsResponseModel>(responses);
         }
@@ -59,7 +58,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User);
             var result = await _emergencyAccessService.GetAsync(new Guid(id), userId.Value);
-            return new EmergencyAccessGranteeDetailsResponseModel(result, false);
+            return new EmergencyAccessGranteeDetailsResponseModel(result);
         }
         
         [HttpPut("{id}")]

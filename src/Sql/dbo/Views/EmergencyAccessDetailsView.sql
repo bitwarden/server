@@ -4,8 +4,6 @@ SELECT
     EA.*,
     GranteeU.[Name] GranteeName,
     ISNULL(GranteeU.[Email], EA.[Email]) GranteeEmail,
-    GranteeU.[TwoFactorProviders] GranteeTwoFactorProviders,
-    GranteeU.[Premium] GranteePremium,
     GrantorU.[Name] GrantorName,
     GrantorU.[Email] GrantorEmail
 FROM
