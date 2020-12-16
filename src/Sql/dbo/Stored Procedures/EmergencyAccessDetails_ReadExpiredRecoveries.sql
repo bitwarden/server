@@ -10,5 +10,5 @@ BEGIN
     WHERE
         [Status] = 3
     AND
-        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedDate]) <= GETDATE()
+        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedDate]) <= GETUTCDATE()
 END

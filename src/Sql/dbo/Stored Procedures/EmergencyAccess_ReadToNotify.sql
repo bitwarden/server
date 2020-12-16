@@ -16,7 +16,7 @@ BEGIN
     WHERE
         EA.[Status] = 3
     AND
-        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedDate]) <= GETDATE()
+        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedDate]) <= GETUTCDATE()
     AND
-        DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETDATE()
+        DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETUTCDATE()
 END

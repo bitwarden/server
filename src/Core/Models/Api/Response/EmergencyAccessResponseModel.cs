@@ -10,7 +10,7 @@ namespace Bit.Core.Models.Api.Response
 {
     public class EmergencyAccessResponseModel : ResponseModel
     {
-        public EmergencyAccessResponseModel(EmergencyAccess emergencyAccess, string obj = "emergencyAccess"): base(obj)
+        public EmergencyAccessResponseModel(EmergencyAccess emergencyAccess, string obj = "emergencyAccess") : base(obj)
         {
             if (emergencyAccess == null)
             {
@@ -84,9 +84,9 @@ namespace Bit.Core.Models.Api.Response
         public string Email { get; private set; }
     }
 
-    public class EmergencyAccessTakeoverResponseModel: ResponseModel
+    public class EmergencyAccessTakeoverResponseModel : ResponseModel
     {
-        public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover"): base(obj)
+        public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
         {
             if (emergencyAccess == null)
             {

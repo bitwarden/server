@@ -6,11 +6,6 @@
         public string Id { get; set; }
         public string Email { get; set; }
         public string Token { get; set; }
-        public string Url => string.Format("{0}/accept-emergency?id={1}&name={2}&email={3}&token={4}",
-            WebVaultUrl,
-            Id,
-            Name,
-            Email,
-            Token);
+        public string Url => $"{WebVaultUrl}/accept-emergency?id={Id}&name={Name}&email={Email}&token={Token}";
     }
 }

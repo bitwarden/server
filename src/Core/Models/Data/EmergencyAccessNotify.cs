@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data
 {
-    public class EmergencyAccessNotify: EmergencyAccess
+    public class EmergencyAccessNotify : EmergencyAccess
     {
         public string GrantorEmail { get; set; }
         public string GranteeName { get; set; }

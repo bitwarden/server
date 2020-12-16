@@ -1,29 +1,36 @@
 /*
  * Add support for Emergency Access
  */
-CREATE TABLE [dbo].[EmergencyAccess] (
-    [Id]                    UNIQUEIDENTIFIER NOT NULL,
-    [GrantorId]             UNIQUEIDENTIFIER NOT NULL,
-    [GranteeId]             UNIQUEIDENTIFIER NULL,
-    [Email]                 NVARCHAR (50)    NULL,
-    [KeyEncrypted]          VARCHAR (MAX)    NULL,
-    [WaitTimeDays]          SMALLINT         NULL,
-    [Type]                  TINYINT          NOT NULL,
-    [Status]                TINYINT          NOT NULL,
-    [RecoveryInitiatedDate] DATETIME2 (7)    NULL,
-    [LastNotificationDate]  DATETIME2 (7)    NULL,
-    [CreationDate]          DATETIME2 (7)    NOT NULL,
-    [RevisionDate]          DATETIME2 (7)    NOT NULL,
-    CONSTRAINT [PK_EmergencyAccess] PRIMARY KEY CLUSTERED ([Id] ASC)
-);
+IF OBJECT_ID('[dbo].[EmergencyAccess]') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmergencyAccess] (
+        [Id]                    UNIQUEIDENTIFIER NOT NULL,
+        [GrantorId]             UNIQUEIDENTIFIER NOT NULL,
+        [GranteeId]             UNIQUEIDENTIFIER NULL,
+        [Email]                 NVARCHAR (50)    NULL,
+        [KeyEncrypted]          VARCHAR (MAX)    NULL,
+        [WaitTimeDays]          SMALLINT         NULL,
+        [Type]                  TINYINT          NOT NULL,
+        [Status]                TINYINT          NOT NULL,
+        [RecoveryInitiatedDate] DATETIME2 (7)    NULL,
+        [LastNotificationDate]  DATETIME2 (7)    NULL,
+        [CreationDate]          DATETIME2 (7)    NOT NULL,
+        [RevisionDate]          DATETIME2 (7)    NOT NULL,
+        CONSTRAINT [PK_EmergencyAccess] PRIMARY KEY CLUSTERED ([Id] ASC)
+    );
+
+    ALTER TABLE [dbo].[EmergencyAccess] WITH NOCHECK
+        ADD CONSTRAINT [FK_EmergencyAccess_GrantorId] FOREIGN KEY ([GrantorId]) REFERENCES [dbo].[User] ([Id]);
+
+    ALTER TABLE [dbo].[EmergencyAccess] WITH NOCHECK
+        ADD CONSTRAINT [FK_EmergencyAccess_GranteeId] FOREIGN KEY ([GranteeId]) REFERENCES [dbo].[User] ([Id]);
+END
 GO
 
-ALTER TABLE [dbo].[EmergencyAccess] WITH NOCHECK
-    ADD CONSTRAINT [FK_EmergencyAccess_GrantorId] FOREIGN KEY ([GrantorId]) REFERENCES [dbo].[User] ([Id]);
-GO
-
-ALTER TABLE [dbo].[EmergencyAccess] WITH NOCHECK
-    ADD CONSTRAINT [FK_EmergencyAccess_GranteeId] FOREIGN KEY ([GranteeId]) REFERENCES [dbo].[User] ([Id]);
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'EmergencyAccessDetailsView')
+BEGIN
+    DROP VIEW [dbo].[EmergencyAccessDetailsView]
+END
 GO
 
 CREATE VIEW [dbo].[EmergencyAccessDetailsView]
@@ -44,9 +51,15 @@ LEFT JOIN
     [dbo].[User] GrantorU ON GrantorU.[Id] = EA.[GrantorId]
 GO
 
-ALTER PROCEDURE [dbo].[User_DeleteById]
-    @Id UNIQUEIDENTIFIER
-WITH RECOMPILE
+IF OBJECT_ID('[dbo].[User_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_DeleteById]
+@Id UNIQUEIDENTIFIER
+    WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -133,7 +146,7 @@ BEGIN
         [GrantorId] = @Id
     OR
         [GranteeId] = @Id
-    
+
     -- Finally, delete the user
     DELETE
     FROM
@@ -142,6 +155,12 @@ BEGIN
         [Id] = @Id
 
     COMMIT TRANSACTION User_DeleteById
+END
+GO
+
+IF OBJECT_ID('[dbo].[EmergencyAccess_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_Create]
 END
 GO
 
@@ -195,6 +214,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccess_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_ReadById]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccess_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
@@ -207,6 +232,12 @@ BEGIN
         [dbo].[EmergencyAccess]
     WHERE
         [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[EmergencyAccess_ReadCountByGrantorIdEmail]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_ReadCountByGrantorIdEmail]
 END
 GO
 
@@ -233,6 +264,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccess_ReadToNotify]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
 AS
 BEGIN
@@ -251,9 +288,15 @@ BEGIN
     WHERE
         EA.[Status] = 3
     AND
-        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedDate]) <= GETDATE()
+        DATEADD(DAY, EA.[WaitTimeDays] - 1, EA.[RecoveryInitiatedDate]) <= GETUTCDATE()
     AND
-        DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETDATE()
+        DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETUTCDATE()
+END
+GO
+
+IF OBJECT_ID('[dbo].[EmergencyAccess_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_Update]
 END
 GO
 
@@ -295,6 +338,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccessDetails_ReadByGranteeId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccessDetails_ReadByGranteeId]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccessDetails_ReadByGranteeId]
     @GranteeId UNIQUEIDENTIFIER
 AS
@@ -310,6 +359,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccessDetails_ReadByGrantorId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccessDetails_ReadByGrantorId]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccessDetails_ReadByGrantorId]
     @GrantorId UNIQUEIDENTIFIER
 AS
@@ -322,6 +377,12 @@ BEGIN
         [dbo].[EmergencyAccessDetailsView]
     WHERE
         [GrantorId] = @GrantorId
+END
+GO
+
+IF OBJECT_ID('[dbo].[EmergencyAccessDetails_ReadByIdGrantorId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccessDetails_ReadByIdGrantorId]
 END
 GO
 
@@ -343,6 +404,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccessDetails_ReadExpiredRecoveries]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccessDetails_ReadExpiredRecoveries]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccessDetails_ReadExpiredRecoveries]
 AS
 BEGIN
@@ -355,7 +422,13 @@ BEGIN
     WHERE
         [Status] = 3
     AND
-        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedDate]) <= GETDATE()
+        DATEADD(DAY, [WaitTimeDays], [RecoveryInitiatedDate]) <= GETUTCDATE()
+END
+GO
+
+IF OBJECT_ID('[dbo].[User_BumpAccountRevisionDateByEmergencyAccessGranteeId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_BumpAccountRevisionDateByEmergencyAccessGranteeId]
 END
 GO
 
@@ -379,6 +452,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[EmergencyAccess_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_DeleteById]
+END
+GO
+
 CREATE PROCEDURE [dbo].[EmergencyAccess_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
@@ -394,6 +473,3 @@ BEGIN
         [Id] = @Id
 END
 GO
-
-ALTER TABLE [dbo].[EmergencyAccess] WITH CHECK CHECK CONSTRAINT [FK_EmergencyAccess_GrantorId];
-ALTER TABLE [dbo].[EmergencyAccess] WITH CHECK CHECK CONSTRAINT [FK_EmergencyAccess_GranteeId];

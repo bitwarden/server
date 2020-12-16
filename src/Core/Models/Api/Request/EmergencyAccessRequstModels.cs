@@ -26,7 +26,7 @@ namespace Bit.Core.Models.Api.Request
         public EmergencyAccess ToEmergencyAccess(EmergencyAccess existingEmergencyAccess)
         {
             // Ensure we only set keys for a confirmed emergency access.
-            if (!string.IsNullOrEmpty(existingEmergencyAccess.KeyEncrypted) && !string.IsNullOrEmpty(KeyEncrypted))
+            if (!string.IsNullOrWhiteSpace(existingEmergencyAccess.KeyEncrypted) && !string.IsNullOrWhiteSpace(KeyEncrypted))
             {
                 existingEmergencyAccess.KeyEncrypted = KeyEncrypted;
             }
