@@ -331,6 +331,9 @@
   <data name="SigningBehavior" xml:space="preserve">
     <value>Signing Behavior</value>
   </data>
+  <data name="MinIncomingSigningAlgorithm" xml:space="preserve">
+    <value>Minimum Incoming Signing Algorithm</value>
+  </data>
   <data name="BindingType" xml:space="preserve">
     <value>Binding Type</value>
   </data>

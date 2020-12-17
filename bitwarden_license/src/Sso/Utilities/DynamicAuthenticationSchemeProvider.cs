@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Sso;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -346,6 +347,10 @@ namespace Bit.Core.Business.Sso
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
                 ValidateCertificates = config.SpValidateCertificates,
             };
+            if (!string.IsNullOrWhiteSpace(config.SpMinIncomingSigningAlgorithm))
+            {
+                spOptions.MinIncomingSigningAlgorithm = config.SpMinIncomingSigningAlgorithm;
+            }
             if (!string.IsNullOrWhiteSpace(config.SpOutboundSigningAlgorithm))
             {
                 spOptions.OutboundSigningAlgorithm = config.SpOutboundSigningAlgorithm;
