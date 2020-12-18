@@ -71,9 +71,18 @@ namespace Bit.Sso
             // Handle Big Cookies
             services.ConfigureApplicationCookie(options =>
             {
-                if (globalSettings.SelfHosted)
+                if (globalSettings.SelfHosted ||
+                    string.IsNullOrWhiteSpace(globalSettings.IdentityServer.RedisConnectionString))
                 {
                     options.SessionStore = new MemoryCacheTicketStore();
+                }
+                else
+                {
+                    var redisOptions = new Microsoft.Extensions.Caching.Redis.RedisCacheOptions
+                    {
+                        Configuration = globalSettings.IdentityServer.RedisConnectionString,
+                    };
+                    options.SessionStore = new RedisCacheTicketStore(redisOptions);
                 }
             });
 

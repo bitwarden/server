@@ -301,7 +301,7 @@ namespace Bit.Core.Business.Sso
                 Authority = config.Authority,
                 ClientId = config.ClientId,
                 ClientSecret = config.ClientSecret,
-                ResponseType = "code",
+                ResponseType = "code id_token",
                 ResponseMode = "form_post",
                 SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
