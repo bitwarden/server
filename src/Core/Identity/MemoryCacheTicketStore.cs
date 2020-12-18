@@ -8,7 +8,7 @@ namespace Bit.Core.Identity
 {
     public class MemoryCacheTicketStore : ITicketStore
     {
-        private const string _keyPrefix = "AuthSessionStore-";
+        private const string _keyPrefix = "auth-";
         private readonly IMemoryCache _cache;
 
         public MemoryCacheTicketStore()
@@ -18,8 +18,7 @@ namespace Bit.Core.Identity
 
         public async Task<string> StoreAsync(AuthenticationTicket ticket)
         {
-            var guid = Guid.NewGuid();
-            var key = _keyPrefix + guid.ToString();
+            var key = $"{_keyPrefix}{Guid.NewGuid()}";
             await RenewAsync(key, ticket);
             return key;
         }
@@ -32,7 +31,10 @@ namespace Bit.Core.Identity
             {
                 options.SetAbsoluteExpiration(expiresUtc.Value);
             }
-            options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+            else
+            {
+                options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+            }
 
             _cache.Set(key, ticket, options);
 
@@ -41,8 +43,7 @@ namespace Bit.Core.Identity
 
         public Task<AuthenticationTicket> RetrieveAsync(string key)
         {
-            AuthenticationTicket ticket;
-            _cache.TryGetValue(key, out ticket);
+            _cache.TryGetValue(key, out AuthenticationTicket ticket);
             return Task.FromResult(ticket);
         }
 
