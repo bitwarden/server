@@ -100,6 +100,7 @@ https://bitwarden.com, https://github.com/bitwarden
 "
 
 if($env:BITWARDEN_QUIET -ne "true") {
+    Write-Line "bitwarden.ps1 version ${coreVersion}"
     docker --version
     docker-compose --version
 }

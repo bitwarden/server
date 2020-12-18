@@ -19,11 +19,6 @@ https://bitwarden.com, https://github.com/bitwarden
 
 EOF
 
-docker --version
-docker-compose --version
-
-echo ""
-
 # Setup
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -39,6 +34,12 @@ SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 COREVERSION="1.38.2"
 WEBVERSION="2.17.1"
+
+echo "bitwarden.sh version $COREVERSION"
+docker --version
+docker-compose --version
+
+echo ""
 
 # Functions
 
