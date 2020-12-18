@@ -72,7 +72,7 @@ namespace Bit.Setup
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
                 RealIps = context.Config.RealIps;
-		ContentSecurityPolicy = string.Format(context.Config.NginxHeaderContentSecurityPolicy, Domain);
+                ContentSecurityPolicy = string.Format(context.Config.NginxHeaderContentSecurityPolicy, Domain);
 
                 if (Ssl)
                 {

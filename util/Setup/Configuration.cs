@@ -74,9 +74,9 @@ namespace Bit.Setup
 
         [Description("Nginx Header Content-Security-Policy parameter\n" +
             "WARNING: Reconfiguring this parameter may break features. By changing this parameter\n" +
-	    "you become responsible for maintaining this value.")]
-        public string NginxHeaderContentSecurityPolicy { get; set; } = "default-src 'self'; style-src 'self' " + 
-	    "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+            "you become responsible for maintaining this value.")]
+        public string NginxHeaderContentSecurityPolicy { get; set; } = "default-src 'self'; style-src 'self' " 
+            "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
             "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
             "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
             "https://twofactorauth.org; object-src 'self' blob:;";
