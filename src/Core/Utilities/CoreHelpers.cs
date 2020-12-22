@@ -719,6 +719,58 @@ namespace Bit.Core.Utilities
                                 claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
                             }
                             break;
+                        case Enums.OrganizationUserType.Custom:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+
+                                if (org.AccessBusinessPortal)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
+                                }
+
+                                if (org.AccessEventLogs)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
+                                }
+
+                                if (org.AccessImportExport)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
+                                }
+
+                                if (org.AccessReports)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
+                                }
+
+                                if (org.ManageAllCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
+                                }
+
+                                if (org.ManageAssignedCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
+                                }
+
+                                if (org.ManageGroups)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
+                                }
+
+                                if (org.ManagePolicies)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
+                                }
+
+                                if (org.ManageUsers)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
+                                }
+
+                            }
+                            break;
                         default:
                             break;
                     }

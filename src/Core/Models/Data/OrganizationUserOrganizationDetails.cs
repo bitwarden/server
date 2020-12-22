@@ -1,8 +1,9 @@
 ﻿using System;
+using Bit.Core.Models.Interfaces;
 
 namespace Bit.Core.Models.Data
 {
-    public class OrganizationUserOrganizationDetails
+    public class OrganizationUserOrganizationDetails: IPermissions
     {
         public Guid OrganizationId { get; set; }
         public Guid? UserId { get; set; }
@@ -27,5 +28,14 @@ namespace Bit.Core.Models.Data
         public bool Enabled { get; set; }
         public string SsoExternalId { get; set; }
         public string Identifier { get; set; }
+        public bool AccessBusinessPortal { get; set; }
+        public bool AccessEventLogs { get; set; }
+        public bool AccessImportExport { get; set; }
+        public bool AccessReports { get; set; }
+        public bool ManageAllCollections { get; set; }
+        public bool ManageAssignedCollections { get; set; }
+        public bool ManageGroups { get; set; }
+        public bool ManagePolicies { get; set; }
+        public bool ManageUsers { get; set; }
     }
 }

@@ -10,7 +10,7 @@
 </div>
 <div class="row">
     @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso &&
-         EnterprisePortalCurrentContext.AdminForSelectedOrganization)
+         EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
     {
         <div class="col">
             <a class="card p-5 border border-primary" asp-area="" asp-controller="Sso" asp-action="Index">
@@ -20,7 +20,7 @@
     }
 
     @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies &&
-         EnterprisePortalCurrentContext.AdminForSelectedOrganization)
+         EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
     {
         <div class="col">
             <a class="card p-5 border border-primary" asp-area="" asp-controller="Policies" asp-action="Index">

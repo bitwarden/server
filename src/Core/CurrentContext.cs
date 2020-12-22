@@ -148,6 +148,44 @@ namespace Bit.Core
                         Type = OrganizationUserType.Manager
                     }));
             }
+
+            if (claimsDict.ContainsKey("orgcustom"))
+            {
+                Organizations.AddRange(claimsDict["orgcustom"].Select(c =>
+                    new CurrentContentOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Custom,
+                        AccessBusinessPortal = claimsDict.ContainsKey("accessbusinessportal") ? 
+                            claimsDict["accessbusinessportal"].Any(x => x.Value == c.Value) : 
+                            false,
+                        AccessEventLogs = claimsDict.ContainsKey("accesseventlogs") ?
+                            claimsDict["accesseventlogs"].Any(x => x.Value == c.Value) :
+                            false,
+                        AccessImportExport = claimsDict.ContainsKey("accessimportexport") ?
+                            claimsDict["accessimportexport"].Any(x => x.Value == c.Value) :
+                            false,
+                        AccessReports = claimsDict.ContainsKey("accessreports") ?
+                            claimsDict["accessreports"].Any(x => x.Value == c.Value) :
+                            false,
+                        ManageAllCollections = claimsDict.ContainsKey("manageallcollections") ?
+                            claimsDict["manageallcollections"].Any(x => x.Value == c.Value) :
+                            false,
+                        ManageAssignedCollections = claimsDict.ContainsKey("manageassignedcollections") ?
+                            claimsDict["manageassignedcollections"].Any(x => x.Value == c.Value) :
+                            false,
+                        ManageGroups = claimsDict.ContainsKey("managegroups") ?
+                            claimsDict["managegroups"].Any(x => x.Value == c.Value) :
+                            false,
+                        ManagePolicies = claimsDict.ContainsKey("managepolicies") ?
+                            claimsDict["managepolicies"].Any(x => x.Value == c.Value) :
+                            false,
+                        ManageUsers = claimsDict.ContainsKey("manageusers") ?
+                            claimsDict["manageusers"].Any(x => x.Value == c.Value) :
+                            false,
+                    }));
+            }
+
             return Task.FromResult(0);
         }
 
@@ -172,6 +210,56 @@ namespace Bit.Core
         public bool OrganizationOwner(Guid orgId)
         {
             return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
+        }
+
+        public bool OrganizationCustom(Guid orgId)
+        {
+            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false;
+        }
+        
+        public bool AccessBusinessPortal(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.AccessBusinessPortal) ?? false);
+        }
+
+        public bool AccessEventLogs(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.AccessEventLogs) ?? false);
+        }
+
+        public bool AccessImportExport(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.AccessImportExport) ?? false);
+        }
+
+        public bool AccessReports(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.AccessReports) ?? false);
+        }
+
+        public bool ManageAllCollections(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.ManageAllCollections) ?? false);
+        }
+
+        public bool ManageAssignedCollections(Guid orgId)
+        {
+            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId && o.ManageAssignedCollections) ?? false);
+        }
+
+        public bool ManageGroups(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.ManageGroups) ?? false);
+        }
+
+        public bool ManagePolicies(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.ManagePolicies) ?? false);
+        }
+
+        public bool ManageUsers(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.ManageUsers) ?? false);
         }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
@@ -204,10 +292,27 @@ namespace Bit.Core
             {
                 Id = orgUser.OrganizationId;
                 Type = orgUser.Type;
+                AccessBusinessPortal = orgUser.AccessBusinessPortal;
+                AccessEventLogs = orgUser.AccessEventLogs;
+                AccessImportExport = orgUser.AccessImportExport;
+                AccessReports = orgUser.AccessReports;
+                ManageAllCollections = orgUser.ManageAllCollections;
+                ManageAssignedCollections = orgUser.ManageAssignedCollections;
+                ManageGroups = orgUser.ManageGroups;
+                ManageUsers = orgUser.ManageUsers;
             }
 
             public Guid Id { get; set; }
             public OrganizationUserType Type { get; set; }
+            public bool AccessBusinessPortal { get; set; }
+            public bool AccessEventLogs { get; set; }
+            public bool AccessImportExport { get; set; }
+            public bool AccessReports { get; set; }
+            public bool ManageAllCollections { get; set; }
+            public bool ManageAssignedCollections { get; set; }
+            public bool ManageGroups { get; set; }
+            public bool ManagePolicies { get; set; }
+            public bool ManageUsers { get; set; }
         }
     }
 }

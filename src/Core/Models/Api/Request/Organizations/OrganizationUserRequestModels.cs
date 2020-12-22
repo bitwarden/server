@@ -1,17 +1,26 @@
 ﻿using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System;
 using System.Linq;
+using Bit.Core.Models.Interfaces;
 
 namespace Bit.Core.Models.Api
 {
-    public class OrganizationUserInviteRequestModel : IValidatableObject
+    public class OrganizationUserInviteRequestModel : IValidatableObject, IPermissions
     {
         [Required]
         public IEnumerable<string> Emails { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
+        public bool AccessBusinessPortal { get; set; }
+        public bool AccessEventLogs { get; set; }
+        public bool AccessImportExport { get; set; }
+        public bool AccessReports { get; set; }
+        public bool ManageAllCollections { get; set; }
+        public bool ManageAssignedCollections { get; set; }
+        public bool ManageGroups { get; set; }
+        public bool ManagePolicies { get; set; }
+        public bool ManageUsers { get; set; }
         public bool AccessAll { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
@@ -61,12 +70,30 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
+        public bool AccessBusinessPortal { get; set; }
+        public bool AccessEventLogs { get; set; }
+        public bool AccessImportExport { get; set; }
+        public bool AccessReports { get; set; }
+        public bool ManageAllCollections { get; set; }
+        public bool ManageAssignedCollections { get; set; }
+        public bool ManageGroups { get; set; }
+        public bool ManagePolicies { get; set; }
+        public bool ManageUsers { get; set; }
         public bool AccessAll { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
             existingUser.Type = Type.Value;
+            existingUser.AccessBusinessPortal = AccessBusinessPortal;
+            existingUser.AccessEventLogs = AccessEventLogs;
+            existingUser.AccessImportExport = AccessImportExport;
+            existingUser.AccessReports = AccessReports;
+            existingUser.ManageAllCollections = ManageAllCollections;
+            existingUser.ManageAssignedCollections = ManageAssignedCollections;
+            existingUser.ManageGroups = ManageGroups;
+            existingUser.ManagePolicies = ManagePolicies;
+            existingUser.ManageUsers = ManageUsers;
             existingUser.AccessAll = AccessAll;
             return existingUser;
         }

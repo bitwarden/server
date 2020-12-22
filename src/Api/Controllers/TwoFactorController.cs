@@ -167,7 +167,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -190,7 +190,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -331,7 +331,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }

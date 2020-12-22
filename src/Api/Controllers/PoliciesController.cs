@@ -52,7 +52,7 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Get(string orgId, int type)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -69,7 +69,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationManager(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody]PolicyRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }

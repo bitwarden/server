@@ -4,10 +4,11 @@ using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;
+using Bit.Core.Models.Interfaces;
 
 namespace Bit.Core.Models.Api
 {
-    public class OrganizationUserResponseModel : ResponseModel
+    public class OrganizationUserResponseModel : ResponseModel, IPermissions
     {
         public OrganizationUserResponseModel(OrganizationUser organizationUser, string obj = "organizationUser")
             : base(obj)
@@ -22,6 +23,15 @@ namespace Bit.Core.Models.Api
             Type = organizationUser.Type;
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
+            AccessBusinessPortal = organizationUser.AccessBusinessPortal;
+            AccessEventLogs = organizationUser.AccessEventLogs;
+            AccessImportExport = organizationUser.AccessImportExport;
+            AccessReports = organizationUser.AccessReports;
+            ManageAllCollections = organizationUser.ManageAllCollections;
+            ManageAssignedCollections = organizationUser.ManageAssignedCollections;
+            ManageGroups = organizationUser.ManageGroups;
+            ManagePolicies = organizationUser.ManagePolicies;
+            ManageUsers = organizationUser.ManageUsers;
         }
 
         public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
@@ -37,6 +47,15 @@ namespace Bit.Core.Models.Api
             Type = organizationUser.Type;
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
+            AccessBusinessPortal = organizationUser.AccessBusinessPortal;
+            AccessEventLogs = organizationUser.AccessEventLogs;
+            AccessImportExport = organizationUser.AccessImportExport;
+            AccessReports = organizationUser.AccessReports;
+            ManageAllCollections = organizationUser.ManageAllCollections;
+            ManageAssignedCollections = organizationUser.ManageAssignedCollections;
+            ManageGroups = organizationUser.ManageGroups;
+            ManagePolicies = organizationUser.ManagePolicies;
+            ManageUsers = organizationUser.ManageUsers;
         }
 
         public string Id { get; set; }
@@ -44,6 +63,15 @@ namespace Bit.Core.Models.Api
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public bool AccessAll { get; set; }
+        public bool AccessBusinessPortal { get; set; }
+        public bool AccessEventLogs { get; set; }
+        public bool AccessImportExport { get; set; }
+        public bool AccessReports { get; set; }
+        public bool ManageAllCollections { get; set; }
+        public bool ManageAssignedCollections { get; set; }
+        public bool ManageGroups { get; set; }
+        public bool ManagePolicies { get; set; }
+        public bool ManageUsers { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel

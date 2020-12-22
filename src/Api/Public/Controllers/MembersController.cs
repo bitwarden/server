@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Models.Api.Public;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -116,8 +117,15 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Post([FromBody]MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-            var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-                model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
+            var invite = new OrganizationUserInvite()
+            {
+                Emails = new List<string> { model.Email },
+                Type = model.Type.Value,
+                AccessAll = model.AccessAll.Value,
+                Collections = associations
+            };
+            var userPromise = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null, model.ExternalId, invite);
+            var user = userPromise.FirstOrDefault();
             var response = new MemberResponseModel(user, associations);
             return new JsonResult(response);
         }
@@ -178,7 +186,7 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds);
+            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
             return new OkResult();
         }
 

@@ -9,7 +9,16 @@
     @AccessAll BIT,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @AccessBusinessPortal BIT,
+    @AccessEventLogs BIT,
+    @AccessImportExport BIT,
+    @AccessReports BIT,
+    @ManageAllCollections BIT,
+    @ManageAssignedCollections BIT,
+    @ManageGroups BIT,
+    @ManagePolicies BIT,
+    @ManageUsers BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +35,16 @@ BEGIN
         [AccessAll],
         [ExternalId],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [AccessBusinessPortal],
+        [AccessEventLogs],
+        [AccessImportExport],
+        [AccessReports],
+        [ManageAllCollections],
+        [ManageAssignedCollections],
+        [ManageGroups],
+        [ManagePolicies],
+        [ManageUsers]
     )
     VALUES
     (
@@ -40,6 +58,15 @@ BEGIN
         @AccessAll,
         @ExternalId,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @AccessBusinessPortal,
+        @AccessEventLogs,
+        @AccessImportExport,
+        @AccessReports,
+        @ManageAllCollections,
+        @ManageAssignedCollections,
+        @ManageGroups,
+        @ManagePolicies,
+        @ManageUsers
     )
 END

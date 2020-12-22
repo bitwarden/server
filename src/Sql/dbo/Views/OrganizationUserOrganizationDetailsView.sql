@@ -22,7 +22,16 @@ SELECT
     OU.[Key],
     OU.[Status],
     OU.[Type],
-    SU.[ExternalId] SsoExternalId
+    SU.[ExternalId] SsoExternalId,
+    OU.[AccessBusinessPortal],
+    OU.[AccessEventLogs],
+    OU.[AccessImportExport],
+    OU.[AccessReports],
+    OU.[ManageAllCollections],
+    OU.[ManageAssignedCollections],
+    OU.[ManageGroups],
+    OU.[ManagePolicies],
+    OU.[ManageUsers]
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN

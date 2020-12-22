@@ -6,5 +6,6 @@
         Admin = 1,
         User = 2,
         Manager = 3,
+        Custom = 4
     }
 }

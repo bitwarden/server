@@ -1,9 +1,10 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Interfaces;
+using Bit.Core.Models.Table;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api
 {
-    public class OrganizationUpdateRequestModel
+    public class OrganizationUpdateRequestModel: IPermissions
     {
         [Required]
         [StringLength(50)]
@@ -16,6 +17,17 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(50)]
         public string BillingEmail { get; set; }
+
+        public bool AccessBusinessPortal { get; set; }
+        public bool AccessEventLogs { get; set; }
+        public bool AccessImportExport { get; set; }
+        public bool AccessReports { get; set; }
+        public bool ManageAllCollections { get; set; }
+        public bool ManageAssignedCollections { get; set; }
+        public bool ManageGroups { get; set; }
+        public bool ManagePolicies { get; set; }
+        public bool ManageUsers { get; set; }
+        public bool ViewPolicies { get; set; }
 
         public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
         {

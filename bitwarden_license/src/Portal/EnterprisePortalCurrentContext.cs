@@ -37,6 +37,9 @@ namespace Bit.Portal
         public bool OwnerForSelectedOrganization =>
             SelectedOrganizationDetails?.Type == Core.Enums.OrganizationUserType.Owner;
 
+        public bool CanManagePoliciesForSelectedOrganization =>
+            AdminForSelectedOrganization || SelectedOrganizationDetails?.ManagePolicies == true;
+
         public async override Task SetContextAsync(ClaimsPrincipal user)
         {
             var nameId = user.FindFirstValue(ClaimTypes.NameIdentifier);

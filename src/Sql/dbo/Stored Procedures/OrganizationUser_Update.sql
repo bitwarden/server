@@ -9,7 +9,16 @@
     @AccessAll BIT,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @AccessBusinessPortal BIT,
+    @AccessEventLogs BIT,
+    @AccessImportExport BIT,
+    @AccessReports BIT,
+    @ManageAllCollections BIT,
+    @ManageAssignedCollections BIT,
+    @ManageGroups BIT,
+    @ManagePolicies BIT,
+    @ManageUsers BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +35,16 @@ BEGIN
         [AccessAll] = @AccessAll,
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [AccessBusinessPortal] = @AccessBusinessPortal,
+        [AccessEventLogs] = @AccessEventLogs,
+        [AccessImportExport] = @AccessImportExport,
+        [AccessReports] = @AccessReports,
+        [ManageAllCollections] = @ManageAllCollections,
+        [ManageAssignedCollections] = @ManageAssignedCollections,
+        [ManageGroups] = @ManageGroups,
+        [ManagePolicies] = @ManagePolicies,
+        [ManageUsers] = @ManageUsers
     WHERE
         [Id] = @Id
 

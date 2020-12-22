@@ -10,12 +10,21 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
+    @AccessBusinessPortal BIT,
+    @AccessEventLogs BIT,
+    @AccessImportExport BIT,
+    @AccessReports BIT,
+    @ManageAllCollections BIT,
+    @ManageAssignedCollections BIT,
+    @ManageGroups BIT,
+    @ManagePolicies BIT,
+    @ManageUsers BIT,
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate
+    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @AccessBusinessPortal, @AccessEventLogs, @AccessImportExport, @AccessReports, @ManageAllCollections, @ManageAssignedCollections,  @ManageGroups, @ManagePolicies, @ManageUsers
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

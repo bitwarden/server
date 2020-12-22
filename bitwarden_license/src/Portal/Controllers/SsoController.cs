@@ -41,7 +41,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
             {
                 return Redirect("~/");
             }
@@ -63,7 +63,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
             {
                 return Redirect("~/");
             }

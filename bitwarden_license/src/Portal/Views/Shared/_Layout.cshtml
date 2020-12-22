@@ -32,7 +32,7 @@
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <ul class="navbar-nav mr-auto">
                         @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso &&
-                           EnterprisePortalCurrentContext.AdminForSelectedOrganization)
+                             EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="Sso" asp-action="Index">
@@ -42,7 +42,7 @@
                         }
 
                         @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies &&
-                           EnterprisePortalCurrentContext.AdminForSelectedOrganization)
+                             EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="Policies" asp-action="Index">
