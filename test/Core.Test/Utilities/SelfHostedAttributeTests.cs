@@ -49,7 +49,8 @@ namespace Bit.Core.Test.Utilities
         }
 
 
-
+        // This generates a ActionExecutingContext with the needed injected
+        // service with the given value.
         private ActionExecutingContext GetContext(bool selfHosted)
         {
             IServiceCollection services = new ServiceCollection();
@@ -65,7 +66,9 @@ namespace Bit.Core.Test.Utilities
             httpContext.RequestServices = services.BuildServiceProvider();
 
             var context = Substitute.For<ActionExecutingContext>(
-                Substitute.For<ActionContext>(httpContext, new RouteData(), Substitute.For<ActionDescriptor>()), 
+                Substitute.For<ActionContext>(httpContext,
+                    new RouteData(),
+                    Substitute.For<ActionDescriptor>()), 
                 new List<IFilterMetadata>(), 
                 new Dictionary<string, object>(), 
                 Substitute.For<Controller>());
