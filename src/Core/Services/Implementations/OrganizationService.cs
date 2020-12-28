@@ -1658,9 +1658,7 @@ namespace Bit.Core.Services
                     .Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
                 if (!loggedInAsOrgOwner)
                 {
-                    var isOwner = oldType.HasValue ?
-                        oldType.Value == OrganizationUserType.Owner :
-                        false;
+                    var isOwner = oldType == OrganizationUserType.Owner;
                     var nowOwner = newType == OrganizationUserType.Owner;
                     var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !(isOwner.Equals(nowOwner));
                     if (ownerUserConfigurationAttempt)
@@ -1671,9 +1669,7 @@ namespace Bit.Core.Services
                     var loggedInAsOrgAdmin = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Admin);
                     if (!loggedInAsOrgAdmin)
                     {
-                        var isCustom = oldType.HasValue ? 
-                           oldType.Value == OrganizationUserType.Custom :
-                           false;
+                        var isCustom = oldType == OrganizationUserType.Custom;
                         var nowCustom = newType == OrganizationUserType.Custom;
                         var customUserConfigurationAttempt = (isCustom && nowCustom) || !(isCustom.Equals(nowCustom));
                         if (customUserConfigurationAttempt)
@@ -1690,9 +1686,7 @@ namespace Bit.Core.Services
                                 throw new BadRequestException("Your account does not have permission to manage users.");
                             }
 
-                            var isAdmin = oldType.HasValue ?
-                               oldType.Value == OrganizationUserType.Admin :
-                               false;
+                            var isAdmin = oldType == OrganizationUserType.Admin;
                             var nowAdmin = newType == OrganizationUserType.Admin;
                             var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !(isAdmin.Equals(nowAdmin));
                             if (adminUserConfigurationAttempt)
