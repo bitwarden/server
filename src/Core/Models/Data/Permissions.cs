@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Bit.Core.Models.Data 
 {
     public class Permissions
