@@ -15,5 +15,4 @@ namespace Bit.Core.Models.Data
         public bool ManageSso { get; set; }
         public bool ManageUsers { get; set; }
     }
-
 }

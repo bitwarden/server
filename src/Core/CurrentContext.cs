@@ -157,39 +157,7 @@ namespace Bit.Core
                     {
                         Id = new Guid(c.Value),
                         Type = OrganizationUserType.Custom,
-                        Permissions = new Permissions 
-                        {
-                            AccessBusinessPortal = claimsDict.ContainsKey("accessbusinessportal") ? 
-                                claimsDict["accessbusinessportal"].Any(x => x.Value == c.Value) : 
-                                false,
-                            AccessEventLogs = claimsDict.ContainsKey("accesseventlogs") ?
-                                claimsDict["accesseventlogs"].Any(x => x.Value == c.Value) :
-                                false,
-                            AccessImportExport = claimsDict.ContainsKey("accessimportexport") ?
-                                claimsDict["accessimportexport"].Any(x => x.Value == c.Value) :
-                                false,
-                            AccessReports = claimsDict.ContainsKey("accessreports") ?
-                                claimsDict["accessreports"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManageAllCollections = claimsDict.ContainsKey("manageallcollections") ?
-                                claimsDict["manageallcollections"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManageAssignedCollections = claimsDict.ContainsKey("manageassignedcollections") ?
-                                claimsDict["manageassignedcollections"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManageGroups = claimsDict.ContainsKey("managegroups") ?
-                                claimsDict["managegroups"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManagePolicies = claimsDict.ContainsKey("managepolicies") ?
-                                claimsDict["managepolicies"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManageSso = claimsDict.ContainsKey("managesso") ?
-                                claimsDict["managesso"].Any(x => x.Value == c.Value) :
-                                false,
-                            ManageUsers = claimsDict.ContainsKey("manageusers") ?
-                                claimsDict["manageusers"].Any(x => x.Value == c.Value) :
-                                false,
-                        }
+                        Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
                     }));
             }
 
@@ -294,6 +262,29 @@ namespace Bit.Core
             }
 
             return claims[type].FirstOrDefault()?.Value;
+        }
+
+        private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
+        {
+            bool hasClaim(string claimKey) 
+            {
+                return claimsDict.ContainsKey(claimKey) ? 
+                    claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
+            }
+
+            return new Permissions
+            {
+                AccessBusinessPortal = hasClaim("accessbusinessportal"),
+                AccessEventLogs = hasClaim("accesseventlogs"),
+                AccessImportExport = hasClaim(""),
+                AccessReports = hasClaim("accessreports"),
+                ManageAllCollections = hasClaim(""),
+                ManageAssignedCollections = hasClaim(""),
+                ManageGroups = hasClaim(""),
+                ManagePolicies = hasClaim(""),
+                ManageSso = hasClaim("managesso"),
+                ManageUsers = hasClaim("manageusers")
+            };
         }
 
         public class CurrentContentOrganization

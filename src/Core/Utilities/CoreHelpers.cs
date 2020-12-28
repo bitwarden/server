@@ -774,7 +774,6 @@ namespace Bit.Core.Utilities
                                 {
                                     claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
                                 }
-
                             }
                             break;
                         default:
@@ -785,7 +784,7 @@ namespace Bit.Core.Utilities
             return claims;
         }
 
-        public static T LoadClassFromJsonData<T>(string jsonData) where T: new()
+        public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
         {
             if (string.IsNullOrWhiteSpace(jsonData))
             {

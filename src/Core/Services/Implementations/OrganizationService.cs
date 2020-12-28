@@ -955,7 +955,7 @@ namespace Bit.Core.Services
             string externalId, OrganizationUserInvite invite)
         {
             var organization = await GetOrgById(organizationId);
-            if (organization == null)
+            if (organization == null || invite?.Emails == null)
             {
                 throw new NotFoundException();
             }
@@ -1462,12 +1462,12 @@ namespace Bit.Core.Services
 
                         try
                         {
-                            var invite = new OrganizationUserInvite() 
+                            var invite = new OrganizationUserInvite
                             {
                                 Emails = new List<string> { user.Email },
                                 Type = OrganizationUserType.User,
                                 AccessAll = false,
-                                Collections = new List<SelectionReadOnly>() 
+                                Collections = new List<SelectionReadOnly>(),
                             };
                             var newUserPromise = await InviteUserAsync(organizationId, importingUserId, user.ExternalId, invite);
                             var newUser = newUserPromise.FirstOrDefault();
@@ -1648,7 +1648,7 @@ namespace Bit.Core.Services
             { 
                 OrganizationUserType.Owner,
                 OrganizationUserType.Admin,
-                OrganizationUserType.Custom 
+                OrganizationUserType.Custom, 
             };
 
             if (checkedTypes.Contains(newType) || (oldType.HasValue && checkedTypes.Contains(oldType.Value)))
@@ -1687,7 +1687,7 @@ namespace Bit.Core.Services
                             var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInAsOrgCustomOrgUser.Permissions);
                             if (!loggedInUserPermissions.ManageUsers)
                             {
-                                throw new BadRequestException("Your account is not permissioned to manage users.");
+                                throw new BadRequestException("Your account does not have permission to manage users.");
                             }
 
                             var isAdmin = oldType.HasValue ?

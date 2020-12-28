@@ -117,7 +117,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Post([FromBody]MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-            var invite = new OrganizationUserInvite()
+            var invite = new OrganizationUserInvite
             {
                 Emails = new List<string> { model.Email },
                 Type = model.Type.Value,

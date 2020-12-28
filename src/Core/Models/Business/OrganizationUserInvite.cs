@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using Bit.Core.Models.Api;
 using System.Linq;
+
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Business
