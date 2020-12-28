@@ -10,7 +10,7 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Permissions NVARCHAR(MAX),
+    @Permissions NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
