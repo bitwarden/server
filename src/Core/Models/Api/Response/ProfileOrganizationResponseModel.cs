@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Interfaces;
-
+using Bit.Core.Utilities;
 namespace Bit.Core.Models.Api
 {
-    public class ProfileOrganizationResponseModel : ResponseModel, IPermissions
+    public class ProfileOrganizationResponseModel : ResponseModel
     {
         public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization)
             : base("profileOrganization")
@@ -30,15 +29,7 @@ namespace Bit.Core.Models.Api
             Enabled = organization.Enabled;
             SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
             Identifier = organization.Identifier;
-            AccessBusinessPortal = organization.AccessBusinessPortal;
-            AccessEventLogs = organization.AccessEventLogs;
-            AccessImportExport = organization.AccessImportExport;
-            AccessReports = organization.AccessReports;
-            ManageAllCollections = organization.ManageAllCollections;
-            ManageAssignedCollections = organization.ManageAssignedCollections;
-            ManageGroups = organization.ManageGroups;
-            ManagePolicies = organization.ManagePolicies;
-            ManageUsers = organization.ManageUsers;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
         }
 
         public string Id { get; set; }
@@ -63,14 +54,6 @@ namespace Bit.Core.Models.Api
         public bool Enabled { get; set; }
         public bool SsoBound { get; set; }
         public string Identifier { get; set; }
-        public bool AccessBusinessPortal { get; set; }
-        public bool AccessEventLogs { get; set; }
-        public bool AccessImportExport { get; set; }
-        public bool AccessReports { get; set; }
-        public bool ManageAllCollections { get; set; }
-        public bool ManageAssignedCollections { get; set; }
-        public bool ManageGroups { get; set; }
-        public bool ManagePolicies { get; set; }
-        public bool ManageUsers { get; set; }
+        public Permissions Permissions { get; set; }
     }
 }

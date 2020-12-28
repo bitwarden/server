@@ -1,27 +1,20 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Bit.Core.Models.Interfaces;
+using System.Text.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class OrganizationUserInviteRequestModel : IValidatableObject, IPermissions
+    public class OrganizationUserInviteRequestModel : IValidatableObject
     {
         [Required]
         public IEnumerable<string> Emails { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
-        public bool AccessBusinessPortal { get; set; }
-        public bool AccessEventLogs { get; set; }
-        public bool AccessImportExport { get; set; }
-        public bool AccessReports { get; set; }
-        public bool ManageAllCollections { get; set; }
-        public bool ManageAssignedCollections { get; set; }
-        public bool ManageGroups { get; set; }
-        public bool ManagePolicies { get; set; }
-        public bool ManageUsers { get; set; }
         public bool AccessAll { get; set; }
+        public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -70,30 +63,17 @@ namespace Bit.Core.Models.Api
     {
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
-        public bool AccessBusinessPortal { get; set; }
-        public bool AccessEventLogs { get; set; }
-        public bool AccessImportExport { get; set; }
-        public bool AccessReports { get; set; }
-        public bool ManageAllCollections { get; set; }
-        public bool ManageAssignedCollections { get; set; }
-        public bool ManageGroups { get; set; }
-        public bool ManagePolicies { get; set; }
-        public bool ManageUsers { get; set; }
         public bool AccessAll { get; set; }
+        public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
             existingUser.Type = Type.Value;
-            existingUser.AccessBusinessPortal = AccessBusinessPortal;
-            existingUser.AccessEventLogs = AccessEventLogs;
-            existingUser.AccessImportExport = AccessImportExport;
-            existingUser.AccessReports = AccessReports;
-            existingUser.ManageAllCollections = ManageAllCollections;
-            existingUser.ManageAssignedCollections = ManageAssignedCollections;
-            existingUser.ManageGroups = ManageGroups;
-            existingUser.ManagePolicies = ManagePolicies;
-            existingUser.ManageUsers = ManageUsers;
+            existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
             existingUser.AccessAll = AccessAll;
             return existingUser;
         }

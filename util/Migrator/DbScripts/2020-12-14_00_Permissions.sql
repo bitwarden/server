@@ -1,151 +1,10 @@
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessBusinessPortal') IS NULL
+IF COL_LENGTH('[dbo].[OrganizationUser]', 'Permissions') IS NULL
 BEGIN
     ALTER TABLE
         [dbo].[OrganizationUser]
     ADD
-        [AccessBusinessPortal] BIT NULL
+        [Permissions] NVARCHAR(MAX) NULL
 END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessEventLogs') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [AccessEventLogs] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessImportExport') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [AccessImportExport] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessReports') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [AccessReports] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'ManageAllCollections') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [ManageAllCollections] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'ManageAssignedCollections') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [ManageAssignedCollections] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'ManageGroups') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [ManageGroups] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'ManagePolicies') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [ManagePolicies] BIT NULL
-END
-GO
-
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'ManageUsers') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[OrganizationUser]
-    ADD
-        [ManageUsers] BIT NULL
-END
-GO
-
-UPDATE [dbo].[OrganizationUser] 
-SET 
-    AccessBusinessPortal = 0,
-    AccessEventLogs = 0,
-    AccessImportExport = 0,
-    AccessReports = 0,
-    ManageAllCollections = 0,
-    ManageAssignedCollections = 0,
-    ManageGroups = 0,
-    ManageUsers = 0
-WHERE 
-    AccessBusinessPortal IS NULL
-    OR AccessEventLogs IS NULL
-    OR AccessImportExport IS NULL
-    OR AccessReports IS NULL
-    OR ManageAllCollections IS NULL
-    OR ManageAssignedCollections IS NULL
-    OR ManageGroups IS NULL
-    OR ManageUsers IS NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    AccessBusinessPortal BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    AccessEventLogs BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    AccessImportExport BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    AccessReports BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    ManageAllCollections BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    ManageAssignedCollections BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    ManageGroups BIT NOT NULL
-GO
-
-ALTER TABLE 
-    [dbo].[OrganizationUser]
-ALTER COLUMN
-    ManageUsers BIT NOT NULL
 GO
 
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserView')
@@ -194,15 +53,7 @@ SELECT
     OU.[Status],
     OU.[Type],
     SU.[ExternalId] SsoExternalId,
-    OU.[AccessBusinessPortal],
-    OU.[AccessEventLogs],
-    OU.[AccessImportExport],
-    OU.[AccessReports],
-    OU.[ManageAllCollections],
-    OU.[ManageAssignedCollections],
-    OU.[ManageGroups],
-    OU.[ManagePolicies],
-    OU.[ManageUsers]
+    OU.[Permissions]
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN
@@ -232,15 +83,7 @@ SELECT
     OU.[AccessAll],
     OU.[ExternalId],
     SU.[ExternalId] SsoExternalId,
-    OU.[AccessBusinessPortal],
-    OU.[AccessEventLogs],
-    OU.[AccessImportExport],
-    OU.[AccessReports],
-    OU.[ManageAllCollections],
-    OU.[ManageAssignedCollections],
-    OU.[ManageGroups],
-    OU.[ManagePolicies],
-    OU.[ManageUsers]
+    OU.[Permissions]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
@@ -267,15 +110,7 @@ CREATE PROCEDURE [dbo].[OrganizationUser_Create]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @AccessBusinessPortal BIT,
-    @AccessEventLogs BIT,
-    @AccessImportExport BIT,
-    @AccessReports BIT,
-    @ManageAllCollections BIT,
-    @ManageAssignedCollections BIT,
-    @ManageGroups BIT,
-    @ManagePolicies BIT,
-    @ManageUsers BIT
+    @Permissions NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -293,15 +128,7 @@ BEGIN
         [ExternalId],
         [CreationDate],
         [RevisionDate],
-        [AccessBusinessPortal],
-        [AccessEventLogs],
-        [AccessImportExport],
-        [AccessReports],
-        [ManageAllCollections],
-        [ManageAssignedCollections],
-        [ManageGroups],
-        [ManagePolicies],
-        [ManageUsers]
+        [Permissions]
     )
     VALUES
     (
@@ -316,15 +143,7 @@ BEGIN
         @ExternalId,
         @CreationDate,
         @RevisionDate,
-        @AccessBusinessPortal,
-        @AccessEventLogs,
-        @AccessImportExport,
-        @AccessReports,
-        @ManageAllCollections,
-        @ManageAssignedCollections,
-        @ManageGroups,
-        @ManagePolicies,
-        @ManageUsers
+        @Permissions
     )
 END
 GO
@@ -347,21 +166,13 @@ CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @AccessBusinessPortal BIT,
-    @AccessEventLogs BIT,
-    @AccessImportExport BIT,
-    @AccessReports BIT,
-    @ManageAllCollections BIT,
-    @ManageAssignedCollections BIT,
-    @ManageGroups BIT,
-    @ManagePolicies BIT,
-    @ManageUsers BIT,
+    @Permissions NVARCHAR(MAX),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @AccessBusinessPortal, @AccessEventLogs, @AccessImportExport, @AccessReports, @ManageAllCollections, @ManageAssignedCollections,  @ManageGroups, @ManagePolicies, @ManageUsers
+    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
@@ -408,15 +219,7 @@ CREATE PROCEDURE [dbo].[OrganizationUser_Update]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @AccessBusinessPortal BIT,
-    @AccessEventLogs BIT,
-    @AccessImportExport BIT,
-    @AccessReports BIT,
-    @ManageAllCollections BIT,
-    @ManageAssignedCollections BIT,
-    @ManageGroups BIT,
-    @ManagePolicies BIT,
-    @ManageUsers BIT
+    @Permissions NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -434,15 +237,7 @@ BEGIN
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [AccessBusinessPortal] = @AccessBusinessPortal,
-        [AccessEventLogs] = @AccessEventLogs,
-        [AccessImportExport] = @AccessImportExport,
-        [AccessReports] = @AccessReports,
-        [ManageAllCollections] = @ManageAllCollections,
-        [ManageAssignedCollections] = @ManageAssignedCollections,
-        [ManageGroups] = @ManageGroups,
-        [ManagePolicies] = @ManagePolicies,
-        [ManageUsers] = @ManageUsers
+        [Permissions] = @Permissions
     WHERE
         [Id] = @Id
 
@@ -468,21 +263,13 @@ CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @AccessBusinessPortal BIT,
-    @AccessEventLogs BIT,
-    @AccessImportExport BIT,
-    @AccessReports BIT,
-    @ManageAllCollections BIT,
-    @ManageAssignedCollections BIT,
-    @ManageGroups BIT,
-    @ManagePolicies BIT,
-    @ManageUsers BIT,
+    @Permissions NVARCHAR(MAX),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @AccessBusinessPortal, @AccessEventLogs, @AccessImportExport, @AccessReports, @ManageAllCollections, @ManageAssignedCollections, @ManageGroups, @ManagePolicies, @ManageUsers
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions
 
 
     -- Update

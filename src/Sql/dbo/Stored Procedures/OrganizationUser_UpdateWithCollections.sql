@@ -10,23 +10,13 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @AccessBusinessPortal BIT,
-    @AccessEventLogs BIT,
-    @AccessImportExport BIT,
-    @AccessReports BIT,
-    @ManageAllCollections BIT,
-    @ManageAssignedCollections BIT,
-    @ManageGroups BIT,
-    @ManagePolicies BIT,
-    @ManageUsers BIT,
+    @Permissions NVARCHAR(MAX),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @AccessBusinessPortal, @AccessEventLogs, @AccessImportExport, @AccessReports, @ManageAllCollections, @ManageAssignedCollections, @ManageGroups, @ManagePolicies, @ManageUsers
-
-
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions
     -- Update
     UPDATE
         [Target]

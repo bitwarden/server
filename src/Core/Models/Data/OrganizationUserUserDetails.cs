@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bit.Core.Enums;
-using Bit.Core.Models.Interfaces;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data
 {
-    public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, IPermissions
+    public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -22,15 +21,7 @@ namespace Bit.Core.Models.Data
         public bool AccessAll { get; set; }
         public string ExternalId { get; set; }
         public string SsoExternalId { get; set; }
-        public bool AccessBusinessPortal { get; set; }
-        public bool AccessEventLogs { get; set; }
-        public bool AccessImportExport { get; set; }
-        public bool AccessReports { get; set; }
-        public bool ManageAllCollections { get; set; }
-        public bool ManageAssignedCollections { get; set; }
-        public bool ManageGroups { get; set; }
-        public bool ManagePolicies { get; set; }
-        public bool ManageUsers { get; set; }
+        public string Permissions { get; set; }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {

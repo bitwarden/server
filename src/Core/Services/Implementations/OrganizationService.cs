@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using System.IO;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Bit.Core.Services
 {
@@ -999,15 +1000,10 @@ namespace Bit.Core.Services
                     ExternalId = externalId,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow,
-                    AccessBusinessPortal = invite.AccessBusinessPortal,
-                    AccessEventLogs = invite.AccessEventLogs,
-                    AccessImportExport = invite.AccessImportExport,
-                    AccessReports = invite.AccessReports,
-                    ManageAllCollections = invite.ManageAllCollections,
-                    ManageAssignedCollections = invite.ManageAssignedCollections,
-                    ManageGroups= invite.ManageGroups,
-                    ManagePolicies = invite.ManagePolicies,
-                    ManageUsers = invite.ManageUsers,
+                    Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    }),
                 };
 
                 if (!orgUser.AccessAll && invite.Collections.Any())
@@ -1688,7 +1684,8 @@ namespace Bit.Core.Services
                         var loggedInAsOrgCustomOrgUser = loggedInUserOrgs.FirstOrDefault(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
                         if (loggedInAsOrgCustomOrgUser != null)
                         {
-                            if (!loggedInAsOrgCustomOrgUser.ManageUsers)
+                            var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInAsOrgCustomOrgUser.Permissions);
+                            if (!loggedInUserPermissions.ManageUsers)
                             {
                                 throw new BadRequestException("Your account is not permissioned to manage users.");
                             }
