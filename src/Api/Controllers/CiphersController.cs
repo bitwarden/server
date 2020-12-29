@@ -187,7 +187,7 @@ namespace Bit.Api.Controllers
             }
 
             // object cannot be a descendant of CipherDetails, so let's clone it.
-            var cipherClone = cipher.Clone();
+            var cipherClone = model.ToCipher(cipher).Clone();
             await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);

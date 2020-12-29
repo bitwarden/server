@@ -39,6 +39,7 @@ namespace Bit.Core.Models.Data
         public Saml2SigningBehavior SpSigningBehavior { get; set; } = Saml2SigningBehavior.IfIdpWantAuthnRequestsSigned;
         public bool SpWantAssertionsSigned { get; set; }
         public bool SpValidateCertificates { get; set; }
+        public string SpMinIncomingSigningAlgorithm { get; set; } = SamlSigningAlgorithms.Sha256;
 
         public string BuildCallbackPath(string ssoUri = null)
         {
