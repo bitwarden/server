@@ -1,10 +1,10 @@
 ﻿using System;
-using Microsoft.AspNetCore.Http;
-using Bit.Core.IdentityServer;
-using Xunit;
-using NSubstitute;
 using System.Collections.Generic;
+using Bit.Core.IdentityServer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Core.Test.IdentityServer
 {
