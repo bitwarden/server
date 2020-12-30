@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Utilities;
 using Xunit;
@@ -104,9 +105,9 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(8, @string.Length);
         }
 
-        [Theory(Skip = "Regression testing with the long.MinValue seems to be acting very weird right now")]
-        [InlineData(long.MinValue, "8589934592 GB")]
-        [InlineData(long.MinValue + 1, "Change")]
+        [Theory]
+        // [InlineData(long.MinValue, "8589934592 GB")]
+        // [InlineData(long.MinValue + 1, "Change")]
         [InlineData(1000L, "1000 Bytes")]
         [InlineData(1, "1 Bytes")]
         [InlineData(-5L, "5 Bytes")]
@@ -117,6 +118,29 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(readable, CoreHelpers.ReadableBytesSize(size));
         }
 
+        [Fact]
+        public void CloneObject_Success()
+        {
+            var orignial = new { Message = "Message" };
+
+            var copy = CoreHelpers.CloneObject(orignial);
+
+            Assert.Equal(orignial.Message, copy.Message);
+        }
+
+        [Fact]
+        public void ExtendQuery_Success()
+        {
+            // Arrange
+            var uri = new Uri("https://bitwarden.com/?param1=value1");
+
+            // Act
+            var newUri = CoreHelpers.ExtendQuery(uri,
+                new Dictionary<string, string> { { "param2", "value2" } });
+
+            // Assert
+            Assert.Equal("https://bitwarden.com/?param1=value1&param2=value2", newUri.ToString());
+        }
 
     }
 }
