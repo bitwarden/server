@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Bit.Core.Models.Data;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Services;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.Models.Api
 {
@@ -22,6 +23,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string Key { get; set; }
+        [Range(1, int.MaxValue)]
         public int? MaxAccessCount { get; set; }
         public DateTime? ExpirationDate { get; set; }
         [Required]
@@ -75,6 +77,22 @@ namespace Bit.Core.Models.Api
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
             }
             return existingSend;
+        }
+
+        public void ValidateCreation()
+        {
+            // Add 1 minute for a sane buffer and client clock float
+            var nowPlus1Minute = DateTime.UtcNow.AddMinutes(1);
+            if (ExpirationDate.HasValue && ExpirationDate.Value <= nowPlus1Minute)
+            {
+                throw new BadRequestException("You cannot create a send that is already expired. " +
+                    "Adjust the expiration date and try again.");
+            }
+            if (DeletionDate.HasValue && DeletionDate.Value <= nowPlus1Minute)
+            {
+                throw new BadRequestException("You cannot create a send that is already deleted. " +
+                    "Adjust the deletion date and try again.");
+            }
         }
 
         private Send ToSendBase(Send existingSend, ISendService sendService)
