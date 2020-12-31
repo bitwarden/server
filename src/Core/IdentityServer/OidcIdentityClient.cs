@@ -14,8 +14,8 @@ namespace Bit.Core.IdentityServer
             ClientSecrets = new List<Secret> { new Secret(globalSettings.OidcIdentityClientKey.Sha256()) };
             AllowedScopes = new string[]
             {
-                    IdentityServerConstants.StandardScopes.OpenId,
-                    IdentityServerConstants.StandardScopes.Profile
+                IdentityServerConstants.StandardScopes.OpenId,
+                IdentityServerConstants.StandardScopes.Profile
             };
             AllowedGrantTypes = GrantTypes.Code;
             Enabled = true;

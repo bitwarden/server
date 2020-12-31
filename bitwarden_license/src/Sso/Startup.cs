@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core;
 using Bit.Core.Identity;
+using Bit.Core.IdentityServer;
 using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;
@@ -59,6 +60,7 @@ namespace Bit.Sso
             }
 
             // Authentication
+            services.AddDistributedIdentityServices(globalSettings);
             services.AddAuthentication();
             services.AddSsoServices(globalSettings);
 
@@ -67,24 +69,6 @@ namespace Bit.Sso
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
-
-            // Handle Big Cookies
-            services.ConfigureApplicationCookie(options =>
-            {
-                if (globalSettings.SelfHosted ||
-                    string.IsNullOrWhiteSpace(globalSettings.IdentityServer.RedisConnectionString))
-                {
-                    options.SessionStore = new MemoryCacheTicketStore();
-                }
-                else
-                {
-                    var redisOptions = new Microsoft.Extensions.Caching.Redis.RedisCacheOptions
-                    {
-                        Configuration = globalSettings.IdentityServer.RedisConnectionString,
-                    };
-                    options.SessionStore = new RedisCacheTicketStore(redisOptions);
-                }
-            });
 
             // Services
             services.AddBaseServices();

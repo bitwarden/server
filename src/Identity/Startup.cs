@@ -81,6 +81,7 @@ namespace Bit.Identity
 
             // Authentication
             services
+                .AddDistributedIdentityServices(globalSettings)
                 .AddAuthentication()
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
@@ -92,7 +93,11 @@ namespace Bit.Identity
                     options.ResponseMode = "form_post";
 
                     options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
-                    options.ResponseType = "code";
+                    options.ResponseType = "code"; // (id_token = hybrid)
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = true;
+                    // Necessary for Hybrid flow (reduce size)
+                    //options.UsePkce = false;
 
                     options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                     {

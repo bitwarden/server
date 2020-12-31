@@ -35,6 +35,11 @@ using Microsoft.Azure.Storage;
 using System.Reflection;
 using Bit.Core.Resources;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Redis;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using IdentityServer4.Infrastructure;
 
 namespace Bit.Core.Utilities
 {
@@ -501,6 +506,41 @@ namespace Bit.Core.Utilities
                         var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
                         return factory.Create("SharedResources", assemblyName.Name);
                     });
+        }
+
+        public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted || string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
+            {
+                services.AddDistributedMemoryCache();
+            }
+            else
+            {
+                services.AddDistributedRedisCache(options =>
+                    options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
+            }
+            services.AddOidcStateDataFormatterCache();
+            services.AddSession();
+            services.ConfigureApplicationCookie(options => options.AddDistributedSessionCookie(services, globalSettings));
+            return services;
+        }
+
+        public static CookieAuthenticationOptions AddDistributedSessionCookie(this CookieAuthenticationOptions options, IServiceCollection services, GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted || string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
+            {
+                options.SessionStore = new MemoryCacheTicketStore();
+            }
+            else
+            {
+                var redisOptions = new RedisCacheOptions
+                {
+                    Configuration = globalSettings.IdentityServer.RedisConnectionString,
+                };
+                options.SessionStore = new RedisCacheTicketStore(redisOptions);
+            }
+
+            return options;
         }
     }
 }

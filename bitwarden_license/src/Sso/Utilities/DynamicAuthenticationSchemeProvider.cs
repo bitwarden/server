@@ -14,8 +14,10 @@ using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
 using IdentityServer4;
+using IdentityServer4.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -40,6 +42,7 @@ namespace Bit.Core.Business.Sso
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedSchemes;
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
         private readonly SemaphoreSlim _semaphore;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         private DateTime? _lastSchemeLoad;
         private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
@@ -54,7 +57,8 @@ namespace Bit.Core.Business.Sso
             ISsoConfigRepository ssoConfigRepository,
             ILogger<DynamicAuthenticationSchemeProvider> logger,
             GlobalSettings globalSettings,
-            SamlEnvironment samlEnvironment)
+            SamlEnvironment samlEnvironment,
+            IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
             _oidcPostConfigureOptions = oidcPostConfigureOptions;
@@ -81,6 +85,7 @@ namespace Bit.Core.Business.Sso
             _cachedSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _semaphore = new SemaphoreSlim(1);
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
         private bool CacheIsValid
@@ -302,7 +307,7 @@ namespace Bit.Core.Business.Sso
                 Authority = config.Authority,
                 ClientId = config.ClientId,
                 ClientSecret = config.ClientSecret,
-                ResponseType = "code",
+                ResponseType = "code id_token", // "code" (id_token = hybrid)
                 ResponseMode = "form_post",
                 SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
@@ -318,6 +323,7 @@ namespace Bit.Core.Business.Sso
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
+                UsePkce = false,
             };
             if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
             {
@@ -331,6 +337,8 @@ namespace Bit.Core.Business.Sso
             {
                 oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
             }
+
+            oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
