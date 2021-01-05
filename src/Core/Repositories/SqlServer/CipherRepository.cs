@@ -610,14 +610,16 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task RestoreAsync(IEnumerable<Guid> ids, Guid userId)
+        public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                var results = await connection.ExecuteAsync(
+                var results = await connection.ExecuteScalarAsync<DateTime>(
                     $"[{Schema}].[Cipher_Restore]",
                     new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                     commandType: CommandType.StoredProcedure);
+
+                return results;
             }
         }
 
