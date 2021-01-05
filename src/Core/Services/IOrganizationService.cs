@@ -8,7 +8,6 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
-    //hiiuguydjfkdfj
     public interface IOrganizationService
     {
         Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType,
