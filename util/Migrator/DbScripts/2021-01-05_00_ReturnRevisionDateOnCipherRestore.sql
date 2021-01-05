@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_Restore]
+IF OBJECT_ID('[dbo].[Cipher_Restore]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_Restore]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_Restore]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -6,7 +12,7 @@ BEGIN
     SET NOCOUNT ON
 
     CREATE TABLE #Temp
-    ( 
+    (
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [UserId] UNIQUEIDENTIFIER NULL,
         [OrganizationId] UNIQUEIDENTIFIER NULL
@@ -22,7 +28,8 @@ BEGIN
     WHERE
         [Edit] = 1
         AND [DeletedDate] IS NOT NULL
-        AND [Id] IN (SELECT * FROM @Ids)
+        AND [Id] IN (SELECT *
+        FROM @Ids)
 
     DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     UPDATE
@@ -31,18 +38,19 @@ BEGIN
         [DeletedDate] = NULL,
         [RevisionDate] = @UtcNow
     WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+        [Id] IN (SELECT [Id]
+    FROM #Temp)
 
     -- Bump orgs
     DECLARE @OrgId UNIQUEIDENTIFIER
     DECLARE [OrgCursor] CURSOR FORWARD_ONLY FOR
         SELECT
-            [OrganizationId]
-        FROM
-            #Temp
-        WHERE
+        [OrganizationId]
+    FROM
+        #Temp
+    WHERE
             [OrganizationId] IS NOT NULL
-        GROUP BY
+    GROUP BY
             [OrganizationId]
     OPEN [OrgCursor]
     FETCH NEXT FROM [OrgCursor] INTO @OrgId
@@ -57,6 +65,5 @@ BEGIN
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
     DROP TABLE #Temp
-
-    SELECT @UtcNow
 END
+GO

@@ -793,6 +793,7 @@ namespace Bit.Core.Services
             var events = ciphers.Select(c =>
             {
                 c.RevisionDate = revisionDate;
+                c.DeletedDate = null;
                 return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null);
             });
             foreach (var eventsBatch in events.Batch(100))
