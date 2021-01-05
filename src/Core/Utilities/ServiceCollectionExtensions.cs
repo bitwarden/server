@@ -41,6 +41,7 @@ using Microsoft.Extensions.Caching.Redis;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using IdentityServer4.Infrastructure;
 using Microsoft.Extensions.Options;
+using IdentityServer4.Configuration;
 
 namespace Bit.Core.Utilities
 {
@@ -522,32 +523,13 @@ namespace Bit.Core.Utilities
             }
             services.AddOidcStateDataFormatterCache();
             services.AddSession();
-            services.ConfigureApplicationCookie(options => options.AddDistributedSessionCookie(services, globalSettings));
-            return services;
-        }
-
-        public static CookieAuthenticationOptions AddDistributedSessionCookie(this CookieAuthenticationOptions options, IServiceCollection services, GlobalSettings globalSettings)
-        {
-            if (globalSettings.SelfHosted || string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
-            {
-                options.SessionStore = new MemoryCacheTicketStore();
-            }
-            else
-            {
-                var redisOptions = new RedisCacheOptions
-                {
-                    Configuration = globalSettings.IdentityServer.RedisConnectionString,
-                };
-                options.SessionStore = new RedisCacheTicketStore(redisOptions);
-            }
-
             services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
                 svcs => new ConfigureOpenIdConnectDistributedOptions(
                     svcs.GetRequiredService<IHttpContextAccessor>(),
-                    globalSettings)
+                    globalSettings,
+                    svcs.GetRequiredService<IdentityServerOptions>())
             );
-
-            return options;
+            return services;
         }
     }
 }

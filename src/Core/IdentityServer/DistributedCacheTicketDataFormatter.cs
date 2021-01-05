@@ -18,7 +18,7 @@ namespace Bit.Core.IdentityServer
             _name = name;
         }
 
-        private string CacheKeyPrefix => "DistributedCacheTicketDataFormatter";
+        private string CacheKeyPrefix => "ticket-data";
 
         private IDistributedCache Cache => _httpContext.HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
         private IDataProtector Protector => _httpContext.HttpContext.RequestServices.GetRequiredService<IDataProtectionProvider>()

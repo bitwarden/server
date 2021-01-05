@@ -309,7 +309,7 @@ namespace Bit.Core.Business.Sso
                 ClientSecret = config.ClientSecret,
                 ResponseType = "code id_token", // "code" (id_token = hybrid)
                 ResponseMode = "form_post",
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
                 SaveTokens = false, // reduce overall request size
                 TokenValidationParameters = new TokenValidationParameters
@@ -415,7 +415,7 @@ namespace Bit.Core.Business.Sso
             var options = new Saml2Options
             {
                 SPOptions = spOptions,
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
             };
             options.IdentityProviders.Add(idp);

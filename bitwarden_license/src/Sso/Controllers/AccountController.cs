@@ -204,7 +204,7 @@ namespace Bit.Sso.Controllers
         {
             // Read external identity from the temporary cookie
             var result = await HttpContext.AuthenticateAsync(
-                IdentityServerConstants.ExternalCookieAuthenticationScheme);
+                Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
             if (result?.Succeeded != true)
             {
                 throw new Exception(_i18nService.T("ExternalAuthenticationError"));
@@ -249,7 +249,7 @@ namespace Bit.Sso.Controllers
             }
 
             // Delete temporary cookie used during external authentication
-            await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
+            await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
             // Retrieve return URL
             var returnUrl = result.Properties.Items["return_url"] ?? "~/";
