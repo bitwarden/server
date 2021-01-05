@@ -349,7 +349,7 @@ namespace Bit.Core.Utilities
             }
             else
             {
-                return absoluteSize.ToString("0 Bytes"); // Byte
+                return size.ToString("0 Bytes"); // Byte
             }
 
             // Divide by 1024 to get fractional value

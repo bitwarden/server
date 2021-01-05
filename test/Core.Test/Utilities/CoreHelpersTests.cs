@@ -121,11 +121,11 @@ namespace Bit.Core.Test.Utilities
 
         [Theory]
         [InlineData(1, "1 Bytes")]
-        [InlineData(-5L, "5 Bytes")]
+        [InlineData(-5L, "-5 Bytes")]
         [InlineData(1023L, "1023 Bytes")]
         [InlineData(1024L, "1 KB")]
         [InlineData(1025L, "1 KB")]
-        [InlineData(-1023L, "1023 Bytes")]
+        [InlineData(-1023L, "-1023 Bytes")]
         [InlineData(-1024L, "-1 KB")]
         [InlineData(-1025L, "-1 KB")]
         [InlineData(1048575L, "1024 KB")]
