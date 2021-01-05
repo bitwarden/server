@@ -62,6 +62,11 @@ namespace Bit.Core.Test.Utilities
         [InlineData("12345&6789", "123456789")]
         [InlineData("abcdef", "ABCDEF")]
         [InlineData("1!@#$%&*()_+", "1")]
+        [InlineData("\u00C6123abc\u00C7", "123ABC")]
+        [InlineData("123\u00C6ABC", "123ABC")]
+        [InlineData("\r\nHello", "E")]
+        [InlineData("\tdef", "DEF")]
+        [InlineData("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV1234567890", "ABCDEFABCDEF1234567890")]
         public void CleanCertificateThumbprint_Success(string input, string output)
         {
             // Arrange & Act
