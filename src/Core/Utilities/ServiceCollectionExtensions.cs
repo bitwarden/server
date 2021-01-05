@@ -40,6 +40,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.Redis;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using IdentityServer4.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Utilities
 {
@@ -539,6 +540,12 @@ namespace Bit.Core.Utilities
                 };
                 options.SessionStore = new RedisCacheTicketStore(redisOptions);
             }
+
+            services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
+                svcs => new ConfigureOpenIdConnectDistributedOptions(
+                    svcs.GetRequiredService<IHttpContextAccessor>(),
+                    globalSettings)
+            );
 
             return options;
         }

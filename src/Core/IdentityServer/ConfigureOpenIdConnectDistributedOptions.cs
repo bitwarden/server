@@ -1,14 +1,10 @@
 ﻿using System;
-using Bit.Core;
-using Bit.Core.IdentityServer;
-using IdentityServer4.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Redis;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Sso.Utilities
+namespace Bit.Core.IdentityServer
 {
     public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<CookieAuthenticationOptions>
     {
@@ -43,7 +39,6 @@ namespace Bit.Sso.Utilities
             }
 
             options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_httpContextAccessor, name);
-            //options.SessionStore = 
         }
     }
 }
