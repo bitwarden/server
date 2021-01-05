@@ -29,7 +29,7 @@ namespace Bit.Core.Test.Utilities
         public void Batch_Success(int batchSize, int totalBatches, int[] collection)
         {
             // Arrange
-            var hasRemainder = collection.Length % batchSize != 0;
+            var remainder = collection.Length % batchSize;
 
             // Act
             var batches = collection.Batch(batchSize);
@@ -37,20 +37,12 @@ namespace Bit.Core.Test.Utilities
             // Assert
             Assert.Equal(totalBatches, batches.Count());
 
-            if (hasRemainder)
+            foreach (var batch in batches.Take(totalBatches - 1))
             {
-                // Grab all but the last one
-                var mainBatches = batches.Take(totalBatches - 1);
-                Assert.All(mainBatches, b =>
-                {
-                    Assert.Equal(batchSize, b.Count());
-                });
-                Assert.True(batchSize > batches.ElementAt(totalBatches - 1).Count());
+                Assert.Equal(batchSize, batch.Count());
             }
-            else
-            {
-                Assert.All(batches, b => Assert.Equal(batchSize, b.Count()));
-            }
+
+            Assert.Equal(batches.Last().Count(), remainder == 0 ? batchSize : remainder);
         }
 
         [Fact]
