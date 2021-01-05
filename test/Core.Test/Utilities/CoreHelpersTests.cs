@@ -20,20 +20,37 @@ namespace Bit.Core.Test.Utilities
             // the comb are working properly
         }
 
-        // TODO: Probably make this a Theory with some more possibilties.
-        [Fact]
-        public void Batch_Success()
+        [Theory]
+        [InlineData(2, 5, new[] { 1, 2, 3, 4, 5, 6, 7, 8 , 9, 0 })]
+        [InlineData(2, 3, new[] { 1, 2, 3, 4, 5 })]
+        [InlineData(2, 1, new[] { 1, 2 })]
+        [InlineData(1, 1, new[] { 1 })]
+        [InlineData(2, 2, new[] { 1, 2, 3 })]
+        public void Batch_Success(int batchSize, int totalBatches, int[] collection)
         {
             // Arrange
-            var source = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            var hasRemainder = collection.Length % batchSize != 0;
 
             // Act
-            var batches = source.Batch(2);
+            var batches = collection.Batch(batchSize);
 
             // Assert
-            Assert.Equal(5, batches.Count());
-            Assert.All(batches,
-                collection => Assert.Equal(2, collection.Count()));
+            Assert.Equal(totalBatches, batches.Count());
+
+            if (hasRemainder)
+            {
+                // Grab all but the last one
+                var mainBatches = batches.Take(totalBatches - 1);
+                Assert.All(mainBatches, b =>
+                {
+                    Assert.Equal(batchSize, b.Count());
+                });
+                Assert.True(batchSize > batches.ElementAt(totalBatches - 1).Count());
+            }
+            else
+            {
+                Assert.All(batches, b => Assert.Equal(batchSize, b.Count()));
+            }
         }
 
         [Fact]
