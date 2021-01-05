@@ -149,7 +149,7 @@ namespace Bit.Core.Test.Utilities
         }
 
         [Fact]
-        public void ExtendQuery_Success()
+        public void ExtendQuery_AddNewParameter_Success()
         {
             // Arrange
             var uri = new Uri("https://bitwarden.com/?param1=value1");
@@ -162,5 +162,51 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal("https://bitwarden.com/?param1=value1&param2=value2", newUri.ToString());
         }
 
+        [Fact]
+        public void ExtendQuery_AddTwoNewParameters_Success()
+        {
+            // Arrange
+            var uri = new Uri("https://bitwarden.com/?param1=value1");
+
+            // Act
+            var newUri = CoreHelpers.ExtendQuery(uri,
+                new Dictionary<string, string>
+                {
+                    { "param2", "value2" },
+                    { "param3", "value3" }
+                });
+
+            // Assert
+            Assert.Equal("https://bitwarden.com/?param1=value1&param2=value2&param3=value3", newUri.ToString());
+        }
+
+        [Fact]
+        public void ExtendQuery_AddExistingParameter_Success()
+        {
+            // Arrange
+            var uri = new Uri("https://bitwarden.com/?param1=value1&param2=value2");
+
+            // Act
+            var newUri = CoreHelpers.ExtendQuery(uri,
+                new Dictionary<string, string> { { "param1", "test_value" } });
+
+            // Assert
+            Assert.Equal("https://bitwarden.com/?param1=test_value&param2=value2", newUri.ToString());
+        }
+
+        [Fact]
+        public void ExtendQuery_AddNoParameters_Success()
+        {
+            // Arrange
+            const string startingUri = "https://bitwarden.com/?param1=value1";
+
+            var uri = new Uri(startingUri);
+
+            // Act
+            var newUri = CoreHelpers.ExtendQuery(uri, new Dictionary<string, string>());
+
+            // Assert
+            Assert.Equal(startingUri, newUri.ToString());
+        }
     }
 }
