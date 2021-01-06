@@ -8,6 +8,11 @@ namespace Bit.Core.Test.Utilities
 {
     public class CoreHelpersTests
     {
+        public static IEnumerable<object[]> _epochTestCases = new[]
+        {
+            new object[] {new DateTime(2020, 12, 30, 11, 49, 12, DateTimeKind.Utc), 1609328952000L},
+        };
+
         [Fact]
         public void GenerateComb_Success()
         {
@@ -87,23 +92,17 @@ namespace Bit.Core.Test.Utilities
 
         // TODO: Add more tests
         [Theory]
-        [InlineData("2020-12-30T11:49:12.0000000Z", 1609310952000L)]
-        public void ToEpocMilliseconds_Success(string dateString, long milliseconds)
+        [MemberData(nameof(_epochTestCases))]
+        public void ToEpocMilliseconds_Success(DateTime date, long milliseconds)
         {
-            // Arrange
-            var date = DateTime.Parse(dateString);
-
             // Act & Assert
             Assert.Equal(milliseconds, CoreHelpers.ToEpocMilliseconds(date));
         }
 
         [Theory]
-        [InlineData(1609310952000L, "2020-12-30T11:49:12.0000000Z")]
-        public void FromEpocMilliseconds(long milliseconds, string dateString)
+        [MemberData(nameof(_epochTestCases))]
+        public void FromEpocMilliseconds(DateTime date, long milliseconds)
         {
-            // Arrange
-            var date = DateTime.Parse(dateString);
-
             // Act & Assert
             Assert.Equal(date, CoreHelpers.FromEpocMilliseconds(milliseconds));
         }
