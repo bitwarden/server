@@ -307,7 +307,7 @@ namespace Bit.Core.Business.Sso
                 Authority = config.Authority,
                 ClientId = config.ClientId,
                 ClientSecret = config.ClientSecret,
-                ResponseType = "code id_token", // "code" (id_token = hybrid)
+                ResponseType = "code",
                 ResponseMode = "form_post",
                 SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
@@ -323,7 +323,6 @@ namespace Bit.Core.Business.Sso
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
-                UsePkce = false,
             };
             if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
             {
