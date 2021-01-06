@@ -1,15 +1,14 @@
-
-using Bit.Core.Utilities;
+using System.Collections.Generic;
 using Bit.Core.Exceptions;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 
 namespace Bit.Core.Test.Utilities
 {
@@ -18,33 +17,47 @@ namespace Bit.Core.Test.Utilities
         [Fact]
         public void NotSelfHosted_Throws_When_SelfHosted()
         {
+            // Arrange
             var sha = new SelfHostedAttribute { NotSelfHostedOnly = true };
 
+            // Act & Assert
             Assert.Throws<BadRequestException>(() => sha.OnActionExecuting(GetContext(selfHosted: true)));
         }
 
         [Fact]
         public void NotSelfHosted_Success_When_NotSelfHosted()
         {
+            // Arrange
             var sha = new SelfHostedAttribute { NotSelfHostedOnly = true };
 
+            // Act
             sha.OnActionExecuting(GetContext(selfHosted: false));
+
+            // Assert
+            // The Assert here is just NOT throwing an exception
         }
 
 
         [Fact]
         public void SelfHosted_Success_When_SelfHosted()
         {
+            // Arrange
             var sha = new SelfHostedAttribute { SelfHostedOnly = true };
 
+            // Act
             sha.OnActionExecuting(GetContext(selfHosted: true));
+
+            // Assert
+            // The Assert here is just NOT throwing an exception
         }
 
         [Fact]
         public void SelfHosted_Throws_When_NotSelfHosted()
         {
+            // Arrange
             var sha = new SelfHostedAttribute { SelfHostedOnly = true };
 
+            // Act & Assert
             Assert.Throws<BadRequestException>(() => sha.OnActionExecuting(GetContext(selfHosted: false)));
         }
 

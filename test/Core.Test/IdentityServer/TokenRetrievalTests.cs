@@ -1,16 +1,16 @@
 ﻿using System;
-using Microsoft.AspNetCore.Http;
-using Bit.Core.IdentityServer;
-using Xunit;
-using NSubstitute;
 using System.Collections.Generic;
+using Bit.Core.IdentityServer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Core.Test.IdentityServer
 {
     public class TokenRetrievalTests
     {
-        private Func<HttpRequest, string> Retrieve = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
+        private readonly Func<HttpRequest, string> _sut = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
 
         [Fact]
         public void RetrieveToken_FromHeader_ReturnsToken()
@@ -27,7 +27,7 @@ namespace Bit.Core.Test.IdentityServer
             request.Headers.Returns(headers);
 
             // Act
-            var token = Retrieve(request);
+            var token = _sut(request);
 
             // Assert
             Assert.Equal("test_value", token);
@@ -47,7 +47,7 @@ namespace Bit.Core.Test.IdentityServer
             request.Query.Returns(new QueryCollection(queryString));
 
             // Act
-            var token = Retrieve(request);
+            var token = _sut(request);
 
             // Assert
             Assert.Equal("test_value", token);
@@ -74,7 +74,7 @@ namespace Bit.Core.Test.IdentityServer
             request.Query.Returns(new QueryCollection(queryString));
 
             // Act
-            var token = Retrieve(request);
+            var token = _sut(request);
 
             // Assert
             Assert.Equal("header_token", token);
@@ -87,7 +87,7 @@ namespace Bit.Core.Test.IdentityServer
             var request = Substitute.For<HttpRequest>();
 
             // Act
-            var token = Retrieve(request);
+            var token = _sut(request);
 
             // Assert
             Assert.Null(token);
