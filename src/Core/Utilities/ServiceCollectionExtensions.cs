@@ -1,47 +1,43 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Resources;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using IdentityModel;
+using IdentityServer4.AccessTokenValidation;
+using IdentityServer4.Configuration;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Azure.Storage;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Http;
-using System;
-using System.IO;
-using SqlServerRepos = Bit.Core.Repositories.SqlServer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Serilog.Context;
 using EntityFrameworkRepos = Bit.Core.Repositories.EntityFramework;
 using NoopRepos = Bit.Core.Repositories.Noop;
-using System.Threading.Tasks;
+using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using IdentityServer4.AccessTokenValidation;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.HttpOverrides;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Utilities;
-using Serilog.Context;
-using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage;
-using System.Reflection;
-using Bit.Core.Resources;
-using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Caching.Redis;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using IdentityServer4.Infrastructure;
-using Microsoft.Extensions.Options;
-using IdentityServer4.Configuration;
 
 namespace Bit.Core.Utilities
 {
@@ -521,14 +517,18 @@ namespace Bit.Core.Utilities
                 services.AddDistributedRedisCache(options =>
                     options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
             }
+
             services.AddOidcStateDataFormatterCache();
             services.AddSession();
+            services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
+            services.ConfigureExternalCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
             services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
                 svcs => new ConfigureOpenIdConnectDistributedOptions(
                     svcs.GetRequiredService<IHttpContextAccessor>(),
                     globalSettings,
                     svcs.GetRequiredService<IdentityServerOptions>())
             );
+
             return services;
         }
     }

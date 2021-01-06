@@ -23,6 +23,8 @@ namespace Bit.Core.IdentityServer
 
         public void PostConfigure(string name, CookieAuthenticationOptions options)
         {
+            options.CookieManager = new DistributedCacheCookieManager();
+
             if (name != AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
             {
                 // Ignore

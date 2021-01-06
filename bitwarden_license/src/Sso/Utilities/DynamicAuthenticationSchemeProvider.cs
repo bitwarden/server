@@ -417,6 +417,7 @@ namespace Bit.Core.Business.Sso
                 SPOptions = spOptions,
                 SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
+                CookieManager = new IdentityServer.DistributedCacheCookieManager(),
             };
             options.IdentityProviders.Add(idp);
 
