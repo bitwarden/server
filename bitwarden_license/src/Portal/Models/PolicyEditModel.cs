@@ -16,7 +16,7 @@ namespace Bit.Portal.Models
             : base(type, false)
         {
             // Inject service and create static lists
-            BuildLists(i18nService);
+            TranslateStrings(i18nService);
         }
 
         public PolicyEditModel(Policy model, II18nService i18nService)
@@ -28,7 +28,7 @@ namespace Bit.Portal.Models
             }
 
             // Inject service and create static lists
-            BuildLists(i18nService);
+            TranslateStrings(i18nService);
 
             if (model.Data != null)
             {
@@ -55,6 +55,7 @@ namespace Bit.Portal.Models
         public PasswordGeneratorDataModel PasswordGeneratorDataModel { get; set; }
         public List<SelectListItem> Complexities { get; set; }
         public List<SelectListItem> DefaultTypes { get; set; }
+        public string EnabledCheckboxText { get; set; }
 
         public Policy ToPolicy(PolicyType type, Guid organizationId)
         {
@@ -93,7 +94,7 @@ namespace Bit.Portal.Models
             return existingPolicy;
         }
 
-        public void BuildLists(II18nService i18nService)
+        public void TranslateStrings(II18nService i18nService)
         {
             Complexities = new List<SelectListItem>
             {
@@ -110,6 +111,8 @@ namespace Bit.Portal.Models
                 new SelectListItem { Value = "password", Text = i18nService.T("Password") },
                 new SelectListItem { Value = "passphrase", Text = i18nService.T("Passphrase") },
             };
+            EnabledCheckboxText = PolicyType == PolicyType.PersonalOwnership
+                ? i18nService.T("PersonalOwnershipCheckboxDesc") : i18nService.T("Enabled");
         }
     }
 }

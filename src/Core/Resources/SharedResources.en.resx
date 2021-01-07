@@ -581,4 +581,7 @@
   <data name="DisableRequireSsoError" xml:space="preserve">
     <value>You must manually disable the Single Sign-On Authentication policy before this policy can be disabled.</value>
   </data>
+  <data name="PersonalOwnershipCheckboxDesc" xml:space="preserve">
+    <value>Disable personal ownership for organization users</value>
+  </data>
 </root>

@@ -58,7 +58,6 @@ namespace Bit.Portal.Models
         public string NameKey { get; set; }
         public string DescriptionKey { get; set; }
         public PolicyType PolicyType { get; set; }
-        [Display(Name = "Enabled")]
         public bool Enabled { get; set; }
     }
 }
