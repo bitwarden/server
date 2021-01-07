@@ -58,6 +58,8 @@ services:
     image: bitwarden/api:{{{CoreVersion}}}
     container_name: bitwarden-api
     restart: always
+    depends_on:
+      - mssql
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -74,6 +76,8 @@ services:
     image: bitwarden/identity:{{{CoreVersion}}}
     container_name: bitwarden-identity
     restart: always
+    depends_on:
+      - mssql
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
@@ -91,6 +95,8 @@ services:
     image: bitwarden/sso:{{{CoreVersion}}}
     container_name: bitwarden-sso
     restart: always
+    depends_on:
+      - mssql
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
@@ -158,6 +164,8 @@ services:
     image: bitwarden/notifications:{{{CoreVersion}}}
     container_name: bitwarden-notifications
     restart: always
+    depends_on:
+      - identity
     volumes:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/notifications:/etc/bitwarden/logs
