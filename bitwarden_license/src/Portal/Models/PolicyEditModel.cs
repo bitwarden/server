@@ -55,7 +55,7 @@ namespace Bit.Portal.Models
         public PasswordGeneratorDataModel PasswordGeneratorDataModel { get; set; }
         public List<SelectListItem> Complexities { get; set; }
         public List<SelectListItem> DefaultTypes { get; set; }
-        public string EnabledCheckboxText { get; set; }
+        public string EnableCheckboxText { get; set; }
 
         public Policy ToPolicy(PolicyType type, Guid organizationId)
         {
@@ -111,7 +111,7 @@ namespace Bit.Portal.Models
                 new SelectListItem { Value = "password", Text = i18nService.T("Password") },
                 new SelectListItem { Value = "passphrase", Text = i18nService.T("Passphrase") },
             };
-            EnabledCheckboxText = PolicyType == PolicyType.PersonalOwnership
+            EnableCheckboxText = PolicyType == PolicyType.PersonalOwnership
                 ? i18nService.T("PersonalOwnershipCheckboxDesc") : i18nService.T("Enabled");
         }
     }
