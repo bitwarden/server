@@ -786,16 +786,16 @@ namespace Bit.Core.Services
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
         }
 
-        public async Task RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId)
+        public async Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId)
         {
-            var cipherIdsSet = new HashSet<Guid>(cipherIds);
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
-            var restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit);
+            var revisionDate = await _cipherRepository.RestoreAsync(ciphers.Select(c => c.Id), restoringUserId);
 
-            await _cipherRepository.RestoreAsync(cipherIds, restoringUserId);
-
-            var events = restoringCiphers.Select(c =>
-                new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null));
+            var events = ciphers.Select(c =>
+            {
+                c.RevisionDate = revisionDate;
+                c.DeletedDate = null;
+                return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null);
+            });
             foreach (var eventsBatch in events.Batch(100))
             {
                 await _eventService.LogCipherEventsAsync(eventsBatch);

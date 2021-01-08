@@ -437,7 +437,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}/restore")]
-        public async Task PutRestore(string id)
+        public async Task<CipherResponseModel> PutRestore(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
@@ -447,13 +447,14 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.RestoreAsync(cipher, userId);
+            return new CipherResponseModel(cipher, _globalSettings);
         }
 
         [HttpPut("{id}/restore-admin")]
-        public async Task PutRestoreAdmin(string id)
+        public async Task<CipherMiniResponseModel> PutRestoreAdmin(string id)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
                 !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
             {
@@ -461,10 +462,11 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.RestoreAsync(cipher, userId, true);
+            return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
         }
 
         [HttpPut("restore")]
-        public async Task PutRestoreMany([FromBody]CipherBulkRestoreRequestModel model)
+        public async Task<ListResponseModel<CipherResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -472,7 +474,14 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User).Value;
-            await _cipherService.RestoreManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+            var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+            var restoringCiphers = ciphers.Where(c => cipherIdsToRestore.Contains(c.Id) && c.Edit);
+
+            await _cipherService.RestoreManyAsync(restoringCiphers, userId);
+            var responses = restoringCiphers.Select(c => new CipherResponseModel(c, _globalSettings));
+            return new ListResponseModel<CipherResponseModel>(responses);
         }
 
         [HttpPut("move")]
