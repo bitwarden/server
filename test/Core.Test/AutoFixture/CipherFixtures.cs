@@ -51,7 +51,6 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
     {
         public InlineKnownUserCipherAutoDataAttribute(string userId, params object[] values) : base(new ICustomization[]
             { new SutProviderCustomization(), new UserCipher { UserId = new Guid(userId) } }, values)
-    { }
-
-}
+        { }
+    }
 }

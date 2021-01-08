@@ -1644,65 +1644,55 @@ namespace Bit.Core.Services
 
         private async Task ValidateOrganizationUserUpdatePermissions(Guid loggedInUserId, Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType) 
         {
-            var checkedTypes = new List<OrganizationUserType> 
-            { 
-                OrganizationUserType.Owner,
-                OrganizationUserType.Admin,
-                OrganizationUserType.Custom, 
-            };
-
-            if (checkedTypes.Contains(newType) || (oldType.HasValue && checkedTypes.Contains(oldType.Value)))
+            var loggedInUserOrgs = await _organizationUserRepository.GetManyByUserAsync(loggedInUserId);
+            var loggedInAsOrgOwner = loggedInUserOrgs
+                .Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
+            if (loggedInAsOrgOwner)
             {
-                var loggedInUserOrgs = await _organizationUserRepository.GetManyByUserAsync(loggedInUserId);
-                var loggedInAsOrgOwner = loggedInUserOrgs
-                    .Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
-                if (loggedInAsOrgOwner)
-                {
-                    return;
-                }
+                return;
+            }
 
-                var isOwner = oldType == OrganizationUserType.Owner;
-                var nowOwner = newType == OrganizationUserType.Owner;
-                var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !(isOwner.Equals(nowOwner));
-                if (ownerUserConfigurationAttempt)
-                {
-                    throw new BadRequestException("Only an Owner can configure another Owner's account.");
-                }
+            var isOwner = oldType == OrganizationUserType.Owner;
+            var nowOwner = newType == OrganizationUserType.Owner;
+            var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !(isOwner.Equals(nowOwner));
+            if (ownerUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only an Owner can configure another Owner's account.");
+            }
 
-                var loggedInAsOrgAdmin = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Admin);
-                if (loggedInAsOrgAdmin)
-                {
-                    return;
-                }
+            var loggedInAsOrgAdmin = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Admin);
+            if (loggedInAsOrgAdmin)
+            {
+                return;
+            }
 
-                var isCustom = oldType == OrganizationUserType.Custom;
-                var nowCustom = newType == OrganizationUserType.Custom;
-                var customUserConfigurationAttempt = (isCustom && nowCustom) || !(isCustom.Equals(nowCustom));
-                if (customUserConfigurationAttempt)
-                {
-                    throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
-                }
+            var isCustom = oldType == OrganizationUserType.Custom;
+            var nowCustom = newType == OrganizationUserType.Custom;
+            var customUserConfigurationAttempt = (isCustom && nowCustom) || !(isCustom.Equals(nowCustom));
+            if (customUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
+            }
 
-                var loggedInAsOrgCustom = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
-                if (!loggedInAsOrgCustom)
-                {
-                    return;
-                }
+            var loggedInAsOrgCustom = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            if (!loggedInAsOrgCustom)
+            {
+                return;
+            }
 
-                var loggedInCustomOrgUser = loggedInUserOrgs.First(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
-                var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInCustomOrgUser.Permissions);
-                if (!loggedInUserPermissions.ManageUsers)
-                {
-                    throw new BadRequestException("Your account does not have permission to manage users.");
-                }
+            var loggedInCustomOrgUser = loggedInUserOrgs.First(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInCustomOrgUser.Permissions);
+            if (!loggedInUserPermissions.ManageUsers)
+            {
+                throw new BadRequestException("Your account does not have permission to manage users.");
+            }
 
-                var isAdmin = oldType == OrganizationUserType.Admin;
-                var nowAdmin = newType == OrganizationUserType.Admin;
-                var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !(isAdmin.Equals(nowAdmin));
-                if (adminUserConfigurationAttempt)
-                {
-                    throw new BadRequestException("Custom users can not manage Admins or Owners.");
-                }
+            var isAdmin = oldType == OrganizationUserType.Admin;
+            var nowAdmin = newType == OrganizationUserType.Admin;
+            var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !(isAdmin.Equals(nowAdmin));
+            if (adminUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Custom users can not manage Admins or Owners.");
             }
         }
     }
