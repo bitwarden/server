@@ -160,7 +160,7 @@ namespace Bit.Core.Test.Services
         public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
-            organization.GatewayCustomerId = "";
+            organization.GatewayCustomerId = string.Empty;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
@@ -189,7 +189,7 @@ namespace Bit.Core.Test.Services
         }
          
         [Theory]
-        [PaidOrganizationAutoData]
+        [FreeOrganizationUpgradeAutoData]
         public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {

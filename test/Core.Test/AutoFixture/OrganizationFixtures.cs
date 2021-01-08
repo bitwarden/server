@@ -39,6 +39,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             var validPlans = StaticStore.Plans.Where(p => !plansToIgnore.Contains(p.Type) && !p.Disabled).Select(p => p.Type).ToList();
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, validPlans.Last()));
+            fixture.Customize<Organization>(composer => composer
+                .Without(o => o.GatewaySubscriptionId));
         }
     }
     internal class OrganizationInvite : ICustomization
