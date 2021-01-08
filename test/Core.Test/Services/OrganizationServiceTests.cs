@@ -11,14 +11,10 @@ using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 using Bit.Core.Test.AutoFixture;
-using AutoFixture;
-using AutoFixture.Xunit2;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories.SqlServer;
 using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
 using System.Text.Json;
 
 namespace Bit.Core.Test.Services
