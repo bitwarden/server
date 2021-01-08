@@ -51,6 +51,17 @@
         </div>
     }
     
+    @if (Model.PolicyType == PolicyType.PersonalOwnership)
+    {
+        <div class="callout callout-warning" role="alert">
+            <h3 class="callout-heading">
+                <i class="fa fa-warning" *ngIf="icon" aria-hidden="true"></i>
+                @i18nService.T("Warning")
+            </h3>
+            @i18nService.T("PersonalOwnershipExemption")
+        </div>
+    }
+    
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <div class="form-group">

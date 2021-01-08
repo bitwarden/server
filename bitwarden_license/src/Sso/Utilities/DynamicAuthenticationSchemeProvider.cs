@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Sso;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -318,6 +319,18 @@ namespace Bit.Core.Business.Sso
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.OpenId);
+            }
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Email))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.Email);
+            }
+            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Profile))
+            {
+                oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
+            }
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
@@ -346,6 +359,10 @@ namespace Bit.Core.Business.Sso
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
                 ValidateCertificates = config.SpValidateCertificates,
             };
+            if (!string.IsNullOrWhiteSpace(config.SpMinIncomingSigningAlgorithm))
+            {
+                spOptions.MinIncomingSigningAlgorithm = config.SpMinIncomingSigningAlgorithm;
+            }
             if (!string.IsNullOrWhiteSpace(config.SpOutboundSigningAlgorithm))
             {
                 spOptions.OutboundSigningAlgorithm = config.SpOutboundSigningAlgorithm;

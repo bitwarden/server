@@ -61,7 +61,8 @@ namespace Bit.Portal
 
             // TODO: maybe make loading orgs Lazy<T> somehow?
             var orgUserRepo = _serviceProvider.GetRequiredService<IOrganizationUserRepository>();
-            var userOrgs = await orgUserRepo.GetManyDetailsByUserAsync(UserId.Value);
+            var userOrgs = await orgUserRepo.GetManyDetailsByUserAsync(UserId.Value,
+                Core.Enums.OrganizationUserStatusType.Confirmed);
             OrganizationsDetails = userOrgs.ToList();
             Organizations = userOrgs.Select(ou => new CurrentContentOrganization
             {

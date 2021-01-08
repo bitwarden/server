@@ -24,7 +24,7 @@ if ($output -eq "") {
 
 $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
-$coreVersion = "1.38.1"
+$coreVersion = "1.38.4"
 $webVersion = "2.17.1"
 
 # Functions
@@ -100,6 +100,7 @@ https://bitwarden.com, https://github.com/bitwarden
 "
 
 if($env:BITWARDEN_QUIET -ne "true") {
+    Write-Line "bitwarden.ps1 version ${coreVersion}"
     docker --version
     docker-compose --version
 }

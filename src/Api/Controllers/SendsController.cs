@@ -84,7 +84,7 @@ namespace Bit.Api.Controllers
         [HttpPost("")]
         public async Task<SendResponseModel> Post([FromBody] SendRequestModel model)
         {
-            throw new NotFoundException();
+            model.ValidateCreation();
             var userId = _userService.GetProperUserId(User).Value;
             var send = model.ToSend(userId, _sendService);
             await _sendService.SaveSendAsync(send);
@@ -96,7 +96,6 @@ namespace Bit.Api.Controllers
         [DisableFormValueModelBinding]
         public async Task<SendResponseModel> PostFile()
         {
-            throw new NotFoundException();
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
@@ -110,6 +109,7 @@ namespace Bit.Api.Controllers
             Send send = null;
             await Request.GetSendFileAsync(async (stream, fileName, model) =>
             {
+                model.ValidateCreation();
                 var userId = _userService.GetProperUserId(User).Value;
                 var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
                 send = madeSend;

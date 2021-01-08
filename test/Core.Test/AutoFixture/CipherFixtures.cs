@@ -53,4 +53,18 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
             { new SutProviderCustomization(), new UserCipher { UserId = new Guid(userId) } }, values)
         { }
     }
+
+    internal class OrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public OrganizationCipherAutoDataAttribute(string organizationId = null) : base(new SutProviderCustomization(),
+            new OrganizationCipher { OrganizationId = organizationId == null ? (Guid?)null : new Guid(organizationId) })
+        { }
+    }
+
+    internal class InlineOrganizationCipherAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineOrganizationCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(OrganizationCipher) }, values)
+        { }
+    }
 }

@@ -36,6 +36,6 @@ namespace Bit.Core.Services
         Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
         Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
         Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
-        Task RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId);
+        Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId);
     }
 }

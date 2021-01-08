@@ -126,6 +126,8 @@ namespace Bit.Api
             });
 
             services.AddSwagger(globalSettings);
+            Jobs.JobsHostedService.AddJobsServices(services);
+            services.AddHostedService<Jobs.JobsHostedService>();
 
             if (globalSettings.SelfHosted)
             {
