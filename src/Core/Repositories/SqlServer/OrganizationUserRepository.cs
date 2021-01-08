@@ -184,6 +184,20 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+        
+        public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, 
+            Guid organizationId, OrganizationUserStatusType? status = null)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
+                    "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]",
+                    new { UserId = userId, Status = status, OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
 
         public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
         {

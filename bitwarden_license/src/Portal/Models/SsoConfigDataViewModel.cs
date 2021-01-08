@@ -47,6 +47,7 @@ namespace Bit.Portal.Models
             SpSigningBehavior = configurationData.SpSigningBehavior;
             SpWantAssertionsSigned = configurationData.SpWantAssertionsSigned;
             SpValidateCertificates = configurationData.SpValidateCertificates;
+            SpMinIncomingSigningAlgorithm = configurationData.SpMinIncomingSigningAlgorithm ?? SamlSigningAlgorithms.Sha256;
         }
 
         [Required]
@@ -86,6 +87,8 @@ namespace Bit.Portal.Models
         public bool SpWantAssertionsSigned { get; set; }
         [Display(Name = "SpValidateCertificates")]
         public bool SpValidateCertificates { get; set; }
+        [Display(Name = "MinIncomingSigningAlgorithm")]
+        public string SpMinIncomingSigningAlgorithm { get; set; }
 
         // SAML2 IDP
         [Display(Name = "EntityId")]
@@ -211,6 +214,7 @@ namespace Bit.Portal.Models
                 SpSigningBehavior = SpSigningBehavior,
                 SpWantAssertionsSigned = SpWantAssertionsSigned,
                 SpValidateCertificates = SpValidateCertificates,
+                SpMinIncomingSigningAlgorithm = SpMinIncomingSigningAlgorithm,
             };
         }
 

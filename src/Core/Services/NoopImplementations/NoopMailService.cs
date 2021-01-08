@@ -107,5 +107,45 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessAcceptedEmailAsync(string granteeEmail, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessConfirmedEmailAsync(string grantorName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessRecoveryRejected(EmergencyAccess emergencyAccess, string rejectingName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

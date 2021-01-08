@@ -135,7 +135,21 @@ namespace Bit.Portal.Controllers
                 case PolicyType.MasterPassword:
                 case PolicyType.PasswordGenerator:
                 case PolicyType.TwoFactorAuthentication:
+                case PolicyType.PersonalOwnership:
+                    break;
+                
                 case PolicyType.SingleOrg:
+                    if (enabled)
+                    {
+                        break;
+                    }
+
+                    var requireSso =
+                        await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, PolicyType.RequireSso);
+                    if (requireSso?.Enabled == true)
+                    {
+                        ModelState.AddModelError(string.Empty, _i18nService.T("DisableRequireSsoError"));
+                    }
                     break;
                 
                 case PolicyType.RequireSso:
@@ -143,6 +157,7 @@ namespace Bit.Portal.Controllers
                     {
                         break;
                     }
+                    
                     var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(orgId.Value, PolicyType.SingleOrg);
                     if (singleOrg?.Enabled != true)
                     {

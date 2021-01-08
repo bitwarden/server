@@ -684,7 +684,7 @@ namespace Bit.Core.Services
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
 
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+            var subUpdateOptions = new SubscriptionUpdateOptions
             {
                 Items = new List<SubscriptionItemOptions>
                 {
@@ -700,7 +700,26 @@ namespace Bit.Core.Services
                 DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,
-            });
+            };
+
+            var customer = await new CustomerService().GetAsync(sub.CustomerId);
+            var taxRates = await _taxRateRepository.GetByLocationAsync(
+                new Bit.Core.Models.Table.TaxRate()
+                {
+                    Country = customer.Address.Country,
+                    PostalCode = customer.Address.PostalCode
+                }
+            );
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+            {
+                subUpdateOptions.DefaultTaxRates = new List<string>(1) 
+                { 
+                    taxRate.Id 
+                };
+            }
+
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
 
             string paymentIntentClientSecret = null;
             if (additionalStorage > 0)

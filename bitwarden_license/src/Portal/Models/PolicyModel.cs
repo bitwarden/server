@@ -41,6 +41,11 @@ namespace Bit.Portal.Models
                     NameKey = "RequireSso";
                     DescriptionKey = "RequireSsoDescription";
                     break;
+                
+                case PolicyType.PersonalOwnership:
+                    NameKey = "PersonalOwnership";
+                    DescriptionKey = "PersonalOwnershipDescription";
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException();

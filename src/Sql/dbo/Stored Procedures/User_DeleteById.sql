@@ -79,6 +79,15 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Delete Emergency Accesses
+    DELETE
+    FROM
+        [dbo].[EmergencyAccess]
+    WHERE
+        [GrantorId] = @Id
+    OR
+        [GranteeId] = @Id
+    
     -- Finally, delete the user
     DELETE
     FROM

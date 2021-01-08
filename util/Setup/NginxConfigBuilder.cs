@@ -6,13 +6,6 @@ namespace Bit.Setup
     public class NginxConfigBuilder
     {
         private const string ConfFile = "/bitwarden/nginx/default.conf";
-        private const string ContentSecurityPolicy =
-            "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
-            "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-            "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-            "https://twofactorauth.org; " +
-            "object-src 'self' blob:;";
 
         private readonly Context _context;
 
@@ -79,6 +72,7 @@ namespace Bit.Setup
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
                 RealIps = context.Config.RealIps;
+                ContentSecurityPolicy = string.Format(context.Config.NginxHeaderContentSecurityPolicy, Domain);
 
                 if (Ssl)
                 {
@@ -129,7 +123,7 @@ namespace Bit.Setup
             public string DiffieHellmanPath { get; set; }
             public string SslCiphers { get; set; }
             public string SslProtocols { get; set; }
-            public string ContentSecurityPolicy => string.Format(NginxConfigBuilder.ContentSecurityPolicy, Domain);
+            public string ContentSecurityPolicy { get; set; }
             public List<string> RealIps { get; set; }
         }
     }

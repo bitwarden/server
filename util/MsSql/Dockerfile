@@ -18,7 +18,7 @@ RUN chmod +x /entrypoint.sh \
 # Does not work unfortunately (https://github.com/bitwarden/server/issues/286)
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 
-HEALTHCHECK --start-period=60s --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
+HEALTHCHECK --start-period=120s --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
     -S localhost -U sa -P ${SA_PASSWORD} -Q "SELECT 1" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

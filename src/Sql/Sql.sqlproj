@@ -69,6 +69,7 @@
     <Folder Include="dbo\User Defined Types\" />
   </ItemGroup>
   <ItemGroup>
+    <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByIdGrantorId.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
@@ -287,6 +288,18 @@
     <Build Include="dbo\Views\SendView.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Send_ReadByDeletionDateBefore.sql" />
+    <Build Include="dbo\Tables\EmergencyAccess.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_Create.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_ReadCountByGrantorIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_Update.sql" />
+    <Build Include="dbo\Views\EmergencyAccessDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByGrantorId.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByEmergencyAccessGranteeId.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByGranteeId.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccess_ReadToNotify.sql" />
+    <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadExpiredRecoveries.sql" />
     <Build Include="dbo\Tables\TaxRate.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Search.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_ReadByLocation.sql" />
@@ -295,6 +308,6 @@
     <Build Include="dbo\Stored Procedures\TaxRate_Create.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId.sql" />
   </ItemGroup>
 </Project>
-

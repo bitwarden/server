@@ -116,5 +116,46 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
                 Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
         }
+
+        [Theory]
+        [InlineKnownUserCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e", "c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
+        [InlineOrganizationCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
+        public async Task RestoreAsync_UpdatesCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
+        {
+            sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+
+            var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
+            cipher.DeletedDate = initialRevisionDate;
+            cipher.RevisionDate = initialRevisionDate;
+
+            await sutProvider.Sut.RestoreAsync(cipher, restoringUserId, cipher.OrganizationId.HasValue);
+
+            Assert.Null(cipher.DeletedDate);
+            Assert.NotEqual(initialRevisionDate, cipher.RevisionDate);
+        }
+
+        [Theory]
+        [InlineKnownUserCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e", "c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
+        public async Task RestoreManyAsync_UpdatesCiphers(Guid restoringUserId, IEnumerable<CipherDetails> ciphers,
+            SutProvider<CipherService> sutProvider)
+        {
+            var previousRevisionDate = DateTime.UtcNow;
+            foreach (var cipher in ciphers)
+            {
+                cipher.RevisionDate = previousRevisionDate;
+            }
+
+            var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
+            sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId)
+                .Returns(revisionDate);
+
+            await sutProvider.Sut.RestoreManyAsync(ciphers, restoringUserId);
+
+            foreach (var cipher in ciphers)
+            {
+                Assert.Null(cipher.DeletedDate);
+                Assert.Equal(revisionDate, cipher.RevisionDate);
+            }
+        }
     }
 }

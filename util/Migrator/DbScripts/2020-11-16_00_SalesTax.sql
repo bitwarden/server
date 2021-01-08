@@ -1,4 +1,4 @@
-IF OBJECT_ID('[dbo].[Policy]') IS NULL
+IF OBJECT_ID('[dbo].[TaxRate]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[TaxRate] (
         [Id]                VARCHAR(40)         NOT NULL,
