@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
@@ -147,7 +146,7 @@ namespace Bit.Core.Test.Services
             await orgUserRepo.Received(2).CreateAsync(Arg.Any<OrganizationUser>());
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -156,7 +155,7 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade));
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -167,7 +166,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("no payment method", exception.Message);
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -178,7 +177,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("already on this plan", exception.Message);
         }
 
-        [Theory, PaidOrganizationAutoDataAttribute]
+        [Theory, PaidOrganizationAutoData]
         public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -199,7 +198,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoDataAttribute]
+        [OrganizationInviteAutoData]
         public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
             OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         {
@@ -210,7 +209,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory] 
-        [OrganizationInviteAutoDataAttribute(
+        [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.Owner, 
             invitorUserType: (int)OrganizationUserType.Admin
         )]
@@ -229,7 +228,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory] 
-        [OrganizationInviteAutoDataAttribute(
+        [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.Custom, 
             invitorUserType: (int)OrganizationUserType.Admin
         )]
@@ -248,7 +247,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory] 
-        [OrganizationInviteAutoDataAttribute(
+        [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.Manager, 
             invitorUserType: (int)OrganizationUserType.Custom
         )]
@@ -273,7 +272,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory] 
-        [OrganizationInviteAutoDataAttribute(
+        [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.Admin, 
             invitorUserType: (int)OrganizationUserType.Custom
         )]
@@ -298,7 +297,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory] 
-        [OrganizationInviteAutoDataAttribute(
+        [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.User, 
             invitorUserType: (int)OrganizationUserType.Custom
         )]
@@ -321,7 +320,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
             IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
         {
@@ -331,7 +330,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
             IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
         {
@@ -342,7 +341,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
         }
 
-        [Theory, CustomAutoDataAttribute(typeof(SutProviderCustomization))]
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveUser_Passes(OrganizationUser oldUserData, OrganizationUser newUserData,
             IEnumerable<SelectionReadOnly> collections, OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
         {
