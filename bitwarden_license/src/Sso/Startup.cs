@@ -58,7 +58,9 @@ namespace Bit.Sso
             }
 
             // Authentication
-            services.AddAuthentication();
+            services.AddDistributedIdentityServices(globalSettings);
+            services.AddAuthentication()
+                .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
             services.AddSsoServices(globalSettings);
 
             // IdentityServer

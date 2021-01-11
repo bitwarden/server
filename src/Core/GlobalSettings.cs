@@ -141,6 +141,7 @@ namespace Bit.Core
         {
             public string CertificateThumbprint { get; set; }
             public string CertificatePassword { get; set; }
+            public string RedisConnectionString { get; set; }
         }
 
         public class DataProtectionSettings

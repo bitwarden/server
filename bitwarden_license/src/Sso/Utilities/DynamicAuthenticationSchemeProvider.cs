@@ -14,8 +14,10 @@ using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
 using IdentityServer4;
+using IdentityServer4.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -40,6 +42,7 @@ namespace Bit.Core.Business.Sso
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedSchemes;
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
         private readonly SemaphoreSlim _semaphore;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         private DateTime? _lastSchemeLoad;
         private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
@@ -54,7 +57,8 @@ namespace Bit.Core.Business.Sso
             ISsoConfigRepository ssoConfigRepository,
             ILogger<DynamicAuthenticationSchemeProvider> logger,
             GlobalSettings globalSettings,
-            SamlEnvironment samlEnvironment)
+            SamlEnvironment samlEnvironment,
+            IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
             _oidcPostConfigureOptions = oidcPostConfigureOptions;
@@ -81,6 +85,7 @@ namespace Bit.Core.Business.Sso
             _cachedSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _semaphore = new SemaphoreSlim(1);
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
         private bool CacheIsValid
@@ -304,7 +309,7 @@ namespace Bit.Core.Business.Sso
                 ClientSecret = config.ClientSecret,
                 ResponseType = "code",
                 ResponseMode = "form_post",
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
                 SaveTokens = false, // reduce overall request size
                 TokenValidationParameters = new TokenValidationParameters
@@ -331,6 +336,8 @@ namespace Bit.Core.Business.Sso
             {
                 oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
             }
+
+            oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
@@ -407,8 +414,9 @@ namespace Bit.Core.Business.Sso
             var options = new Saml2Options
             {
                 SPOptions = spOptions,
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
+                CookieManager = new IdentityServer.DistributedCacheCookieManager(),
             };
             options.IdentityProviders.Add(idp);
 

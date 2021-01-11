@@ -33,8 +33,6 @@ namespace Bit.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var provider = services.BuildServiceProvider();
-
             // Options
             services.AddOptions();
 

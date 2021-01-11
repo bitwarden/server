@@ -81,7 +81,9 @@ namespace Bit.Identity
 
             // Authentication
             services
+                .AddDistributedIdentityServices(globalSettings)
                 .AddAuthentication()
+                .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
                     options.Authority = globalSettings.BaseServiceUri.InternalSso;
@@ -91,8 +93,10 @@ namespace Bit.Identity
                     options.ClientSecret = globalSettings.OidcIdentityClientKey;
                     options.ResponseMode = "form_post";
 
-                    options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
+                    options.SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
                     options.ResponseType = "code";
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = true;
 
                     options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                     {
