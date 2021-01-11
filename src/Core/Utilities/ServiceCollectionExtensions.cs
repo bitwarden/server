@@ -508,7 +508,7 @@ namespace Bit.Core.Utilities
 
         public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            if (globalSettings.SelfHosted || string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
+            if (string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
             {
                 services.AddDistributedMemoryCache();
             }
