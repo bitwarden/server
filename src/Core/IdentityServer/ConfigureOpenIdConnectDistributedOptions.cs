@@ -36,7 +36,7 @@ namespace Bit.Core.IdentityServer
             options.Cookie.SameSite = _idsrv.Authentication.CookieSameSiteMode;
             options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_httpContextAccessor, name);
 
-            if (_globalSettings.SelfHosted || string.IsNullOrWhiteSpace(_globalSettings.IdentityServer?.RedisConnectionString))
+            if (string.IsNullOrWhiteSpace(_globalSettings.IdentityServer?.RedisConnectionString))
             {
                 options.SessionStore = new MemoryCacheTicketStore();
             }
