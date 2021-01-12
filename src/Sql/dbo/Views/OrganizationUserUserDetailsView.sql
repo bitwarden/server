@@ -12,7 +12,8 @@ SELECT
     OU.[Type],
     OU.[AccessAll],
     OU.[ExternalId],
-    SU.[ExternalId] SsoExternalId
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

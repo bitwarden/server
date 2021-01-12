@@ -22,7 +22,8 @@ SELECT
     OU.[Key],
     OU.[Status],
     OU.[Type],
-    SU.[ExternalId] SsoExternalId
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions]
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN

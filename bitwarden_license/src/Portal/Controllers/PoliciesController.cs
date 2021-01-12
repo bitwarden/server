@@ -45,7 +45,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
             {
                 return Redirect("~/");
             }
@@ -65,7 +65,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
             {
                 return Redirect("~/");
             }
@@ -85,7 +85,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
             {
                 return Redirect("~/");
             }

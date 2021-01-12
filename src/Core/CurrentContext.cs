@@ -8,6 +8,7 @@ using Bit.Core.Repositories;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using Bit.Core.Utilities;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core
 {
@@ -148,6 +149,18 @@ namespace Bit.Core
                         Type = OrganizationUserType.Manager
                     }));
             }
+
+            if (claimsDict.ContainsKey("orgcustom"))
+            {
+                Organizations.AddRange(claimsDict["orgcustom"].Select(c =>
+                    new CurrentContentOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Custom,
+                        Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
+                    }));
+            }
+
             return Task.FromResult(0);
         }
 
@@ -174,6 +187,61 @@ namespace Bit.Core
             return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
         }
 
+        public bool OrganizationCustom(Guid orgId)
+        {
+            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false;
+        }
+        
+        public bool AccessBusinessPortal(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessBusinessPortal) ?? false);
+        }
+
+        public bool AccessEventLogs(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessEventLogs) ?? false);
+        }
+
+        public bool AccessImportExport(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessImportExport) ?? false);
+        }
+
+        public bool AccessReports(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessReports) ?? false);
+        }
+
+        public bool ManageAllCollections(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageAllCollections) ?? false);
+        }
+
+        public bool ManageAssignedCollections(Guid orgId)
+        {
+            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageAssignedCollections) ?? false);
+        }
+
+        public bool ManageGroups(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageGroups) ?? false);
+        }
+
+        public bool ManagePolicies(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManagePolicies) ?? false);
+        }
+
+        public bool ManageSso(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageSso) ?? false);
+        }
+
+        public bool ManageUsers(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageUsers) ?? false);
+        }
+
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId)
         {
@@ -196,6 +264,29 @@ namespace Bit.Core
             return claims[type].FirstOrDefault()?.Value;
         }
 
+        private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
+        {
+            bool hasClaim(string claimKey) 
+            {
+                return claimsDict.ContainsKey(claimKey) ? 
+                    claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
+            }
+
+            return new Permissions
+            {
+                AccessBusinessPortal = hasClaim("accessbusinessportal"),
+                AccessEventLogs = hasClaim("accesseventlogs"),
+                AccessImportExport = hasClaim(""),
+                AccessReports = hasClaim("accessreports"),
+                ManageAllCollections = hasClaim(""),
+                ManageAssignedCollections = hasClaim(""),
+                ManageGroups = hasClaim(""),
+                ManagePolicies = hasClaim(""),
+                ManageSso = hasClaim("managesso"),
+                ManageUsers = hasClaim("manageusers")
+            };
+        }
+
         public class CurrentContentOrganization
         {
             public CurrentContentOrganization() { }
@@ -204,10 +295,12 @@ namespace Bit.Core
             {
                 Id = orgUser.OrganizationId;
                 Type = orgUser.Type;
+                Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
             }
 
             public Guid Id { get; set; }
             public OrganizationUserType Type { get; set; }
+            public Permissions Permissions { get; set; }
         }
     }
 }

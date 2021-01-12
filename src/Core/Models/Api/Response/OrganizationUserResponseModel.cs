@@ -4,7 +4,7 @@ using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;
-
+using Bit.Core.Utilities;
 namespace Bit.Core.Models.Api
 {
     public class OrganizationUserResponseModel : ResponseModel
@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Api
             Type = organizationUser.Type;
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         }
 
         public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
@@ -37,6 +38,7 @@ namespace Bit.Core.Models.Api
             Type = organizationUser.Type;
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         }
 
         public string Id { get; set; }
@@ -44,6 +46,7 @@ namespace Bit.Core.Models.Api
         public OrganizationUserType Type { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public bool AccessAll { get; set; }
+        public Permissions Permissions { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel

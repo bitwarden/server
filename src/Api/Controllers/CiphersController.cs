@@ -60,7 +60,7 @@ namespace Bit.Api.Controllers
         {
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -137,7 +137,7 @@ namespace Bit.Api.Controllers
         public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherCreateRequestModel model)
         {
             var cipher = model.Cipher.ToOrganizationCipher();
-            if (!_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+            if (!_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -181,7 +181,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -200,7 +200,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManageAllCollections(orgIdGuid) && !_currentContext.AccessReports(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -243,7 +243,7 @@ namespace Bit.Api.Controllers
             }
 
             var orgId = new Guid(organizationId);
-            if (!_currentContext.OrganizationAdmin(orgId))
+            if (!_currentContext.AccessImportExport(orgId))
             {
                 throw new NotFoundException();
             }
@@ -308,7 +308,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -338,7 +338,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -371,7 +371,7 @@ namespace Bit.Api.Controllers
             }
 
             if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+                !_currentContext.ManageAllCollections(new Guid(model.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -398,7 +398,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -427,7 +427,7 @@ namespace Bit.Api.Controllers
             }
 
             if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-                !_currentContext.OrganizationAdmin(new Guid(model.OrganizationId)))
+                !_currentContext.ManageAllCollections(new Guid(model.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -456,7 +456,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -550,7 +550,7 @@ namespace Bit.Api.Controllers
             else
             {
                 var orgId = new Guid(organizationId);
-                if (!_currentContext.OrganizationAdmin(orgId))
+                if (!_currentContext.ManageAllCollections(orgId))
                 {
                     throw new NotFoundException();
                 }
@@ -593,7 +593,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -651,7 +651,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(idGuid);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationAdmin(cipher.OrganizationId.Value))
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }

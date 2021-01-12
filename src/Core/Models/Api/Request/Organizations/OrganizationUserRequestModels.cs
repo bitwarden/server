@@ -1,8 +1,9 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System;
 using System.Linq;
+using System.Text.Json;
 
 namespace Bit.Core.Models.Api
 {
@@ -13,6 +14,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
         public bool AccessAll { get; set; }
+        public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -62,11 +64,16 @@ namespace Bit.Core.Models.Api
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }
         public bool AccessAll { get; set; }
+        public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
         public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
         {
             existingUser.Type = Type.Value;
+            existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
             existingUser.AccessAll = AccessAll;
             return existingUser;
         }

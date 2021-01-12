@@ -9,7 +9,8 @@
     @AccessAll BIT,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Permissions NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [AccessAll] = @AccessAll,
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [Permissions] = @Permissions
     WHERE
         [Id] = @Id
 

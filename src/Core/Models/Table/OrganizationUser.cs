@@ -17,6 +17,7 @@ namespace Bit.Core.Models.Table
         public string ExternalId { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public string Permissions { get; set; }
 
         public void SetNewId()
         {

@@ -34,7 +34,7 @@ namespace Bit.Api.Controllers
         public async Task<GroupResponseModel> Get(string orgId, string id)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -46,7 +46,7 @@ namespace Bit.Api.Controllers
         public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
             var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
-            if (groupDetails?.Item1 == null || !_currentContext.OrganizationAdmin(groupDetails.Item1.OrganizationId))
+            if (groupDetails?.Item1 == null || !_currentContext.ManageGroups(groupDetails.Item1.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -58,7 +58,11 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationManager(orgIdGuid))
+            var canAccess = _currentContext.ManageGroups(orgIdGuid) ||
+                _currentContext.ManageAssignedCollections(orgIdGuid) ||
+                _currentContext.ManageAllCollections(orgIdGuid);
+
+            if (!canAccess)
             {
                 throw new NotFoundException();
             }
@@ -73,7 +77,7 @@ namespace Bit.Api.Controllers
         {
             var idGuid = new Guid(id);
             var group = await _groupRepository.GetByIdAsync(idGuid);
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -86,7 +90,7 @@ namespace Bit.Api.Controllers
         public async Task<GroupResponseModel> Post(string orgId, [FromBody]GroupRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManageGroups(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -101,7 +105,7 @@ namespace Bit.Api.Controllers
         public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody]GroupRequestModel model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -114,7 +118,7 @@ namespace Bit.Api.Controllers
         public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<Guid> model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -126,7 +130,7 @@ namespace Bit.Api.Controllers
         public async Task Delete(string orgId, string id)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -139,7 +143,7 @@ namespace Bit.Api.Controllers
         public async Task Delete(string orgId, string id, string orgUserId)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
-            if (group == null || !_currentContext.OrganizationAdmin(group.OrganizationId))
+            if (group == null || !_currentContext.ManageGroups(group.OrganizationId))
             {
                 throw new NotFoundException();
             }

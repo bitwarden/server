@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using System.IO;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Bit.Core.Services
 {
@@ -972,45 +973,25 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
-        {
-            var results = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email },
-                type, accessAll, externalId, collections);
-            var result = results.FirstOrDefault();
-            if (result == null)
-            {
-                throw new BadRequestException("This user has already been invited.");
-            }
-            return result;
-        }
-
         public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<string> emails, OrganizationUserType type, bool accessAll, string externalId,
-            IEnumerable<SelectionReadOnly> collections)
+            string externalId, OrganizationUserInvite invite)
         {
             var organization = await GetOrgById(organizationId);
-            if (organization == null)
+            if (organization == null || invite?.Emails == null)
             {
                 throw new NotFoundException();
             }
 
-            if (type == OrganizationUserType.Owner && invitingUserId.HasValue)
+            if (invitingUserId.HasValue && invite.Type.HasValue)
             {
-                var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId.Value);
-                var anyOwners = invitingUserOrgs.Any(
-                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
-                if (!anyOwners)
-                {
-                    throw new BadRequestException("Only owners can invite new owners.");
-                }
+                await ValidateOrganizationUserUpdatePermissions(invitingUserId.Value, organizationId, invite.Type.Value, null);
             }
 
             if (organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
-                if (availableSeats < emails.Count())
+                if (availableSeats < invite.Emails.Count())
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
@@ -1019,7 +1000,7 @@ namespace Bit.Core.Services
 
             var orgUsers = new List<OrganizationUser>();
             var orgUserInvitedCount = 0;
-            foreach (var email in emails)
+            foreach (var email in invite.Emails)
             {
                 // Make sure user is not already invited
                 var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
@@ -1035,17 +1016,21 @@ namespace Bit.Core.Services
                     UserId = null,
                     Email = email.ToLowerInvariant(),
                     Key = null,
-                    Type = type,
+                    Type = invite.Type.Value,
                     Status = OrganizationUserStatusType.Invited,
-                    AccessAll = accessAll,
+                    AccessAll = invite.AccessAll,
                     ExternalId = externalId,
                     CreationDate = DateTime.UtcNow,
-                    RevisionDate = DateTime.UtcNow
+                    RevisionDate = DateTime.UtcNow,
+                    Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    }),
                 };
 
-                if (!orgUser.AccessAll && collections.Any())
+                if (!orgUser.AccessAll && invite.Collections.Any())
                 {
-                    await _organizationUserRepository.CreateAsync(orgUser, collections);
+                    await _organizationUserRepository.CreateAsync(orgUser, invite.Collections);
                 }
                 else
                 {
@@ -1264,21 +1249,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
+            var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
+            if (user.Equals(originalUser)) {
+                throw new BadRequestException("Please make changes before saving.");
+            }
+
             if (savingUserId.HasValue)
             {
-                var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId.Value);
-                var savingUserIsOrgOwner = savingUserOrgs
-                    .Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner);
-                if (!savingUserIsOrgOwner)
-                {
-                    var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-                    var isOwner = originalUser.Type == OrganizationUserType.Owner;
-                    var nowOwner = user.Type == OrganizationUserType.Owner;
-                    if ((isOwner && !nowOwner) || (!isOwner && nowOwner))
-                    {
-                        throw new BadRequestException("Only an owner can change the user type of another owner.");
-                    }
-                }
+                await ValidateOrganizationUserUpdatePermissions(savingUserId.Value, user.OrganizationId, user.Type, originalUser.Type);
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
@@ -1367,8 +1345,12 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
+        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
         {
+            if (loggedInUserId.HasValue)
+            {
+                await ValidateOrganizationUserUpdatePermissions(loggedInUserId.Value, organizationUser.OrganizationId, organizationUser.Type, null);
+            }
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
                 EventType.OrganizationUser_UpdatedGroups);
@@ -1502,8 +1484,16 @@ namespace Bit.Core.Services
 
                         try
                         {
-                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email,
-                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                            var invite = new OrganizationUserInvite
+                            {
+                                Emails = new List<string> { user.Email },
+                                Type = OrganizationUserType.User,
+                                AccessAll = false,
+                                Collections = new List<SelectionReadOnly>(),
+                            };
+                            var newUserPromise = await InviteUserAsync(organizationId, importingUserId, user.ExternalId, invite);
+                            var newUser = newUserPromise.FirstOrDefault();
+
                             existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
                         }
                         catch (BadRequestException)
@@ -1671,6 +1661,60 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            }
+        }
+
+        private async Task ValidateOrganizationUserUpdatePermissions(Guid loggedInUserId, Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType) 
+        {
+            var loggedInUserOrgs = await _organizationUserRepository.GetManyByUserAsync(loggedInUserId);
+            var loggedInAsOrgOwner = loggedInUserOrgs
+                .Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
+            if (loggedInAsOrgOwner)
+            {
+                return;
+            }
+
+            var isOwner = oldType == OrganizationUserType.Owner;
+            var nowOwner = newType == OrganizationUserType.Owner;
+            var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !(isOwner.Equals(nowOwner));
+            if (ownerUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only an Owner can configure another Owner's account.");
+            }
+
+            var loggedInAsOrgAdmin = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Admin);
+            if (loggedInAsOrgAdmin)
+            {
+                return;
+            }
+
+            var isCustom = oldType == OrganizationUserType.Custom;
+            var nowCustom = newType == OrganizationUserType.Custom;
+            var customUserConfigurationAttempt = (isCustom && nowCustom) || !(isCustom.Equals(nowCustom));
+            if (customUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
+            }
+
+            var loggedInAsOrgCustom = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            if (!loggedInAsOrgCustom)
+            {
+                return;
+            }
+
+            var loggedInCustomOrgUser = loggedInUserOrgs.First(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInCustomOrgUser.Permissions);
+            if (!loggedInUserPermissions.ManageUsers)
+            {
+                throw new BadRequestException("Your account does not have permission to manage users.");
+            }
+
+            var isAdmin = oldType == OrganizationUserType.Admin;
+            var nowAdmin = newType == OrganizationUserType.Admin;
+            var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !(isAdmin.Equals(nowAdmin));
+            if (adminUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Custom users can not manage Admins or Owners.");
             }
         }
     }
