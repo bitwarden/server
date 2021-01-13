@@ -1022,11 +1022,15 @@ namespace Bit.Core.Services
                     ExternalId = externalId,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow,
-                    Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                };
+
+                if (invite.Permissions != null)
+                {
+                    orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    }),
-                };
+                    });
+                }
 
                 if (!orgUser.AccessAll && invite.Collections.Any())
                 {
