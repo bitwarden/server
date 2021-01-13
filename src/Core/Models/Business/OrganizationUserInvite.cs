@@ -20,8 +20,12 @@ namespace Bit.Core.Models.Business
             Emails = requestModel.Emails;
             Type = requestModel.Type.Value;
             AccessAll = requestModel.AccessAll;
-            Collections = requestModel.Collections.Select(c => c.ToSelectionReadOnly());
             Permissions = requestModel.Permissions;
+
+            if (requestModel.Collections != null && requestModel.Collections.Any())
+            {
+                Collections = requestModel.Collections.Select(c => c.ToSelectionReadOnly());
+            }
         }
     }
 }
