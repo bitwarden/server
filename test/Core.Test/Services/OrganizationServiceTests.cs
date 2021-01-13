@@ -299,6 +299,25 @@ namespace Bit.Core.Test.Services
         [Theory] 
         [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.User, 
+            invitorUserType: (int)OrganizationUserType.Owner
+        )]
+        public async Task InviteUser_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite, 
+            OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+        {
+            invite.Permissions = null;
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var eventService = sutProvider.GetDependency<IEventService>();
+
+            organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+            organizationUserRepository.GetManyByUserAsync(invitor.UserId.Value).Returns(new List<OrganizationUser> { invitor });
+
+            await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
+        }
+
+        [Theory] 
+        [OrganizationInviteAutoData(
+            inviteeUserType: (int)OrganizationUserType.User, 
             invitorUserType: (int)OrganizationUserType.Custom
         )]
         public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite, 
