@@ -56,7 +56,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
             fixture.Customize<Organization>(composer => composer
-                .With(o => o.Id, organizationId));
+                .With(o => o.Id, organizationId)
+                .With(o => o.Seats, (short)100));
             fixture.Customize<OrganizationUser>(composer => composer
                 .With(ou => ou.OrganizationId, organizationId)
                 .With(ou => ou.Type, InvitorUserType)
