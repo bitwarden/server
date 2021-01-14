@@ -444,6 +444,21 @@ namespace Bit.Core.Services
                 Quantity = 1,
             });
 
+            var taxRates = await _taxRateRepository.GetByLocationAsync(
+                new Bit.Core.Models.Table.TaxRate()
+                {
+                    Country = customer.Address.Country,
+                    PostalCode = customer.Address.PostalCode
+                }
+            );
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null)
+            {
+                subCreateOptions.DefaultTaxRates = new List<string>(1) 
+                { 
+                    taxRate.Id 
+                };
+            }
             if (additionalStorageGb > 0)
             {
                 subCreateOptions.Items.Add(new SubscriptionItemOptions
