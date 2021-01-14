@@ -459,6 +459,7 @@ namespace Bit.Core.Services
                     taxRate.Id 
                 };
             }
+
             if (additionalStorageGb > 0)
             {
                 subCreateOptions.Items.Add(new SubscriptionItemOptions
