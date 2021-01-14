@@ -276,12 +276,12 @@ namespace Bit.Core
             {
                 AccessBusinessPortal = hasClaim("accessbusinessportal"),
                 AccessEventLogs = hasClaim("accesseventlogs"),
-                AccessImportExport = hasClaim(""),
+                AccessImportExport = hasClaim("accessimportexport"),
                 AccessReports = hasClaim("accessreports"),
-                ManageAllCollections = hasClaim(""),
-                ManageAssignedCollections = hasClaim(""),
-                ManageGroups = hasClaim(""),
-                ManagePolicies = hasClaim(""),
+                ManageAllCollections = hasClaim("manageallcollections"),
+                ManageAssignedCollections = hasClaim("manageassignedcollections"),
+                ManageGroups = hasClaim("managegroups"),
+                ManagePolicies = hasClaim("managepolicies"),
                 ManageSso = hasClaim("managesso"),
                 ManageUsers = hasClaim("manageusers")
             };
