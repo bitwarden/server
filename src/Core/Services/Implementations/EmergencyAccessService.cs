@@ -20,6 +20,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IMailService _mailService;
+        private readonly IUserService _userService;
         private readonly IDataProtector _dataProtector;
         private readonly GlobalSettings _globalSettings;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -29,6 +30,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IMailService mailService,
+            IUserService userService,
             IPasswordHasher<User> passwordHasher,
             IDataProtectionProvider dataProtectionProvider,
             GlobalSettings globalSettings)
@@ -37,6 +39,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _mailService = mailService;
+            _userService = userService;
             _passwordHasher = passwordHasher;
             _dataProtector = dataProtectionProvider.CreateProtector("EmergencyAccessServiceDataProtector");
             _globalSettings = globalSettings;
@@ -44,7 +47,7 @@ namespace Bit.Core.Services
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string invitingUsersName, string email, EmergencyAccessType type, int waitTime)
         {
-            if (!invitingUser.Premium)
+            if (! await _userService.CanAccessPremium(invitingUser))
             {
                 throw new BadRequestException("Not a premium user.");
             }
