@@ -158,6 +158,30 @@
             </div>
             <div class="row">
                 <div class="col-7 form-group">
+                    <label asp-for="Data.SpMetadataUrl">@i18nService.T("SpMetadataUrl")</label>
+                    <div class="input-group">
+                        <input asp-for="Data.SpMetadataUrl" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <a class="btn btn-outline-secondary launch-button"
+                               href="@Model.Data.SpMetadataUrl"
+                               target="_blank"
+                               aria-label="@i18nService.T("LaunchSpMetadataUrl")" title="@i18nService.T("LaunchSpMetadataUrl")"
+                               tabindex="-1">
+                                <i class="fa fa-lg fa-external-link" aria-hidden="true"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary copy-button"
+                                    aria-label="@i18nService.T("CopySpMetadataUrl")" title="@i18nService.T("CopySpMetadataUrl")"
+                                    tabindex="-1">
+                                <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-1">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-7 form-group">
                     <label asp-for="Data.SpAcsUrl">@i18nService.T("SpAcsUrl")</label>
                     <div class="input-group">
                         <input asp-for="Data.SpAcsUrl" class="form-control" readonly>

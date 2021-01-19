@@ -265,6 +265,9 @@
   <data name="SpEntityId" xml:space="preserve">
     <value>SP Entity ID</value>
   </data>
+  <data name="SpMetadataUrl" xml:space="preserve">
+    <value>SAML 2.0 Metadata URL</value>
+  </data>
   <data name="SpAcsUrl" xml:space="preserve">
     <value>Assertion Consumer Service (ACS) URL</value>
   </data>
@@ -474,6 +477,12 @@
   </data>
   <data name="CopySpEntityId">
     <value>Copy the SP Entity Id to your clipboard</value>
+  </data>
+  <data name="CopySpMetadataUrl">
+    <value>Copy the SAML 2.0 Metadata URL to your clipboard</value>
+  </data>
+  <data name="LaunchSpMetadataUrl">
+    <value>View the SAML 2.0 Metadata (opens in a new window)</value>
   </data>
   <data name="CopySpAcsUrl">
     <value>Copy the Assertion Consumer Service (ACS) URL to your clipboard</value>
