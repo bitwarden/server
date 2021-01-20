@@ -64,8 +64,8 @@ function Install() {
             $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
                 "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
                 "certonly{0} --standalone --noninteractive --agree-tos --preferred-challenges http " +`
-                "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs" -f $qFlag
-            Invoke-Expression $certbotExp
+                "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs"
+            Invoke-Expression ($certbotExp -f $qFlag)
         }
     }
     
