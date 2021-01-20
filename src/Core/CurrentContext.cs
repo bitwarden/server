@@ -194,52 +194,62 @@ namespace Bit.Core
         
         public bool AccessBusinessPortal(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessBusinessPortal) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
         }
 
         public bool AccessEventLogs(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessEventLogs) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.AccessEventLogs ?? false)) ?? false);
         }
 
         public bool AccessImportExport(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessImportExport) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.AccessImportExport ?? false)) ?? false);
         }
 
         public bool AccessReports(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.AccessReports) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.AccessReports ?? false)) ?? false);
         }
 
         public bool ManageAllCollections(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageAllCollections) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageAllCollections ?? false)) ?? false);
         }
 
         public bool ManageAssignedCollections(Guid orgId)
         {
-            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageAssignedCollections) ?? false);
+            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageAssignedCollections ?? false)) ?? false);
         }
 
         public bool ManageGroups(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageGroups) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageGroups ?? false)) ?? false);
         }
 
         public bool ManagePolicies(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManagePolicies) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManagePolicies ?? false)) ?? false);
         }
 
         public bool ManageSso(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageSso) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageSso ?? false)) ?? false);
         }
 
         public bool ManageUsers(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId && o.Permissions.ManageUsers) ?? false);
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageUsers ?? false)) ?? false);
         }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
