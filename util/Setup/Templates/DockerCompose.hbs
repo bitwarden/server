@@ -59,7 +59,8 @@ services:
     container_name: bitwarden-api
     restart: always
     depends_on:
-      - mssql
+      mssql:
+        condition: service_healthy
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -77,7 +78,8 @@ services:
     container_name: bitwarden-identity
     restart: always
     depends_on:
-      - mssql
+      mssql:
+        condition: service_healthy
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
@@ -96,7 +98,8 @@ services:
     container_name: bitwarden-sso
     restart: always
     depends_on:
-      - mssql
+      mssql:
+        condition: service_healthy
     volumes:
       - ../identity:/etc/bitwarden/identity
       - ../core:/etc/bitwarden/core
@@ -115,7 +118,8 @@ services:
     container_name: bitwarden-admin
     restart: always
     depends_on:
-      - mssql
+      mssql:
+        condition: service_healthy
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -133,7 +137,8 @@ services:
     container_name: bitwarden-portal
     restart: always
     depends_on:
-      - mssql
+      mssql:
+        condition: service_healthy
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -165,7 +170,8 @@ services:
     container_name: bitwarden-notifications
     restart: always
     depends_on:
-      - identity
+      identity:
+        condition: service_healthy
     volumes:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/notifications:/etc/bitwarden/logs
@@ -197,10 +203,14 @@ services:
     container_name: bitwarden-nginx
     restart: always
     depends_on:
-      - web
-      - admin
-      - api
-      - identity
+      web:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
 {{#if HasPort}}
     ports:
 {{#if HttpPort}}
