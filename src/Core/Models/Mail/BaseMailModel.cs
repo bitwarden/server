@@ -22,7 +22,7 @@ namespace Bit.Core.Models.Mail
         {
             get
             {
-                return DateTime.Now.Year.ToString();
+                return DateTime.UtcNow.Year.ToString();
             }
         }
     }
