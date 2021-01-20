@@ -203,14 +203,10 @@ services:
     container_name: bitwarden-nginx
     restart: always
     depends_on:
-      web:
-        condition: service_healthy
-      admin:
-        condition: service_healthy
-      api:
-        condition: service_healthy
-      identity:
-        condition: service_healthy
+      - web
+      - admin
+      - api
+      - identity
 {{#if HasPort}}
     ports:
 {{#if HttpPort}}
