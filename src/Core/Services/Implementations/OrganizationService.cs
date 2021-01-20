@@ -415,20 +415,24 @@ namespace Bit.Core.Services
             };
 
             var customer = await new CustomerService().GetAsync(sub.CustomerId);
-            var taxRates = await _taxRateRepository.GetByLocationAsync(
-                new Bit.Core.Models.Table.TaxRate()
-                {
-                    Country = customer.Address.Country,
-                    PostalCode = customer.Address.PostalCode
-                }
-            );
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
+                    && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
             {
-                subUpdateOptions.DefaultTaxRates = new List<string>(1) 
-                { 
-                    taxRate.Id 
-                };
+                var taxRates = await _taxRateRepository.GetByLocationAsync(
+                    new Bit.Core.Models.Table.TaxRate()
+                    {
+                        Country = customer.Address.Country,
+                        PostalCode = customer.Address.PostalCode
+                    }
+                );
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+                {
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1) 
+                    { 
+                        taxRate.Id 
+                    };
+                }
             }
 
             var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
