@@ -45,7 +45,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
         }
 
-        public async Task<EmergencyAccess> InviteAsync(User invitingUser, string invitingUsersName, string email, EmergencyAccessType type, int waitTime)
+        public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
         {
             if (! await _userService.CanAccessPremium(invitingUser))
             {
@@ -64,7 +64,7 @@ namespace Bit.Core.Services
             };
 
             await _emergencyAccessRepository.CreateAsync(emergencyAccess);
-            await SendInviteAsync(emergencyAccess, invitingUsersName);
+            await SendInviteAsync(emergencyAccess, NameOrEmail(invitingUser));
 
             return emergencyAccess;
         }
@@ -80,16 +80,16 @@ namespace Bit.Core.Services
             return emergencyAccess;
         }
 
-        public async Task ResendInviteAsync(Guid invitingUserId, Guid emergencyAccessId, string invitingUsersName)
+        public async Task ResendInviteAsync(User invitingUser, Guid emergencyAccessId)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
-            if (emergencyAccess == null || emergencyAccess.GrantorId != invitingUserId ||
+            if (emergencyAccess == null || emergencyAccess.GrantorId != invitingUser.Id ||
                 emergencyAccess.Status != EmergencyAccessStatusType.Invited)
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
-            await SendInviteAsync(emergencyAccess, invitingUsersName);
+            await SendInviteAsync(emergencyAccess, NameOrEmail(invitingUser));
         }
 
         public async Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User user, string token, IUserService userService)
@@ -157,7 +157,7 @@ namespace Bit.Core.Services
             emergencyAccess.KeyEncrypted = key;
             emergencyAccess.Email = null;
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
-            await _mailService.SendEmergencyAccessConfirmedEmailAsync(grantor.Name, grantee.Email);
+            await _mailService.SendEmergencyAccessConfirmedEmailAsync(NameOrEmail(grantor), grantee.Email);
 
             return emergencyAccess;
         }
@@ -191,7 +191,7 @@ namespace Bit.Core.Services
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
-            await _mailService.SendEmergencyAccessRecoveryInitiated(emergencyAccess, initiatingUser.Name, grantor.Email);
+            await _mailService.SendEmergencyAccessRecoveryInitiated(emergencyAccess, NameOrEmail(initiatingUser), grantor.Email);
         }
 
         public async Task ApproveAsync(Guid id, User approvingUser)
@@ -208,7 +208,7 @@ namespace Bit.Core.Services
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
             
             var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
-            await _mailService.SendEmergencyAccessRecoveryApproved(emergencyAccess, approvingUser.Name, grantee.Email);
+            await _mailService.SendEmergencyAccessRecoveryApproved(emergencyAccess, NameOrEmail(approvingUser), grantee.Email);
         }
 
         public async Task RejectAsync(Guid id, User rejectingUser)
@@ -226,7 +226,7 @@ namespace Bit.Core.Services
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
             
             var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
-            await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, rejectingUser.Name, grantee.Email);
+            await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
         }
 
         public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User requestingUser)
@@ -312,6 +312,11 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect($"EmergencyAccessInvite {emergencyAccess.Id} {emergencyAccess.Email} {nowMillis}");
             await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
+        }
+
+        private string NameOrEmail(User user)
+        {
+            return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
         }
     }
 }
