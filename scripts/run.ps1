@@ -83,7 +83,9 @@ function Docker-Compose-Up {
 
 function Docker-Compose-Down {
     Docker-Compose-Files
-    Invoke-Expression ("docker-compose down{0}" -f "") #TODO: qFlag
+    if ((Invoke-Expression ("docker-compose ps{0}" -f "") | Measure-Object -Line).lines -gt 2 ) {
+        Invoke-Expression ("docker-compose down{0}" -f "") #TODO: qFlag
+    }
 }
 
 function Docker-Compose-Pull {

@@ -91,7 +91,9 @@ function dockerComposeUp() {
 
 function dockerComposeDown() {
     dockerComposeFiles
-    docker-compose down
+    if [ $(docker-compose ps | wc -l) -gt 2 ]; then
+        docker-compose down
+    fi
 }
 
 function dockerComposePull() {
