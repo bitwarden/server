@@ -103,53 +103,54 @@ EOT
 
 # Commands
 
-if [ "$1" == "install" ]
-then
-    checkOutputDirNotExists
-    mkdir -p $OUTPUT
-    downloadRunFile
-    $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "start" -o "$1" == "restart" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "update" ]
-then
-    checkOutputDirExists
-    downloadRunFile
-    $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "rebuild" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "updateconf" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "updatedb" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh updatedb $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "stop" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "renewcert" ]
-then
-    checkOutputDirExists
-    $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION
-elif [ "$1" == "updaterun" ]
-then
-    checkOutputDirExists
-    downloadRunFile
-elif [ "$1" == "updateself" ]
-then
-    downloadSelf && echo "Updated self." && exit
-elif [ "$1" == "help" ]
-then
-    listCommands
-else
-    echo "No command found."
-    echo
-    listCommands
-fi
+case $1 in
+    "install")
+        checkOutputDirNotExists
+        mkdir -p $OUTPUT
+        downloadRunFile
+        $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "start" | "restart")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "update")
+        checkOutputDirExists
+        downloadRunFile
+        $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "rebuild")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "updateconf")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "updatedb")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh updatedb $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "stop")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "renewcrt")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION
+        ;;
+    "updaterun")
+        checkOutputDirExists
+        downloadRunFile
+        ;;
+    "updateself")
+        downloadSelf && echo "Updated self." && exit
+        ;;
+    "help")
+        listCommands
+        ;;
+    *)
+        echo "No command found."
+        echo
+        listCommands
+esac

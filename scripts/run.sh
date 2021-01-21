@@ -172,6 +172,23 @@ function updateDatabase() {
     echo "Database update complete"
 }
 
+function updatebw() {
+    CORE_ID=$(docker-compose ps -q admin)
+    WEB_ID=$(docker-compose ps -q web)
+    if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
+       docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$"
+    then
+        echo "Update not needed"
+        exit
+    fi
+    dockerComposeDown
+    update withpull
+    restart
+    dockerPrune
+    echo "Pausing 60 seconds for database to come online. Please wait..."
+    sleep 60
+}
+
 function update() {
     if [ "$1" == "withpull" ]
     then
@@ -211,48 +228,36 @@ function pullSetup() {
 
 # Commands
 
-if [ "$1" == "install" ]
-then
-    install
-elif [ "$1" == "start" -o "$1" == "restart" ]
-then
-    restart
-elif [ "$1" == "pull" ]
-then
-    dockerComposePull
-elif [ "$1" == "stop" ]
-then
-    dockerComposeDown
-elif [ "$1" == "renewcert" ]
-then
-    certRestart
-elif [ "$1" == "updateconf" ]
-then
-    dockerComposeDown
-    update withpull
-elif [ "$1" == "updatedb" ]
-then
-    updateDatabase
-elif [ "$1" == "update" ]
-then
-    dockerComposeFiles
-    CORE_ID=$(docker-compose ps -q admin)
-    WEB_ID=$(docker-compose ps -q web)
-    if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
-       docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$"
-    then
-        echo "Update not needed"
-        exit
-    fi
-    dockerComposeDown
-    update withpull
-    restart
-    dockerPrune
-    echo "Pausing 60 seconds for database to come online. Please wait..."
-    sleep 60
-    updateDatabase
-elif [ "$1" == "rebuild" ]
-then
-    dockerComposeDown
-    update nopull
-fi
+case $1 in
+    "install")
+        install
+        ;;
+    "start" | "restart")
+        restart
+        ;;
+    "pull")
+        dockerComposePull
+        ;;
+    "stop")
+        dockerComposeDown
+        ;;
+    "renewcert")
+        certRestart
+        ;;
+    "updateconf")
+        dockerComposeDown
+        update withpull
+        ;;
+    "updatedb")
+        updateDatabase
+        ;;
+    "update")
+        dockerComposeFiles
+        updatebw
+        updateDatabase
+        ;;
+    "rebuild")
+        dockerComposeDown
+        update nopull
+        ;;
+esac
