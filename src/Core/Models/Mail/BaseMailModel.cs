@@ -18,5 +18,12 @@ namespace Bit.Core.Models.Mail
                 return WebVaultUrl;
             }
         }
+        public string CurrentYear
+        {
+            get
+            {
+                return DateTime.UtcNow.Year.ToString();
+            }
+        }
     }
 }

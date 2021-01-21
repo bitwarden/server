@@ -202,7 +202,7 @@ namespace Bit.Core.Services
 
         public async Task SendWelcomeEmailAsync(User user)
         {
-            var message = CreateDefaultMessage("Welcome", user.Email);
+            var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
             var model = new BaseMailModel
             {
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
