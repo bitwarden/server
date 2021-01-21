@@ -31,6 +31,7 @@ namespace Bit.Portal.Models
             RedirectBehavior = configurationData.RedirectBehavior;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
             SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+            SpMetadataUrl = configurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
             SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
             IdpEntityId = configurationData.IdpEntityId;
             IdpBindingType = configurationData.IdpBindingType;
@@ -75,6 +76,8 @@ namespace Bit.Portal.Models
         // SAML2 SP
         [Display(Name = "SpEntityId")]
         public string SpEntityId { get; set; }
+        [Display(Name = "SpMetadataUrl")]
+        public string SpMetadataUrl { get; set; }
         [Display(Name = "SpAcsUrl")]
         public string SpAcsUrl { get; set; }
         [Display(Name = "NameIdFormat")]
