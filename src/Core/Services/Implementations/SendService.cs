@@ -18,6 +18,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IPushNotificationService _pushService;
         private readonly GlobalSettings _globalSettings;
 
         public SendService(
@@ -27,6 +28,7 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
+            IPushNotificationService pushService,
             GlobalSettings globalSettings)
         {
             _sendRepository = sendRepository;
@@ -35,6 +37,7 @@ namespace Bit.Core.Services
             _organizationRepository = organizationRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
+            _pushService = pushService;
             _globalSettings = globalSettings;
         }
 
@@ -43,11 +46,13 @@ namespace Bit.Core.Services
             if (send.Id == default(Guid))
             {
                 await _sendRepository.CreateAsync(send);
+                await _pushService.PushSyncSendCreateAsync(send);
             }
             else
             {
                 send.RevisionDate = DateTime.UtcNow;
                 await _sendRepository.UpsertAsync(send);
+                await _pushService.PushSyncSendUpdateAsync(send);
             }
         }
 
@@ -129,6 +134,7 @@ namespace Bit.Core.Services
                 var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
                 await _sendFileStorageService.DeleteFileAsync(data.Id);
             }
+            await _pushService.PushSyncSendDeleteAsync(send);
         }
 
         // Response: Send, password required, password invalid
