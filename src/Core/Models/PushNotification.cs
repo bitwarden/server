@@ -39,4 +39,11 @@ namespace Bit.Core.Models
         public Guid UserId { get; set; }
         public DateTime Date { get; set; }
     }
+
+    public class SyncSendPushNotification
+    {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public DateTime RevisionDate { get; set; }
+    }
 }
