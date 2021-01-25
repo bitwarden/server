@@ -107,11 +107,13 @@ namespace Bit.Core.Services
                         case Enums.PolicyType.SingleOrg:
                             var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                                     removableOrgUsers.Select(ou => ou.UserId.Value));
+                            organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                             foreach (var orgUser in removableOrgUsers)
                             {
-                                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId && ou.Status != OrganizationUserStatusType.Invited))
+                                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId 
+                                            && ou.OrganizationId != organization.Id 
+                                            && ou.Status != OrganizationUserStatusType.Invited))
                                 {
-                                    organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                                     await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
                                     await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
