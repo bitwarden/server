@@ -447,8 +447,8 @@ namespace Bit.Core.Services
             var taxRates = await _taxRateRepository.GetByLocationAsync(
                 new Bit.Core.Models.Table.TaxRate()
                 {
-                    Country = customer.Address.Country,
-                    PostalCode = customer.Address.PostalCode
+                    Country = taxInfo.BillingAddressCountry,
+                    PostalCode = taxInfo.BillingAddressPostalCode
                 }
             );
             var taxRate = taxRates.FirstOrDefault();
