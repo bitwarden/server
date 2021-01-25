@@ -444,8 +444,8 @@ namespace Bit.Core.Services
                 Quantity = 1,
             });
 
-            if (string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry) 
-                    && string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode)) 
+            if (!string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry) 
+                    && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode)) 
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
                     new Bit.Core.Models.Table.TaxRate()
