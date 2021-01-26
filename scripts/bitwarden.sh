@@ -32,8 +32,8 @@ fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
-COREVERSION="1.39.0"
-WEBVERSION="2.18.0"
+COREVERSION="1.39.1"
+WEBVERSION="2.18.1"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
