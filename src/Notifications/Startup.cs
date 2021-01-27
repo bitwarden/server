@@ -39,7 +39,7 @@ namespace Bit.Notifications
                 config.AddPolicy("Application", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                     policy.RequireClaim(JwtClaimTypes.Scope, "api");
                 });
                 config.AddPolicy("Internal", policy =>
