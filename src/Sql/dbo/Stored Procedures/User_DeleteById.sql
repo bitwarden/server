@@ -88,11 +88,9 @@ BEGIN
     OR
         [GranteeId] = @Id
 
-
--- Delete Sends
-DELETE
-
-FROM
+    -- Delete Sends
+    DELETE
+    FROM
         [dbo].[Send]
     WHERE 
         [UserId] = @Id
