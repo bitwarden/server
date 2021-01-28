@@ -87,6 +87,15 @@ BEGIN
         [GrantorId] = @Id
     OR
         [GranteeId] = @Id
+
+
+-- Delete Sends
+DELETE
+
+FROM
+        [dbo].[Send]
+    WHERE 
+        [UserId] = @Id
     
     -- Finally, delete the user
     DELETE
