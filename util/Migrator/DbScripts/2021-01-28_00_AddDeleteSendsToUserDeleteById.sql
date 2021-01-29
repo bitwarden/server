@@ -1,7 +1,6 @@
 IF OBJECT_ID('[dbo].[User_DeleteById]') IS NOT NULL
 BEGIN
-
-DROP PROCEDURE [dbo].[User_DeleteById]
+    DROP PROCEDURE [dbo].[User_DeleteById]
 END
 GO
 
@@ -14,18 +13,16 @@ BEGIN
     SET NOCOUNT ON
 
 DECLARE @BatchSize INT = 100
-
-
 -- Delete ciphers
 WHILE @BatchSize > 0
-    BEGIN
+BEGIN
     BEGIN TRANSACTION User_DeleteById_Ciphers
 
     DELETE TOP(@BatchSize)
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [UserId] = @Id
+    FROM
+        [dbo].[Cipher]
+     WHERE
+         [UserId] = @Id
 
     SET @BatchSize = @@ROWCOUNT
 
@@ -36,97 +33,74 @@ BEGIN TRANSACTION User_DeleteById
 
 -- Delete folders
 DELETE
-    FROM
-        [dbo].[Folder]
-    WHERE
-        [UserId] = @Id
+FROM
+    [dbo].[Folder]
+WHERE
+    [UserId] = @Id
 
 -- Delete devices
 DELETE
-    FROM
-        [dbo].[Device]
-    WHERE
-        [UserId] = @Id
+FROM
+    [dbo].[Device]
+WHERE
+    [UserId] = @Id
 
 -- Delete collection users
 DELETE
-        CU
-    FROM
+    CU
+FROM
     [dbo].[CollectionUser] CU
-    INNER JOIN
+INNER JOIN
     [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
-    WHERE
-        OU.[UserId] = @Id
+WHERE
+    OU.[UserId] = @Id
 
 -- Delete group users
 DELETE
-        GU
-    FROM
+    GU
+FROM
     [dbo].[GroupUser] GU
-    INNER JOIN
+INNER JOIN
     [dbo].[OrganizationUser] OU ON OU.[Id] = GU.[OrganizationUserId]
-    WHERE
-        OU.[UserId] = @Id
+WHERE
+    OU.[UserId] = @Id
 
 -- Delete organization users
 DELETE
-    FROM
-        [dbo].[OrganizationUser]
-    WHERE
-        [UserId] = @Id
-
-
+FROM
+    [dbo].[OrganizationUser]
+WHERE
+    [UserId] = @Id
 -- Delete U2F logins
 DELETE
-    FROM
-
-[dbo].[U2f]
-    WHERE
-
-[UserId]
-= @Id
-
-
+FROM
+    [dbo].[U2f]
+WHERE
+    [UserId] = @Id
 -- Delete SSO Users
 DELETE
-    FROM
-        [dbo].[SsoUser]
-    WHERE
-
-[UserId]
-= @Id
-
-
+FROM
+    [dbo].[SsoUser]
+WHERE
+    [UserId] = @Id
 -- Delete Emergency Accesses
 DELETE
-    FROM
-
-[dbo].[EmergencyAccess]
-    WHERE
-
-[GrantorId]
-= @Id
-        OR
-        [GranteeId] = @Id
-
-
-
+FROM
+    [dbo].[EmergencyAccess]
+WHERE
+    [GrantorId] = @Id 
+    OR [GranteeId] = @Id
 -- Delete Sends
 DELETE
-
 FROM
-        [dbo].[Send]
-    WHERE 
-        [UserId] = @Id
-
-
+    [dbo].[Send]
+WHERE 
+    [UserId] = @Id
 -- Finally, delete the user
 DELETE
-    FROM
-        [dbo].[User]
-    WHERE
-        [Id] = @Id
-
-
+FROM
+    [dbo].[User]
+WHERE
+    [Id] = @Id
 COMMIT TRANSACTION User_DeleteById
 END
