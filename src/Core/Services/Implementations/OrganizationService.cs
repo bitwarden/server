@@ -1502,6 +1502,11 @@ namespace Bit.Core.Services
                             var newUserPromise = await InviteUserAsync(organizationId, importingUserId, user.ExternalId, invite);
                             var newUser = newUserPromise.FirstOrDefault();
 
+                            if (newUser == null)
+                            {
+                                throw new BadRequestException("This user has already been invited.");
+                            }
+
                             existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
                         }
                         catch (BadRequestException)
