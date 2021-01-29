@@ -25,11 +25,11 @@ namespace Bit.Api.Jobs
                 .Build();
             var emergencyAccessNotificationTrigger = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 * * * * ?")
+                .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var emergencyAccessTimeoutTrigger  = TriggerBuilder.Create()
                 .StartNow()
-                .WithCronSchedule("0 * * * * ?")
+                .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var everyTopOfTheSixthHourTrigger = TriggerBuilder.Create()
                 .StartNow()
