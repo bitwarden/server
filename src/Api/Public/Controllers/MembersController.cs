@@ -124,8 +124,8 @@ namespace Bit.Api.Public.Controllers
                 AccessAll = model.AccessAll.Value,
                 Collections = associations
             };
-            var userPromise = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null, model.ExternalId, invite);
-            var user = userPromise.FirstOrDefault();
+            var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
+                model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
             var response = new MemberResponseModel(user, associations);
             return new JsonResult(response);
         }
