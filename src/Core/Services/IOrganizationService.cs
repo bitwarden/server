@@ -30,6 +30,8 @@ namespace Bit.Core.Services
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
         Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
+        Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
         Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string externalId, OrganizationUserInvite orgUserInvite);
         Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
