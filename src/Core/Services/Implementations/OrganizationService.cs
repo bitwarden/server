@@ -1388,6 +1388,25 @@ namespace Bit.Core.Services
             return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
         }
 
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        {
+            var invite = new OrganizationUserInvite()
+            {
+                Emails = new List<string> { email },
+                Type = type,
+                AccessAll = accessAll,
+                Collections = collections,
+            };
+            var results = await InviteUserAsync(organizationId, invitingUserId, externalId, invite);
+            var result = results.FirstOrDefault();
+            if (result == null)
+            {
+                throw new BadRequestException("This user has already been invited.");
+            }
+            return result;
+        }
+
         public async Task ImportAsync(Guid organizationId,
             Guid? importingUserId,
             IEnumerable<ImportedGroup> groups,
@@ -1499,9 +1518,8 @@ namespace Bit.Core.Services
                                 AccessAll = false,
                                 Collections = new List<SelectionReadOnly>(),
                             };
-                            var newUserPromise = await InviteUserAsync(organizationId, importingUserId, user.ExternalId, invite);
-                            var newUser = newUserPromise.FirstOrDefault();
-
+                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
+                                    OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
                             existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
                         }
                         catch (BadRequestException)
