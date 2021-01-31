@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Jobs;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -14,8 +15,9 @@ namespace Bit.Api.Jobs
         public JobsHostedService(
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
-            ILogger<JobListener> listenerLogger)
-            : base(serviceProvider, logger, listenerLogger) { }
+            ILogger<JobListener> listenerLogger,
+            IConfiguration config)
+            : base(serviceProvider, logger, listenerLogger, config) { }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
