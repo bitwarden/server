@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Jobs;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
