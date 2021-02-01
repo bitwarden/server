@@ -39,7 +39,7 @@ namespace Bit.Core.Jobs
             var factory = new StdSchedulerFactory(new NameValueCollection
             {
                 {"quartz.serializer.type", "binary"},
-                // Ensure each project has a unqiue instanceName
+                // Ensure each project has a unique instanceName
                 {"quartz.scheduler.instanceName", GetType().FullName},
                 {"quartz.scheduler.instanceId", "AUTO"},
                 {"quartz.jobStore.type", "Quartz.Impl.AdoJobStore.JobStoreTX"},
