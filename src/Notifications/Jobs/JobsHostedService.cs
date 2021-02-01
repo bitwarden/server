@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,11 +14,11 @@ namespace Bit.Notifications.Jobs
     public class JobsHostedService : BaseJobsHostedService
     {
         public JobsHostedService(
+            GlobalSettings globalSettings,
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
-            ILogger<JobListener> listenerLogger,
-            IConfiguration config)
-            : base(serviceProvider, logger, listenerLogger, config) { }
+            ILogger<JobListener> listenerLogger)
+            : base(globalSettings, serviceProvider, logger, listenerLogger) { }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {

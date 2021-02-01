@@ -14,17 +14,12 @@ namespace Bit.Billing.Jobs
 {
     public class JobsHostedService : BaseJobsHostedService
     {
-        private readonly GlobalSettings _globalSettings;
-
         public JobsHostedService(
             GlobalSettings globalSettings,
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
-            ILogger<JobListener> listenerLogger,
-            IConfiguration config)
-            : base(serviceProvider, logger, listenerLogger, config) {
-            _globalSettings = globalSettings;
-        }
+            ILogger<JobListener> listenerLogger)
+            : base(globalSettings, serviceProvider, logger, listenerLogger) {}
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
