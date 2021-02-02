@@ -587,6 +587,15 @@
   <data name="PersonalOwnershipExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
+  <data name="DisableSend" xml:space="preserve">
+    <value>Disable Send</value>
+  </data>
+  <data name="DisableSendDescription" xml:space="preserve">
+    <value>Do not allow users to create or edit Bitwarden Sends. Deleting existing Sends is still allowed</value>
+  </data>
+  <data name="DisableSendExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
   <data name="DisableRequireSsoError" xml:space="preserve">
     <value>You must manually disable the Single Sign-On Authentication policy before this policy can be disabled.</value>
   </data>

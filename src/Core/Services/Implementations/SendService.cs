@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
@@ -14,11 +16,13 @@ namespace Bit.Core.Services
     {
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly GlobalSettings _globalSettings;
 
         public SendService(
@@ -29,12 +33,16 @@ namespace Bit.Core.Services
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository,
+            IOrganizationUserRepository organizationUserRepository)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
+            _policyRepository = policyRepository;
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
@@ -43,6 +51,25 @@ namespace Bit.Core.Services
 
         public async Task SaveSendAsync(Send send)
         {
+            // Make sure user can save Sends
+            if (send.UserId.HasValue)
+            {
+                var policies = await _policyRepository.GetManyByUserIdAsync(send.UserId.Value);
+                if (policies != null)
+                {
+                    foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
+                    {
+                        var org = await _organizationUserRepository.GetDetailsByUserAsync(send.UserId.Value, policy.OrganizationId,
+                            OrganizationUserStatusType.Confirmed);
+                        if (org != null && org.Enabled && org.UsePolicies
+                           && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
+                        {
+                            throw new BadRequestException("Due to an Enterprise Policy, you are restricted to only Deleting Sends.");
+                        }
+                    }
+                }
+            }
+
             if (send.Id == default(Guid))
             {
                 await _sendRepository.CreateAsync(send);
