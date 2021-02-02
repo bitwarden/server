@@ -96,7 +96,7 @@ renewcert
 rebuild
 help
 
-See more at https://help.bitwarden.com/article/install-on-premise/#script-commands
+See more at https://bitwarden.com/help/article/install-on-premise/#script-commands
 
 EOT
 }
@@ -135,7 +135,7 @@ case $1 in
         checkOutputDirExists
         $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
         ;;
-    "renewcrt")
+    "renewcert")
         checkOutputDirExists
         $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION
         ;;
