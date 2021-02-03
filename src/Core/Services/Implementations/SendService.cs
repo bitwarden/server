@@ -22,8 +22,8 @@ namespace Bit.Core.Services
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly GlobalSettings _globalSettings;
+        private readonly CurrentContext _currentContext;
 
         public SendService(
             ISendRepository sendRepository,
@@ -35,40 +35,24 @@ namespace Bit.Core.Services
             IPushNotificationService pushService,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            IOrganizationUserRepository organizationUserRepository)
+            CurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
             _policyRepository = policyRepository;
             _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
             _globalSettings = globalSettings;
+            _currentContext = currentContext;
         }
 
         public async Task SaveSendAsync(Send send)
         {
             // Make sure user can save Sends
-            if (send.UserId.HasValue)
-            {
-                var policies = await _policyRepository.GetManyByUserIdAsync(send.UserId.Value);
-                if (policies != null)
-                {
-                    foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
-                    {
-                        var org = await _organizationUserRepository.GetDetailsByUserAsync(send.UserId.Value, policy.OrganizationId,
-                            OrganizationUserStatusType.Confirmed);
-                        if (org != null && org.Enabled && org.UsePolicies
-                           && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
-                        {
-                            throw new BadRequestException("Due to an Enterprise Policy, you are restricted to only Deleting Sends.");
-                        }
-                    }
-                }
-            }
+            await ValidateUserCanSaveAsync(send.UserId);
 
             if (send.Id == default(Guid))
             {
@@ -85,7 +69,7 @@ namespace Bit.Core.Services
 
         public async Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength)
         {
-            if (send.Type != Enums.SendType.File)
+            if (send.Type != SendType.File)
             {
                 throw new BadRequestException("Send is not of type \"file\".");
             }
@@ -200,6 +184,29 @@ namespace Bit.Core.Services
         public string HashPassword(string password)
         {
             return _passwordHasher.HashPassword(new User(), password);
+        }
+
+        private async Task ValidateUserCanSaveAsync(Guid? userId)
+        {
+            if (!userId.HasValue || _currentContext.Organizations.FirstOrDefault() == default)
+            {
+                return;
+            }
+
+            var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
+
+            if (policies == null)
+            {
+                return;
+            }
+
+            foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
+            {
+                if (!_currentContext.ManagePolicies(policy.OrganizationId))
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are restricted to only Deleting Sends.");
+                }
+            }
         }
     }
 }

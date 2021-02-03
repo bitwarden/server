@@ -585,13 +585,13 @@
     <value>Require users to save vault items to an organization by removing the personal ownership option.</value>
   </data>
   <data name="PersonalOwnershipExemption" xml:space="preserve">
-    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+    <value>Organization members that can manage policies are exempt from this policy's enforcement.</value>
   </data>
   <data name="DisableSend" xml:space="preserve">
     <value>Disable Send</value>
   </data>
   <data name="DisableSendDescription" xml:space="preserve">
-    <value>Do not allow users to create or edit Bitwarden Sends. Deleting existing Sends is still allowed</value>
+    <value>Do not allow users to create or edit Bitwarden Sends. Deleting existing Sends is still allowed.</value>
   </data>
   <data name="DisableSendExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
