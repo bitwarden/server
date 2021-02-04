@@ -19,12 +19,12 @@ namespace Bit.Core.Identity
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IUserRepository _userRepository;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public UserStore(
             IServiceProvider serviceProvider,
             IUserRepository userRepository,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _serviceProvider = serviceProvider;
             _userRepository = userRepository;

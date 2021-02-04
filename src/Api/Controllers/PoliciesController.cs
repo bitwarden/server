@@ -24,7 +24,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IDataProtector _organizationServiceDataProtector;
 
@@ -34,7 +34,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IUserService userService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IDataProtectionProvider dataProtectionProvider)
         {

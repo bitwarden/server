@@ -31,7 +31,7 @@ namespace Bit.Core.IdentityServer
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,

@@ -47,7 +47,7 @@ namespace Bit.Billing
             services.AddSingleton<BitPayClient>();
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);

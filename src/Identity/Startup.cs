@@ -50,7 +50,7 @@ namespace Bit.Identity
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Caching
             services.AddMemoryCache();

@@ -40,7 +40,7 @@ namespace Bit.Sso
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Mvc
             services.AddControllersWithViews();

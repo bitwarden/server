@@ -18,12 +18,12 @@ namespace Bit.Api.Controllers
     {
         private readonly IGroupRepository _groupRepository;
         private readonly IGroupService _groupService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public GroupsController(
             IGroupRepository groupRepository,
             IGroupService groupService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _groupRepository = groupRepository;
             _groupService = groupService;

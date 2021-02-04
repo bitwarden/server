@@ -20,13 +20,13 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly ICollectionService _collectionService;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public CollectionsController(
             ICollectionRepository collectionRepository,
             ICollectionService collectionService,
             IUserService userService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _collectionRepository = collectionRepository;
             _collectionService = collectionService;

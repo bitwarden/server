@@ -41,7 +41,7 @@ namespace Bit.Portal
 
             // Context
             services.AddScoped<EnterprisePortalCurrentContext>();
-            services.AddScoped<CurrentContext>((serviceProvider) =>
+            services.AddScoped<ICurrentContext, CurrentContext>((serviceProvider) =>
                 serviceProvider.GetService<EnterprisePortalCurrentContext>());
 
             // Identity

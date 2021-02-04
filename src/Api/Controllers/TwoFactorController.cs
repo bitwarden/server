@@ -26,7 +26,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public TwoFactorController(
             IUserService userService,
@@ -34,7 +34,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             GlobalSettings globalSettings,
             UserManager<User> userManager,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationRepository = organizationRepository;

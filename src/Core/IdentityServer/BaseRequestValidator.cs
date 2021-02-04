@@ -34,7 +34,7 @@ namespace Bit.Core.IdentityServer
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IMailService _mailService;
         private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IPolicyRepository _policyRepository;
 
@@ -50,7 +50,7 @@ namespace Bit.Core.IdentityServer
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository)
         {

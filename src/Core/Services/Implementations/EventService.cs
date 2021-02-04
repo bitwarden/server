@@ -15,14 +15,14 @@ namespace Bit.Core.Services
         private readonly IEventWriteService _eventWriteService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IApplicationCacheService _applicationCacheService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public EventService(
             IEventWriteService eventWriteService,
             IOrganizationUserRepository organizationUserRepository,
             IApplicationCacheService applicationCacheService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _eventWriteService = eventWriteService;

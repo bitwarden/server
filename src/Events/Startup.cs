@@ -36,7 +36,7 @@ namespace Bit.Events
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Identity
             services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>

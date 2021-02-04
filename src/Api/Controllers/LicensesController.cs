@@ -21,7 +21,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationService _organizationService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public LicensesController(
             ILicensingService licensingService,
@@ -29,7 +29,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IOrganizationRepository organizationRepository,
             IOrganizationService organizationService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _licensingService = licensingService;
             _userRepository = userRepository;

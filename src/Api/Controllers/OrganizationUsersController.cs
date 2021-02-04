@@ -23,7 +23,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
@@ -32,7 +32,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;

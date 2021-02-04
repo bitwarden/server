@@ -16,12 +16,12 @@ namespace Bit.Api.Public.Controllers
     public class OrganizationController : Controller
     {
         private readonly IOrganizationService _organizationService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationController(
             IOrganizationService organizationService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _organizationService = organizationService;

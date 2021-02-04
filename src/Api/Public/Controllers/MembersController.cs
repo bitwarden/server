@@ -21,14 +21,14 @@ namespace Bit.Api.Public.Controllers
         private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public MembersController(
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
             IOrganizationService organizationService,
             IUserService userService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
