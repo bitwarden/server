@@ -15,6 +15,7 @@ using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Bit.Core.Enums;
+using Bit.Core.Context;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
@@ -685,7 +686,7 @@ namespace Bit.Core.Utilities
             return configDict;
         }
 
-        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContext.CurrentContentOrganization> orgs, bool isPremium) 
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs, bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {

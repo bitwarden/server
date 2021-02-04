@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers

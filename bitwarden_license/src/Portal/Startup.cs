@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Utilities;
 using Bit.Portal.Utilities;
 using Microsoft.AspNetCore.Builder;

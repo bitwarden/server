@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core;
+using Bit.Core.Context;
 using System.Threading.Tasks;
 using Bit.Core.Models.Business;
 using Bit.Core.Exceptions;

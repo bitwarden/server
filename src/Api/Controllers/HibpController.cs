@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Context;
 using System.Net;
 using Bit.Core.Exceptions;
 using System.Linq;

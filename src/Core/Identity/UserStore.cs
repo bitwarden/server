@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Context;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity

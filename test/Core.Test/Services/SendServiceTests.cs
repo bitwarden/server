@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -15,53 +16,37 @@ namespace Bit.Core.Test.Services
 {
     public class SendServiceTests
     {
-        private void SaveSendAsync_Setup(SendType sendType, OrganizationUserType userType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies,
-            OrganizationUserOrganizationDetails organizationDetails)
+        private void SaveSendAsync_Setup(SendType sendType, bool canManagePolicies,
+            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
         {
             send.Id = default;
             send.Type = sendType;
-
-            organizationDetails.Enabled = true;
-            organizationDetails.UsePolicies = true;
-            organizationDetails.Type = userType;
 
             policies.First().Type = PolicyType.DisableSend;
             policies.First().Enabled = true;
 
             sutProvider.GetDependency<IPolicyRepository>().GetManyByUserIdAsync(send.UserId.Value).Returns(policies);
-            sutProvider.GetDependency<IOrganizationUserRepository>().GetDetailsByUserAsync(send.UserId.Value,
-                policies.First().OrganizationId, OrganizationUserStatusType.Confirmed).Returns(organizationDetails);
+            sutProvider.GetDependency<ICurrentContext>().ManagePolicies(policies.First().Id).Returns(canManagePolicies);
         }
 
         [Theory]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.User)]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Manager)]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Custom)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.User)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Manager)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Custom)]
-        public async void SaveSendAsync_DisableSend_NonAdmin_throws(SendType sendType, OrganizationUserType userType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies,
-            OrganizationUserOrganizationDetails organizationDetails)
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableSend_CantManagePolicies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
         {
-            SaveSendAsync_Setup(sendType, userType, sutProvider, send, policies, organizationDetails);
+            SaveSendAsync_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
 
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
         }
 
         [Theory]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.User)]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Manager)]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Custom)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.User)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Manager)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Custom)]
-        public async void SaveSendAsync_DisableSend_DisabledPolicy_NonAdmin_success(SendType sendType, OrganizationUserType userType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies,
-            OrganizationUserOrganizationDetails organizationDetails)
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableSend_DisabledPolicy_CantManagePolicies_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
         {
-            SaveSendAsync_Setup(sendType, userType, sutProvider, send, policies, organizationDetails);
+            SaveSendAsync_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
             foreach (var policy in policies.Where(p => p.Type == PolicyType.DisableSend))
             {
                 policy.Enabled = false;
@@ -73,15 +58,12 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Admin)]
-        [InlineUserSendAutoData(SendType.File, OrganizationUserType.Owner)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Admin)]
-        [InlineUserSendAutoData(SendType.Text, OrganizationUserType.Owner)]
-        public async void SaveSendAsync_DisableSend_Admin_success(SendType sendType, OrganizationUserType userType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies,
-            OrganizationUserOrganizationDetails organizationDetails)
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableSend_CanManagePolicies_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
         {
-            SaveSendAsync_Setup(sendType, userType, sutProvider, send, policies, organizationDetails);
+            SaveSendAsync_Setup(sendType, canManagePolicies: true, sutProvider, send, policies);
 
             await sutProvider.Sut.SaveSendAsync(send);
 

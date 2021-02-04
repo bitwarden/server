@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bit.Core;
+using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Notifications

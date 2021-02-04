@@ -35,29 +35,31 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
     }
     internal class InlineUserSendAutoDataAttribute : InlineCustomAutoDataAttribute
     {
-        public InlineUserSendAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(UserSend) }, values)
+        public InlineUserSendAutoDataAttribute(params object[] values) : base(new[] { typeof(CurrentContextFixtures.CurrentContext),
+            typeof(SutProviderCustomization), typeof(UserSend) }, values)
         { }
     }
 
     internal class InlineKnownUserSendAutoDataAttribute : InlineCustomAutoDataAttribute
     {
         public InlineKnownUserSendAutoDataAttribute(string userId, params object[] values) : base(new ICustomization[]
-            { new SutProviderCustomization(), new UserSend { UserId = new Guid(userId) } }, values)
+            { new CurrentContextFixtures.CurrentContext(), new SutProviderCustomization(),
+            new UserSend { UserId = new Guid(userId) } }, values)
         { }
     }
 
     internal class OrganizationSendAutoDataAttribute : CustomAutoDataAttribute
     {
-        public OrganizationSendAutoDataAttribute(string organizationId = null) : base(new SutProviderCustomization(),
+        public OrganizationSendAutoDataAttribute(string organizationId = null) : base(new CurrentContextFixtures.CurrentContext(),
+            new SutProviderCustomization(),
             new OrganizationSend { OrganizationId = organizationId == null ? (Guid?)null : new Guid(organizationId) })
         { }
     }
 
     internal class InlineOrganizationSendAutoDataAttribute : InlineCustomAutoDataAttribute
     {
-        public InlineOrganizationSendAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(OrganizationSend) }, values)
+        public InlineOrganizationSendAutoDataAttribute(params object[] values) : base(new[] { typeof(CurrentContextFixtures.CurrentContext),
+            typeof(SutProviderCustomization), typeof(OrganizationSend) }, values)
         { }
     }
 }

@@ -16,10 +16,12 @@ namespace Bit.Core.Test.AutoFixture
         public TSut Sut { get; private set; }
         public Type SutType => typeof(TSut);
 
-        public SutProvider()
+        public SutProvider() : this(new Fixture()) { }
+
+        public SutProvider(IFixture fixture)
         {
             _dependencies = new Dictionary<Type, Dictionary<string, object>>();
-            _fixture = new Fixture().WithAutoNSubstitutions();
+            _fixture = (fixture ?? new Fixture()).WithAutoNSubstitutions();
             _constructorParameterRelay = new ConstructorParameterRelay<TSut>(this, _fixture);
             _fixture.Customizations.Add(_constructorParameterRelay);
         }

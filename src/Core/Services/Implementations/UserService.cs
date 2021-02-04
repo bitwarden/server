@@ -14,6 +14,7 @@ using Bit.Core.Models.Business;
 using U2fLib = U2F.Core.Crypto.U2F;
 using U2F.Core.Models;
 using U2F.Core.Utils;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using System.IO;

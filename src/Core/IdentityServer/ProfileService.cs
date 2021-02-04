@@ -9,6 +9,7 @@ using System.Linq;
 using System;
 using IdentityModel;
 using Bit.Core.Utilities;
+using Bit.Core.Context;
 
 namespace Bit.Core.IdentityServer
 {

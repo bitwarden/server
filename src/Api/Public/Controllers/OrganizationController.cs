@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Services;

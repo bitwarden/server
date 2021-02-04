@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Microsoft.Azure.NotificationHubs;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using System.Collections.Generic;

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using System.Collections.Generic;
 using Bit.Core.Models.Business;
 

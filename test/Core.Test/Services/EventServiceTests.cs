@@ -1,4 +1,5 @@
 using System;
+using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;

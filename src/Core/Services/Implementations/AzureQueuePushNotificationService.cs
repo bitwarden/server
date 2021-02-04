@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Newtonsoft.Json;

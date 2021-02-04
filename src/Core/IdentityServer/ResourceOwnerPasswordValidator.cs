@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
 using Bit.Core.Identity;
+using Bit.Core.Context;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer

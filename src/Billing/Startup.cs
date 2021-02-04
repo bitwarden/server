@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Bit.Core;
+using Bit.Core.Context;
 using Stripe;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;

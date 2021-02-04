@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
+using Bit.Core.Context;
 
 namespace Bit.Core.Utilities
 {

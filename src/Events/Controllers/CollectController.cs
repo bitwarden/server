@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;

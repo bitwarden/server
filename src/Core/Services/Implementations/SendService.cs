@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -23,7 +24,7 @@ namespace Bit.Core.Services
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
         private readonly GlobalSettings _globalSettings;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public SendService(
             ISendRepository sendRepository,
@@ -35,7 +36,7 @@ namespace Bit.Core.Services
             IPushNotificationService pushService,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
@@ -188,7 +189,7 @@ namespace Bit.Core.Services
 
         private async Task ValidateUserCanSaveAsync(Guid? userId)
         {
-            if (!userId.HasValue || _currentContext.Organizations.FirstOrDefault() == default)
+            if (!userId.HasValue || _currentContext.Organizations?.FirstOrDefault() == null)
             {
                 return;
             }

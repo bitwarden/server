@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;

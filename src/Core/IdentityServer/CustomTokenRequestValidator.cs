@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
+using Bit.Core.Context;
 using System.Linq;
 using Bit.Core.Identity;
 using Microsoft.Extensions.Logging;
