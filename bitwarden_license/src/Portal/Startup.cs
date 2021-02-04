@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Utilities;
 using Bit.Portal.Utilities;
 using Microsoft.AspNetCore.Builder;
@@ -40,7 +41,7 @@ namespace Bit.Portal
 
             // Context
             services.AddScoped<EnterprisePortalCurrentContext>();
-            services.AddScoped<CurrentContext>((serviceProvider) =>
+            services.AddScoped<ICurrentContext, CurrentContext>((serviceProvider) =>
                 serviceProvider.GetService<EnterprisePortalCurrentContext>());
 
             // Identity

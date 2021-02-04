@@ -6,6 +6,8 @@ namespace Bit.Core.Test.AutoFixture
 {
     public class SutProviderCustomization : ICustomization, ISpecimenBuilder
     {
+        private IFixture _fixture = null;
+
         public object Create(object request, ISpecimenContext context)
         {
             if (context == null)
@@ -21,11 +23,12 @@ namespace Bit.Core.Test.AutoFixture
                 return new NoSpecimen();
             }
 
-            return ((ISutProvider)Activator.CreateInstance(typeRequest)).Create();
+            return ((ISutProvider)Activator.CreateInstance(typeRequest, _fixture)).Create();
         }
 
         public void Customize(IFixture fixture)
         {
+            _fixture = fixture;
             fixture.Customizations.Add(this);
         }
     }

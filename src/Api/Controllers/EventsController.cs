@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
@@ -20,14 +20,14 @@ namespace Bit.Api.Controllers
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IEventRepository _eventRepository;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public EventsController(
             IUserService userService,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
             IEventRepository eventRepository,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _cipherRepository = cipherRepository;

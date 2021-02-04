@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using Bit.Core.Context;
 
 namespace Bit.Core.Test.Services
 {

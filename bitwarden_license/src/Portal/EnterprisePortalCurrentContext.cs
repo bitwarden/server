@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core;
+using Bit.Core.Context;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;

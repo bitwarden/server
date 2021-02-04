@@ -9,6 +9,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
@@ -24,7 +25,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IPolicyRepository _policyRepository;
 
@@ -34,7 +35,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IUserService userService,
             IPaymentService paymentService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository)
         {

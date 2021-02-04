@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 
@@ -20,13 +20,13 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly ICollectionService _collectionService;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public CollectionsController(
             ICollectionRepository collectionRepository,
             ICollectionService collectionService,
             IUserService userService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _collectionRepository = collectionRepository;
             _collectionService = collectionService;

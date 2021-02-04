@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Microsoft.Azure.NotificationHubs;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -206,7 +207,7 @@ namespace Bit.Core.Services
             }
 
             var currentContext = _httpContextAccessor?.HttpContext?.
-                RequestServices.GetService(typeof(CurrentContext)) as CurrentContext;
+                RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
             return currentContext?.DeviceIdentifier;
         }
 
