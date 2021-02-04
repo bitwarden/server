@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Context;
@@ -26,7 +27,7 @@ namespace Bit.Core.Test.Services
             policies.First().Enabled = true;
 
             sutProvider.GetDependency<IPolicyRepository>().GetManyByUserIdAsync(send.UserId.Value).Returns(policies);
-            sutProvider.GetDependency<ICurrentContext>().ManagePolicies(policies.First().Id).Returns(canManagePolicies);
+            sutProvider.GetDependency<ICurrentContext>().ManagePolicies(Arg.Any<Guid>()).Returns(canManagePolicies);
         }
 
         [Theory]
