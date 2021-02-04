@@ -589,9 +589,11 @@
   </data>
   <data name="DisableSend" xml:space="preserve">
     <value>Disable Send</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
   </data>
   <data name="DisableSendDescription" xml:space="preserve">
-    <value>Do not allow users to create or edit Bitwarden Sends. Deleting existing Sends is still allowed.</value>
+    <value>Do not allow users to create or edit a Bitwarden Send. Deleting an existing Send is still allowed.</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
   </data>
   <data name="DisableSendExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>

@@ -189,7 +189,7 @@ namespace Bit.Core.Services
 
         private async Task ValidateUserCanSaveAsync(Guid? userId)
         {
-            if (!userId.HasValue || _currentContext.Organizations?.FirstOrDefault() == null)
+            if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
             {
                 return;
             }
@@ -205,7 +205,7 @@ namespace Bit.Core.Services
             {
                 if (!_currentContext.ManagePolicies(policy.OrganizationId))
                 {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are restricted to only Deleting Sends.");
+                    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
             }
         }
