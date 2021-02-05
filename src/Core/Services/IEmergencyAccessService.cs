@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Response;
@@ -19,7 +20,7 @@ namespace Bit.Core.Services
         Task InitiateAsync(Guid id, User initiatingUser);
         Task ApproveAsync(Guid id, User approvingUser);
         Task RejectAsync(Guid id, User rejectingUser);
-        Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User initiatingUser);
+        Task<(EmergencyAccess, User, ICollection<Policy>)> TakeoverAsync(Guid id, User initiatingUser);
         Task PasswordAsync(Guid id, User user, string newMasterPasswordHash, string key);
         Task SendNotificationsAsync();
         Task HandleTimedOutRequestsAsync();
