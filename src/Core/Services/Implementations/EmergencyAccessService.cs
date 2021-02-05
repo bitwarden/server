@@ -17,6 +17,7 @@ namespace Bit.Core.Services
     public class EmergencyAccessService : IEmergencyAccessService
     {
         private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IMailService _mailService;
@@ -24,18 +25,22 @@ namespace Bit.Core.Services
         private readonly IDataProtector _dataProtector;
         private readonly GlobalSettings _globalSettings;
         private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IOrganizationService _organizationService;
 
         public EmergencyAccessService(
             IEmergencyAccessRepository emergencyAccessRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IMailService mailService,
             IUserService userService,
             IPasswordHasher<User> passwordHasher,
             IDataProtectionProvider dataProtectionProvider,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IOrganizationService organizationService)
         {
             _emergencyAccessRepository = emergencyAccessRepository;
+            _organizationUserRepository = organizationUserRepository;
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _mailService = mailService;
@@ -43,6 +48,7 @@ namespace Bit.Core.Services
             _passwordHasher = passwordHasher;
             _dataProtector = dataProtectionProvider.CreateProtector("EmergencyAccessServiceDataProtector");
             _globalSettings = globalSettings;
+            _organizationService = organizationService;
         }
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -261,6 +267,16 @@ namespace Bit.Core.Services
             // Disable TwoFactor providers since they will otherwise block logins
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
             await _userRepository.ReplaceAsync(grantor);
+
+            // Remove grantor from all organisations unless Owner
+            var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
+            foreach (var o in orgUser)
+            {
+                if (o.Type != OrganizationUserType.Owner)
+                {
+                    await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                }
+            }
         }
 
         public async Task SendNotificationsAsync()
