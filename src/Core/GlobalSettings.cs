@@ -67,6 +67,7 @@ namespace Bit.Core
         {
             private string _connectionString;
             private string _readOnlyConnectionString;
+            private string _jobSchedulerConnectionString;
 
             public string ConnectionString
             {
@@ -84,6 +85,15 @@ namespace Bit.Core
                 set
                 {
                     _readOnlyConnectionString = value.Trim('"');
+                }
+            }
+            
+            public string JobSchedulerConnectionString
+            {
+                get => _jobSchedulerConnectionString;
+                set
+                {
+                    _jobSchedulerConnectionString = value.Trim('"');
                 }
             }
         }

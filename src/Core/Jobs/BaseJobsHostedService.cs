@@ -36,21 +36,27 @@ namespace Bit.Core.Jobs
 
         public virtual async Task StartAsync(CancellationToken cancellationToken)
         {
-            var factory = new StdSchedulerFactory(new NameValueCollection
+            var props = new NameValueCollection
             {
                 {"quartz.serializer.type", "binary"},
+            };
+
+            if (!_globalSettings.SelfHosted)
+            {
                 // Ensure each project has a unique instanceName
-                {"quartz.scheduler.instanceName", GetType().FullName},
-                {"quartz.scheduler.instanceId", "AUTO"},
-                {"quartz.jobStore.type", "Quartz.Impl.AdoJobStore.JobStoreTX"},
-                {"quartz.jobStore.driverDelegateType", "Quartz.Impl.AdoJobStore.SqlServerDelegate"},
-                {"quartz.jobStore.useProperties", "true"},
-                {"quartz.jobStore.dataSource", "default"},
-                {"quartz.jobStore.tablePrefix", "QRTZ_"},
-                {"quartz.jobStore.clustered", "true"},
-                {"quartz.dataSource.default.provider", "SqlServer"},
-                {"quartz.dataSource.default.connectionString", _globalSettings.SqlServer.ConnectionString},
-            });
+                props.Add("quartz.scheduler.instanceName", GetType().FullName);
+                props.Add("quartz.scheduler.instanceId", "AUTO");
+                props.Add("quartz.jobStore.type", "Quartz.Impl.AdoJobStore.JobStoreTX");
+                props.Add("quartz.jobStore.driverDelegateType", "Quartz.Impl.AdoJobStore.SqlServerDelegate");
+                props.Add("quartz.jobStore.useProperties", "true");
+                props.Add("quartz.jobStore.dataSource", "default");
+                props.Add("quartz.jobStore.tablePrefix", "QRTZ_");
+                props.Add("quartz.jobStore.clustered", "true");
+                props.Add("quartz.dataSource.default.provider", "SqlServer");
+                props.Add("quartz.dataSource.default.connectionString", _globalSettings.SqlServer.JobSchedulerConnectionString);
+            }
+
+            var factory = new StdSchedulerFactory(props);
             _scheduler = await factory.GetScheduler(cancellationToken);
             _scheduler.JobFactory = new JobFactory(_serviceProvider);
             _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger),
