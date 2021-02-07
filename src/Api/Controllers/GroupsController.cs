@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
@@ -18,12 +18,12 @@ namespace Bit.Api.Controllers
     {
         private readonly IGroupRepository _groupRepository;
         private readonly IGroupService _groupService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public GroupsController(
             IGroupRepository groupRepository,
             IGroupService groupService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _groupRepository = groupRepository;
             _groupService = groupService;

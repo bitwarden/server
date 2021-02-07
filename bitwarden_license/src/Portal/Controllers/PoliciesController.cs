@@ -136,6 +136,7 @@ namespace Bit.Portal.Controllers
                 case PolicyType.PasswordGenerator:
                 case PolicyType.TwoFactorAuthentication:
                 case PolicyType.PersonalOwnership:
+                case PolicyType.DisableSend:
                     break;
                 
                 case PolicyType.SingleOrg:

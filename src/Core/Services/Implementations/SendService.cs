@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
@@ -14,12 +17,14 @@ namespace Bit.Core.Services
     {
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
         private readonly GlobalSettings _globalSettings;
+        private readonly ICurrentContext _currentContext;
 
         public SendService(
             ISendRepository sendRepository,
@@ -29,20 +34,27 @@ namespace Bit.Core.Services
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository,
+            ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
+            _policyRepository = policyRepository;
             _organizationRepository = organizationRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
             _globalSettings = globalSettings;
+            _currentContext = currentContext;
         }
 
         public async Task SaveSendAsync(Send send)
         {
+            // Make sure user can save Sends
+            await ValidateUserCanSaveAsync(send.UserId);
+
             if (send.Id == default(Guid))
             {
                 await _sendRepository.CreateAsync(send);
@@ -58,7 +70,7 @@ namespace Bit.Core.Services
 
         public async Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength)
         {
-            if (send.Type != Enums.SendType.File)
+            if (send.Type != SendType.File)
             {
                 throw new BadRequestException("Send is not of type \"file\".");
             }
@@ -173,6 +185,29 @@ namespace Bit.Core.Services
         public string HashPassword(string password)
         {
             return _passwordHasher.HashPassword(new User(), password);
+        }
+
+        private async Task ValidateUserCanSaveAsync(Guid? userId)
+        {
+            if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
+            {
+                return;
+            }
+
+            var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
+
+            if (policies == null)
+            {
+                return;
+            }
+
+            foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
+            {
+                if (!_currentContext.ManagePolicies(policy.OrganizationId))
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+                }
+            }
         }
     }
 }

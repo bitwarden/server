@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -17,12 +17,12 @@ namespace Bit.Api.Public.Controllers
     {
         private readonly ICollectionRepository _collectionRepository;
         private readonly ICollectionService _collectionService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public CollectionsController(
             ICollectionRepository collectionRepository,
             ICollectionService collectionService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _collectionRepository = collectionRepository;
             _collectionService = collectionService;

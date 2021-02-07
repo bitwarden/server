@@ -47,6 +47,11 @@ namespace Bit.Portal.Models
                     DescriptionKey = "PersonalOwnershipDescription";
                     break;
 
+                case PolicyType.DisableSend:
+                    NameKey = "DisableSend";
+                    DescriptionKey = "DisableSendDescription";
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }

@@ -9,6 +9,7 @@ using System.Linq;
 using System;
 using IdentityModel;
 using Bit.Core.Utilities;
+using Bit.Core.Context;
 
 namespace Bit.Core.IdentityServer
 {
@@ -17,13 +18,13 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licensingService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public ProfileService(
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licensingService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;

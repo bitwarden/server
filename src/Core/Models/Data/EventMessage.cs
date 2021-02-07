@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Enums;
+using Bit.Core.Context;
 
 namespace Bit.Core.Models.Data
 {
@@ -7,7 +8,7 @@ namespace Bit.Core.Models.Data
     {
         public EventMessage() { }
 
-        public EventMessage(CurrentContext currentContext)
+        public EventMessage(ICurrentContext currentContext)
             : base()
         {
             IpAddress = currentContext.IpAddress;

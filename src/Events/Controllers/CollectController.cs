@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -18,12 +18,12 @@ namespace Bit.Events.Controllers
     [Authorize("Application")]
     public class CollectController : Controller
     {
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly IEventService _eventService;
         private readonly ICipherRepository _cipherRepository;
 
         public CollectController(
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             IEventService eventService,
             ICipherRepository cipherRepository)
         {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Utilities;
 using AspNetCoreRateLimit;
 using System.Globalization;
@@ -49,7 +50,7 @@ namespace Bit.Identity
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Caching
             services.AddMemoryCache();

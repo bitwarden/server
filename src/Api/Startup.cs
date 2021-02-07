@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Identity;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
@@ -54,7 +55,7 @@ namespace Bit.Api
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Caching
             services.AddMemoryCache();
