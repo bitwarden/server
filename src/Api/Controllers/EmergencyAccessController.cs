@@ -136,8 +136,8 @@ namespace Bit.Api.Controllers
         public async Task<EmergencyAccessTakeoverResponseModel> Takeover(string id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var (result, grantor) = await _emergencyAccessService.TakeoverAsync(new Guid(id), user);
-            return new EmergencyAccessTakeoverResponseModel(result, grantor);
+            var (result, grantor, policy) = await _emergencyAccessService.TakeoverAsync(new Guid(id), user);
+            return new EmergencyAccessTakeoverResponseModel(result, grantor, policy);
         }
         
         [HttpPost("{id}/password")]

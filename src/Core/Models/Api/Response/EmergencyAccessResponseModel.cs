@@ -84,7 +84,7 @@ namespace Bit.Core.Models.Api.Response
 
     public class EmergencyAccessTakeoverResponseModel : ResponseModel
     {
-        public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
+        public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, ICollection<Policy> policy, string obj = "emergencyAccessTakeover") : base(obj)
         {
             if (emergencyAccess == null)
             {
@@ -94,11 +94,13 @@ namespace Bit.Core.Models.Api.Response
             KeyEncrypted = emergencyAccess.KeyEncrypted;
             Kdf = grantor.Kdf;
             KdfIterations = grantor.KdfIterations;
+            Policy = policy?.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
         }
 
         public int KdfIterations { get; private set; }
         public KdfType Kdf { get; private set; }
         public string KeyEncrypted { get; private set; }
+        public IEnumerable<PolicyResponseModel> Policy { get; private set; }
     }
 
     public class EmergencyAccessViewResponseModel : ResponseModel

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -17,32 +18,41 @@ namespace Bit.Core.Services
     public class EmergencyAccessService : IEmergencyAccessService
     {
         private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IMailService _mailService;
         private readonly IUserService _userService;
         private readonly IDataProtector _dataProtector;
         private readonly GlobalSettings _globalSettings;
         private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IOrganizationService _organizationService;
 
         public EmergencyAccessService(
             IEmergencyAccessRepository emergencyAccessRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
+            IPolicyRepository policyRepository,
             IMailService mailService,
             IUserService userService,
             IPasswordHasher<User> passwordHasher,
             IDataProtectionProvider dataProtectionProvider,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IOrganizationService organizationService)
         {
             _emergencyAccessRepository = emergencyAccessRepository;
+            _organizationUserRepository = organizationUserRepository;
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
+            _policyRepository = policyRepository;
             _mailService = mailService;
             _userService = userService;
             _passwordHasher = passwordHasher;
             _dataProtector = dataProtectionProvider.CreateProtector("EmergencyAccessServiceDataProtector");
             _globalSettings = globalSettings;
+            _organizationService = organizationService;
         }
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -229,7 +239,7 @@ namespace Bit.Core.Services
             await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
         }
 
-        public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User requestingUser)
+        public async Task<(EmergencyAccess, User, ICollection<Policy>)> TakeoverAsync(Guid id, User requestingUser)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
@@ -240,8 +250,12 @@ namespace Bit.Core.Services
             }
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
-            
-            return (emergencyAccess, grantor);
+
+            var grantorOrganizations = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
+            var isOrganizationOwner = grantorOrganizations.Any<OrganizationUser>(organization => organization.Type == OrganizationUserType.Owner);
+            var policy = isOrganizationOwner ? await _policyRepository.GetManyByUserIdAsync(grantor.Id) : null;
+
+            return (emergencyAccess, grantor, policy);
         }
 
         public async Task PasswordAsync(Guid id, User requestingUser, string newMasterPasswordHash, string key)
@@ -261,6 +275,16 @@ namespace Bit.Core.Services
             // Disable TwoFactor providers since they will otherwise block logins
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
             await _userRepository.ReplaceAsync(grantor);
+
+            // Remove grantor from all organisations unless Owner
+            var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
+            foreach (var o in orgUser)
+            {
+                if (o.Type != OrganizationUserType.Owner)
+                {
+                    await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                }
+            }
         }
 
         public async Task SendNotificationsAsync()
