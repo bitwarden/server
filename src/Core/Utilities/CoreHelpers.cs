@@ -810,5 +810,15 @@ namespace Bit.Core.Utilities
 
             return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
         }
+
+        public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
+        {
+            if (list.Contains(item))
+            {
+                return list;
+            }
+            list.Add(item);
+            return list;
+        }
     }
 }

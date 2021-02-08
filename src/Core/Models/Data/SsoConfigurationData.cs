@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -20,6 +22,10 @@ namespace Bit.Core.Models.Data
         public string MetadataAddress { get; set; }
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; } = OpenIdConnectRedirectBehavior.FormPost;
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
+        public string AdditionalScopes { get; set; }
+        public string AdditionalUserIdClaimTypes { get; set; }
+        public string AdditionalEmailClaimTypes { get; set; }
+        public string AdditionalNameClaimTypes { get; set; }
 
         // SAML2 IDP
         public string IdpEntityId { get; set; }
@@ -66,6 +72,30 @@ namespace Bit.Core.Models.Data
         {
             return BuildSaml2ModulePath(ssoUri, scheme);
         }
+
+        public IEnumerable<string> GetAdditionalScopes() => AdditionalScopes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalUserIdClaimTypes() => AdditionalUserIdClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalEmailClaimTypes() => AdditionalEmailClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalNameClaimTypes() => AdditionalNameClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
 
         private string BuildSsoUrl(string relativePath, string ssoUri)
         {

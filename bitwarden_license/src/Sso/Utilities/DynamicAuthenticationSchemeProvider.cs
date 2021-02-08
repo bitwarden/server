@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -324,17 +325,13 @@ namespace Bit.Core.Business.Sso
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
+            oidcOptions.Scope
+                .AddIfNotExists(OpenIdConnectScopes.OpenId)
+                .AddIfNotExists(OpenIdConnectScopes.Email)
+                .AddIfNotExists(OpenIdConnectScopes.Profile);
+            foreach (var scope in config.GetAdditionalScopes())
             {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.OpenId);
-            }
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Email))
-            {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.Email);
-            }
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Profile))
-            {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
+                oidcOptions.Scope.AddIfNotExists(scope);
             }
 
             oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
