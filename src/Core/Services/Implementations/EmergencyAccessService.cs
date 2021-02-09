@@ -20,7 +20,6 @@ namespace Bit.Core.Services
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
-        private readonly IPolicyRepository _policyRepository;
         private readonly IMailService _mailService;
         private readonly IUserService _userService;
         private readonly IDataProtector _dataProtector;
@@ -33,7 +32,6 @@ namespace Bit.Core.Services
             IOrganizationUserRepository organizationUserRepository,
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
-            IPolicyRepository policyRepository,
             IMailService mailService,
             IUserService userService,
             IPasswordHasher<User> passwordHasher,
@@ -45,7 +43,6 @@ namespace Bit.Core.Services
             _organizationUserRepository = organizationUserRepository;
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
-            _policyRepository = policyRepository;
             _mailService = mailService;
             _userService = userService;
             _passwordHasher = passwordHasher;
@@ -238,7 +235,7 @@ namespace Bit.Core.Services
             await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
         }
 
-        public async Task<(EmergencyAccess, User, ICollection<Policy>)> TakeoverAsync(Guid id, User requestingUser)
+        public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User requestingUser)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
@@ -249,9 +246,8 @@ namespace Bit.Core.Services
             }
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
-            var policy = await _policyRepository.GetManyByUserIdAsync(grantor.Id);
             
-            return (emergencyAccess, grantor, policy);
+            return (emergencyAccess, grantor);
         }
 
         public async Task PasswordAsync(Guid id, User requestingUser, string newMasterPasswordHash, string key)
