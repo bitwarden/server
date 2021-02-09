@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -250,11 +249,8 @@ namespace Bit.Core.Services
             }
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
-
-            var grantorOrganizations = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
-            var isOrganizationOwner = grantorOrganizations.Any<OrganizationUser>(organization => organization.Type == OrganizationUserType.Owner);
-            var policy = isOrganizationOwner ? await _policyRepository.GetManyByUserIdAsync(grantor.Id) : null;
-
+            var policy = await _policyRepository.GetManyByUserIdAsync(grantor.Id);
+            
             return (emergencyAccess, grantor, policy);
         }
 

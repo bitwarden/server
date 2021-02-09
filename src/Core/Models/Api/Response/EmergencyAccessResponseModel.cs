@@ -94,7 +94,7 @@ namespace Bit.Core.Models.Api.Response
             KeyEncrypted = emergencyAccess.KeyEncrypted;
             Kdf = grantor.Kdf;
             KdfIterations = grantor.KdfIterations;
-            Policy = policy?.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
+            Policy = policy.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
         }
 
         public int KdfIterations { get; private set; }
