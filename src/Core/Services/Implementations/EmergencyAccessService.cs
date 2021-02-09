@@ -239,7 +239,7 @@ namespace Bit.Core.Services
             await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
         }
 
-        public async Task<(EmergencyAccess, User, ICollection<Policy>)> TakeoverAsync(Guid id, User requestingUser)
+        public async Task<ICollection<Policy>> GetPoliciesAsync(Guid id, User requestingUser)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
@@ -253,9 +253,24 @@ namespace Bit.Core.Services
 
             var grantorOrganizations = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
             var isOrganizationOwner = grantorOrganizations.Any<OrganizationUser>(organization => organization.Type == OrganizationUserType.Owner);
-            var policy = isOrganizationOwner ? await _policyRepository.GetManyByUserIdAsync(grantor.Id) : null;
+            var policies = isOrganizationOwner ? await _policyRepository.GetManyByUserIdAsync(grantor.Id) : null;
 
-            return (emergencyAccess, grantor, policy);
+            return policies;
+        }
+
+        public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User requestingUser)
+        {
+            var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+
+            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
+                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            {
+                throw new BadRequestException("Emergency Access not valid.");
+            }
+
+            var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
+            
+            return (emergencyAccess, grantor);
         }
 
         public async Task PasswordAsync(Guid id, User requestingUser, string newMasterPasswordHash, string key)

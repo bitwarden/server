@@ -20,7 +20,8 @@ namespace Bit.Core.Services
         Task InitiateAsync(Guid id, User initiatingUser);
         Task ApproveAsync(Guid id, User approvingUser);
         Task RejectAsync(Guid id, User rejectingUser);
-        Task<(EmergencyAccess, User, ICollection<Policy>)> TakeoverAsync(Guid id, User initiatingUser);
+        Task<ICollection<Policy>> GetPoliciesAsync(Guid id, User requestingUser);
+        Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User initiatingUser);
         Task PasswordAsync(Guid id, User user, string newMasterPasswordHash, string key);
         Task SendNotificationsAsync();
         Task HandleTimedOutRequestsAsync();
