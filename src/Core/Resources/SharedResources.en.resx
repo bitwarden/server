@@ -616,4 +616,8 @@
   <data name="AdditionalNameClaimTypes" xml:space="preserve">
     <value>Additional/Custom Name Claim Types (comma delimited)</value>
   </data>
+  <data name="AcrValues" xml:space="preserve">
+    <value>Requested Authentication Context Class Reference values (acr_values)</value>
+    <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
+  </data>
 </root>

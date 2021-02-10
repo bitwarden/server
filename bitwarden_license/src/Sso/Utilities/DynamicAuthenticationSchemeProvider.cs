@@ -336,6 +336,19 @@ namespace Bit.Core.Business.Sso
 
             oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
 
+            // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
+            if (!string.IsNullOrWhiteSpace(config.AcrValues))
+            {
+                oidcOptions.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = ctx =>
+                    {
+                        ctx.ProtocolMessage.AcrValues = config.AcrValues;
+                        return Task.CompletedTask;
+                    }
+                };
+            }
+
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
         }
