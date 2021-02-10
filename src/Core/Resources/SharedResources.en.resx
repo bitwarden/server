@@ -604,4 +604,20 @@
   <data name="PersonalOwnershipCheckboxDesc" xml:space="preserve">
     <value>Disable personal ownership for organization users</value>
   </data>
+  <data name="AdditionalScopes" xml:space="preserve">
+    <value>Additional/Custom Scopes (comma delimited)</value>
+  </data>
+  <data name="AdditionalUserIdClaimTypes" xml:space="preserve">
+    <value>Additional/Custom User ID Claim Types (comma delimited)</value>
+  </data>
+  <data name="AdditionalEmailClaimTypes" xml:space="preserve">
+    <value>Additional/Custom Email Claim Types (comma delimited)</value>
+  </data>
+  <data name="AdditionalNameClaimTypes" xml:space="preserve">
+    <value>Additional/Custom Name Claim Types (comma delimited)</value>
+  </data>
+  <data name="AcrValues" xml:space="preserve">
+    <value>Requested Authentication Context Class Reference values (acr_values)</value>
+    <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
+  </data>
 </root>

@@ -49,6 +49,11 @@ namespace Bit.Portal.Models
             SpWantAssertionsSigned = configurationData.SpWantAssertionsSigned;
             SpValidateCertificates = configurationData.SpValidateCertificates;
             SpMinIncomingSigningAlgorithm = configurationData.SpMinIncomingSigningAlgorithm ?? SamlSigningAlgorithms.Sha256;
+            AdditionalScopes = configurationData.AdditionalScopes;
+            AdditionalUserIdClaimTypes = configurationData.AdditionalUserIdClaimTypes;
+            AdditionalEmailClaimTypes = configurationData.AdditionalEmailClaimTypes;
+            AdditionalNameClaimTypes = configurationData.AdditionalNameClaimTypes;
+            AcrValues = configurationData.AcrValues;
         }
 
         [Required]
@@ -72,6 +77,16 @@ namespace Bit.Portal.Models
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; }
         [Display(Name = "GetClaimsFromUserInfoEndpoint")]
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
+        [Display(Name = "AdditionalScopes")]
+        public string AdditionalScopes { get; set; }
+        [Display(Name = "AdditionalUserIdClaimTypes")]
+        public string AdditionalUserIdClaimTypes { get; set; }
+        [Display(Name = "AdditionalEmailClaimTypes")]
+        public string AdditionalEmailClaimTypes { get; set; }
+        [Display(Name = "AdditionalNameClaimTypes")]
+        public string AdditionalNameClaimTypes { get; set; }
+        [Display(Name = "AcrValues")]
+        public string AcrValues { get; set; }
 
         // SAML2 SP
         [Display(Name = "SpEntityId")]
@@ -218,6 +233,11 @@ namespace Bit.Portal.Models
                 SpWantAssertionsSigned = SpWantAssertionsSigned,
                 SpValidateCertificates = SpValidateCertificates,
                 SpMinIncomingSigningAlgorithm = SpMinIncomingSigningAlgorithm,
+                AdditionalScopes = AdditionalScopes,
+                AdditionalUserIdClaimTypes = AdditionalUserIdClaimTypes,
+                AdditionalEmailClaimTypes = AdditionalEmailClaimTypes,
+                AdditionalNameClaimTypes = AdditionalNameClaimTypes,
+                AcrValues = AcrValues,
             };
         }
 

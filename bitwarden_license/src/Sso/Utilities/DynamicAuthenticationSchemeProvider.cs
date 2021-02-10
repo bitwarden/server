@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -324,20 +325,29 @@ namespace Bit.Core.Business.Sso
                 AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.OpenId))
+            oidcOptions.Scope
+                .AddIfNotExists(OpenIdConnectScopes.OpenId)
+                .AddIfNotExists(OpenIdConnectScopes.Email)
+                .AddIfNotExists(OpenIdConnectScopes.Profile);
+            foreach (var scope in config.GetAdditionalScopes())
             {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.OpenId);
-            }
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Email))
-            {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.Email);
-            }
-            if (!oidcOptions.Scope.Contains(OpenIdConnectScopes.Profile))
-            {
-                oidcOptions.Scope.Add(OpenIdConnectScopes.Profile);
+                oidcOptions.Scope.AddIfNotExists(scope);
             }
 
             oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
+
+            // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
+            if (!string.IsNullOrWhiteSpace(config.AcrValues))
+            {
+                oidcOptions.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = ctx =>
+                    {
+                        ctx.ProtocolMessage.AcrValues = config.AcrValues;
+                        return Task.CompletedTask;
+                    }
+                };
+            }
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
