@@ -41,7 +41,7 @@ namespace Bit.Core.Jobs
                 {"quartz.serializer.type", "binary"},
             };
 
-            if (!_globalSettings.SelfHosted && !string.IsNullOrEmpty(_globalSettings.SqlServer.JobSchedulerConnectionString))
+            if (!string.IsNullOrEmpty(_globalSettings.SqlServer.JobSchedulerConnectionString))
             {
                 // Ensure each project has a unique instanceName
                 props.Add("quartz.scheduler.instanceName", GetType().FullName);
