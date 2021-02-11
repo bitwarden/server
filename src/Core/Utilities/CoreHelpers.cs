@@ -503,9 +503,10 @@ namespace Bit.Core.Utilities
 
         public static string SanitizeForEmail(string value)
         {
-            return value.Replace("@", "[at]")
+            var cleanedValue = value.Replace("@", "[at]")
                 .Replace("http://", string.Empty)
                 .Replace("https://", string.Empty);
+            return HttpUtility.HtmlEncode(cleanedValue);
         }
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -558,7 +559,7 @@ namespace Bit.Core.Utilities
         {
             return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId, globalSettings);
         }
-        
+
         public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
             Guid id, GlobalSettings globalSettings)
         {
