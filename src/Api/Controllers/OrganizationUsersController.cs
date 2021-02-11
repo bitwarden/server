@@ -59,7 +59,9 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageAssignedCollections(orgGuidId) && !_currentContext.ManageGroups(orgGuidId))
+            if (!_currentContext.ManageAssignedCollections(orgGuidId) &&
+                !_currentContext.ManageGroups(orgGuidId) &&
+                !_currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -75,7 +77,8 @@ namespace Bit.Api.Controllers
         public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-            if (organizationUser == null || !_currentContext.ManageGroups(organizationUser.OrganizationId))
+            if (organizationUser == null || (!_currentContext.ManageGroups(organizationUser.OrganizationId) &&
+                                             !_currentContext.ManageUsers(organizationUser.OrganizationId)))
             {
                 throw new NotFoundException();
             }
