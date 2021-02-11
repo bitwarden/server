@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -282,7 +284,7 @@ namespace Bit.Admin.Controllers
             {
                 count = 1;
             }
-            
+
             var skip = (page - 1) * count;
             var rates = await _taxRateRepository.SearchAsync(skip, count);
             return View(new TaxRatesModel
@@ -293,13 +295,13 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> TaxRateAddEdit(string stripeTaxRateId = null) 
+        public async Task<IActionResult> TaxRateAddEdit(string stripeTaxRateId = null)
         {
             if (string.IsNullOrWhiteSpace(stripeTaxRateId))
             {
                 return View(new TaxRateAddEditModel());
             }
-            
+
             var rate = await _taxRateRepository.GetByIdAsync(stripeTaxRateId);
             var model = new TaxRateAddEditModel()
             {
@@ -311,6 +313,71 @@ namespace Bit.Admin.Controllers
             };
 
             return View(model);
+        }
+
+        public async Task<IActionResult> TaxRateUpload(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            // Build rates and validate them first before updating DB & Stripe
+            var taxRateUpdates = new List<TaxRate>();
+            var currentTaxRates = await _taxRateRepository.GetAllActiveAsync();
+            using var reader = new StreamReader(file.OpenReadStream());
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+                var taxParts = line.Split(',');
+                if (taxParts.Length < 2)
+                {
+                    throw new Exception($"This line is not in the format of <postal code>,<rate>,<state code>,<country code>: {line}");
+                }
+                var postalCode = taxParts[0].Trim();
+                if (string.IsNullOrWhiteSpace(postalCode))
+                {
+                    throw new Exception($"'{line}' is not valid, the first element must contain a postal code.");
+                }
+                if (!decimal.TryParse(taxParts[1], out var rate) || rate <= 0M || rate > 100)
+                {
+                    throw new Exception($"{taxParts[1]} is not a valid rate/decimal for {postalCode}");
+                }
+                var state = taxParts.Length > 2 ? taxParts[2] : null;
+                var country = (taxParts.Length > 3 ? taxParts[3] : null);
+                if (string.IsNullOrWhiteSpace(country))
+                {
+                    country = "US";
+                }
+                var taxRate = currentTaxRates.FirstOrDefault(r => r.Country == country && r.PostalCode == postalCode) ??
+                    new TaxRate
+                    {
+                        Country = country,
+                        PostalCode = postalCode,
+                        Active = true,
+                    };
+                taxRate.Rate = rate;
+                taxRate.State = state ?? taxRate.State;
+                taxRateUpdates.Add(taxRate);
+            }
+
+            foreach (var taxRate in taxRateUpdates)
+            {
+                if (!string.IsNullOrWhiteSpace(taxRate.Id))
+                {
+                    await _paymentService.UpdateTaxRateAsync(taxRate);
+                }
+                else
+                {
+                    await _paymentService.CreateTaxRateAsync(taxRate);
+                }
+            }
+
+            return RedirectToAction("TaxRate");
         }
 
         [HttpPost]

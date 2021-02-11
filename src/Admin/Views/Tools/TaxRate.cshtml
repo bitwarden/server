@@ -7,6 +7,39 @@
 
 <h1>Manage Tax Rates</h1>
 
+<h2>Bulk Upload Tax Rates</h2>
+<section>
+    <p>
+        Upload a CSV file containing multiple tax rates in bulk in order to update existing rates by country
+        and postal code OR to create new rates where a currently active rate is not found already.
+    </p>
+    <p>CSV Upload Format</p>
+    <ul>
+        <li><b>Postal Code</b> (required) - The postal code for the tax rate.</li>
+        <li><b>Rate</b> (required) - The effective tax rate for this postal code.</li>
+        <li><b>State</b> (<i>optional</i>) - The ISO-2 character code for the state. Optional but recommended.</li>
+        <li><b>Country</b> (<i>optional</i>) - The ISO-2 character country code, defaults to "US" if not provided.</li>
+    </ul>
+    <p>Example (white-space is ignored):</p>
+    <div class="card mb-2">
+        <div class="card-body">
+            <pre class="mb-0">87654,8.25,FL,US
+22334,8.5,CA
+11223,7</pre>
+        </div>
+    </div>
+    <form method="post" enctype="multipart/form-data" asp-action="TaxRateUpload">
+        <div class="form-group">
+            <input type="file" name="file" />
+        </div>
+        <div class="form-group">
+            <input type="submit" value="Upload" class="btn btn-primary mb-2" />
+        </div>
+    </form>
+</section>
+
+<hr/>
+<h2>View &amp; Manage Tax Rates</h2>
 <a class="btn btn-primary mb-2" asp-controller="Tools" asp-action="TaxRateAddEdit">Add a Rate</a>
 <div class="table-responsive">
     <table class="table table-striped table-hover">
