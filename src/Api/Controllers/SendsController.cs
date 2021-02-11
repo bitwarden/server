@@ -122,6 +122,7 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}")]
         public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
         {
+            model.ValidateEdit();
             var userId = _userService.GetProperUserId(User).Value;
             var send = await _sendRepository.GetByIdAsync(new Guid(id));
             if (send == null || send.UserId != userId)

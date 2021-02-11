@@ -81,17 +81,35 @@ namespace Bit.Core.Models.Api
 
         public void ValidateCreation()
         {
+            var now = DateTime.UtcNow;
             // Add 1 minute for a sane buffer and client clock float
-            var nowPlus1Minute = DateTime.UtcNow.AddMinutes(1);
+            var nowPlus1Minute = now.AddMinutes(1);
             if (ExpirationDate.HasValue && ExpirationDate.Value <= nowPlus1Minute)
             {
-                throw new BadRequestException("You cannot create a send that is already expired. " +
+                throw new BadRequestException("You cannot create a Send that is already expired. " +
                     "Adjust the expiration date and try again.");
             }
-            if (DeletionDate.HasValue && DeletionDate.Value <= nowPlus1Minute)
+            ValidateEdit();
+        }
+
+        public void ValidateEdit()
+        {
+            var now = DateTime.UtcNow;
+            // Add 1 minute for a sane buffer and client clock float
+            var nowPlus1Minute = now.AddMinutes(1);
+            if (DeletionDate.HasValue)
             {
-                throw new BadRequestException("You cannot create a send that is already deleted. " +
-                    "Adjust the deletion date and try again.");
+                if (DeletionDate.Value <= nowPlus1Minute)
+                {
+                    throw new BadRequestException("You cannot have a Send with a deletion date in the past. " +
+                        "Adjust the deletion date and try again.");
+                }
+                if (DeletionDate.Value > now.AddDays(31))
+                {
+                    throw new BadRequestException("You cannot have a Send with a deletion date that far " +
+                        "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                        "and try again.");
+                }
             }
         }
 
