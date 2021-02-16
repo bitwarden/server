@@ -1094,17 +1094,21 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
-            if (string.IsNullOrWhiteSpace(orgUser.Email) ||
-                !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw new BadRequestException("User email does not match invite.");
-            }
-
             var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
                 orgUser.OrganizationId, user.Email, true);
             if (existingOrgUserCount > 0)
             {
+                if (orgUser.Status == OrganizationUserStatusType.Accepted)
+                {
+                    throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
+                }
                 throw new BadRequestException("You are already part of this organization.");
+            }
+
+            if (string.IsNullOrWhiteSpace(orgUser.Email) ||
+                !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new BadRequestException("User email does not match invite.");
             }
 
             return await AcceptUserAsync(orgUser, user, userService);
