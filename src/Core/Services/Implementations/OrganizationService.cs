@@ -1100,7 +1100,7 @@ namespace Bit.Core.Services
             {
                 if (orgUser.Status == OrganizationUserStatusType.Accepted)
                 {
-                    throw new BadRequestException("Invitation already accepted. You will receive an email when your Organization membership is confirmed.");
+                    throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
                 }
                 throw new BadRequestException("You are already part of this organization.");
             }
