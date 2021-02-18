@@ -216,17 +216,18 @@ namespace Bit.Core.Services
             }
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, attachmentId);
+            var data = new CipherAttachment.MetaData
+            {
+                AttachmentId = attachmentId,
+                FileName = fileName,
+                Key = key,
+                Size = stream.Length
+            };
+
+            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, data);
 
             try
             {
-                var data = new CipherAttachment.MetaData
-                {
-                    FileName = fileName,
-                    Key = key,
-                    Size = stream.Length
-                };
-
                 var attachment = new CipherAttachment
                 {
                     Id = cipher.Id,
@@ -243,7 +244,7 @@ namespace Bit.Core.Services
             catch
             {
                 // Clean up since this is not transactional
-                await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentId);
+                await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
                 throw;
             }
 
@@ -283,8 +284,26 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Not enough storage available for this organization.");
                 }
 
+                var attachments = cipher.GetAttachments();
+                if (!attachments.ContainsKey(attachmentId))
+                {
+                    throw new BadRequestException($"Cipher does not own specified attachment");
+                }
+
                 await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId,
-                    attachmentId);
+                    attachments[attachmentId]);
+
+                // Previous call may alter metadata
+                var updatedAttachment = new CipherAttachment
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    AttachmentId = attachmentId,
+                    AttachmentData = JsonConvert.SerializeObject(attachments[attachmentId])
+                };
+
+                await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
             }
             catch
             {
@@ -350,9 +369,10 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
+            var data = cipher.GetAttachments()[attachmentId];
             await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
             cipher.DeleteAttachment(attachmentId);
-            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentId);
+            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
 
             // push
@@ -421,6 +441,7 @@ namespace Bit.Core.Services
             var hasOldAttachments = attachments?.Any(a => a.Key == null) ?? false;
             var updatedCipher = false;
             var migratedAttachments = false;
+            var originalAttachments = CoreHelpers.CloneObject(attachments);
 
             try
             {
@@ -471,7 +492,7 @@ namespace Bit.Core.Services
                     foreach (var attachment in attachments.Where(a => a.Key == null))
                     {
                         await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId,
-                            attachment.Key);
+                            attachment.Value);
                         migratedAttachments = true;
                     }
 
@@ -504,7 +525,7 @@ namespace Bit.Core.Services
                 foreach (var attachment in attachments.Where(a => a.Key == null))
                 {
                     await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId,
-                        attachment.Key);
+                        attachment.Value, originalAttachments[attachment.Key].ContainerName);
                 }
 
                 await _attachmentStorageService.CleanupAsync(cipher.Id);
