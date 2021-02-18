@@ -11,6 +11,14 @@ namespace Bit.Icons.Controllers
     [Route("")]
     public class IconsController : Controller
     {
+        // Basic fa-globe icon
+        private static readonly byte[] _notFoundImage = Convert.FromBase64String("iVBORw0KGgoAAAANSUhE" +
+            "UgAAABEAAAARCAQAAACRZI9xAAABH0lEQVQoz2WQv0sDQRCF351C4g9QkXCgIkJAEREExUpJbyFoK6nSRLT/GgtLOxE" +
+            "sgoX/QLAL2Alin0YkICJicQhHCrEIEsJYZLnsxVfNzH779s1KToTsUqNFzAOnRBoWyyS0+aSO0cEwrhnxgUOMMjOMk2" +
+            "eVOwzDeCE/cDDWXD2B0aFAnR7GPUE/Q8KJ5zjHDYHEFr8YB5IoYbymlpIIJaap0sVICMQthpEbil9xeYxIxBjGQgY4S" +
+            "wFjW27FD6bccUCBbw8piWdXNliRuKRLzQOMdXGeNj+E7FDOAMakKHptk30iHr3JU//1RuZWiysWWXKRi30kT5KBviSJ" +
+            "MWKOB0vO8uYhVUJKtCH7VaNcpEhMj3c29F/k2OSICnvM+/M/XGfnuYOrfEAAAAAASUVORK5CYII=");
+
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
         private readonly IIconFetchingService _iconFetchingService;
@@ -88,7 +96,7 @@ namespace Bit.Icons.Controllers
 
             if (icon == null)
             {
-                return new NotFoundResult();
+                return new FileContentResult(_notFoundImage, "image/png");
             }
 
             return new FileContentResult(icon.Image, icon.Format);
