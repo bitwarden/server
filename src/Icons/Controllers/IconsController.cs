@@ -46,6 +46,17 @@ namespace Bit.Icons.Controllers
             return DateTime.UtcNow;
         }
 
+        [HttpGet("~/config")]
+        public IActionResult GetConfig()
+        {
+            return new JsonResult(new
+            {
+                CacheEnabled = _iconsSettings.CacheEnabled,
+                CacheHours = _iconsSettings.CacheHours,
+                CacheSizeLimit = _iconsSettings.CacheSizeLimit
+            });
+        }
+
         [HttpGet("{hostname}/icon.png")]
         public async Task<IActionResult> Get(string hostname)
         {
