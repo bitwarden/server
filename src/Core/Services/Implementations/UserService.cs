@@ -399,7 +399,6 @@ namespace Bit.Core.Services
             provider.MetaData["pending"] = options.ToJson();
 
             providers[TwoFactorProviderType.WebAuthn] = provider;
-            user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
 
             return options;
@@ -437,7 +436,6 @@ namespace Bit.Core.Services
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
-            user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
 
             return true;
