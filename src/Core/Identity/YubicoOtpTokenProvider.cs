@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using YubicoDotNetClient;
 using System.Linq;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 

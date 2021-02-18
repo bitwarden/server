@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System.IO;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

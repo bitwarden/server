@@ -3,9 +3,10 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using System.IO;
 using System;
-using Bit.Core.Models.Table;
-using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {

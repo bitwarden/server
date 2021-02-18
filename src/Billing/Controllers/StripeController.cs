@@ -1,9 +1,9 @@
-﻿using Bit.Core;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;

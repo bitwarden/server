@@ -7,6 +7,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using Bit.Core.Enums;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

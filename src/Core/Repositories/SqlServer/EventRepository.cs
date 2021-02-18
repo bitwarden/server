@@ -3,6 +3,7 @@ using Bit.Core.Models.Table;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Data;

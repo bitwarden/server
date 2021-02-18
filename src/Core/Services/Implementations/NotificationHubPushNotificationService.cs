@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

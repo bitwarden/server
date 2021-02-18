@@ -7,6 +7,7 @@ using System.Data;
 using Dapper;
 using System.Linq;
 using Bit.Core.Enums;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

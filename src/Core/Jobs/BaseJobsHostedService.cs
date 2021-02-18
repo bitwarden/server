@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl;
 using Quartz.Impl.Matchers;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Jobs
 {

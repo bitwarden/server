@@ -7,6 +7,7 @@ using Bit.Core.Models;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Identity
 {

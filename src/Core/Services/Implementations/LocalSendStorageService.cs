@@ -2,6 +2,7 @@
 using System.IO;
 using System;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

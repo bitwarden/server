@@ -10,6 +10,7 @@ using Core.Models.Data;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

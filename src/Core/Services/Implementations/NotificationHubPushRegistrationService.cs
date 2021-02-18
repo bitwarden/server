@@ -6,6 +6,7 @@ using System.Linq;
 using System;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

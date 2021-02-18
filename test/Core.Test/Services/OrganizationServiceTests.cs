@@ -6,6 +6,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;

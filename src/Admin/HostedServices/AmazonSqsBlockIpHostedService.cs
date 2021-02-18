@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using Bit.Core;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

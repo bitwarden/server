@@ -5,11 +5,12 @@ using Stripe;
 using System.Collections.Generic;
 using Bit.Core.Exceptions;
 using System.Linq;
+using Bit.Billing.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
-using Bit.Billing.Models;
 using StripeTaxRate = Stripe.TaxRate;
 using TaxRate = Bit.Core.Models.Table.TaxRate;
 

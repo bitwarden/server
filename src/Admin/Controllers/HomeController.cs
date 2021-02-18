@@ -3,7 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core;
+using Bit.Core.Settings;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;

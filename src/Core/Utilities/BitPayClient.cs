@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Utilities
 {

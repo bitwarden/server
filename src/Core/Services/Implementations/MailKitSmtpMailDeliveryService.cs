@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using MimeKit;

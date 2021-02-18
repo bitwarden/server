@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;

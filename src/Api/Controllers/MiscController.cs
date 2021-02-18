@@ -4,7 +4,7 @@ using Bit.Core.Models.Api;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core;
+using Bit.Core.Settings;
 using Stripe;
 using System.Linq;
 using System.Collections.Generic;

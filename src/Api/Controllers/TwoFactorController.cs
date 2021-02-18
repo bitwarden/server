@@ -9,11 +9,11 @@ using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Utilities.Duo;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Controllers
 {

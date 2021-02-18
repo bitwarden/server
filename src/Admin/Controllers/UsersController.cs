@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using Bit.Admin.Models;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
-using Bit.Core;
 using Bit.Core.Utilities;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Admin.Controllers
 {

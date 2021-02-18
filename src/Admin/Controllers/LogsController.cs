@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using Bit.Core;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

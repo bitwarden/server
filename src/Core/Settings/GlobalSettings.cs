@@ -1,9 +1,9 @@
 ﻿using System;
 using Bit.Core.Enums;
 
-namespace Bit.Core
+namespace Bit.Core.Settings
 {
-    public class GlobalSettings
+    public class GlobalSettings : IGlobalSettings
     {
         public bool SelfHosted { get; set; }
         public virtual string KnownProxies { get; set; }
@@ -29,7 +29,7 @@ namespace Bit.Core
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
-        public virtual FileStorageSettings Attachment { get; set; } = new FileStorageSettings();
+        public virtual IFileStorageSettings Attachment { get; set; } = new FileStorageSettings();
         public virtual FileStorageSettings Send { get; set; } = new FileStorageSettings();
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
         public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
@@ -112,7 +112,7 @@ namespace Bit.Core
             }
         }
 
-        public class FileStorageSettings
+        public class FileStorageSettings : IFileStorageSettings
         {
             private string _connectionString;
 

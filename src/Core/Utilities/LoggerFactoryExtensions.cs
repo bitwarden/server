@@ -9,6 +9,7 @@ using Serilog.Sinks.Syslog;
 using System;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Utilities
 {

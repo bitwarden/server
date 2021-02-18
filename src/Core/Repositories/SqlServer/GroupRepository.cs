@@ -9,6 +9,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

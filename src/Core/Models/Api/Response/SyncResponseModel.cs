@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using Core.Models.Data;
 
 namespace Bit.Core.Models.Api

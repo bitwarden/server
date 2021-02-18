@@ -17,6 +17,7 @@ using U2F.Core.Utils;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.DataProtection;

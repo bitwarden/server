@@ -7,6 +7,7 @@ using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Identity;
+using Bit.Core.Settings;
 using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Stripe;

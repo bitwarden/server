@@ -3,6 +3,7 @@ using System.IO;
 using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {
@@ -13,7 +14,7 @@ namespace Bit.Core.Services
         private readonly string _baseTempDirPath;
 
         public LocalAttachmentStorageService(
-            GlobalSettings globalSettings)
+            IGlobalSettings globalSettings)
         {
             _baseDirPath = globalSettings.Attachment.BaseDirectory;
             _baseTempDirPath = $"{_baseDirPath}/temp";

@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Data;

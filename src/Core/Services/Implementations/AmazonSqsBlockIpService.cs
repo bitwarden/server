@@ -2,6 +2,7 @@
 using System;
 using Amazon.SQS;
 using Amazon;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

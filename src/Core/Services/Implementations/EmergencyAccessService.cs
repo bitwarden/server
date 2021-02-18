@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
