@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using System.IO;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Bit.Core.Services
 {
@@ -38,6 +39,7 @@ namespace Bit.Core.Services
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
+        private readonly ITaxRateRepository _taxRateRepository;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -59,7 +61,8 @@ namespace Bit.Core.Services
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IReferenceEventService referenceEventService,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ITaxRateRepository taxRateRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -81,6 +84,7 @@ namespace Bit.Core.Services
             _ssoUserRepository = ssoUserRepository;
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
+            _taxRateRepository = taxRateRepository;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -240,7 +244,7 @@ namespace Bit.Core.Services
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
-                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon);
+                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
                 success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
             else
@@ -253,8 +257,6 @@ namespace Bit.Core.Services
             organization.PlanType = newPlan.Type;
             organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
             organization.MaxCollections = newPlan.MaxCollections;
-            organization.MaxStorageGb = !newPlan.BaseStorageGb.HasValue ?
-                (short?)null : (short)(newPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
             organization.UseGroups = newPlan.HasGroups;
             organization.UseDirectory = newPlan.HasDirectory;
             organization.UseEvents = newPlan.HasEvents;
@@ -263,14 +265,15 @@ namespace Bit.Core.Services
             organization.UseApi = newPlan.HasApi;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsePolicies = newPlan.HasPolicies;
-            organization.MaxStorageGb = !newPlan.MaxAdditionalStorage.HasValue ?
-                (short?)null : (short)(newPlan.MaxAdditionalStorage.Value + upgrade.AdditionalStorageGb);
+            organization.MaxStorageGb = !newPlan.BaseStorageGb.HasValue ?
+                (short?)null : (short)(newPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
             organization.UseGroups = newPlan.HasGroups;
             organization.UseDirectory = newPlan.HasDirectory;
             organization.UseEvents = newPlan.HasEvents;
             organization.UseTotp = newPlan.HasTotp;
             organization.Use2fa = newPlan.Has2fa;
             organization.UseApi = newPlan.HasApi;
+            organization.UseSso = newPlan.HasSso;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;
@@ -393,7 +396,7 @@ namespace Bit.Core.Services
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
 
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
+            var subUpdateOptions = new SubscriptionUpdateOptions
             {
                 Items = new List<SubscriptionItemOptions>
                 {
@@ -409,7 +412,30 @@ namespace Bit.Core.Services
                 DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,
-            });
+            };
+
+            var customer = await new CustomerService().GetAsync(sub.CustomerId);
+            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
+                    && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
+            {
+                var taxRates = await _taxRateRepository.GetByLocationAsync(
+                    new Bit.Core.Models.Table.TaxRate()
+                    {
+                        Country = customer.Address.Country,
+                        PostalCode = customer.Address.PostalCode
+                    }
+                );
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+                {
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1) 
+                    { 
+                        taxRate.Id 
+                    };
+                }
+            }
+
+            var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
 
             string paymentIntentClientSecret = null;
             if (additionalSeats > 0)
@@ -951,45 +977,25 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
-        {
-            var results = await InviteUserAsync(organizationId, invitingUserId, new List<string> { email },
-                type, accessAll, externalId, collections);
-            var result = results.FirstOrDefault();
-            if (result == null)
-            {
-                throw new BadRequestException("This user has already been invited.");
-            }
-            return result;
-        }
-
         public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<string> emails, OrganizationUserType type, bool accessAll, string externalId,
-            IEnumerable<SelectionReadOnly> collections)
+            string externalId, OrganizationUserInvite invite)
         {
             var organization = await GetOrgById(organizationId);
-            if (organization == null)
+            if (organization == null || invite?.Emails == null)
             {
                 throw new NotFoundException();
             }
 
-            if (type == OrganizationUserType.Owner && invitingUserId.HasValue)
+            if (invitingUserId.HasValue && invite.Type.HasValue)
             {
-                var invitingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(invitingUserId.Value);
-                var anyOwners = invitingUserOrgs.Any(
-                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
-                if (!anyOwners)
-                {
-                    throw new BadRequestException("Only owners can invite new owners.");
-                }
+                await ValidateOrganizationUserUpdatePermissions(invitingUserId.Value, organizationId, invite.Type.Value, null);
             }
 
             if (organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
-                if (availableSeats < emails.Count())
+                if (availableSeats < invite.Emails.Count())
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
@@ -998,7 +1004,7 @@ namespace Bit.Core.Services
 
             var orgUsers = new List<OrganizationUser>();
             var orgUserInvitedCount = 0;
-            foreach (var email in emails)
+            foreach (var email in invite.Emails)
             {
                 // Make sure user is not already invited
                 var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
@@ -1014,17 +1020,25 @@ namespace Bit.Core.Services
                     UserId = null,
                     Email = email.ToLowerInvariant(),
                     Key = null,
-                    Type = type,
+                    Type = invite.Type.Value,
                     Status = OrganizationUserStatusType.Invited,
-                    AccessAll = accessAll,
+                    AccessAll = invite.AccessAll,
                     ExternalId = externalId,
                     CreationDate = DateTime.UtcNow,
-                    RevisionDate = DateTime.UtcNow
+                    RevisionDate = DateTime.UtcNow,
                 };
 
-                if (!orgUser.AccessAll && collections.Any())
+                if (invite.Permissions != null)
                 {
-                    await _organizationUserRepository.CreateAsync(orgUser, collections);
+                    orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    });
+                }
+
+                if (!orgUser.AccessAll && invite.Collections.Any())
+                {
+                    await _organizationUserRepository.CreateAsync(orgUser, invite.Collections);
                 }
                 else
                 {
@@ -1075,15 +1089,55 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User invalid.");
             }
 
-            if (orgUser.Status != OrganizationUserStatusType.Invited)
+            if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
             {
-                throw new BadRequestException("Already accepted.");
+                throw new BadRequestException("Invalid token.");
+            }
+
+            var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
+                orgUser.OrganizationId, user.Email, true);
+            if (existingOrgUserCount > 0)
+            {
+                if (orgUser.Status == OrganizationUserStatusType.Accepted)
+                {
+                    throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
+                }
+                throw new BadRequestException("You are already part of this organization.");
             }
 
             if (string.IsNullOrWhiteSpace(orgUser.Email) ||
                 !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadRequestException("User email does not match invite.");
+            }
+
+            return await AcceptUserAsync(orgUser, user, userService);
+        }
+
+        public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
+        {
+            var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+            if (org == null)
+            {
+                throw new BadRequestException("Organization invalid.");
+            }
+
+            var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
+            if (orgUser == null)
+            {
+                throw new BadRequestException("User not found within organization.");
+            }
+
+            return await AcceptUserAsync(orgUser, user, userService);
+        }
+
+        private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user, 
+            IUserService userService)
+        {
+            if (orgUser.Status != OrganizationUserStatusType.Invited)
+            {
+                throw new BadRequestException("Already accepted.");
             }
 
             if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
@@ -1100,22 +1154,34 @@ namespace Bit.Core.Services
                 }
             }
 
-            var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-                orgUser.OrganizationId, user.Email, true);
-            if (existingOrgUserCount > 0)
+            ICollection<Policy> orgPolicies = null;
+            ICollection<Policy> userPolicies = null;
+            async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
             {
-                throw new BadRequestException("You are already part of this organization.");
+                var policies = useUserPolicies ? 
+                    userPolicies = userPolicies ?? await _policyRepository.GetManyByUserIdAsync(user.Id) : 
+                    orgPolicies = orgPolicies ?? await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                
+                return policies.Any(p => p.Type == policyType && p.Enabled);
             }
-
-            if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
-            {
-                throw new BadRequestException("Invalid token.");
+            var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
+            {   
+                if (await hasPolicyAsync(PolicyType.SingleOrg))
+                {
+                    throw new BadRequestException("You may not join this organization until you leave or remove " +
+                        "all other organizations.");
+                }
+                if (await hasPolicyAsync(PolicyType.SingleOrg, true))
+                {
+                    throw new BadRequestException("You cannot join this organization because you are a member of " + 
+                        "an organization which forbids it");
+                }
             }
 
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                if (policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled))
+                if (await hasPolicyAsync(PolicyType.TwoFactorAuthentication))
                 {
                     throw new BadRequestException("You cannot join this organization until you enable " +
                         "two-step login on your user account.");
@@ -1125,10 +1191,10 @@ namespace Bit.Core.Services
             orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.UserId = user.Id;
             orgUser.Email = null;
+
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             // TODO: send notification emails to org admins and accepting user?
-
             return orgUser;
         }
 
@@ -1162,6 +1228,16 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
 
+            var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
+            if (usingSingleOrgPolicy)
+            {
+                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
+                {
+                    throw new BadRequestException("User is a member of another organization.");
+                }
+            }
+
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
             orgUser.Email = null;
@@ -1185,21 +1261,14 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
+            var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
+            if (user.Equals(originalUser)) {
+                throw new BadRequestException("Please make changes before saving.");
+            }
+
             if (savingUserId.HasValue)
             {
-                var savingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(savingUserId.Value);
-                var savingUserIsOrgOwner = savingUserOrgs
-                    .Any(u => u.OrganizationId == user.OrganizationId && u.Type == OrganizationUserType.Owner);
-                if (!savingUserIsOrgOwner)
-                {
-                    var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-                    var isOwner = originalUser.Type == OrganizationUserType.Owner;
-                    var nowOwner = user.Type == OrganizationUserType.Owner;
-                    if ((isOwner && !nowOwner) || (!isOwner && nowOwner))
-                    {
-                        throw new BadRequestException("Only an owner can change the user type of another owner.");
-                    }
-                }
+                await ValidateOrganizationUserUpdatePermissions(savingUserId.Value, user.OrganizationId, user.Type, originalUser.Type);
             }
 
             var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
@@ -1288,8 +1357,12 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
+        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
         {
+            if (loggedInUserId.HasValue)
+            {
+                await ValidateOrganizationUserUpdatePermissions(loggedInUserId.Value, organizationUser.OrganizationId, organizationUser.Type, null);
+            }
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
                 EventType.OrganizationUser_UpdatedGroups);
@@ -1317,6 +1390,25 @@ namespace Bit.Core.Services
 
             var subInfo = await _paymentService.GetSubscriptionAsync(organization);
             return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
+        }
+
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+            OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        {
+            var invite = new OrganizationUserInvite()
+            {
+                Emails = new List<string> { email },
+                Type = type,
+                AccessAll = accessAll,
+                Collections = collections,
+            };
+            var results = await InviteUserAsync(organizationId, invitingUserId, externalId, invite);
+            var result = results.FirstOrDefault();
+            if (result == null)
+            {
+                throw new BadRequestException("This user has already been invited.");
+            }
+            return result;
         }
 
         public async Task ImportAsync(Guid organizationId,
@@ -1423,8 +1515,15 @@ namespace Bit.Core.Services
 
                         try
                         {
-                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email,
-                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                            var invite = new OrganizationUserInvite
+                            {
+                                Emails = new List<string> { user.Email },
+                                Type = OrganizationUserType.User,
+                                AccessAll = false,
+                                Collections = new List<SelectionReadOnly>(),
+                            };
+                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
+                                    OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
                             existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
                         }
                         catch (BadRequestException)
@@ -1592,6 +1691,60 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException($"Selected plan allows a maximum of " +
                     $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            }
+        }
+
+        private async Task ValidateOrganizationUserUpdatePermissions(Guid loggedInUserId, Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType) 
+        {
+            var loggedInUserOrgs = await _organizationUserRepository.GetManyByUserAsync(loggedInUserId);
+            var loggedInAsOrgOwner = loggedInUserOrgs
+                .Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
+            if (loggedInAsOrgOwner)
+            {
+                return;
+            }
+
+            var isOwner = oldType == OrganizationUserType.Owner;
+            var nowOwner = newType == OrganizationUserType.Owner;
+            var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !(isOwner.Equals(nowOwner));
+            if (ownerUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only an Owner can configure another Owner's account.");
+            }
+
+            var loggedInAsOrgAdmin = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Admin);
+            if (loggedInAsOrgAdmin)
+            {
+                return;
+            }
+
+            var isCustom = oldType == OrganizationUserType.Custom;
+            var nowCustom = newType == OrganizationUserType.Custom;
+            var customUserConfigurationAttempt = (isCustom && nowCustom) || !(isCustom.Equals(nowCustom));
+            if (customUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
+            }
+
+            var loggedInAsOrgCustom = loggedInUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            if (!loggedInAsOrgCustom)
+            {
+                return;
+            }
+
+            var loggedInCustomOrgUser = loggedInUserOrgs.First(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Custom);
+            var loggedInUserPermissions = CoreHelpers.LoadClassFromJsonData<Permissions>(loggedInCustomOrgUser.Permissions);
+            if (!loggedInUserPermissions.ManageUsers)
+            {
+                throw new BadRequestException("Your account does not have permission to manage users.");
+            }
+
+            var isAdmin = oldType == OrganizationUserType.Admin;
+            var nowAdmin = newType == OrganizationUserType.Admin;
+            var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !(isAdmin.Equals(nowAdmin));
+            if (adminUserConfigurationAttempt)
+            {
+                throw new BadRequestException("Custom users can not manage Admins or Owners.");
             }
         }
     }

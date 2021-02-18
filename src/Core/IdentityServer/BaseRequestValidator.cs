@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Services;
 using System.Linq;
@@ -17,7 +18,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Bit.Core.Models.Api;
-using System.Text.Json;
+using Bit.Core.Context;
 
 namespace Bit.Core.IdentityServer
 {
@@ -34,8 +35,9 @@ namespace Bit.Core.IdentityServer
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IMailService _mailService;
         private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IPolicyRepository _policyRepository;
 
         public BaseRequestValidator(
             UserManager<User> userManager,
@@ -49,8 +51,9 @@ namespace Bit.Core.IdentityServer
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
-            CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            ICurrentContext currentContext,
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -65,6 +68,7 @@ namespace Bit.Core.IdentityServer
             _logger = logger;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _policyRepository = policyRepository;
         }
 
         protected async Task ValidateAsync(T context, ValidatedTokenRequest request)
@@ -78,14 +82,15 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
-                await BuildErrorResultAsync(false, context, user);
+                await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
 
             var twoFactorRequirement = await RequiresTwoFactorAsync(user);
             if (twoFactorRequirement.Item1)
             {
-                var twoFactorProviderType = TwoFactorProviderType.Authenticator; // Just defaulting it
+                // Just defaulting it
+                var twoFactorProviderType = TwoFactorProviderType.Authenticator;
                 if (!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
                 {
                     await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
@@ -96,12 +101,13 @@ namespace Bit.Core.IdentityServer
                     twoFactorProviderType, twoFactorToken);
                 if (!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
-                    await BuildErrorResultAsync(true, context, user);
+                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     return;
                 }
                 else if (!verified && twoFactorProviderType == TwoFactorProviderType.Remember)
                 {
-                    await Task.Delay(2000); // Delay for brute force.
+                    // Delay for brute force.
+                    await Task.Delay(2000);
                     await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
                     return;
                 }
@@ -113,9 +119,24 @@ namespace Bit.Core.IdentityServer
                 twoFactorToken = null;
             }
 
-            var device = await SaveDeviceAsync(user, request);
-            await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
-            return;
+            // Returns true if can finish validation process
+            if (await IsValidAuthTypeAsync(user, request.GrantType))
+            {
+                var device = await SaveDeviceAsync(user, request);
+                if (device == null)
+                {
+                    await BuildErrorResultAsync("No device information provided.", false, context, user);
+                    return;
+                }
+                await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
+            }
+            else
+            {
+                SetSsoResult(context, new Dictionary<string, object>
+                {{
+                    "ErrorModel", new ErrorResponseModel("SSO authentication is required.")
+                }});
+            }
         }
 
         protected abstract Task<(User, bool)> ValidateContextAsync(T context);
@@ -181,7 +202,7 @@ namespace Bit.Core.IdentityServer
 
             if (!enabledProviders.Any())
             {
-                await BuildErrorResultAsync(false, context, user);
+                await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
                 return;
             }
 
@@ -206,7 +227,7 @@ namespace Bit.Core.IdentityServer
             }
         }
 
-        protected async Task BuildErrorResultAsync(bool twoFactorRequest, T context, User user)
+        protected async Task BuildErrorResultAsync(string message, bool twoFactorRequest, T context, User user)
         {
             if (user != null)
             {
@@ -220,16 +241,18 @@ namespace Bit.Core.IdentityServer
                     string.Format("Failed login attempt{0}{1}", twoFactorRequest ? ", 2FA invalid." : ".",
                         $" {_currentContext.IpAddress}"));
             }
+
             await Task.Delay(2000); // Delay for brute force.
             SetErrorResult(context,
                 new Dictionary<string, object>
                 {{
-                    "ErrorModel", new ErrorResponseModel(twoFactorRequest ?
-                        "Two-step token is invalid. Try again." : "Username or password is incorrect. Try again.")
+                    "ErrorModel", new ErrorResponseModel(message)
                 }});
         }
 
         protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
+
+        protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
 
         protected abstract void SetSuccessResult(T context, User user, List<Claim> claims,
             Dictionary<string, object> customResponse);
@@ -260,10 +283,56 @@ namespace Bit.Core.IdentityServer
             return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
         }
 
+        private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
+        {
+            if (grantType == "authorization_code")
+            {
+                // Already using SSO to authorize, finish successfully
+                return true;
+            }
+
+            // Is user apart of any orgs? Use cache for initial checks.
+            var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+                .ToList();
+            if (orgs.Any())
+            {
+                // Get all org abilities
+                var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+                // Parse all user orgs that are enabled and have the ability to use sso
+                var ssoOrgs = orgs.Where(o => OrgCanUseSso(orgAbilities, o.Id));
+                if (ssoOrgs.Any())
+                {
+                    // Parse users orgs and determine if require sso policy is enabled
+                    var userOrgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+                        OrganizationUserStatusType.Confirmed);
+                    foreach (var userOrg in userOrgs.Where(o => o.Enabled && o.UseSso))
+                    {
+                        var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(userOrg.OrganizationId,
+                            PolicyType.RequireSso);
+                        // Owners and Admins are exempt from this policy
+                        if (orgPolicy != null && orgPolicy.Enabled && 
+                            userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            // Default - continue validation process
+            return true;
+        }
+
         private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                 orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
+        }
+
+        private bool OrgCanUseSso(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+        {
+            return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
+                   orgAbilities[orgId].Enabled && orgAbilities[orgId].UseSso;
         }
 
         private Device GetDeviceFromRequest(ValidatedRequest request)

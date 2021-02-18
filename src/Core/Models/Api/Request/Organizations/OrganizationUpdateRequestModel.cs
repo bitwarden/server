@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api
@@ -16,6 +17,8 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(50)]
         public string BillingEmail { get; set; }
+
+        public Permissions Permissions { get; set; }
 
         public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
         {

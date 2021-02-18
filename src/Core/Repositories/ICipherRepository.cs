@@ -35,6 +35,6 @@ namespace Bit.Core.Repositories
             IEnumerable<CollectionCipher> collectionCiphers);
         Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
         Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-        Task RestoreAsync(IEnumerable<Guid> ids, Guid userId);
+        Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     }
 }

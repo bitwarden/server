@@ -12,17 +12,20 @@ namespace Bit.Portal.Controllers
     public class SsoController : Controller
     {
         private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly ISsoConfigService _ssoConfigService;
         private readonly EnterprisePortalCurrentContext _enterprisePortalCurrentContext;
         private readonly II18nService _i18nService;
         private readonly GlobalSettings _globalSettings;
 
         public SsoController(
             ISsoConfigRepository ssoConfigRepository,
+            ISsoConfigService ssoConfigService,
             EnterprisePortalCurrentContext enterprisePortalCurrentContext,
             II18nService i18nService,
             GlobalSettings globalSettings)
         {
             _ssoConfigRepository = ssoConfigRepository;
+            _ssoConfigService = ssoConfigService;
             _enterprisePortalCurrentContext = enterprisePortalCurrentContext;
             _i18nService = i18nService;
             _globalSettings = globalSettings;
@@ -38,13 +41,13 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManageSsoForSelectedOrganization)
             {
                 return Redirect("~/");
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId.Value);
-            var model = new SsoConfigEditViewModel(ssoConfig, _i18nService, _globalSettings);
+            var model = new SsoConfigEditViewModel(ssoConfig, orgId.Value, _i18nService, _globalSettings);
 
             return View(model);
         }
@@ -60,7 +63,7 @@ namespace Bit.Portal.Controllers
             }
 
             if (!_enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso ||
-                !_enterprisePortalCurrentContext.AdminForSelectedOrganization)
+                !_enterprisePortalCurrentContext.CanManageSsoForSelectedOrganization)
             {
                 return Redirect("~/");
             }
@@ -74,16 +77,14 @@ namespace Bit.Portal.Controllers
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId.Value);
             if (ssoConfig == null)
             {
-                ssoConfig = model.ToSsoConfig();
-                ssoConfig.OrganizationId = orgId.GetValueOrDefault();
-                await _ssoConfigRepository.CreateAsync(ssoConfig);
+                ssoConfig = model.ToSsoConfig(orgId.GetValueOrDefault());
             }
             else
             {
                 ssoConfig = model.ToSsoConfig(ssoConfig);
-                await _ssoConfigRepository.ReplaceAsync(ssoConfig);
             }
 
+            await _ssoConfigService.SaveAsync(ssoConfig);
             return View(model);
         }
     }

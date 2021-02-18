@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Repositories;
@@ -20,14 +20,14 @@ namespace Bit.Api.Public.Controllers
         private readonly IPolicyService _policyService;
         private readonly IUserService _userService;
         private readonly IOrganizationService _organizationService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public PoliciesController(
             IPolicyRepository policyRepository,
             IPolicyService policyService,
             IUserService userService,
             IOrganizationService organizationService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _policyRepository = policyRepository;
             _policyService = policyService;

@@ -32,6 +32,26 @@ namespace Bit.Portal.Models
                     DescriptionKey = "PasswordGeneratorDescription";
                     break;
 
+                case PolicyType.SingleOrg:
+                    NameKey = "SingleOrganization";
+                    DescriptionKey = "SingleOrganizationDescription";
+                    break;
+                
+                case PolicyType.RequireSso:
+                    NameKey = "RequireSso";
+                    DescriptionKey = "RequireSsoDescription";
+                    break;
+                
+                case PolicyType.PersonalOwnership:
+                    NameKey = "PersonalOwnership";
+                    DescriptionKey = "PersonalOwnershipDescription";
+                    break;
+
+                case PolicyType.DisableSend:
+                    NameKey = "DisableSend";
+                    DescriptionKey = "DisableSendDescription";
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -43,7 +63,6 @@ namespace Bit.Portal.Models
         public string NameKey { get; set; }
         public string DescriptionKey { get; set; }
         public PolicyType PolicyType { get; set; }
-        [Display(Name = "Enabled")]
         public bool Enabled { get; set; }
     }
 }

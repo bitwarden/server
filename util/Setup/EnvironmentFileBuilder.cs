@@ -99,6 +99,8 @@ namespace Bit.Setup
                 ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
                 ["globalSettings__attachment__baseDirectory"] = $"{_context.OutputDir}/core/attachments",
                 ["globalSettings__attachment__baseUrl"] = $"{_context.Config.Url}/attachments",
+                ["globalSettings__send__baseDirectory"] = $"{_context.OutputDir}/core/attachments/send",
+                ["globalSettings__send__baseUrl"] = $"{_context.Config.Url}/attachments/send",
                 ["globalSettings__dataProtection__directory"] = $"{_context.OutputDir}/core/aspnet-dataprotection",
                 ["globalSettings__logDirectory"] = $"{_context.OutputDir}/logs",
                 ["globalSettings__logRollBySizeLimit"] = string.Empty,

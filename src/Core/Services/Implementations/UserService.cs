@@ -11,6 +11,10 @@ using Bit.Core.Enums;
 using System.Security.Claims;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using U2fLib = U2F.Core.Crypto.U2F;
+using U2F.Core.Models;
+using U2F.Core.Utils;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using System.IO;
@@ -44,8 +48,9 @@ namespace Bit.Core.Services
         private readonly IDataProtector _organizationServiceDataProtector;
         private readonly IReferenceEventService _referenceEventService;
         private readonly IFido2 _fido2;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IOrganizationService _organizationService;
 
         public UserService(
             IUserRepository userRepository,
@@ -71,8 +76,9 @@ namespace Bit.Core.Services
             IPolicyRepository policyRepository,
             IReferenceEventService referenceEventService,
             IFido2 fido2,
-            CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            ICurrentContext currentContext,
+            GlobalSettings globalSettings,
+            IOrganizationService organizationService)
             : base(
                   store,
                   optionsAccessor,
@@ -105,6 +111,7 @@ namespace Bit.Core.Services
             _fido2 = fido2;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _organizationService = organizationService;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -287,6 +294,7 @@ namespace Bit.Core.Services
                 }
             }
 
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
             var result = await base.CreateAsync(user, masterPassword);
             if (result == IdentityResult.Success)
             {
@@ -558,7 +566,8 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key)
+        public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key, 
+            string orgIdentifier = null)
         {
             if (user == null)
             {
@@ -571,7 +580,7 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
-            var result = await UpdatePasswordHash(user, masterPassword);
+            var result = await UpdatePasswordHash(user, masterPassword, true, false);
             if (!result.Succeeded)
             {
                 return result;
@@ -582,7 +591,12 @@ namespace Bit.Core.Services
 
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
+            
+            if (!string.IsNullOrWhiteSpace(orgIdentifier))
+            {
+                await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
+            }
+            
             return IdentityResult.Success;
         }
 
@@ -1176,6 +1190,13 @@ namespace Bit.Core.Services
                     new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
             }
             return result;
+        }
+
+        public async Task RotateApiKeyAsync(User user)
+        {
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
         }
     }
 }

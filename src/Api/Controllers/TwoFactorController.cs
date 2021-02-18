@@ -10,6 +10,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Utilities.Duo;
@@ -26,7 +27,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly GlobalSettings _globalSettings;
         private readonly UserManager<User> _userManager;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public TwoFactorController(
             IUserService userService,
@@ -34,7 +35,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             GlobalSettings globalSettings,
             UserManager<User> userManager,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationRepository = organizationRepository;
@@ -168,7 +169,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -191,7 +192,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -331,7 +332,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }

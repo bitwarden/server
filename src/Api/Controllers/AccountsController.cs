@@ -210,7 +210,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key);
+            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key, 
+                model.OrgIdentifier);
             if (result.Succeeded)
             {
                 return;
@@ -733,6 +734,49 @@ namespace Bit.Api.Controllers
             var token = await _userService.GenerateSignInTokenAsync(user, TokenPurposes.LinkSso);
             var userIdentifier = $"{user.Id},{token}";
             return userIdentifier;
+        }
+
+        [HttpPost("api-key")]
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var response = new ApiKeyResponseModel(user);
+                return response;
+            }
+        }
+
+        [HttpPost("rotate-api-key")]
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]ApiKeyRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                await _userService.RotateApiKeyAsync(user);
+                var response = new ApiKeyResponseModel(user);
+                return response;
+            }
         }
     }
 }

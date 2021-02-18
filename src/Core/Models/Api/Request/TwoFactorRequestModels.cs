@@ -104,7 +104,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (!Host.StartsWith("api-") || !Host.EndsWith(".duosecurity.com"))
+            if (!Host.StartsWith("api-") || (!Host.EndsWith(".duosecurity.com") && !Host.EndsWith(".duofederal.com")))
             {
                 yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
             }

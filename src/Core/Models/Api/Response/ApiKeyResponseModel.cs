@@ -15,6 +15,16 @@ namespace Bit.Core.Models.Api
             ApiKey = organization.ApiKey;
         }
 
+        public ApiKeyResponseModel(User user, string obj = "apiKey")
+            : base(obj)
+        {
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+            ApiKey = user.ApiKey;
+        }
+
         public string ApiKey { get; set; }
     }
 }

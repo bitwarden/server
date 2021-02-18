@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Api.Public;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -17,12 +17,12 @@ namespace Bit.Api.Public.Controllers
     {
         private readonly IEventRepository _eventRepository;
         private readonly ICipherRepository _cipherRepository;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public EventsController(
             IEventRepository eventRepository,
             ICipherRepository cipherRepository,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _eventRepository = eventRepository;
             _cipherRepository = cipherRepository;

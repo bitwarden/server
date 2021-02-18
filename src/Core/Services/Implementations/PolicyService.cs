@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -42,6 +44,33 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("This organization cannot use policies.");
             }
+            
+            // Handle dependent policy checks
+            switch(policy.Type)
+            {
+                case PolicyType.SingleOrg:
+                    if (!policy.Enabled)
+                    {
+                        var requireSso =
+                            await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
+                        if (requireSso?.Enabled == true)
+                        {
+                            throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
+                        }
+                    }
+                    break;
+                
+               case PolicyType.RequireSso:
+                   if (policy.Enabled)
+                   {
+                       var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
+                       if (singleOrg?.Enabled != true)
+                       {
+                           throw new BadRequestException("Single Organization policy not enabled.");
+                       }
+                   }
+                   break;
+            }
 
             var now = DateTime.UtcNow;
             if (policy.Id == default(Guid))
@@ -53,27 +82,47 @@ namespace Bit.Core.Services
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
                 if (!currentPolicy?.Enabled ?? true)
                 {
-                    if (currentPolicy.Type == Enums.PolicyType.TwoFactorAuthentication)
+                    Organization organization = null;
+                    var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+                        policy.OrganizationId);
+                    var removableOrgUsers = orgUsers.Where(ou =>
+                        ou.Status != Enums.OrganizationUserStatusType.Invited &&
+                        ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin && 
+                        ou.UserId != savingUserId);
+                    switch (currentPolicy.Type)
                     {
-                        Organization organization = null;
-                        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
-                            policy.OrganizationId);
-                        foreach (var orgUser in orgUsers.Where(ou =>
-                            ou.Status != Enums.OrganizationUserStatusType.Invited &&
-                            ou.Type != Enums.OrganizationUserType.Owner))
-                        {
-                            if (orgUser.UserId != savingUserId && !await userService.TwoFactorIsEnabledAsync(orgUser))
+                        case Enums.PolicyType.TwoFactorAuthentication:
+                            foreach (var orgUser in removableOrgUsers)
                             {
-                                if (organization == null)
+                                if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                                 {
-                                    organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                    organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                        savingUserId);
+                                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                        organization.Name, orgUser.Email);
                                 }
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    organization.Name, orgUser.Email);
                             }
-                        }
+                        break;
+                        case Enums.PolicyType.SingleOrg:
+                            var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
+                                    removableOrgUsers.Select(ou => ou.UserId.Value));
+                            organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+                            foreach (var orgUser in removableOrgUsers)
+                            {
+                                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId 
+                                            && ou.OrganizationId != organization.Id 
+                                            && ou.Status != OrganizationUserStatusType.Invited))
+                                {
+                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                        savingUserId);
+                                    await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                                        organization.Name, orgUser.Email);
+                                }
+                            }
+                        break;
+                        default:
+                        break;
                     }
                 }
             }

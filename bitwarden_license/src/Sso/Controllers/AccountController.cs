@@ -20,10 +20,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Models;
 using Bit.Core.Models.Api;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
-using System.Net;
+using Bit.Core.Utilities;
+using System.Text.Json;
+using Bit.Core.Models.Data;
 
 namespace Bit.Sso.Controllers
 {
@@ -39,6 +40,7 @@ namespace Bit.Sso.Controllers
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IUserService _userService;
         private readonly II18nService _i18nService;
         private readonly UserManager<User> _userManager;
@@ -53,6 +55,7 @@ namespace Bit.Sso.Controllers
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
+            IPolicyRepository policyRepository,
             IUserService userService,
             II18nService i18nService,
             UserManager<User> userManager)
@@ -66,6 +69,7 @@ namespace Bit.Sso.Controllers
             _userRepository = userRepository;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoUserRepository = ssoUserRepository;
+            _policyRepository = policyRepository;
             _userService = userService;
             _i18nService = i18nService;
             _userManager = userManager;
@@ -164,7 +168,7 @@ namespace Bit.Sso.Controllers
             }
             else
             {
-                throw new Exception("No domain_hint provided.");
+                throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
         }
 
@@ -178,7 +182,7 @@ namespace Bit.Sso.Controllers
 
             if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
             {
-                throw new Exception("invalid return URL");
+                throw new Exception(_i18nService.T("InvalidReturnUrl"));
             }
 
             var props = new AuthenticationProperties
@@ -202,10 +206,10 @@ namespace Bit.Sso.Controllers
         {
             // Read external identity from the temporary cookie
             var result = await HttpContext.AuthenticateAsync(
-                IdentityServerConstants.ExternalCookieAuthenticationScheme);
+                AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
             if (result?.Succeeded != true)
             {
-                throw new Exception("External authentication error");
+                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
             }
 
             // Debugging
@@ -213,7 +217,7 @@ namespace Bit.Sso.Controllers
             _logger.LogDebug("External claims: {@claims}", externalClaims);
 
             // Lookup our user and external provider info
-            var (user, provider, providerUserId, claims) = await FindUserFromExternalProviderAsync(result);
+            var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
             if (user == null)
             {
                 // This might be where you might initiate a custom workflow for user registration
@@ -221,7 +225,7 @@ namespace Bit.Sso.Controllers
                 // simply auto-provisions new external user
                 var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                     result.Properties.Items["user_identifier"] : null;
-                user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier);
+                user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier, ssoConfigData);
             }
 
             if (user != null)
@@ -247,7 +251,7 @@ namespace Bit.Sso.Controllers
             }
 
             // Delete temporary cookie used during external authentication
-            await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
+            await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
             // Retrieve return URL
             var returnUrl = result.Properties.Items["return_url"] ?? "~/";
@@ -303,9 +307,23 @@ namespace Bit.Sso.Controllers
             }
         }
 
-        private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims)>
+        private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
             FindUserFromExternalProviderAsync(AuthenticateResult result)
         {
+            var provider = result.Properties.Items["scheme"];
+            var orgId = new Guid(provider);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
+            if (ssoConfig == null || !ssoConfig.Enabled)
+            {
+                throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+            var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data, options);
+
             var externalUser = result.Principal;
 
             // Ensure the NameIdentifier used is not a transient name ID, if so, we need a different attribute
@@ -318,49 +336,43 @@ namespace Bit.Sso.Controllers
             // Try to determine the unique id of the external user (issued by the provider)
             // the most common claim type for that are the sub claim and the NameIdentifier
             // depending on the external provider, some other claim type might be used
-            var userIdClaim = externalUser.FindFirst(JwtClaimTypes.Subject) ??
+            var customUserIdClaimTypes = ssoConfigData.GetAdditionalUserIdClaimTypes();
+            var userIdClaim = externalUser.FindFirst(c => customUserIdClaimTypes.Contains(c.Type)) ??
+                              externalUser.FindFirst(JwtClaimTypes.Subject) ??
                               externalUser.FindFirst(nameIdIsNotTransient) ??
                               // Some SAML providers may use the `uid` attribute for this
                               //    where a transient NameID has been sent in the subject
                               externalUser.FindFirst("uid") ??
                               externalUser.FindFirst("upn") ??
                               externalUser.FindFirst("eppn") ??
-                              throw new Exception("Unknown userid");
+                              throw new Exception(_i18nService.T("UnknownUserId"));
 
             // Remove the user id claim so we don't include it as an extra claim if/when we provision the user
             var claims = externalUser.Claims.ToList();
             claims.Remove(userIdClaim);
 
-            var provider = result.Properties.Items["scheme"];
+            // find external user
             var providerUserId = userIdClaim.Value;
 
-            // find external user
-            var orgId = new Guid(provider);
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
-            if (ssoConfig == null || !ssoConfig.Enabled)
-            {
-                throw new Exception("Organization not found or SSO configuration not enabled");
-            }
             var user = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
 
-            return (user, provider, providerUserId, claims);
+            return (user, provider, providerUserId, claims, ssoConfigData);
         }
 
         private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
-            IEnumerable<Claim> claims, string userIdentifier)
+            IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
         {
-            var name = GetName(claims);
-            var email = GetEmailAddress(claims);
-
-            Guid? orgId = null;
-            if (Guid.TryParse(provider, out var oId))
+            var name = GetName(claims, config.GetAdditionalNameClaimTypes());
+            var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
+            if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
             {
-                orgId = oId;
+                email = providerUserId;
             }
-            else
+            
+            if (!Guid.TryParse(provider, out var orgId))
             {
                 // TODO: support non-org (server-wide) SSO in the future?
-                throw new Exception($"SSO provider, '{provider}' is not an organization id");
+                throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
             }
 
             User existingUser = null;
@@ -368,7 +380,7 @@ namespace Bit.Sso.Controllers
             {
                 if (string.IsNullOrWhiteSpace(email))
                 {
-                    throw new Exception("Cannot find email claim");
+                    throw new Exception(_i18nService.T("CannotFindEmailClaim"));
                 }
                 existingUser = await _userRepository.GetByEmailAsync(email);
             }
@@ -377,7 +389,7 @@ namespace Bit.Sso.Controllers
                 var split = userIdentifier.Split(",");
                 if (split.Length < 2)
                 {
-                    throw new Exception("Invalid user identifier.");
+                    throw new Exception(_i18nService.T("InvalidUserIdentifier"));
                 }
                 var userId = split[0];
                 var token = split[1];
@@ -395,104 +407,115 @@ namespace Bit.Sso.Controllers
                     }
                     else
                     {
-                        throw new Exception("Supplied userId and token did not match.");
+                        throw new Exception(_i18nService.T("UserIdAndTokenMismatch"));
                     }
                 }
             }
 
             OrganizationUser orgUser = null;
-            if (orgId.HasValue)
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            if (organization == null)
             {
-                var organization = await _organizationRepository.GetByIdAsync(orgId.Value);
-                if (organization == null)
-                {
-                    throw new Exception($"Could not find organization for '{orgId}'");
-                }
+                throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
+            }
+            
+            // Try to find OrgUser via existing User Id (accepted/confirmed user)
+            if (existingUser != null)
+            {
+                var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
+                orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+            }
 
-                if (existingUser != null)
-                {
-                    var orgUsers = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
-                    orgUser = orgUsers.SingleOrDefault(u => u.OrganizationId == orgId.Value &&
-                        u.Status != OrganizationUserStatusType.Invited);
-                }
-
+            // If no Org User found by Existing User Id - search all organization users via email
+            orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
+            
+            // All Existing User flows handled below
+            if (existingUser != null)
+            {
                 if (orgUser == null)
                 {
-                    if (organization.Seats.HasValue)
-                    {
-                        var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId.Value);
-                        var availableSeats = organization.Seats.Value - userCount;
-                        if (availableSeats < 1)
-                        {
-                            // No seats are available
-                            throw new Exception($"No seats available for organization, '{organization.Name}'");
-                        }
-                    }
+                    // Org User is not created - no invite has been sent
+                    throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
+                }
+                
+                if (orgUser.Status == OrganizationUserStatusType.Invited)
+                {
+                    // Org User is invited - they must manually accept the invite via email and authenticate with MP
+                    throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
+                }
+                
+                // Accepted or Confirmed - create SSO link and return;
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                return existingUser;
+            }
 
-                    // Make sure user is not already invited to this org
-                    var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-                        orgId.Value, email, false);
-                    if (existingOrgUserCount > 0)
-                    {
-                        throw new Exception($"User, '{email}', has already been invited to this organization, '{organization.Name}'");
-                    }
+            // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
+            if (orgUser == null && organization.Seats.HasValue)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId);
+                var availableSeats = organization.Seats.Value - userCount;
+                if (availableSeats < 1)
+                {
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
                 }
             }
 
-            User user = null;
+            // Create user record - all existing user flows are handled above
+            var user = new User
+            {
+                Name = name,
+                Email = email,
+                ApiKey = CoreHelpers.SecureRandomString(30)
+            };
+            await _userService.RegisterUserAsync(user);
+            
+            // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
+            var twoFactorPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.TwoFactorAuthentication);
+            if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+            {
+                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                {
+                    [TwoFactorProviderType.Email] = new TwoFactorProvider
+                        {
+                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                            Enabled = true
+                        }
+                });
+                await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            }
+            
+            // Create Org User if null or else update existing Org User
             if (orgUser == null)
             {
-                if (existingUser != null)
+                orgUser = new OrganizationUser
                 {
-                    // TODO: send an email inviting this user to link SSO to their account?
-                    throw new Exception("User already exists, please link account to SSO after logging in");
-                }
-
-                // Create user record
-                user = new User
-                {
-                    Name = name,
-                    Email = email
+                    OrganizationId = orgId,
+                    UserId = user.Id,
+                    Type = OrganizationUserType.User,
+                    Status = OrganizationUserStatusType.Invited
                 };
-                await _userService.RegisterUserAsync(user);
-
-                if (orgId.HasValue)
-                {
-                    // Create organization user record
-                    orgUser = new OrganizationUser
-                    {
-                        OrganizationId = orgId.Value,
-                        UserId = user.Id,
-                        Type = OrganizationUserType.User,
-                        Status = OrganizationUserStatusType.Accepted
-                    };
-                    await _organizationUserRepository.CreateAsync(orgUser);
-                }
+                await _organizationUserRepository.CreateAsync(orgUser);
             }
             else
             {
-                // Since the user is already a member of this organization, let's link their existing user account
-                user = existingUser;
+                orgUser.UserId = user.Id;
+                await _organizationUserRepository.ReplaceAsync(orgUser);
             }
-
+            
             // Create sso user record
-            var ssoUser = new SsoUser
-            {
-                ExternalId = providerUserId,
-                UserId = user.Id,
-                OrganizationId = orgId
-            };
-            await _ssoUserRepository.CreateAsync(ssoUser);
-
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
+            
             return user;
         }
 
-        private string GetEmailAddress(IEnumerable<Claim> claims)
+        private string GetEmailAddress(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
         {
             var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value) && c.Value.Contains("@"));
 
-            var email = filteredClaims.GetFirstMatch(JwtClaimTypes.Email, ClaimTypes.Email,
-                SamlClaimTypes.Email, "mail", "emailaddress");
+            var email = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
+                filteredClaims.GetFirstMatch(JwtClaimTypes.Email, ClaimTypes.Email,
+                    SamlClaimTypes.Email, "mail", "emailaddress");
             if (!string.IsNullOrWhiteSpace(email))
             {
                 return email;
@@ -508,12 +531,13 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private string GetName(IEnumerable<Claim> claims)
+        private string GetName(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
         {
             var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value));
 
-            var name = filteredClaims.GetFirstMatch(JwtClaimTypes.Name, ClaimTypes.Name,
-                SamlClaimTypes.DisplayName, SamlClaimTypes.CommonName, "displayname", "cn");
+            var name = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
+                filteredClaims.GetFirstMatch(JwtClaimTypes.Name, ClaimTypes.Name,
+                    SamlClaimTypes.DisplayName, SamlClaimTypes.CommonName, "displayname", "cn");
             if (!string.IsNullOrWhiteSpace(name))
             {
                 return name;
@@ -529,6 +553,17 @@ namespace Bit.Sso.Controllers
             }
 
             return null;
+        }
+
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
+        {
+            var ssoUser = new SsoUser
+            {
+                ExternalId = providerUserId,
+                UserId = userId,
+                OrganizationId = orgId
+            }; 
+            await _ssoUserRepository.CreateAsync(ssoUser);
         }
 
         private void ProcessLoginCallback(AuthenticateResult externalResult,

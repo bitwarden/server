@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using IdentityModel;
+using Bit.Core.Utilities;
+using Bit.Core.Context;
 
 namespace Bit.Core.IdentityServer
 {
@@ -16,13 +18,13 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILicensingService _licensingService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public ProfileService(
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
             ILicensingService licensingService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
@@ -39,56 +41,15 @@ namespace Bit.Core.IdentityServer
             if (user != null)
             {
                 var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
-                newClaims.AddRange(new List<Claim>
-                {
-                    new Claim("premium", isPremium ? "true" : "false", ClaimValueTypes.Boolean),
-                    new Claim(JwtClaimTypes.Email, user.Email),
-                    new Claim(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false",
-                        ClaimValueTypes.Boolean),
-                    new Claim("sstamp", user.SecurityStamp)
-                });
-
-                if (!string.IsNullOrWhiteSpace(user.Name))
-                {
-                    newClaims.Add(new Claim(JwtClaimTypes.Name, user.Name));
-                }
-
-                // Orgs that this user belongs to
                 var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
-                if (orgs.Any())
+                foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, isPremium))
                 {
-                    foreach (var group in orgs.GroupBy(o => o.Type))
-                    {
-                        switch (group.Key)
-                        {
-                            case Enums.OrganizationUserType.Owner:
-                                foreach (var org in group)
-                                {
-                                    newClaims.Add(new Claim("orgowner", org.Id.ToString()));
-                                }
-                                break;
-                            case Enums.OrganizationUserType.Admin:
-                                foreach (var org in group)
-                                {
-                                    newClaims.Add(new Claim("orgadmin", org.Id.ToString()));
-                                }
-                                break;
-                            case Enums.OrganizationUserType.Manager:
-                                foreach (var org in group)
-                                {
-                                    newClaims.Add(new Claim("orgmanager", org.Id.ToString()));
-                                }
-                                break;
-                            case Enums.OrganizationUserType.User:
-                                foreach (var org in group)
-                                {
-                                    newClaims.Add(new Claim("orguser", org.Id.ToString()));
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+                    var upperValue = claim.Value.ToUpperInvariant();
+                    var isBool = upperValue == "TRUE" || upperValue == "FALSE";
+                    newClaims.Add(isBool ?
+                        new Claim(claim.Key, claim.Value, ClaimValueTypes.Boolean) :
+                        new Claim(claim.Key, claim.Value)
+                    );
                 }
             }
 

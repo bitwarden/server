@@ -15,9 +15,13 @@ using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Bit.Core.Enums;
+using Bit.Core.Context;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Bit.Core.Models.Table;
+using IdentityModel;
+using System.Text.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -347,7 +351,7 @@ namespace Bit.Core.Utilities
             }
             else
             {
-                return absoluteSize.ToString("0 Bytes"); // Byte
+                return size.ToString("0 Bytes"); // Byte
             }
 
             // Divide by 1024 to get fractional value
@@ -357,6 +361,11 @@ namespace Bit.Core.Utilities
             return readable.ToString("0.## ") + suffix;
         }
 
+        /// <summary>
+        /// Creates a clone of the given object through serializing to json and deserializing.
+        /// This method is subject to the limitations of Newstonsoft. For example, properties with
+        /// inaccessible setters will not be set.
+        /// </summary>
         public static T CloneObject<T>(T obj)
         {
             return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(obj));
@@ -494,9 +503,10 @@ namespace Bit.Core.Utilities
 
         public static string SanitizeForEmail(string value)
         {
-            return value.Replace("@", "[at]")
+            var cleanedValue = value.Replace("@", "[at]")
                 .Replace("http://", string.Empty)
                 .Replace("https://", string.Empty);
+            return HttpUtility.HtmlEncode(cleanedValue);
         }
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -547,13 +557,19 @@ namespace Bit.Core.Utilities
         public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
             Guid orgUserId, GlobalSettings globalSettings)
         {
+            return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId, globalSettings);
+        }
+
+        public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
+            Guid id, GlobalSettings globalSettings)
+        {
             var invalid = true;
             try
             {
                 var unprotectedData = protector.Unprotect(token);
                 var dataParts = unprotectedData.Split(' ');
-                if (dataParts.Length == 4 && dataParts[0] == "OrganizationUserInvite" &&
-                    new Guid(dataParts[1]) == orgUserId &&
+                if (dataParts.Length == 4 && dataParts[0] == firstTokenPart &&
+                    new Guid(dataParts[1]) == id &&
                     dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
                     var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
@@ -669,6 +685,141 @@ namespace Bit.Core.Utilities
                 configDict[replace.Key] = replace.Value;
             }
             return configDict;
+        }
+
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs, bool isPremium)
+        {
+            var claims = new List<KeyValuePair<string, string>>()
+            {
+                new KeyValuePair<string, string>("premium", isPremium ? "true" : "false"),
+                new KeyValuePair<string, string>(JwtClaimTypes.Email, user.Email),
+                new KeyValuePair<string, string>(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+                new KeyValuePair<string, string>("sstamp", user.SecurityStamp)
+            };
+
+            if (!string.IsNullOrWhiteSpace(user.Name))
+            {
+                claims.Add(new KeyValuePair<string, string>(JwtClaimTypes.Name, user.Name));
+            }
+
+            // Orgs that this user belongs to
+            if (orgs.Any())
+            {
+                foreach (var group in orgs.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case Enums.OrganizationUserType.Owner:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgowner", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Admin:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgadmin", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Manager:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgmanager", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.User:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Custom:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+
+                                if (org.Permissions.AccessBusinessPortal)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessEventLogs)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessImportExport)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessReports)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageAllCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageAssignedCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageGroups)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManagePolicies)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageSso)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageUsers)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            return claims;
+        }
+
+        public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
+        {
+            if (string.IsNullOrWhiteSpace(jsonData))
+            {
+                return new T();
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+
+            return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
+        }
+
+        public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
+        {
+            if (list.Contains(item))
+            {
+                return list;
+            }
+            list.Add(item);
+            return list;
         }
     }
 }

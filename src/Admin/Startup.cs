@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
@@ -45,7 +46,7 @@ namespace Bit.Admin
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Identity
             services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);

@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
 using Bit.Core.Identity;
+using Bit.Core.Context;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer
@@ -30,11 +31,12 @@ namespace Bit.Core.IdentityServer
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
-            CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            ICurrentContext currentContext,
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
             _userService = userService;
@@ -74,6 +76,13 @@ namespace Bit.Core.IdentityServer
             Dictionary<string, object> customResponse)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
+                customResponse);
+        }
+
+        protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
+            Dictionary<string, object> customResponse)
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
                 customResponse);
         }
 

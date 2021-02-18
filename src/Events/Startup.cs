@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -35,7 +36,7 @@ namespace Bit.Events
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Identity
             services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
@@ -43,7 +44,7 @@ namespace Bit.Events
                 config.AddPolicy("Application", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application");
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                     policy.RequireClaim(JwtClaimTypes.Scope, "api");
                 });
             });

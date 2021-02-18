@@ -99,6 +99,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     UseEvents = e.UseEvents,
                     UsersGetPremium = e.UsersGetPremium,
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
+                    UseSso = e.UseSso,
                 }).ToListAsync();
             }
         }

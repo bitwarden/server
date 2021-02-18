@@ -10,6 +10,7 @@ using U2F.Core.Utils;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Portal.Models
 {
@@ -17,7 +18,8 @@ namespace Bit.Portal.Models
     {
         public SsoConfigDataViewModel() { }
 
-        public SsoConfigDataViewModel(SsoConfigurationData configurationData, GlobalSettings globalSettings)
+        public SsoConfigDataViewModel(SsoConfigurationData configurationData, GlobalSettings globalSettings,
+            Guid organizationId)
         {
             ConfigType = configurationData.ConfigType;
             Authority = configurationData.Authority;
@@ -26,9 +28,11 @@ namespace Bit.Portal.Models
             CallbackPath = configurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
             SignedOutCallbackPath = configurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
             MetadataAddress = configurationData.MetadataAddress;
+            RedirectBehavior = configurationData.RedirectBehavior;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
             SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
-            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso);
+            SpMetadataUrl = configurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
+            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
             IdpEntityId = configurationData.IdpEntityId;
             IdpBindingType = configurationData.IdpBindingType;
             IdpSingleSignOnServiceUrl = configurationData.IdpSingleSignOnServiceUrl;
@@ -44,6 +48,12 @@ namespace Bit.Portal.Models
             SpSigningBehavior = configurationData.SpSigningBehavior;
             SpWantAssertionsSigned = configurationData.SpWantAssertionsSigned;
             SpValidateCertificates = configurationData.SpValidateCertificates;
+            SpMinIncomingSigningAlgorithm = configurationData.SpMinIncomingSigningAlgorithm ?? SamlSigningAlgorithms.Sha256;
+            AdditionalScopes = configurationData.AdditionalScopes;
+            AdditionalUserIdClaimTypes = configurationData.AdditionalUserIdClaimTypes;
+            AdditionalEmailClaimTypes = configurationData.AdditionalEmailClaimTypes;
+            AdditionalNameClaimTypes = configurationData.AdditionalNameClaimTypes;
+            AcrValues = configurationData.AcrValues;
         }
 
         [Required]
@@ -63,12 +73,26 @@ namespace Bit.Portal.Models
         public string SignedOutCallbackPath { get; set; }
         [Display(Name = "MetadataAddress")]
         public string MetadataAddress { get; set; }
+        [Display(Name = "RedirectBehavior")]
+        public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; }
         [Display(Name = "GetClaimsFromUserInfoEndpoint")]
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
+        [Display(Name = "AdditionalScopes")]
+        public string AdditionalScopes { get; set; }
+        [Display(Name = "AdditionalUserIdClaimTypes")]
+        public string AdditionalUserIdClaimTypes { get; set; }
+        [Display(Name = "AdditionalEmailClaimTypes")]
+        public string AdditionalEmailClaimTypes { get; set; }
+        [Display(Name = "AdditionalNameClaimTypes")]
+        public string AdditionalNameClaimTypes { get; set; }
+        [Display(Name = "AcrValues")]
+        public string AcrValues { get; set; }
 
         // SAML2 SP
         [Display(Name = "SpEntityId")]
         public string SpEntityId { get; set; }
+        [Display(Name = "SpMetadataUrl")]
+        public string SpMetadataUrl { get; set; }
         [Display(Name = "SpAcsUrl")]
         public string SpAcsUrl { get; set; }
         [Display(Name = "NameIdFormat")]
@@ -81,6 +105,8 @@ namespace Bit.Portal.Models
         public bool SpWantAssertionsSigned { get; set; }
         [Display(Name = "SpValidateCertificates")]
         public bool SpValidateCertificates { get; set; }
+        [Display(Name = "MinIncomingSigningAlgorithm")]
+        public string SpMinIncomingSigningAlgorithm { get; set; }
 
         // SAML2 IDP
         [Display(Name = "EntityId")]
@@ -190,6 +216,7 @@ namespace Bit.Portal.Models
                 ClientSecret = ClientSecret,
                 MetadataAddress = MetadataAddress,
                 GetClaimsFromUserInfoEndpoint = GetClaimsFromUserInfoEndpoint,
+                RedirectBehavior = RedirectBehavior,
                 IdpEntityId = IdpEntityId,
                 IdpBindingType = IdpBindingType,
                 IdpSingleSignOnServiceUrl = IdpSingleSignOnServiceUrl,
@@ -205,6 +232,12 @@ namespace Bit.Portal.Models
                 SpSigningBehavior = SpSigningBehavior,
                 SpWantAssertionsSigned = SpWantAssertionsSigned,
                 SpValidateCertificates = SpValidateCertificates,
+                SpMinIncomingSigningAlgorithm = SpMinIncomingSigningAlgorithm,
+                AdditionalScopes = AdditionalScopes,
+                AdditionalUserIdClaimTypes = AdditionalUserIdClaimTypes,
+                AdditionalEmailClaimTypes = AdditionalEmailClaimTypes,
+                AdditionalNameClaimTypes = AdditionalNameClaimTypes,
+                AcrValues = AcrValues,
             };
         }
 

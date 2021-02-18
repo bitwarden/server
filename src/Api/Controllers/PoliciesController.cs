@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -23,7 +24,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IDataProtector _organizationServiceDataProtector;
 
@@ -33,7 +34,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IUserService userService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IDataProtectionProvider dataProtectionProvider)
         {
@@ -52,7 +53,7 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Get(string orgId, int type)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -69,7 +70,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationManager(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -108,7 +109,7 @@ namespace Bit.Api.Controllers
         public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody]PolicyRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!_currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }

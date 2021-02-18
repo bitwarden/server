@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
@@ -20,14 +20,14 @@ namespace Bit.Api.Controllers
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IEventRepository _eventRepository;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public EventsController(
             IUserService userService,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
             IEventRepository eventRepository,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _userService = userService;
             _cipherRepository = cipherRepository;
@@ -61,7 +61,7 @@ namespace Bit.Api.Controllers
             var canView = false;
             if (cipher.OrganizationId.HasValue)
             {
-                canView = _currentContext.OrganizationAdmin(cipher.OrganizationId.Value);
+                canView = _currentContext.AccessEventLogs(cipher.OrganizationId.Value);
             }
             else if (cipher.UserId.HasValue)
             {
@@ -86,7 +86,7 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var orgId = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgId))
+            if (!_currentContext.AccessEventLogs(orgId))
             {
                 throw new NotFoundException();
             }
@@ -104,7 +104,7 @@ namespace Bit.Api.Controllers
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
             if (organizationUser == null || !organizationUser.UserId.HasValue ||
-                !_currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+                !_currentContext.AccessEventLogs(organizationUser.OrganizationId))
             {
                 throw new NotFoundException();
             }

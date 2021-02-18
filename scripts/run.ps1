@@ -64,8 +64,8 @@ function Install() {
             $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
                 "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
                 "certonly{0} --standalone --noninteractive --agree-tos --preferred-challenges http " +`
-                "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs" -f $qFlag
-            Invoke-Expression $certbotExp
+                "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs"
+            Invoke-Expression ($certbotExp -f $qFlag)
         }
     }
     
@@ -83,7 +83,9 @@ function Docker-Compose-Up {
 
 function Docker-Compose-Down {
     Docker-Compose-Files
-    Invoke-Expression ("docker-compose down{0}" -f "") #TODO: qFlag
+    if ((Invoke-Expression ("docker-compose ps{0}" -f "") | Measure-Object -Line).lines -gt 2 ) {
+        Invoke-Expression ("docker-compose down{0}" -f "") #TODO: qFlag
+    }
 }
 
 function Docker-Compose-Pull {
@@ -113,6 +115,8 @@ function Docker-Compose-Volumes {
     Create-Dir "logs/mssql"
     Create-Dir "logs/nginx"
     Create-Dir "logs/notifications"
+    Create-Dir "logs/sso"
+    Create-Dir "logs/portal"
     Create-Dir "mssql/backups"
     Create-Dir "mssql/data"
 }

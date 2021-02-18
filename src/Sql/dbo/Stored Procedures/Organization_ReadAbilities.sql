@@ -14,6 +14,7 @@ BEGIN
             0
         END AS [Using2fa],
         [UsersGetPremium],
+        [UseSso],
         [Enabled]
     FROM
         [dbo].[Organization]

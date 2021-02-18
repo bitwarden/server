@@ -19,6 +19,7 @@ namespace Bit.Core.Models.Api.Request.Accounts
         public KdfType Kdf { get; set; }
         [Required]
         public int KdfIterations { get; set; }
+        public string OrgIdentifier { get; set; }
 
         public User ToUser(User existingUser)
         {

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 using Fido2NetLib;
+using Bit.Core.Context;
 
 namespace Bit.Core.Test.Services
 {
@@ -42,6 +43,7 @@ namespace Bit.Core.Test.Services
         private readonly IFido2 _fido2;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
+        private readonly IOrganizationService _organizationService;
 
         public UserServiceTests()
         {
@@ -70,6 +72,7 @@ namespace Bit.Core.Test.Services
             _fido2 = Substitute.For<IFido2>();
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
+            _organizationService = Substitute.For<IOrganizationService>();
 
             _sut = new UserService(
                 _userRepository,
@@ -96,7 +99,8 @@ namespace Bit.Core.Test.Services
                 _referenceEventService,
                 _fido2,
                 _currentContext,
-                _globalSettings
+                _globalSettings,
+                _organizationService
             );
         }
 

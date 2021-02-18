@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Core.Models.Data
 {
@@ -17,7 +20,13 @@ namespace Bit.Core.Models.Data
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
         public string MetadataAddress { get; set; }
+        public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; } = OpenIdConnectRedirectBehavior.FormPost;
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
+        public string AdditionalScopes { get; set; }
+        public string AdditionalUserIdClaimTypes { get; set; }
+        public string AdditionalEmailClaimTypes { get; set; }
+        public string AdditionalNameClaimTypes { get; set; }
+        public string AcrValues { get; set; }
 
         // SAML2 IDP
         public string IdpEntityId { get; set; }
@@ -37,6 +46,7 @@ namespace Bit.Core.Models.Data
         public Saml2SigningBehavior SpSigningBehavior { get; set; } = Saml2SigningBehavior.IfIdpWantAuthnRequestsSigned;
         public bool SpWantAssertionsSigned { get; set; }
         public bool SpValidateCertificates { get; set; }
+        public string SpMinIncomingSigningAlgorithm { get; set; } = SamlSigningAlgorithms.Sha256;
 
         public string BuildCallbackPath(string ssoUri = null)
         {
@@ -48,15 +58,45 @@ namespace Bit.Core.Models.Data
             return BuildSsoUrl(_oidcSignedOutPath, ssoUri);
         }
 
-        public string BuildSaml2ModulePath(string ssoUri = null)
+        public string BuildSaml2ModulePath(string ssoUri = null, string scheme = null)
         {
-            return BuildSsoUrl(_saml2ModulePath, ssoUri);
+            return string.Concat(BuildSsoUrl(_saml2ModulePath, ssoUri),
+                string.IsNullOrWhiteSpace(scheme) ? string.Empty : $"/{scheme}");
         }
 
-        public string BuildSaml2AcsUrl(string ssoUri = null)
+        public string BuildSaml2AcsUrl(string ssoUri = null, string scheme = null)
         {
-            return string.Concat(BuildSaml2ModulePath(ssoUri), "/Acs");
+            return string.Concat(BuildSaml2ModulePath(ssoUri, scheme), "/Acs");
         }
+
+        public string BuildSaml2MetadataUrl(string ssoUri = null, string scheme = null)
+        {
+            return BuildSaml2ModulePath(ssoUri, scheme);
+        }
+
+        public IEnumerable<string> GetAdditionalScopes() => AdditionalScopes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalUserIdClaimTypes() => AdditionalUserIdClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalEmailClaimTypes() => AdditionalEmailClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
+        
+        public IEnumerable<string> GetAdditionalNameClaimTypes() => AdditionalNameClaimTypes?
+            .Split(',')?
+            .Where(c => !string.IsNullOrWhiteSpace(c))?
+            .Select(c => c.Trim()) ??
+            Array.Empty<string>();
 
         private string BuildSsoUrl(string relativePath, string ssoUri)
         {

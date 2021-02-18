@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Models.Api.Public;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -20,14 +21,14 @@ namespace Bit.Api.Public.Controllers
         private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
 
         public MembersController(
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
             IOrganizationService organizationService,
             IUserService userService,
-            CurrentContext currentContext)
+            ICurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
@@ -116,6 +117,13 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Post([FromBody]MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
+            var invite = new OrganizationUserInvite
+            {
+                Emails = new List<string> { model.Email },
+                Type = model.Type.Value,
+                AccessAll = model.AccessAll.Value,
+                Collections = associations
+            };
             var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
                 model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
             var response = new MemberResponseModel(user, associations);
@@ -178,7 +186,7 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds);
+            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
             return new OkResult();
         }
 

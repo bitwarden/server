@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using Bit.Core.Services;
 using Bit.Core;
+using Bit.Core.Context;
 using System.Net;
 using Bit.Core.Exceptions;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Bit.Api.Controllers
         private static HttpClient _httpClient;
 
         private readonly IUserService _userService;
-        private readonly CurrentContext _currentContext;
+        private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly string _userAgent;
 
@@ -33,7 +34,7 @@ namespace Bit.Api.Controllers
 
         public HibpController(
             IUserService userService,
-            CurrentContext currentContext,
+            ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _userService = userService;

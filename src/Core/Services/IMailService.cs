@@ -28,5 +28,14 @@ namespace Bit.Core.Services
         Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null);
         Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
         Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
+        Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email);
+        Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token);
+        Task SendEmergencyAccessAcceptedEmailAsync(string granteeEmail, string email);
+        Task SendEmergencyAccessConfirmedEmailAsync(string grantorName, string email);
+        Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email);
+        Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email);
+        Task SendEmergencyAccessRecoveryRejected(EmergencyAccess emergencyAccess, string rejectingName, string email);
+        Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
+        Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
     }
 }

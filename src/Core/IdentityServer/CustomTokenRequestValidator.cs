@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Services;
+using Bit.Core.Context;
 using System.Linq;
 using Bit.Core.Identity;
 using Microsoft.Extensions.Logging;
 using IdentityServer4.Extensions;
+using IdentityModel;
 
 namespace Bit.Core.IdentityServer
 {
@@ -30,18 +32,21 @@ namespace Bit.Core.IdentityServer
             IApplicationCacheService applicationCacheService,
             IMailService mailService,
             ILogger<ResourceOwnerPasswordValidator> logger,
-            CurrentContext currentContext,
-            GlobalSettings globalSettings)
+            ICurrentContext currentContext,
+            GlobalSettings globalSettings,
+            IPolicyRepository policyRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
         }
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
         {
-            if (context.Result.ValidatedRequest.GrantType != "authorization_code")
+            string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
+            if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType) ||
+                context.Result.ValidatedRequest.ClientId.StartsWith("organization"))
             {
                 return;
             }
@@ -50,7 +55,9 @@ namespace Bit.Core.IdentityServer
 
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
         {
-            var user = await _userManager.FindByEmailAsync(context.Result.ValidatedRequest.Subject.GetDisplayName());
+            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
+                ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
             return (user, user != null);
         }
 
@@ -77,6 +84,9 @@ namespace Bit.Core.IdentityServer
             context.Result.IsError = true;
             context.Result.CustomResponse = customResponse;
         }
+
+        protected override void SetSsoResult(CustomTokenRequestValidationContext context, 
+            Dictionary<string, object> customResponse) => throw new System.NotImplementedException();
 
         protected override void SetErrorResult(CustomTokenRequestValidationContext context,
             Dictionary<string, object> customResponse)

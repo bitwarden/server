@@ -4,7 +4,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @Storage BIGINT
+    DECLARE @AttachmentStorage BIGINT
+    DECLARE @SendStorage BIGINT
 
     CREATE TABLE #OrgStorageUpdateTemp
     ( 
@@ -35,16 +36,31 @@ BEGIN
             #OrgStorageUpdateTemp
     )
     SELECT
-        @Storage = SUM([Size])
+        @AttachmentStorage = SUM([Size])
     FROM
         [CTE]
 
     DROP TABLE #OrgStorageUpdateTemp
 
+    ;WITH [CTE] AS (
+        SELECT
+            [Id],
+            CAST(JSON_VALUE([Data],'$.Size') AS BIGINT) [Size]
+        FROM
+            [Send]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+    )
+    SELECT
+        @SendStorage = SUM([CTE].[Size])
+    FROM
+        [CTE]
+
     UPDATE
         [dbo].[Organization]
     SET
-        [Storage] = @Storage,
+        [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
         [RevisionDate] = GETUTCDATE()
     WHERE
         [Id] = @Id

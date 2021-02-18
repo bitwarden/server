@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Utilities;
 using AspNetCoreRateLimit;
 using System.Globalization;
@@ -49,7 +50,7 @@ namespace Bit.Identity
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Caching
             services.AddMemoryCache();
@@ -90,7 +91,9 @@ namespace Bit.Identity
 
             // Authentication
             services
+                .AddDistributedIdentityServices(globalSettings)
                 .AddAuthentication()
+                .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
                 .AddOpenIdConnect("sso", "Single Sign On", options =>
                 {
                     options.Authority = globalSettings.BaseServiceUri.InternalSso;
@@ -100,8 +103,10 @@ namespace Bit.Identity
                     options.ClientSecret = globalSettings.OidcIdentityClientKey;
                     options.ResponseMode = "form_post";
 
-                    options.SignInScheme = IdentityServer4.IdentityServerConstants.ExternalCookieAuthenticationScheme;
+                    options.SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
                     options.ResponseType = "code";
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = true;
 
                     options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                     {

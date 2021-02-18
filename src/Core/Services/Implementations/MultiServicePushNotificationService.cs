@@ -122,6 +122,24 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task PushSyncSendCreateAsync(Send send)
+        {
+            PushToServices((s) => s.PushSyncSendCreateAsync(send));
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncSendUpdateAsync(Send send)
+        {
+            PushToServices((s) => s.PushSyncSendUpdateAsync(send));
+            return Task.FromResult(0);
+        }
+
+        public Task PushSyncSendDeleteAsync(Send send)
+        {
+            PushToServices((s) => s.PushSyncSendDeleteAsync(send));
+            return Task.FromResult(0);
+        }
+
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
             string deviceId = null)
         {

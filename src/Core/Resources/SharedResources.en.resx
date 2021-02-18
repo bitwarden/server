@@ -149,7 +149,7 @@
     <value>Edit Policy - {0}</value>
   </data>
   <data name="EditPolicyTwoStepLoginWarning" xml:space="preserve">
-    <value>Organization members who do not have two-step login enabled for their personal account will be removed from the organization and will receive an email notifying them about the change.</value>
+    <value>Organization members who are not Owners or Administrators and do not have two-step login enabled for their personal account will be removed from the organization and will receive an email notifying them about the change.</value>
   </data>
   <data name="Save" xml:space="preserve">
     <value>Save</value>
@@ -265,6 +265,9 @@
   <data name="SpEntityId" xml:space="preserve">
     <value>SP Entity ID</value>
   </data>
+  <data name="SpMetadataUrl" xml:space="preserve">
+    <value>SAML 2.0 Metadata URL</value>
+  </data>
   <data name="SpAcsUrl" xml:space="preserve">
     <value>Assertion Consumer Service (ACS) URL</value>
   </data>
@@ -330,6 +333,9 @@
   </data>
   <data name="SigningBehavior" xml:space="preserve">
     <value>Signing Behavior</value>
+  </data>
+  <data name="MinIncomingSigningAlgorithm" xml:space="preserve">
+    <value>Minimum Incoming Signing Algorithm</value>
   </data>
   <data name="BindingType" xml:space="preserve">
     <value>Binding Type</value>
@@ -472,6 +478,12 @@
   <data name="CopySpEntityId">
     <value>Copy the SP Entity Id to your clipboard</value>
   </data>
+  <data name="CopySpMetadataUrl">
+    <value>Copy the SAML 2.0 Metadata URL to your clipboard</value>
+  </data>
+  <data name="LaunchSpMetadataUrl">
+    <value>View the SAML 2.0 Metadata (opens in a new window)</value>
+  </data>
   <data name="CopySpAcsUrl">
     <value>Copy the Assertion Consumer Service (ACS) URL to your clipboard</value>
   </data>
@@ -486,5 +498,126 @@
   <data name="Artifact">
     <value>Artifact</value>
     <comment>A SAML binding type, Artifact</comment>
+  </data>
+  <data name="NoDomainHintProvided" xml:space="preserve">
+    <value>No domain_hint provided.</value>
+  </data>
+  <data name="InvalidReturnUrl" xml:space="preserve">
+    <value>invalid return URL</value>
+  </data>
+  <data name="ExternalAuthenticationError" xml:space="preserve">
+    <value>External authentication error</value>
+  </data>
+  <data name="UnknownUserId" xml:space="preserve">
+    <value>Unknown userid</value>
+  </data>
+  <data name="OrganizationOrSsoConfigNotFound" xml:space="preserve">
+    <value>Organization not found or SSO configuration not enabled</value>
+  </data>
+  <data name="SSOProviderIsNotAnOrgId" xml:space="preserve">
+    <value>SSO provider, {0} is not an organization id</value>
+  </data>
+  <data name="CannotFindEmailClaim" xml:space="preserve">
+    <value>Cannot find email claim</value>
+  </data>
+  <data name="InvalidUserIdentifier" xml:space="preserve">
+    <value>Invalid user identifier.</value>
+  </data>
+  <data name="UserIdAndTokenMismatch" xml:space="preserve">
+    <value>Supplied userId and token did not match.</value>
+  </data>
+  <data name="CouldNotFindOrganization" xml:space="preserve">
+    <value>Could not find organization for '{0}'</value>
+  </data>
+  <data name="NoSeatsAvailable" xml:space="preserve">
+    <value>No seats available for organization, '{0}'</value>
+  </data>
+  <data name="UserAlreadyInvited" xml:space="preserve">
+    <value>User, '{0}', has already been invited to this organization, '{1}'. Accept the invite in order to log in with SSO.</value>
+  </data>
+  <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
+    <value>In order to join this organization, contact an admin to send you an invite and follow the instructions within to accept.</value>
+  </data>
+  <data name="RedirectGet" xml:space="preserve">
+    <value>Redirect GET</value>
+    <comment>An OIDC Connect Redirect Behavior, Redirect; Emits a 302 response 
+    to redirect the user agent to the OpenID Connect provider using a GET request.</comment>
+  </data>
+  <data name="FormPost" xml:space="preserve">
+    <value>Form POST</value>
+    <comment>An OIDC Connect Redirect Behavior, Form POST; Emits an HTML form to
+      redirect the user agent to the OpenID Connect provider using a POST request.</comment>
+  </data>
+  <data name="RedirectBehavior" xml:space="preserve">
+    <value>OIDC Redirect Behavior</value>
+  </data>
+  <data name="SingleOrganization" xml:space="preserve">
+    <value>Single Organization</value>
+  </data>
+  <data name="SingleOrganizationDescription" xml:space="preserve">
+    <value>Restrict users from being able to join any other organizations.</value>
+  </data>
+  <data name="SingleOrganizationPolicyWarning" xml:space="preserve">
+    <value>Organization members who are not Owners or Administrators and are already a part of another organization will be removed from this organization and will receive an email notifying them about the change.</value>
+  </data>
+  <data name="RequireSso" xml:space="preserve">
+    <value>Single Sign-On Authentication</value>
+  </data>
+  <data name="RequireSsoDescription" xml:space="preserve">
+    <value>Require users to log in with the Enterprise Single Sign-On method.</value>
+  </data>
+  <data name="Prerequisite" xml:space="preserve">
+    <value>Prerequisite</value>
+  </data>
+  <data name="RequireSsoPolicyReq" xml:space="preserve">
+    <value>The Single Organization enterprise policy must be enabled before activating this policy.</value>
+  </data>
+  <data name="RequireSsoPolicyReqError" xml:space="preserve">
+    <value>Single Organization policy not enabled.</value>
+  </data>
+  <data name="RequireSsoExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
+  <data name="PersonalOwnership" xml:space="preserve">
+    <value>Personal Ownership</value>
+  </data>
+  <data name="PersonalOwnershipDescription" xml:space="preserve">
+    <value>Require users to save vault items to an organization by removing the personal ownership option.</value>
+  </data>
+  <data name="PersonalOwnershipExemption" xml:space="preserve">
+    <value>Organization users that can manage the organization's policies are exempt from this policy's enforcement.</value>
+  </data>
+  <data name="DisableSend" xml:space="preserve">
+    <value>Disable Send</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
+  </data>
+  <data name="DisableSendDescription" xml:space="preserve">
+    <value>Do not allow users to create or edit a Bitwarden Send. Deleting an existing Send is still allowed.</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
+  </data>
+  <data name="DisableSendExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
+  <data name="DisableRequireSsoError" xml:space="preserve">
+    <value>You must manually disable the Single Sign-On Authentication policy before this policy can be disabled.</value>
+  </data>
+  <data name="PersonalOwnershipCheckboxDesc" xml:space="preserve">
+    <value>Disable personal ownership for organization users</value>
+  </data>
+  <data name="AdditionalScopes" xml:space="preserve">
+    <value>Additional/Custom Scopes (comma delimited)</value>
+  </data>
+  <data name="AdditionalUserIdClaimTypes" xml:space="preserve">
+    <value>Additional/Custom User ID Claim Types (comma delimited)</value>
+  </data>
+  <data name="AdditionalEmailClaimTypes" xml:space="preserve">
+    <value>Additional/Custom Email Claim Types (comma delimited)</value>
+  </data>
+  <data name="AdditionalNameClaimTypes" xml:space="preserve">
+    <value>Additional/Custom Name Claim Types (comma delimited)</value>
+  </data>
+  <data name="AcrValues" xml:space="preserve">
+    <value>Requested Authentication Context Class Reference values (acr_values)</value>
+    <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
   </data>
 </root>

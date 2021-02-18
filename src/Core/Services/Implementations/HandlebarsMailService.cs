@@ -202,7 +202,7 @@ namespace Bit.Core.Services
 
         public async Task SendWelcomeEmailAsync(User user)
         {
-            var message = CreateDefaultMessage("Welcome", user.Email);
+            var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
             var model = new BaseMailModel
             {
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -323,6 +323,20 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "RecoverTwoFactor", model);
             message.Category = "RecoverTwoFactor";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
+        {
+            var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
+            var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
+            {
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
+            message.Category = "OrganizationUserRemovedForPolicySingleOrg";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -474,6 +488,122 @@ namespace Bit.Core.Services
                 var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
                 writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
             });
+        }
+
+        public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
+        {
+            var message = CreateDefaultMessage($"Emergency Access Contact Invite", emergencyAccess.Email);
+            var model = new EmergencyAccessInvitedViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(name),
+                Email = WebUtility.UrlEncode(emergencyAccess.Email),
+                Id = emergencyAccess.Id.ToString(),
+                Token = WebUtility.UrlEncode(token),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessInvited", model);
+            message.Category = "EmergencyAccessInvited";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessAcceptedEmailAsync(string granteeEmail, string email)
+        {
+            var message = CreateDefaultMessage($"Accepted Emergency Access", email);
+            var model = new EmergencyAccessAcceptedViewModel
+            {
+                GranteeEmail = CoreHelpers.SanitizeForEmail(granteeEmail),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessAccepted", model);
+            message.Category = "EmergencyAccessAccepted";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessConfirmedEmailAsync(string grantorName, string email)
+        {
+            var message = CreateDefaultMessage($"You Have Been Confirmed as Emergency Access Contact", email);
+            var model = new EmergencyAccessConfirmedViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(grantorName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessConfirmed", model);
+            message.Category = "EmergencyAccessConfirmed";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email)
+        {
+            var message = CreateDefaultMessage("Emergency Access Initiated", email);
+            
+            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
+
+            var model = new EmergencyAccessRecoveryViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(initiatingName),
+                Action = emergencyAccess.Type.ToString(),
+                DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessRecovery", model);
+            message.Category = "EmergencyAccessRecovery";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+        
+        public async Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email)
+        {
+            var message = CreateDefaultMessage("Emergency Access Approved", email);
+            var model = new EmergencyAccessApprovedViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(approvingName),
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessApproved", model);
+            message.Category = "EmergencyAccessApproved";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessRecoveryRejected(EmergencyAccess emergencyAccess, string rejectingName, string email)
+        {
+            var message = CreateDefaultMessage("Emergency Access Rejected", email);
+            var model = new EmergencyAccessRejectedViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(rejectingName),
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessRejected", model);
+            message.Category = "EmergencyAccessRejected";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email)
+        {
+            var message = CreateDefaultMessage("Pending Emergency Access Request", email);
+
+            var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
+            
+            var model = new EmergencyAccessRecoveryViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(initiatingName),
+                Action = emergencyAccess.Type.ToString(),
+                DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessRecoveryReminder", model);
+            message.Category = "EmergencyAccessRecoveryReminder";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess emergencyAccess, string initiatingName, string email)
+        {
+            var message = CreateDefaultMessage("Emergency Access Granted", email);
+            var model = new EmergencyAccessRecoveryTimedOutViewModel
+            {
+                Name = CoreHelpers.SanitizeForEmail(initiatingName),
+                Action = emergencyAccess.Type.ToString(),
+            };
+            await AddMessageContentAsync(message, "EmergencyAccessRecoveryTimedOut", model);
+            message.Category = "EmergencyAccessRecoveryTimedOut";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
     }
 }

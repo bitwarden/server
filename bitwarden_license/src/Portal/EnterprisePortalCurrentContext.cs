@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core;
+using Bit.Core.Context;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +7,7 @@ using Bit.Core.Repositories;
 using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Portal
 {
@@ -37,6 +38,14 @@ namespace Bit.Portal
         public bool OwnerForSelectedOrganization =>
             SelectedOrganizationDetails?.Type == Core.Enums.OrganizationUserType.Owner;
 
+        public bool CanManagePoliciesForSelectedOrganization =>
+            AdminForSelectedOrganization || SelectedOrganizationDetailsPermissions.ManagePolicies == true;
+
+        public bool CanManageSsoForSelectedOrganization =>
+            AdminForSelectedOrganization || SelectedOrganizationDetailsPermissions.ManageSso == true;
+
+        public Permissions SelectedOrganizationDetailsPermissions => CoreHelpers.LoadClassFromJsonData<Permissions>(SelectedOrganizationDetails?.Permissions);
+
         public async override Task SetContextAsync(ClaimsPrincipal user)
         {
             var nameId = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -52,7 +61,8 @@ namespace Bit.Portal
 
             // TODO: maybe make loading orgs Lazy<T> somehow?
             var orgUserRepo = _serviceProvider.GetRequiredService<IOrganizationUserRepository>();
-            var userOrgs = await orgUserRepo.GetManyDetailsByUserAsync(UserId.Value);
+            var userOrgs = await orgUserRepo.GetManyDetailsByUserAsync(UserId.Value,
+                Core.Enums.OrganizationUserStatusType.Confirmed);
             OrganizationsDetails = userOrgs.ToList();
             Organizations = userOrgs.Select(ou => new CurrentContentOrganization
             {

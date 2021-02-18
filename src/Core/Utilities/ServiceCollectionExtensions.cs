@@ -1,40 +1,43 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Resources;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using IdentityModel;
+using IdentityServer4.AccessTokenValidation;
+using IdentityServer4.Configuration;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Azure.Storage;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Http;
-using System;
-using System.IO;
-using SqlServerRepos = Bit.Core.Repositories.SqlServer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Serilog.Context;
 using EntityFrameworkRepos = Bit.Core.Repositories.EntityFramework;
 using NoopRepos = Bit.Core.Repositories.Noop;
-using System.Threading.Tasks;
+using SqlServerRepos = Bit.Core.Repositories.SqlServer;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using IdentityServer4.AccessTokenValidation;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.HttpOverrides;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Utilities;
-using Serilog.Context;
-using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage;
-using System.Reflection;
-using Bit.Core.Resources;
-using Microsoft.AspNetCore.Mvc.Localization;
 
 namespace Bit.Core.Utilities
 {
@@ -78,6 +81,9 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
                 services.AddSingleton<ISsoConfigRepository, SqlServerRepos.SsoConfigRepository>();
                 services.AddSingleton<ISsoUserRepository, SqlServerRepos.SsoUserRepository>();
+                services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
+                services.AddSingleton<ITaxRateRepository, SqlServerRepos.TaxRateRepository>();
+                services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
             }
 
             if (globalSettings.SelfHosted)
@@ -110,8 +116,11 @@ namespace Bit.Core.Utilities
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
             services.AddScoped<Services.IEventService, EventService>();
+            services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
+            services.AddSingleton<ISsoConfigService, SsoConfigService>();
+            services.AddScoped<ISendService, SendService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -197,6 +206,19 @@ namespace Bit.Core.Utilities
             else
             {
                 services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.Send.ConnectionString))
+            {
+                services.AddSingleton<ISendFileStorageService, AzureSendFileStorageService>();
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
+            {
+                services.AddSingleton<ISendFileStorageService, LocalSendStorageService>();
+            }
+            else
+            {
+                services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
             }
 
             if (globalSettings.SelfHosted)
@@ -484,6 +506,32 @@ namespace Bit.Core.Utilities
                         var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
                         return factory.Create("SharedResources", assemblyName.Name);
                     });
+        }
+
+        public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
+        {
+            if (string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
+            {
+                services.AddDistributedMemoryCache();
+            }
+            else
+            {
+                services.AddDistributedRedisCache(options =>
+                    options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
+            }
+
+            services.AddOidcStateDataFormatterCache();
+            services.AddSession();
+            services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
+            services.ConfigureExternalCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
+            services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
+                svcs => new ConfigureOpenIdConnectDistributedOptions(
+                    svcs.GetRequiredService<IHttpContextAccessor>(),
+                    globalSettings,
+                    svcs.GetRequiredService<IdentityServerOptions>())
+            );
+
+            return services;
         }
     }
 }

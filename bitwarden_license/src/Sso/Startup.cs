@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;
@@ -39,7 +40,7 @@ namespace Bit.Sso
             services.AddSqlServerRepositories(globalSettings);
 
             // Context
-            services.AddScoped<CurrentContext>();
+            services.AddScoped<ICurrentContext, CurrentContext>();
 
             // Mvc
             services.AddControllersWithViews();
@@ -58,7 +59,9 @@ namespace Bit.Sso
             }
 
             // Authentication
-            services.AddAuthentication();
+            services.AddDistributedIdentityServices(globalSettings);
+            services.AddAuthentication()
+                .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
             services.AddSsoServices(globalSettings);
 
             // IdentityServer

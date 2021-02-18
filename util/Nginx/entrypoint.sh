@@ -30,7 +30,7 @@ mkhomedir_helper $USERNAME
 # The rest...
 
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
-cp /etc/bitwarden/nginx/default.conf /etc/nginx/conf.d/default.conf
+cp /etc/bitwarden/nginx/*.conf /etc/nginx/conf.d/
 mkdir -p /etc/letsencrypt
 chown -R $USERNAME:$GROUPNAME /etc/letsencrypt
 mkdir -p /etc/ssl

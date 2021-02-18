@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-
+using Bit.Core.Utilities;
 namespace Bit.Core.Models.Api
 {
     public class ProfileOrganizationResponseModel : ResponseModel
@@ -29,6 +29,7 @@ namespace Bit.Core.Models.Api
             Enabled = organization.Enabled;
             SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
             Identifier = organization.Identifier;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
         }
 
         public string Id { get; set; }
@@ -53,5 +54,6 @@ namespace Bit.Core.Models.Api
         public bool Enabled { get; set; }
         public bool SsoBound { get; set; }
         public string Identifier { get; set; }
+        public Permissions Permissions { get; set; }
     }
 }

@@ -9,12 +9,16 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
 using IdentityServer4;
+using IdentityServer4.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -39,6 +43,7 @@ namespace Bit.Core.Business.Sso
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedSchemes;
         private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
         private readonly SemaphoreSlim _semaphore;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         private DateTime? _lastSchemeLoad;
         private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
@@ -53,7 +58,8 @@ namespace Bit.Core.Business.Sso
             ISsoConfigRepository ssoConfigRepository,
             ILogger<DynamicAuthenticationSchemeProvider> logger,
             GlobalSettings globalSettings,
-            SamlEnvironment samlEnvironment)
+            SamlEnvironment samlEnvironment,
+            IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
             _oidcPostConfigureOptions = oidcPostConfigureOptions;
@@ -75,11 +81,12 @@ namespace Bit.Core.Business.Sso
             _ssoConfigRepository = ssoConfigRepository;
             _logger = logger;
             _globalSettings = globalSettings;
-            _schemeCacheLifetime = TimeSpan.FromSeconds(_globalSettings.Sso?.CacheLifetimeInSeconds ?? 60);
+            _schemeCacheLifetime = TimeSpan.FromSeconds(_globalSettings.Sso?.CacheLifetimeInSeconds ?? 30);
             _samlEnvironment = samlEnvironment;
             _cachedSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
             _semaphore = new SemaphoreSlim(1);
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
         private bool CacheIsValid
@@ -303,7 +310,7 @@ namespace Bit.Core.Business.Sso
                 ClientSecret = config.ClientSecret,
                 ResponseType = "code",
                 ResponseMode = "form_post",
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.SignoutScheme,
                 SaveTokens = false, // reduce overall request size
                 TokenValidationParameters = new TokenValidationParameters
@@ -315,8 +322,32 @@ namespace Bit.Core.Business.Sso
                 SignedOutCallbackPath = config.BuildSignedOutCallbackPath(),
                 MetadataAddress = config.MetadataAddress,
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
+                AuthenticationMethod = config.RedirectBehavior,
                 GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
             };
+            oidcOptions.Scope
+                .AddIfNotExists(OpenIdConnectScopes.OpenId)
+                .AddIfNotExists(OpenIdConnectScopes.Email)
+                .AddIfNotExists(OpenIdConnectScopes.Profile);
+            foreach (var scope in config.GetAdditionalScopes())
+            {
+                oidcOptions.Scope.AddIfNotExists(scope);
+            }
+
+            oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
+
+            // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
+            if (!string.IsNullOrWhiteSpace(config.AcrValues))
+            {
+                oidcOptions.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = ctx =>
+                    {
+                        ctx.ProtocolMessage.AcrValues = config.AcrValues;
+                        return Task.CompletedTask;
+                    }
+                };
+            }
 
             return new DynamicAuthenticationScheme(name, name, typeof(OpenIdConnectHandler),
                 oidcOptions, SsoType.OpenIdConnect);
@@ -339,12 +370,16 @@ namespace Bit.Core.Business.Sso
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
-                ModulePath = config.BuildSaml2ModulePath(),
+                ModulePath = config.BuildSaml2ModulePath(null, name),
                 NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
                 ValidateCertificates = config.SpValidateCertificates,
             };
+            if (!string.IsNullOrWhiteSpace(config.SpMinIncomingSigningAlgorithm))
+            {
+                spOptions.MinIncomingSigningAlgorithm = config.SpMinIncomingSigningAlgorithm;
+            }
             if (!string.IsNullOrWhiteSpace(config.SpOutboundSigningAlgorithm))
             {
                 spOptions.OutboundSigningAlgorithm = config.SpOutboundSigningAlgorithm;
@@ -389,8 +424,9 @@ namespace Bit.Core.Business.Sso
             var options = new Saml2Options
             {
                 SPOptions = spOptions,
-                SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
+                SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
                 SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
+                CookieManager = new IdentityServer.DistributedCacheCookieManager(),
             };
             options.IdentityProviders.Add(idp);
 

@@ -23,8 +23,12 @@ namespace Bit.Core.Repositories
         Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId);
         Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
             OrganizationUserStatusType? status = null);
+        Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId,
+            OrganizationUserStatusType? status = null);
         Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
         Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
+        Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
+        Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email);
     }
 }

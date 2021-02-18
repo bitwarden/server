@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>1.37.0</Version>
+    <Version>1.39.4</Version>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bit.Notifications</RootNamespace>
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
