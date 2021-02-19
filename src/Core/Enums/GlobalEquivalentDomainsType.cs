@@ -63,7 +63,7 @@
         Mdsol = 58,
         Sears = 59,
         Xiami = 60,
-        Belkin = 61,
+        Belkin = 61, // deprecated
         Turbotax = 62,
         Shopify = 63,
         Ebay = 64,
