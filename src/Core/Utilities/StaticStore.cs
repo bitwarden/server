@@ -92,6 +92,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Netcup, new List<string> { "netcup.de", "netcup.eu", "customercontrolpanel.de" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Yandex, new List<string> { "yandex.com", "ya.ru", "yandex.az", "yandex.by", "yandex.co.il", "yandex.com.am", "yandex.com.ge", "yandex.com.tr", "yandex.ee", "yandex.fi", "yandex.fr", "yandex.kg", "yandex.kz", "yandex.lt", "yandex.lv", "yandex.md", "yandex.pl", "yandex.ru", "yandex.tj", "yandex.tm", "yandex.ua", "yandex.uz" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Sony, new List<string> { "sony.com", "sonyentertainmentnetwork.com", "playstation.com" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.LogMeIn, new List<string> { "logmein.com", "logme.in" });
             #endregion
 
             #region Plans
