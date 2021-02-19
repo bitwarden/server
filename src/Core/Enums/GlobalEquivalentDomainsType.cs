@@ -24,7 +24,7 @@
         Cox = 19,
         Norton = 20,
         Verizon = 21,
-        Buy = 22,
+        Buy = 22, // deprecated
         Sirius = 23,
         Ea = 24,
         Basecamp = 25,
