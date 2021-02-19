@@ -6,7 +6,7 @@
         Apple = 1,
         Ameritrade = 2,
         BoA = 3,
-        Sprint = 4,
+        Sprint = 4, // deprecated
         WellsFargo = 5,
         Merrill = 6,
         Citi = 7,
