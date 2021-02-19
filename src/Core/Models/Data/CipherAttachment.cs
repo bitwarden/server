@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.ComponentModel;
 
 namespace Bit.Core.Models.Data
 {
@@ -34,8 +33,7 @@ namespace Bit.Core.Models.Data
             public string FileName { get; set; }
             public string Key { get; set; }
 
-            [DefaultValue("attachments")]
-            public string ContainerName { get; set; }
+            public string ContainerName { get; set; } = "attachments";
 
             // This is stored alongside metadata as an identifier. It does not need repeating in serialization
             [JsonIgnore]
