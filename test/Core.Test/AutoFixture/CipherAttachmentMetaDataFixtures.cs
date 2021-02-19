@@ -1,9 +1,6 @@
-using System.ComponentModel;
-using System.Reflection;
 using AutoFixture;
 using AutoFixture.Dsl;
 using Bit.Core.Models.Data;
-using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.CipherAttachmentMetaData
 {
@@ -27,18 +24,7 @@ namespace Bit.Core.Test.AutoFixture.CipherAttachmentMetaData
             base.ComposerAction(fixture, composer).With(d => d.ContainerName, (string)null);
     }
 
-    public class MetaDataDefaultContainer : MetaData
-    {
-        private static readonly string _defaultValue = typeof(CipherAttachment.MetaData)
-            .GetProperty(nameof(CipherAttachment.MetaData.ContainerName))
-            .GetCustomAttribute<DefaultValueAttribute>().Value as string;
-
-        protected override IPostprocessComposer<CipherAttachment.MetaData> ComposerAction(IFixture fixture,
-            ICustomizationComposer<CipherAttachment.MetaData> composer) =>
-            base.ComposerAction(fixture, composer).With(d => d.ContainerName, _defaultValue);
-    }
-
-    public class MetaDataWithoutKey : MetaDataDefaultContainer
+    public class MetaDataWithoutKey : MetaDataWithoutContainer
     {
         protected override IPostprocessComposer<CipherAttachment.MetaData> ComposerAction(IFixture fixture,
             ICustomizationComposer<CipherAttachment.MetaData> composer) =>

@@ -28,7 +28,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataWithoutKey) })]
         public async Task UploadNewAttachmentAsync_Success(string stream, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -45,7 +44,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutKey) })]
         public async Task UploadShareAttachmentAsync_Success(string stream, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -63,7 +61,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutKey) })]
         public async Task StartShareAttachmentAsync_NoSource_NoWork(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -81,7 +78,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutKey) })]
         public async Task StartShareAttachmentAsync_NoDest_NoWork(string source, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -108,7 +104,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutKey) })]
         public async Task StartShareAttachmentAsync_Success(string source, string destOriginal, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -121,7 +116,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(OrganizationCipher), typeof(MetaDataWithoutKey) })]
         public async Task RollbackShareAttachmentAsync_Success(string source, string destOriginal, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
@@ -146,7 +140,6 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaData) })]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataWithoutContainer) })]
-        [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataDefaultContainer) })]
         [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaDataWithoutKey) })]
         public async Task DeleteAttachmentAsync_Success(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
