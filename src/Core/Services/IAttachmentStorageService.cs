@@ -17,7 +17,6 @@ namespace Bit.Core.Services
         Task DeleteAttachmentsForCipherAsync(Guid cipherId);
         Task DeleteAttachmentsForOrganizationAsync(Guid organizationId);
         Task DeleteAttachmentsForUserAsync(Guid userId);
-        // Task<string> GetUploadAttachmentUrl(Cipher cipher, string attachmentId);
         Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
     }
 }
