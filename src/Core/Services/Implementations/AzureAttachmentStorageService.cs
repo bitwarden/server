@@ -12,7 +12,7 @@ namespace Bit.Core.Services
 {
     public class AzureAttachmentStorageService : IAttachmentStorageService
     {
-        private const string _defaultContainerName = "attachments-v2";
+        private const string _defaultContainerName = "attachments";
         private readonly static string[] _attachmentContainerName = { "attachments", "attachments-v2" };
         private static readonly TimeSpan downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
