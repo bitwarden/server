@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using System.IO;
@@ -165,7 +165,14 @@ namespace Bit.Core.Services
             if (!_attachmentContainers.ContainsKey(containerName) || _attachmentContainers[containerName] == null)
             {
                 _attachmentContainers[containerName] = _blobClient.GetContainerReference(containerName);
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null);
+                if (containerName == "attachments")
+                {
+                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
+                }
+                else
+                {
+                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null);
+                }
             }
         }
     }
