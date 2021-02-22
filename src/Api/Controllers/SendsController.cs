@@ -11,6 +11,7 @@ using Bit.Api.Utilities;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Models.Api.Response;
 
 namespace Bit.Api.Controllers
 {
@@ -21,17 +22,20 @@ namespace Bit.Api.Controllers
         private readonly ISendRepository _sendRepository;
         private readonly IUserService _userService;
         private readonly ISendService _sendService;
+        private readonly ISendFileStorageService _sendFileStorageService;
         private readonly GlobalSettings _globalSettings;
 
         public SendsController(
             ISendRepository sendRepository,
             IUserService userService,
             ISendService sendService,
+            ISendFileStorageService sendFileStorageService,
             GlobalSettings globalSettings)
         {
             _sendRepository = sendRepository;
             _userService = userService;
             _sendService = sendService;
+            _sendFileStorageService = sendFileStorageService;
             _globalSettings = globalSettings;
         }
 
@@ -57,6 +61,17 @@ namespace Bit.Api.Controllers
             }
 
             return new ObjectResult(new SendAccessResponseModel(send, _globalSettings));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("access/file/{id}")]
+        public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string id)
+        {
+            return new SendFileDownloadDataResponseModel()
+            {
+                Id = id,
+                Url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(id)
+            };
         }
 
         [HttpGet("{id}")]
