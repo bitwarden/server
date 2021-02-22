@@ -55,7 +55,7 @@ namespace Bit.Core.Services
 
         public Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
-            return Task.FromResult(string.Empty);
+            return Task.FromResult((string)null);
         }
 
     }
