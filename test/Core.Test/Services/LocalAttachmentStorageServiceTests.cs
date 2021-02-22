@@ -149,7 +149,7 @@ namespace Bit.Core.Test.Services
 
                 var expectedPath = $"{tempDirectory}/{cipher.Id}/{attachmentData.AttachmentId}";
                 Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
-                File.Create(expectedPath);
+                File.Create(expectedPath).Close();
 
                 await sutProvider.Sut.DeleteAttachmentAsync(cipher.Id, attachmentData);
 
