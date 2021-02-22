@@ -27,3 +27,8 @@ GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_StatusType]
+    ON [dbo].[OrganizationUser] ([Status], [Type])
+    INCLUDE ([OrganizationId], [UserId]);

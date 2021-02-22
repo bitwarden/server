@@ -8,3 +8,9 @@
     CONSTRAINT [PK_SsoConfig] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_SsoConfig_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_SsoConfig_OrganizationId]
+    ON [dbo].[SsoConfig] ([OrganizationId])
+    INCLUDE ([CreationDate], [Data], [Enabled], [RevisionDate]);

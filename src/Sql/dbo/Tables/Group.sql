@@ -10,3 +10,7 @@
     CONSTRAINT [FK_Group_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Group_OrganizationId]
+    ON [dbo].[Group] ([OrganizationId]);
