@@ -11,5 +11,6 @@ namespace Bit.Core.Services
         Task DeleteFileAsync(string fileId);
         Task DeleteFilesForOrganizationAsync(Guid organizationId);
         Task DeleteFilesForUserAsync(Guid userId);
+        Task<string> GetSendFileDownloadUrlAsync(string fileId);
     }
 }

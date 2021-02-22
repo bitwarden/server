@@ -9,11 +9,13 @@ namespace Bit.Core.Services
     public class LocalSendStorageService : ISendFileStorageService
     {
         private readonly string _baseDirPath;
+        private readonly string _baseSendUrl;
 
         public LocalSendStorageService(
             GlobalSettings globalSettings)
         {
             _baseDirPath = globalSettings.Send.BaseDirectory;
+            _baseSendUrl = globalSettings.Send.BaseUrl;
         }
 
         public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
@@ -40,6 +42,12 @@ namespace Bit.Core.Services
         public async Task DeleteFilesForUserAsync(Guid userId)
         {
             await InitAsync();
+        }
+
+        public async Task<string> GetSendFileDownloadUrlAsync(string fileId)
+        {
+            await InitAsync();
+            return $"{_baseSendUrl}/{fileId}";
         }
 
         private void DeleteFileIfExists(string path)

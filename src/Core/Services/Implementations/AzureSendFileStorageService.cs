@@ -12,6 +12,7 @@ namespace Bit.Core.Services
     {
         private const string FilesContainerName = "sendfiles";
 
+        private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
         private CloudBlobContainer _sendFilesContainer;
 
@@ -55,12 +56,25 @@ namespace Bit.Core.Services
             await InitAsync();
         }
 
+        public async Task<string> GetSendFileDownloadUrlAsync(string fileId)
+        {
+            await InitAsync();
+            var blob = _sendFilesContainer.GetBlockBlobReference(fileId);
+            var accessPolicy = new SharedAccessBlobPolicy()
+            {
+                SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
+                Permissions = SharedAccessBlobPermissions.Read
+            };
+
+            return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+        }
+
         private async Task InitAsync()
         {
             if (_sendFilesContainer == null)
             {
                 _sendFilesContainer = _blobClient.GetContainerReference(FilesContainerName);
-                await _sendFilesContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
+                await _sendFilesContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null);
             }
         }
     }

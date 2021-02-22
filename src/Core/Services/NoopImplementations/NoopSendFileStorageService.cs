@@ -26,5 +26,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task<string> GetSendFileDownloadUrlAsync(string fileId)
+        {
+            return Task.FromResult((string)null);
+        }
     }
 }
