@@ -3,6 +3,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using Bit.Core.Utilities.Duo;
 using Bit.Core.Models;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Identity
 {

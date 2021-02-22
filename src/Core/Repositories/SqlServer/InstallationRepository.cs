@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

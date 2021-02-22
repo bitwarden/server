@@ -2,6 +2,7 @@
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using Dapper;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {

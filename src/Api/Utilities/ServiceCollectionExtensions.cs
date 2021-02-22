@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Bit.Core;
+using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 

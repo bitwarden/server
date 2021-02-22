@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 

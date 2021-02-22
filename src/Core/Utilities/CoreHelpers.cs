@@ -14,6 +14,7 @@ using Dapper;
 using System.Globalization;
 using System.Web;
 using Microsoft.AspNetCore.DataProtection;
+using Bit.Core.Settings;
 using Bit.Core.Enums;
 using Bit.Core.Context;
 using System.Threading.Tasks;

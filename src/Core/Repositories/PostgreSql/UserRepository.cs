@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using Dapper;
 using Npgsql;
 

@@ -2,10 +2,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using Bit.Core.Services;
-using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using Bit.Core.Settings;
 using U2F.Core.Utils;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;

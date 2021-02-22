@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

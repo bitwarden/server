@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api

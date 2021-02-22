@@ -32,6 +32,12 @@ namespace Bit.Core.Models.Data
 
             public string FileName { get; set; }
             public string Key { get; set; }
+
+            public string ContainerName { get; set; } = "attachments";
+
+            // This is stored alongside metadata as an identifier. It does not need repeating in serialization
+            [JsonIgnore]
+            public string AttachmentId { get; set; }
         }
     }
 }

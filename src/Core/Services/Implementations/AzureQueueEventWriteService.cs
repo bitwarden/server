@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

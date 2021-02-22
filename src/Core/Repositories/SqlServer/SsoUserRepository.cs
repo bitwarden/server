@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using Dapper;
 using System;
 using System.Threading.Tasks;

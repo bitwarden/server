@@ -6,6 +6,7 @@ using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

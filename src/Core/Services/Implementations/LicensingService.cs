@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Storage;

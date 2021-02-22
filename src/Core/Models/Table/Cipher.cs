@@ -42,6 +42,10 @@ namespace Bit.Core.Models.Table
             try
             {
                 _attachmentData = JsonConvert.DeserializeObject<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
+                foreach (var kvp in _attachmentData)
+                {
+                    kvp.Value.AttachmentId = kvp.Key;
+                }
                 return _attachmentData;
             }
             catch

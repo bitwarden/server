@@ -9,6 +9,7 @@ using IdentityModel;
 using Bit.Core.Utilities;
 using System.Security.Claims;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Context;
 using System.Collections.ObjectModel;
 

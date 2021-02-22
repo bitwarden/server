@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Models.Business;
+using Bit.Core.Settings;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Services

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Globalization;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Identity;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

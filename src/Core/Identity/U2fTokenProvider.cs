@@ -13,6 +13,7 @@ using U2F.Core.Exceptions;
 using U2F.Core.Utils;
 using System;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity

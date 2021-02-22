@@ -8,11 +8,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Controllers
 {

@@ -9,6 +9,7 @@ using Bit.Core.Models.Data;
 using System.Collections.Generic;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer

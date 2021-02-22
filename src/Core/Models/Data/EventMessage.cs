@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Context;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Data
 {

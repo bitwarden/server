@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 

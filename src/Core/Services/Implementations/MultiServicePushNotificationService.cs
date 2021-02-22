@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

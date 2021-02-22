@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
@@ -12,7 +13,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
+        public Task DeleteAttachmentAsync(Guid cipherId, CipherAttachment.MetaData attachmentData)
         {
             return Task.FromResult(0);
         }
@@ -32,24 +33,30 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
+        public Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData, string originalContainer)
         {
             return Task.FromResult(0);
         }
 
-        public Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, string attachmentId)
+        public Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData)
         {
             return Task.FromResult(0);
         }
 
-        public Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, string attachmentId)
+        public Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
             return Task.FromResult(0);
         }
 
-        public Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, string attachmentId)
+        public Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData)
         {
             return Task.FromResult(0);
         }
+
+        public Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+        {
+            return Task.FromResult((string)null);
+        }
+
     }
 }

@@ -10,6 +10,7 @@ using System;
 using IdentityModel;
 using Bit.Core.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Settings;
 
 namespace Bit.Core.IdentityServer
 {

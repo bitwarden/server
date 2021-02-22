@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Api
 {

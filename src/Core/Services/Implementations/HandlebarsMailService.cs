@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Mail;
+using Bit.Core.Settings;
 using System.IO;
 using System.Net;
 using Bit.Core.Utilities;

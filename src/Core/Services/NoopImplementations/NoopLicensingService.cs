@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using System;
 using Bit.Core.Models.Business;
+using Bit.Core.Settings;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 

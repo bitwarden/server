@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 
