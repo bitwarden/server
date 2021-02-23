@@ -116,9 +116,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
-            if (emergencyAccess.Status != EmergencyAccessStatusType.Invited)
+            if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)
             {
                 throw new BadRequestException("Invitation already accepted. You will receive an email when the grantor confirms you as an emergency access contact.");
+            }
+            else if (emergencyAccess.Status != EmergencyAccessStatusType.Invited)
+            {
+                throw new BadRequestException("Invitation already accepted.");
             }
 
             if (string.IsNullOrWhiteSpace(emergencyAccess.Email) ||
