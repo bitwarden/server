@@ -263,8 +263,12 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            var requestIsValid = emergencyAccess != null && 
+                emergencyAccess.GranteeId == requestingUser.Id &&
+                emergencyAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+                emergencyAccess.Type == EmergencyAccessType.Takeover;
+
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -336,8 +340,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -357,6 +360,13 @@ namespace Bit.Core.Services
         private string NameOrEmail(User user)
         {
             return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
+        }
+
+        private bool IsValidRequest(EmergencyAccess accessRequest, User requestingUser, EmergencyAccessType granteeAccessType) {
+             return accessRequest != null && 
+                accessRequest.GranteeId == requestingUser.Id &&
+                accessRequest.Status == EmergencyAccessStatusType.RecoveryApproved &&
+                accessRequest.Type == granteeAccessType;
         }
     }
 }
