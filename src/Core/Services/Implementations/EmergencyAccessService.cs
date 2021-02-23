@@ -263,7 +263,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
