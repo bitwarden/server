@@ -248,8 +248,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -267,8 +266,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -282,8 +280,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -340,8 +337,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -361,6 +357,13 @@ namespace Bit.Core.Services
         private string NameOrEmail(User user)
         {
             return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
+        }
+
+        private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType) {
+             return availibleAccess != null && 
+                availibleAccess.GranteeId == requestingUser.Id &&
+                availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+                availibleAccess.Type == requestedAccessType;
         }
     }
 }
