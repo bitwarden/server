@@ -357,11 +357,11 @@ namespace Bit.Core.Services
             return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
         }
 
-        private bool IsValidRequest(EmergencyAccess accessRequest, User requestingUser, EmergencyAccessType granteeAccessType) {
-             return accessRequest != null && 
-                accessRequest.GranteeId == requestingUser.Id &&
-                accessRequest.Status == EmergencyAccessStatusType.RecoveryApproved &&
-                accessRequest.Type == granteeAccessType;
+        private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType) {
+             return availibleAccess != null && 
+                availibleAccess.GranteeId == requestingUser.Id &&
+                availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+                availibleAccess.Type == requestedAccessType;
         }
     }
 }
