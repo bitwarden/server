@@ -3,6 +3,7 @@ using System.IO;
 using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -10,6 +11,8 @@ namespace Bit.Core.Services
     {
         private readonly string _baseDirPath;
         private readonly string _baseSendUrl;
+
+        public FileUploadType FileUploadType => FileUploadType.Direct;
 
         public LocalSendStorageService(
             GlobalSettings globalSettings)
@@ -28,7 +31,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DeleteFileAsync(string fileId)
+        public async Task DeleteFileAsync(Send send, string fileId)
         {
             await InitAsync();
             DeleteFileIfExists($"{_baseDirPath}/{fileId}");
@@ -44,7 +47,7 @@ namespace Bit.Core.Services
             await InitAsync();
         }
 
-        public async Task<string> GetSendFileDownloadUrlAsync(string fileId)
+        public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
             return $"{_baseSendUrl}/{fileId}";
@@ -67,5 +70,9 @@ namespace Bit.Core.Services
 
             return Task.FromResult(0);
         }
+
+        public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId) => throw new NotImplementedException();
+        public Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize) => throw new NotImplementedException();
+
     }
 }
