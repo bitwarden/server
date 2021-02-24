@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
             return new SendFileDownloadDataResponseModel()
             {
                 Id = id,
-                Url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(id)
+                Url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(id),
             };
         }
 
