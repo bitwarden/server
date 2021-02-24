@@ -74,51 +74,21 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength)
+        public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)
         {
             if (send.Type != SendType.File)
             {
                 throw new BadRequestException("Send is not of type \"file\".");
             }
 
-            if (requestLength < 1)
+            if (fileLength < 1)
             {
                 throw new BadRequestException("No file data.");
             }
 
-            var storageBytesRemaining = 0L;
-            if (send.UserId.HasValue)
-            {
-                var user = await _userRepository.GetByIdAsync(send.UserId.Value);
-                if (!(await _userService.CanAccessPremium(user)))
-                {
-                    throw new BadRequestException("You must have premium status to use file sends.");
-                }
+            var storageBytesRemaining = await StorageRemainingForSendAsync(send);
 
-                if (user.Premium)
-                {
-                    storageBytesRemaining = user.StorageBytesRemaining();
-                }
-                else
-                {
-                    // Users that get access to file storage/premium from their organization get the default
-                    // 1 GB max storage.
-                    storageBytesRemaining = user.StorageBytesRemaining(
-                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
-                }
-            }
-            else if (send.OrganizationId.HasValue)
-            {
-                var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
-                if (!org.MaxStorageGb.HasValue)
-                {
-                    throw new BadRequestException("This organization cannot use file sends.");
-                }
-
-                storageBytesRemaining = org.StorageBytesRemaining();
-            }
-
-            if (storageBytesRemaining < requestLength)
+            if (storageBytesRemaining < fileLength)
             {
                 throw new BadRequestException("Not enough storage available.");
             }
@@ -152,6 +122,19 @@ namespace Bit.Core.Services
                 // Clean up since this is not transactional
                 await _sendFileStorageService.DeleteFileAsync(send, fileId);
                 throw;
+            }
+        }
+
+        public async Task ValidateSendFile(Send send)
+        {
+            var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+
+            var valid = await _sendFileStorageService.ValidateFile(send, fileData.Id, fileData.Size);
+
+            if (!valid)
+            {
+                // File reported differs in size from that promised. Must be a rogue client. Delete Send
+                await DeleteSendAsync(send);
             }
         }
 
@@ -278,6 +261,43 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
             }
+        }
+
+        private async Task<long> StorageRemainingForSendAsync(Send send)
+        {
+            var storageBytesRemaining = 0L;
+            if (send.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(send.UserId.Value);
+                if (!await _userService.CanAccessPremium(user))
+                {
+                    throw new BadRequestException("You must have premium status to use file sends.");
+                }
+
+                if (user.Premium)
+                {
+                    storageBytesRemaining = user.StorageBytesRemaining();
+                }
+                else
+                {
+                    // Users that get access to file storage/premium from their organization get the default
+                    // 1 GB max storage.
+                    storageBytesRemaining = user.StorageBytesRemaining(
+                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                }
+            }
+            else if (send.OrganizationId.HasValue)
+            {
+                var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
+                if (!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use file sends.");
+                }
+
+                storageBytesRemaining = org.StorageBytesRemaining();
+            }
+
+            return storageBytesRemaining;
         }
     }
 }

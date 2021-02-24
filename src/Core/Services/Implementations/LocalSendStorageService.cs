@@ -4,6 +4,7 @@ using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using System.Linq;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -14,6 +15,7 @@ namespace Bit.Core.Services
 
         private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
         private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
+        public FileUploadType FileUploadType => FileUploadType.Direct;
 
         public LocalSendStorageService(
             GlobalSettings globalSettings)
@@ -83,5 +85,9 @@ namespace Bit.Core.Services
 
             return Task.FromResult(0);
         }
+
+        public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId) => throw new NotImplementedException();
+        public Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize) => throw new NotImplementedException();
+
     }
 }

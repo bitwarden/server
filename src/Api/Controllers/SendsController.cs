@@ -7,11 +7,13 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Api.Utilities;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Models.Api.Response;
+using Bit.Core.Enums;
+using Microsoft.Azure.EventGrid.Models;
+using Bit.Api.Utilities;
+using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
@@ -139,31 +141,73 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("file")]
-        [RequestSizeLimit(105_906_176)]
-        [DisableFormValueModelBinding]
-        public async Task<SendResponseModel> PostFile()
+        public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
         {
-            if (!Request?.ContentType.Contains("multipart/") ?? true)
+            if (model.Type != SendType.File)
             {
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            if (!model.FileLength.HasValue)
             {
-                throw new BadRequestException("Max file size is 100 MB.");
+                throw new BadRequestException("Invalid content. File size hint is required.");
             }
 
-            Send send = null;
-            await Request.GetSendFileAsync(async (stream, fileName, model) =>
+            var userId = _userService.GetProperUserId(User).Value;
+            var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
+            var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
+            return new SendFileUploadDataResponseModel
             {
-                model.ValidateCreation();
-                var userId = _userService.GetProperUserId(User).Value;
-                var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
-                send = madeSend;
-                await _sendService.CreateSendAsync(send, madeData, stream, model.FileLength.GetValueOrDefault(0));
-            });
+                Url = uploadUrl,
+                FileUploadType = _sendFileStorageService.FileUploadType,
+                SendResponse = new SendResponseModel(send, _globalSettings)
+            };
+        }
 
-            return new SendResponseModel(send, _globalSettings);
+        [AllowAnonymous]
+        [HttpPost("file/validate/azure")]
+        [HttpGet("file/validate/azure")]
+        public async Task<OkObjectResult> AzureValidateFile()
+        {
+            return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+                {
+                  {"Microsoft.Storage.BlobCreated", async (eventGridEvent) => {
+                      try
+                      {
+                          var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
+                          var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
+                          var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+                          if (send == null)
+                          {
+                              return;
+                          }
+                          await _sendService.ValidateSendFile(send);
+                      }
+                      catch
+                      {
+                          return;
+                      }
+                  }}
+                });
+        }
+
+        [HttpPost("{id}/validate")]
+        public async Task PostValidateFile(string id)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var send = await _sendRepository.GetByIdAsync(new Guid(id));
+
+            if (send == null || send.UserId != userId)
+            {
+                throw new NotFoundException();
+            }
+
+            if (send.Type != SendType.File)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            await _sendService.ValidateSendFile(send);
         }
 
         [HttpPut("{id}")]
