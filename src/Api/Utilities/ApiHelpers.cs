@@ -47,6 +47,11 @@ namespace Bit.Api.Utilities
         {
             var response = string.Empty;
             var requestContent = await new StreamReader(request.Body).ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(requestContent))
+            {
+                return new OkObjectResult(response);
+            }
+
             var eventGridSubscriber = new EventGridSubscriber();
             var eventGridEvents = eventGridSubscriber.DeserializeEventGridEvents(requestContent);
 
