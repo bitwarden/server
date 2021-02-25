@@ -66,10 +66,11 @@ namespace Bit.Api.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("{sendId}/access/file/{fileId}")]
-        public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string sendId, string fileId)
+        [HttpGet("{encodedSendId}/access/file/{fileId}")]
+        public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId, string fileId)
         {
-            var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+            var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
+            var send = await _sendRepository.GetByIdAsync(sendId);
 
             if (send == null)
             {
