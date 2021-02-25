@@ -71,8 +71,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId) => throw new NotImplementedException();
-        public Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize) => throw new NotImplementedException();
+        public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
+            => Task.FromResult($"/sends/{send.Id}/file/{fileId}");
+
+        // Validation of local files is handled when they are direct uploaded
+        public Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize, long leeway) =>
+            Task.FromResult(true);
 
     }
 }

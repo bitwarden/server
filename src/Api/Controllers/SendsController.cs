@@ -140,6 +140,27 @@ namespace Bit.Api.Controllers
             };
         }
 
+        [HttpPost("{id}/file/{fileId}")]
+        [DisableFormValueModelBinding]
+        public async Task PostFileForExistingSend(string id, string fileId)
+        {
+            if (!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            {
+                throw new BadRequestException("Max file size for direct upload is 100 MB.");
+            }
+
+            var send = await _sendRepository.GetByIdAsync(new Guid(id));
+            await Request.GetSendFileAsync(async (stream) =>
+            {
+                await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
+            });
+        }
+
         [AllowAnonymous]
         [HttpPost("file/validate/azure")]
         public async Task<OkObjectResult> AzureValidateFile()
@@ -164,25 +185,6 @@ namespace Bit.Api.Controllers
                       }
                   }}
                 });
-        }
-
-        [HttpPost("{id}/validate")]
-        public async Task PostValidateFile(string id)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var send = await _sendRepository.GetByIdAsync(new Guid(id));
-
-            if (send == null || send.UserId != userId)
-            {
-                throw new NotFoundException();
-            }
-
-            if (send.Type != SendType.File)
-            {
-                throw new BadRequestException("Invalid content.");
-            }
-
-            await _sendService.ValidateSendFile(send);
         }
 
         [HttpPut("{id}")]

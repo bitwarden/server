@@ -12,7 +12,6 @@ namespace Bit.Core.Services
     public class AzureSendFileStorageService : ISendFileStorageService
     {
         public const string FilesContainerName = "sendfiles";
-        private const long FileSizeValidationGrace = 1024L;
 
         private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
@@ -90,7 +89,7 @@ namespace Bit.Core.Services
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
         }
 
-        public async Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize)
+        public async Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize, long leeway)
         {
             await InitAsync();
 
@@ -116,7 +115,7 @@ namespace Bit.Core.Services
             blob.SetProperties();
 
             var length = blob.Properties.Length;
-            if (length < expectedFileSize - FileSizeValidationGrace || length > expectedFileSize + FileSizeValidationGrace)
+            if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
             {
                 return false;
             }
