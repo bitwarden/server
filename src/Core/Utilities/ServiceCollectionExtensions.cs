@@ -423,7 +423,7 @@ namespace Bit.Core.Utilities
             var globalSettings = new GlobalSettings();
             ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
-            services.AddSingleton<IGlobalSettings, GlobalSettings>();
+            services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
             return globalSettings;
         }
 
