@@ -28,6 +28,7 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
+        private const long _fileSizeLeeway = 1024;
 
         public SendService(
             ISendRepository sendRepository,
@@ -125,11 +126,33 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UploadFileToExistingSendAsync(Stream stream, Send send)
+        {
+            if (send?.Data == null)
+            {
+                throw new BadRequestException("Send does not have file data");
+            }
+
+            if (send.Type != SendType.File)
+            {
+                throw new BadRequestException("Not a File Type Send.");
+            }
+
+            var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+
+            if (stream.Length < data.Size - _fileSizeLeeway || stream.Length > data.Size + _fileSizeLeeway)
+            {
+                throw new BadRequestException("Stream size does not match expected size.");
+            }
+
+            await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
+        }
+
         public async Task ValidateSendFile(Send send)
         {
             var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
 
-            var valid = await _sendFileStorageService.ValidateFile(send, fileData.Id, fileData.Size);
+            var valid = await _sendFileStorageService.ValidateFile(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
             if (!valid)
             {
