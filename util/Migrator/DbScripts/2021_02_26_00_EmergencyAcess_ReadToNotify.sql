@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
+IF OBJECT_ID('[dbo].[EmergencyAccess_ReadToNotify]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
+END
+GO
+
+CREATE PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,3 +27,4 @@ BEGIN
     AND
         DATEADD(DAY, 1, EA.[LastNotificationDate]) <= GETUTCDATE()
 END
+GO

@@ -10,5 +10,6 @@ namespace Bit.Core.Models.Data
     {
         public string GrantorEmail { get; set; }
         public string GranteeName { get; set; }
+        public string GranteeEmail { get; set; }
     }
 }
