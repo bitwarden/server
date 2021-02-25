@@ -313,8 +313,10 @@ namespace Bit.Core.Services
                 var ea = notify.ToEmergencyAccess();
                 ea.LastNotificationDate = DateTime.UtcNow;
                 await _emergencyAccessRepository.ReplaceAsync(ea);
-                
-                await _mailService.SendEmergencyAccessRecoveryReminder(ea, notify.GranteeName, notify.GrantorEmail);
+
+                var granteeNameOrEmail = string.IsNullOrWhiteSpace(notify.GranteeName) ? notify.GranteeEmail : notify.GranteeName;
+
+                await _mailService.SendEmergencyAccessRecoveryReminder(ea, granteeNameOrEmail, notify.GrantorEmail);
             }
         }
 
@@ -327,9 +329,12 @@ namespace Bit.Core.Services
                 var ea = details.ToEmergencyAccess();
                 ea.Status = EmergencyAccessStatusType.RecoveryApproved;
                 await _emergencyAccessRepository.ReplaceAsync(ea);
-                
-                await _mailService.SendEmergencyAccessRecoveryApproved(ea, details.GrantorName, details.GranteeEmail);
-                await _mailService.SendEmergencyAccessRecoveryTimedOut(ea, details.GranteeName, details.GrantorEmail);
+
+                var grantorNameOrEmail = string.IsNullOrWhiteSpace(details.GrantorName) ? details.GrantorEmail : details.GrantorName;
+                var granteeNameOrEmail = string.IsNullOrWhiteSpace(details.GranteeName) ? details.GranteeEmail : details.GranteeName;
+
+                await _mailService.SendEmergencyAccessRecoveryApproved(ea, grantorNameOrEmail, details.GranteeEmail);
+                await _mailService.SendEmergencyAccessRecoveryTimedOut(ea, granteeNameOrEmail, details.GrantorEmail);
             }
         }
 

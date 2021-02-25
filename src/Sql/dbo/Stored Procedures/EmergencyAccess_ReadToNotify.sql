@@ -6,6 +6,7 @@ BEGIN
     SELECT
         EA.*,
         Grantee.Name as GranteeName,
+        Grantee.Email as GranteeEmail,
         Grantor.Email as GrantorEmail
     FROM
         [dbo].[EmergencyAccess] EA
