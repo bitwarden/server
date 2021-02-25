@@ -26,7 +26,7 @@ namespace Bit.Core.Services
         private readonly IPushNotificationService _pushService;
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
-        private const long _fileSizeLeeway = 1024;
+        private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
 
         public SendService(
             ISendRepository sendRepository,
