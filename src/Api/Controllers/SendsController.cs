@@ -142,7 +142,6 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("file/validate/azure")]
-        [HttpGet("file/validate/azure")]
         public async Task<OkObjectResult> AzureValidateFile()
         {
             return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
