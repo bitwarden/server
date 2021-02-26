@@ -41,7 +41,7 @@ namespace Bit.Api.Utilities
         /// <param name="request">HttpRequest received from Azure</param>
         /// <param name="eventTypeHandlers">Dictionary of eventType strings and their associated handlers.</param>
         /// <returns>OkObjectResult</returns>
-        // Reference https://docs.microsoft.com/en-us/azure/event-grid/receive-events
+        /// <remarks>Reference https://docs.microsoft.com/en-us/azure/event-grid/receive-events</remarks>
         public async static Task<OkObjectResult> HandleAzureEvents(HttpRequest request,
             Dictionary<string, Func<EventGridEvent, Task>> eventTypeHandlers)
         {
