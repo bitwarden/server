@@ -4,6 +4,7 @@ using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Enums;
+using System.Linq;
 
 namespace Bit.Core.Services
 {
@@ -40,7 +41,7 @@ namespace Bit.Core.Services
             await InitAsync();
             var path = FilePath(send, fileId);
             DeleteFileIfExists(path);
-            DeleteDirectoryIfExists(Path.GetDirectoryName(path));
+            DeleteDirectoryIfExistsAndEmpty(Path.GetDirectoryName(path));
         }
 
         public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
@@ -67,9 +68,9 @@ namespace Bit.Core.Services
             }
         }
 
-        private void DeleteDirectoryIfExists(string path)
+        private void DeleteDirectoryIfExistsAndEmpty(string path)
         {
-            if (Directory.Exists(path))
+            if (Directory.Exists(path) && !Directory.EnumerateFiles(path).Any())
             {
                 Directory.Delete(path);
             }
