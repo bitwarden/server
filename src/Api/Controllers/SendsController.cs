@@ -166,25 +166,28 @@ namespace Bit.Api.Controllers
         public async Task<OkObjectResult> AzureValidateFile()
         {
             return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+            {
                 {
-                  {"Microsoft.Storage.BlobCreated", async (eventGridEvent) => {
-                      try
-                      {
-                          var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
-                          var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
-                          var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
-                          if (send == null)
-                          {
-                              return;
-                          }
-                          await _sendService.ValidateSendFile(send);
-                      }
-                      catch
-                      {
-                          return;
-                      }
-                  }}
-                });
+                    "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                    {
+                        try
+                        {
+                            var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
+                            var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
+                            var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+                            if (send == null)
+                            {
+                                return;
+                            }
+                            await _sendService.ValidateSendFile(send);
+                        }
+                        catch
+                        {
+                            return;
+                        }
+                    }
+                }
+            });
         }
 
         [HttpPut("{id}")]
