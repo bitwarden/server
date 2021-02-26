@@ -88,7 +88,7 @@ namespace Bit.Core.Services
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
         }
 
-        public async Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize, long leeway)
+        public async Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
         {
             await InitAsync();
 
