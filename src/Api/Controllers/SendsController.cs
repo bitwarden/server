@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -173,7 +173,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            if (Request.ContentLength > 105906176 && !_globalSettings.SelfHosted) // 101 MB, give em' 1 extra MB for cushion
             {
                 throw new BadRequestException("Max file size for direct upload is 100 MB.");
             }
