@@ -16,6 +16,6 @@ namespace Bit.Core.Services
         string HashPassword(string password);
         Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
         Task<bool> ValidateSendFile(Send send);
-
+        Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
     }
 }
