@@ -156,22 +156,21 @@ namespace Bit.Core.Services
             await _pushService.PushSyncSendDeleteAsync(send);
         }
 
-        // Response: Send, password required, password invalid
-        public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
+        public (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(Send send,
+            string password)
         {
-            var send = await _sendRepository.GetByIdAsync(sendId);
             var now = DateTime.UtcNow;
             if (send == null || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
                 send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
                 send.DeletionDate < now)
             {
-                return (null, false, false);
+                return (false, false, false);
             }
             if (!string.IsNullOrWhiteSpace(send.Password))
             {
                 if (string.IsNullOrWhiteSpace(password))
                 {
-                    return (null, true, false);
+                    return (false, true, false);
                 }
                 var passwordResult = _passwordHasher.VerifyHashedPassword(new User(), send.Password, password);
                 if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -180,11 +179,51 @@ namespace Bit.Core.Services
                 }
                 if (passwordResult == PasswordVerificationResult.Failed)
                 {
-                    return (null, false, true);
+                    return (false, false, true);
                 }
             }
-            // TODO: maybe move this to a simple ++ sproc?
+
+            return (true, false, false);
+        }
+
+        // Response: Send, password required, password invalid
+        public async Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
+        {
+            if (send.Type != SendType.File)
+            {
+                throw new BadRequestException("Can only get a download URL for file type a Send");
+            }
+
+            var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
+
+            if (!grantAccess)
+            {
+                return (null, passwordRequired, passwordInvalid);
+            }
+
             send.AccessCount++;
+            await _sendRepository.ReplaceAsync(send);
+            return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
+        }
+
+        // Response: Send, password required, password invalid
+        public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
+        {
+            var send = await _sendRepository.GetByIdAsync(sendId);
+            var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
+
+            if (!grantAccess)
+            {
+                return (null, passwordRequired, passwordInvalid);
+            }
+
+            // TODO: maybe move this to a simple ++ sproc?
+            if (send.Type != SendType.File)
+            {
+                // File sends are incremented during file download
+                send.AccessCount++;
+            }
+
             await _sendRepository.ReplaceAsync(send);
             return (send, false, false);
         }

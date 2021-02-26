@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -66,8 +66,9 @@ namespace Bit.Api.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("{encodedSendId}/access/file/{fileId}")]
-        public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId, string fileId)
+        [HttpPost("{encodedSendId}/access/file/{fileId}")]
+        public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+            string fileId, [FromBody] SendAccessRequestModel model)
         {
             var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
             var send = await _sendRepository.GetByIdAsync(sendId);
@@ -77,11 +78,28 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Could not locate send");
             }
 
-            return new SendFileDownloadDataResponseModel()
+            var (url, passwordRequired, passwordInvalid) = await _sendService.GetSendFileDownloadUrlAsync(send, fileId,
+                model.Password);
+
+            if (passwordRequired)
+            {
+                return new UnauthorizedResult();
+            }
+            if (passwordInvalid)
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Invalid password.");
+            }
+            if (send == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new ObjectResult(new SendFileDownloadDataResponseModel()
             {
                 Id = fileId,
-                Url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId),
-            };
+                Url = url,
+            });
         }
 
         [HttpGet("{id}")]
