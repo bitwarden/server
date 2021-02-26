@@ -5,6 +5,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using System.Linq;
 using Bit.Core.Enums;
+using System.Linq;
 
 namespace Bit.Core.Services
 {
