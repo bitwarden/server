@@ -13,6 +13,8 @@ namespace Bit.Core.Services
         private readonly string _baseSendUrl;
 
         public FileUploadType FileUploadType => FileUploadType.Direct;
+        private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
+        private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
 
         public LocalSendStorageService(
             GlobalSettings globalSettings)
@@ -24,7 +26,9 @@ namespace Bit.Core.Services
         public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
         {
             await InitAsync();
-            using (var fs = File.Create($"{_baseDirPath}/{fileId}"))
+            var path = FilePath(send, fileId);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            using (var fs = File.Create(path))
             {
                 stream.Seek(0, SeekOrigin.Begin);
                 await stream.CopyToAsync(fs);
@@ -34,7 +38,9 @@ namespace Bit.Core.Services
         public async Task DeleteFileAsync(Send send, string fileId)
         {
             await InitAsync();
-            DeleteFileIfExists($"{_baseDirPath}/{fileId}");
+            var path = FilePath(send, fileId);
+            DeleteFileIfExists(path);
+            DeleteDirectoryIfExists(Path.GetDirectoryName(path));
         }
 
         public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
@@ -50,7 +56,7 @@ namespace Bit.Core.Services
         public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
-            return $"{_baseSendUrl}/{fileId}";
+            return $"{_baseSendUrl}/{RelativeFilePath(send, fileId)}";
         }
 
         private void DeleteFileIfExists(string path)
@@ -58,6 +64,14 @@ namespace Bit.Core.Services
             if (File.Exists(path))
             {
                 File.Delete(path);
+            }
+        }
+
+        private void DeleteDirectoryIfExists(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path);
             }
         }
 
@@ -74,9 +88,21 @@ namespace Bit.Core.Services
         public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
             => Task.FromResult($"/sends/{send.Id}/file/{fileId}");
 
-        // Validation of local files is handled when they are direct uploaded
-        public Task<bool> ValidateFile(Send send, string fileId, long expectedFileSize, long leeway) =>
-            Task.FromResult(true);
+        public Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+        {
+            var path = FilePath(send, fileId);
+            if (!File.Exists(path))
+            {
+                return Task.FromResult(false);
+            }
 
+            var fileInfo = new FileInfo(path);
+            if (expectedFileSize < fileInfo.Length - leeway || expectedFileSize > fileInfo.Length + leeway)
+            {
+                return Task.FromResult(false);
+            }
+
+            return Task.FromResult(true);
+        }
     }
 }

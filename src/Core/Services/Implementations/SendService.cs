@@ -122,25 +122,27 @@ namespace Bit.Core.Services
 
             var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
 
-            if (stream.Length < data.Size - _fileSizeLeeway || stream.Length > data.Size + _fileSizeLeeway)
-            {
-                throw new BadRequestException("Stream size does not match expected size.");
-            }
-
             await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
+
+            if (!await ValidateSendFile(send))
+            {
+                throw new BadRequestException("File received does not match expected file length.");
+            }
         }
 
-        public async Task ValidateSendFile(Send send)
+        public async Task<bool> ValidateSendFile(Send send)
         {
             var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
 
-            var valid = await _sendFileStorageService.ValidateFile(send, fileData.Id, fileData.Size, _fileSizeLeeway);
+            var valid = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
             if (!valid)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
                 await DeleteSendAsync(send);
             }
+
+            return valid;
         }
 
         public async Task DeleteSendAsync(Send send)

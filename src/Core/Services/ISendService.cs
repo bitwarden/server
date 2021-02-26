@@ -14,7 +14,7 @@ namespace Bit.Core.Services
         Task UploadFileToExistingSendAsync(Stream stream, Send send);
         Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password);
         string HashPassword(string password);
-        Task ValidateSendFile(Send send);
+        Task<bool> ValidateSendFile(Send send);
 
     }
 }
