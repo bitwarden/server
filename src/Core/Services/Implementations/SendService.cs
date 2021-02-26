@@ -196,7 +196,7 @@ namespace Bit.Core.Services
         {
             if (send.Type != SendType.File)
             {
-                throw new BadRequestException("Can only get a download URL for file type a Send");
+                throw new BadRequestException("Can only get a download URL for a file type of Send");
             }
 
             var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
