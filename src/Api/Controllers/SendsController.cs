@@ -62,7 +62,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new ObjectResult(new SendAccessResponseModel(send, _globalSettings));
+            var sendResponse = new SendAccessResponseModel(send, _globalSettings);
+            if (send.UserId.HasValue) {
+                var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
+                sendResponse.CreatorIdentifier = creator.Email;
+            }
+            return new ObjectResult(sendResponse);
         }
 
         [AllowAnonymous]

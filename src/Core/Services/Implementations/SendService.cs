@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -24,6 +25,7 @@ namespace Bit.Core.Services
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
+        private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
         private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
@@ -36,6 +38,7 @@ namespace Bit.Core.Services
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
+            IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
             ICurrentContext currentContext)
@@ -48,6 +51,7 @@ namespace Bit.Core.Services
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
+            _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
             _currentContext = currentContext;
         }
@@ -61,6 +65,7 @@ namespace Bit.Core.Services
             {
                 await _sendRepository.CreateAsync(send);
                 await _pushService.PushSyncSendCreateAsync(send);
+                await RaiseReferenceEventAsync(send, ReferenceEventType.SendCreated);
             }
             else
             {
@@ -225,7 +230,21 @@ namespace Bit.Core.Services
             }
 
             await _sendRepository.ReplaceAsync(send);
+            await RaiseReferenceEventAsync(send, ReferenceEventType.SendAccessed);
             return (send, false, false);
+        }
+
+        private async Task RaiseReferenceEventAsync(Send send, ReferenceEventType eventType)
+        {
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Id = send.UserId ?? default,
+                Type = eventType,
+                Source = ReferenceEventSource.User,
+                SendType = send.Type,
+                MaxAccessCount = send.MaxAccessCount,
+                HasPassword = !string.IsNullOrWhiteSpace(send.Password),
+            });
         }
 
         public string HashPassword(string password)

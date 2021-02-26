@@ -4,6 +4,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Services;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
@@ -39,6 +40,7 @@ namespace Bit.Core.Models.Api
             }
 
             Name = sendData.Name;
+            ExpirationDate = send.ExpirationDate;
         }
 
         public string Id { get; set; }
@@ -46,5 +48,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public SendFileModel File { get; set; }
         public SendTextModel Text { get; set; }
+        public DateTime? ExpirationDate { get; set; }
+        public string CreatorIdentifier { get; set; }
     }
 }
