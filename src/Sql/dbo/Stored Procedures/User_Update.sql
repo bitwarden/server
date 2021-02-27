@@ -30,7 +30,7 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
-	@DefaultLogins NVARCHAR(MAX)
+	@DefaultUsernames NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -68,7 +68,7 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
-	    [DefaultLogins] = @DefaultLogins
+	    [DefaultUsernames] = @DefaultUsernames
     WHERE
         [Id] = @Id
 END

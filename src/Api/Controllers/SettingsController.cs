@@ -49,8 +49,8 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpGet("logins")]
-        public async Task<LoginsResponseModel> GetLogins()
+        [HttpGet("usernames")]
+        public async Task<UsernamesResponseModel> GetUsernames()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -58,13 +58,13 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var response = new LoginsResponseModel(user);
+            var response = new UsernamesResponseModel(user);
             return response;
         }
 
-        [HttpPut("logins")]
-        [HttpPost("logins")]
-        public async Task<LoginsResponseModel> PutLogins([FromBody] UpdateLoginsRequestModel model)
+        [HttpPut("usernames")]
+        [HttpPost("usernames")]
+        public async Task<UsernamesResponseModel> PutUsernames([FromBody] UpdateUsernamessRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -74,7 +74,7 @@ namespace Bit.Api.Controllers
 
             await _userService.SaveUserAsync(model.ToUser(user), true);
 
-            var response = new LoginsResponseModel(user);
+            var response = new UsernamesResponseModel(user);
             return response;
         }
     }

@@ -5,17 +5,17 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api.Response
 {
-    public class LoginsResponseModel : ResponseModel
+    public class UsernamesResponseModel : ResponseModel
     {
-        public LoginsResponseModel(User user) : base("logins")
+        public UsernamesResponseModel(User user) : base("logins")
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            DefaultLogins = user.DefaultLogins != null ?
-                JsonConvert.DeserializeObject<List<string>>(user.DefaultLogins) : null;
+            DefaultLogins = user.DefaultUsernames != null ?
+                JsonConvert.DeserializeObject<List<string>>(user.DefaultUsernames) : null;
         }
 
         public IEnumerable<string> DefaultLogins { get; set; }

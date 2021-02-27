@@ -1,10 +1,10 @@
-﻿-- Add DefaultLogins column to dbo.User
-IF COL_LENGTH('[dbo].[User]', 'DefaultLogins') IS NULL
+﻿-- Add DefaultUsernames column to dbo.User
+IF COL_LENGTH('[dbo].[User]', 'DefaultUsernames') IS NULL
 BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [DefaultLogins] [nvarchar](max) NULL
+        [DefaultUsernames] [nvarchar](max) NULL
 END
 GO
 
@@ -40,7 +40,7 @@ ALTER PROCEDURE [dbo].[User_Create]
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
-	@DefaultLogins NVARCHAR(MAX)
+	@DefaultUsernames NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -78,7 +78,7 @@ BEGIN
         [CreationDate],
         [RevisionDate],
         [ApiKey],
-		[DefaultLogins]
+		[DefaultUsernames]
     )
     VALUES
     (
@@ -113,7 +113,7 @@ BEGIN
         @CreationDate,
         @RevisionDate,
         @ApiKey,
-		@DefaultLogins
+		@DefaultUsernames
     )
 END
 GO
@@ -150,7 +150,7 @@ ALTER PROCEDURE [dbo].[User_Update]
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
-	@DefaultLogins NVARCHAR(MAX)
+	@DefaultUsernames NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -188,7 +188,7 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
-	    [DefaultLogins] = @DefaultLogins
+	    [DefaultUsernames] = @DefaultUsernames
     WHERE
         [Id] = @Id
 END

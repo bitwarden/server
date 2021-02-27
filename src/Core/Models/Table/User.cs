@@ -38,7 +38,7 @@ namespace Bit.Core.Models.Table
         public string ReferenceData { get; set; }
         public string LicenseKey { get; set; }
         public string ApiKey { get; set; }
-        public string DefaultLogins { get; set; }
+        public string DefaultUsernames { get; set; }
         public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
         public int KdfIterations { get; set; } = 5000;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
