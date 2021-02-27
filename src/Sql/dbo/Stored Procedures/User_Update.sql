@@ -29,7 +29,8 @@
     @KdfIterations INT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+	@DefaultLogins NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -66,7 +67,8 @@ BEGIN
         [KdfIterations] = @KdfIterations,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [ApiKey] = @ApiKey
+        [ApiKey] = @ApiKey,
+	    [DefaultLogins] = @DefaultLogins
     WHERE
         [Id] = @Id
 END

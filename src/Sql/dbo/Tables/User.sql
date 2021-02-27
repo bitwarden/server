@@ -30,6 +30,7 @@
     [CreationDate]                    DATETIME2 (7)    NOT NULL,
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     [ApiKey]                          VARCHAR (30)     NOT NULL,
+    [DefaultLogins]                   NVARCHAR (MAX)   NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
