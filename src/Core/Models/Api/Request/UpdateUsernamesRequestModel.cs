@@ -4,13 +4,13 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class UpdateUsernamessRequestModel
+    public class UpdateUsernamesRequestModel
     {
-        public IEnumerable<string> DefaultLogins { get; set; }
+        public IEnumerable<string> DefaultUsernames { get; set; }
 
         public User ToUser(User existingUser)
         {
-            existingUser.DefaultUsernames = DefaultLogins != null ? JsonConvert.SerializeObject(DefaultLogins) : null;
+            existingUser.DefaultUsernames = DefaultUsernames != null ? JsonConvert.SerializeObject(DefaultUsernames) : null;
             return existingUser;
         }
     }

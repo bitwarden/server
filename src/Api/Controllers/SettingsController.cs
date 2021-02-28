@@ -64,7 +64,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("usernames")]
         [HttpPost("usernames")]
-        public async Task<UsernamesResponseModel> PutUsernames([FromBody] UpdateUsernamessRequestModel model)
+        public async Task<UsernamesResponseModel> PutUsernames([FromBody] UpdateUsernamesRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

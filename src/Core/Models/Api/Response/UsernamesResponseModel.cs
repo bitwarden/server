@@ -7,17 +7,17 @@ namespace Bit.Core.Models.Api.Response
 {
     public class UsernamesResponseModel : ResponseModel
     {
-        public UsernamesResponseModel(User user) : base("logins")
+        public UsernamesResponseModel(User user) : base("usernames")
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            DefaultLogins = user.DefaultUsernames != null ?
+            DefaultUsernames = user.DefaultUsernames != null ?
                 JsonConvert.DeserializeObject<List<string>>(user.DefaultUsernames) : null;
         }
 
-        public IEnumerable<string> DefaultLogins { get; set; }
+        public IEnumerable<string> DefaultUsernames { get; set; }
     }
 }
