@@ -61,7 +61,7 @@ namespace Bit.Core.Services
             await ValidateUserCanSaveAsync(send.UserId);
 
             // Prevent white space only passwords
-            if (!string.IsNullOrWhiteSpace(send.Password)) 
+            if (send.Password != null && string.IsNullOrWhiteSpace(send.Password)) 
             {
                 send.Password = null;
             }
