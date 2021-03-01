@@ -163,10 +163,17 @@ namespace Bit.Api.Controllers
             }
 
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            if (policies.Any(policy => policy.Enabled && policy.Type == PolicyType.SingleOrg))
+            foreach (var policy in policies)
             {
-                throw new Exception("You may not create an organization. You belong to an organization " +
-                     "which has a policy that prohibits you from being a member of any other organization.");
+                if (policy.Enabled && policy.Type == PolicyType.SingleOrg)
+                {
+                    var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(policy.OrganizationId, user.Id);
+                    if (organizationUser.Type != OrganizationUserType.Owner && organizationUser.Type != OrganizationUserType.Admin)
+                    {
+                        throw new Exception("You may not create an organization. You belong to an organization " +
+                            "which has a policy that prohibits you from being a member of any other organization.");
+                    }
+                }
             }
 
             var organizationSignup = model.ToOrganizationSignup(user);
