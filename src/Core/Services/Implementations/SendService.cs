@@ -133,7 +133,7 @@ namespace Bit.Core.Services
                 await SaveSendAsync(send);
                 await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
                 // Need to save length of stream since that isn't available until it is read
-                if (data.Size <= requestLength)
+                if (stream.Length <= requestLength)
                 {
                     data.Size = stream.Length;
                     send.Data = JsonConvert.SerializeObject(data,
