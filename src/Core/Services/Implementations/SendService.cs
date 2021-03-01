@@ -60,6 +60,12 @@ namespace Bit.Core.Services
             // Make sure user can save Sends
             await ValidateUserCanSaveAsync(send.UserId);
 
+            // Prevent white space only passwords
+            if (!string.IsNullOrWhiteSpace(send.Password)) 
+            {
+                send.Password = null;
+            }
+
             if (send.Id == default(Guid))
             {
                 await _sendRepository.CreateAsync(send);
