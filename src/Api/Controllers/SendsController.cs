@@ -69,14 +69,40 @@ namespace Bit.Api.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("access/file/{id}")]
-        public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string id)
-        {
-            return new SendFileDownloadDataResponseModel()
+        [HttpPost("{encodedSendId}/access/file/{fileId}")]
+        public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+            string fileId, [FromBody] SendAccessRequestModel model)
             {
-                Id = id,
-                Url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(id),
-            };
+                var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
+                var send = await _sendRepository.GetByIdAsync(sendId);
+
+                if (send == null)
+                {
+                    throw new BadRequestException("Could not locate send");
+                }
+
+                var (url, passwordRequired, passwordInvalid) = await _sendService.GetSendFileDownloadUrlAsync(send, fileId,
+                    model.Password);
+
+                if (passwordRequired)
+                {
+                    return new UnauthorizedResult();
+                }
+                if (passwordInvalid)
+                {
+                    await Task.Delay(2000);
+                    throw new BadRequestException("Invalid password.");
+                }
+                if (send == null)
+            {
+                    throw new NotFoundException();
+                }
+
+                return new ObjectResult(new SendFileDownloadDataResponseModel()
+            {
+                Id = fileId,
+                Url = url,
+            });
         }
 
         [HttpGet("{id}")]
