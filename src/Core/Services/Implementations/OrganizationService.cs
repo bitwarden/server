@@ -1155,38 +1155,47 @@ namespace Bit.Core.Services
                 }
             }
 
-            ICollection<Policy> orgPolicies = null;
-            ICollection<Policy> userPolicies = null;
-            async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
+            bool notExempt(OrganizationUser organizationUser)
             {
-                var policies = useUserPolicies ? 
-                    userPolicies = userPolicies ?? await _policyRepository.GetManyByUserIdAsync(user.Id) : 
-                    orgPolicies = orgPolicies ?? await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                
-                return policies.Any(p => p.Type == policyType && p.Enabled);
+                return organizationUser.Type != OrganizationUserType.Owner && organizationUser.Type != OrganizationUserType.Admin;
             }
-            var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-            if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
-            {   
-                if (await hasPolicyAsync(PolicyType.SingleOrg))
+
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var otherOrgUsers = allOrgUsers.Where(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited);
+
+            // Enforce Single Organization Policy of organization user is trying to join
+            var thisSingleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.SingleOrg);
+            if (thisSingleOrgPolicy != null &&
+                thisSingleOrgPolicy.Enabled &&
+                notExempt(orgUser) &&
+                otherOrgUsers.Count() > 0)
+            {
+                throw new BadRequestException("You may not join this organization until you leave or remove " +
+                    "all other organizations.");
+            }
+
+            // Enforce Single Organization Policy of other organizations user is a member of
+            foreach (var ou in otherOrgUsers)
+            {
+                if (notExempt(ou))
                 {
-                    throw new BadRequestException("You may not join this organization until you leave or remove " +
-                        "all other organizations.");
-                }
-                if (await hasPolicyAsync(PolicyType.SingleOrg, true))
-                {
-                    throw new BadRequestException("You cannot join this organization because you are a member of " + 
-                        "an organization which forbids it");
+                    var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(ou.OrganizationId, PolicyType.SingleOrg);
+                    if (singleOrgPolicy != null && singleOrgPolicy.Enabled)
+                    {
+                        throw new BadRequestException("You cannot join this organization because you are a member of " +
+                            "an organization which forbids it");
+                    }
                 }
             }
 
-            if (!await userService.TwoFactorIsEnabledAsync(user))
+            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            if (!await userService.TwoFactorIsEnabledAsync(user) &&
+                twoFactorPolicy != null &&
+                twoFactorPolicy.Enabled &&
+                notExempt(orgUser))
             {
-                if (await hasPolicyAsync(PolicyType.TwoFactorAuthentication))
-                {
-                    throw new BadRequestException("You cannot join this organization until you enable " +
-                        "two-step login on your user account.");
-                }
+                throw new BadRequestException("You cannot join this organization until you enable " +
+                    "two-step login on your user account.");
             }
 
             orgUser.Status = OrganizationUserStatusType.Accepted;
