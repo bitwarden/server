@@ -44,7 +44,8 @@ namespace Bit.Core.Services
         public async Task DeleteFileAsync(Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId)); await blob.DeleteIfExistsAsync();
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+            await blob.DeleteIfExistsAsync();
         }
 
         public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
