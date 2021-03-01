@@ -10,11 +10,13 @@ namespace Bit.Core.Services
 {
     public class AzureSendFileStorageService : ISendFileStorageService
     {
-        private const string FilesContainerName = "sendfiles";
-
+        public const string FilesContainerName = "sendfiles";
         private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
         private CloudBlobContainer _sendFilesContainer;
+
+        public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
+        public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
 
         public AzureSendFileStorageService(
             GlobalSettings globalSettings)
@@ -26,7 +28,7 @@ namespace Bit.Core.Services
         public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(fileId);
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
             if (send.UserId.HasValue)
             {
                 blob.Metadata.Add("userId", send.UserId.Value.ToString());
@@ -39,10 +41,10 @@ namespace Bit.Core.Services
             await blob.UploadFromStreamAsync(stream);
         }
 
-        public async Task DeleteFileAsync(string fileId)
+        public async Task DeleteFileAsync(Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(fileId);
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
             await blob.DeleteIfExistsAsync();
         }
 
@@ -56,14 +58,14 @@ namespace Bit.Core.Services
             await InitAsync();
         }
 
-        public async Task<string> GetSendFileDownloadUrlAsync(string fileId)
+        public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(fileId);
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
             var accessPolicy = new SharedAccessBlobPolicy()
             {
                 SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
-                Permissions = SharedAccessBlobPermissions.Read
+                Permissions = SharedAccessBlobPermissions.Read,
             };
 
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);

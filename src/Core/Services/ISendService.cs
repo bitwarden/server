@@ -13,5 +13,6 @@ namespace Bit.Core.Services
         Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength);
         Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password);
         string HashPassword(string password);
+        Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
     }
 }
