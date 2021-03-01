@@ -128,11 +128,24 @@ namespace Bit.Core.Services
             try
             {
                 data.Id = fileId;
-                data.Size = stream.Length;
                 send.Data = JsonConvert.SerializeObject(data,
                     new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                 await SaveSendAsync(send);
                 await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
+                // Need to save length of stream since that isn't available until it is read
+                if (data.Size <= requestLength)
+                {
+                    data.Size = stream.Length;
+                    send.Data = JsonConvert.SerializeObject(data,
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    await SaveSendAsync(send);
+                }
+                else
+                {
+                    await DeleteSendAsync(send);
+                    throw new BadRequestException("Content-Length header is smaller than file received.");
+                }
+
             }
             catch
             {
