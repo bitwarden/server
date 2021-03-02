@@ -160,7 +160,7 @@ namespace Bit.Api.Controllers
                 var userId = _userService.GetProperUserId(User).Value;
                 var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
                 send = madeSend;
-                await _sendService.CreateSendAsync(send, madeData, stream, Request.ContentLength.GetValueOrDefault(0));
+                await _sendService.CreateSendAsync(send, madeData, stream, model.FileLength.GetValueOrDefault(0));
             });
 
             return new SendResponseModel(send, _globalSettings);

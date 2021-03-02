@@ -13,6 +13,7 @@ namespace Bit.Core.Models.Api
     public class SendRequestModel
     {
         public SendType Type { get; set; }
+        public long? FileLength { get; set; }
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string Name { get; set; }
