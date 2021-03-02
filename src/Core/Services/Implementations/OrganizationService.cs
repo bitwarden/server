@@ -1157,35 +1157,35 @@ namespace Bit.Core.Services
 
             bool notExempt(OrganizationUser organizationUser)
             {
-                return organizationUser.Type != OrganizationUserType.Owner && organizationUser.Type != OrganizationUserType.Admin;
+                return organizationUser.Type != OrganizationUserType.Owner &&
+                        organizationUser.Type != OrganizationUserType.Admin;
             }
 
             var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-            var otherOrgUsers = allOrgUsers.Where(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited);
 
             // Enforce Single Organization Policy of organization user is trying to join
             var thisSingleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.SingleOrg);
             if (thisSingleOrgPolicy != null &&
                 thisSingleOrgPolicy.Enabled &&
                 notExempt(orgUser) &&
-                otherOrgUsers.Count() > 0)
+                allOrgUsers.Count(ou => ou.OrganizationId != orgUser.OrganizationId) > 0)
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            foreach (var ou in otherOrgUsers)
+            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+
+            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg).Select(p => p.OrganizationId);
+            var blockedBySingleOrgPolicy = allOrgUsers.Any(ou => notExempt(ou) &&
+                ou.Status != OrganizationUserStatusType.Invited &&
+                orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
+
+            if (blockedBySingleOrgPolicy)
             {
-                if (notExempt(ou))
-                {
-                    var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(ou.OrganizationId, PolicyType.SingleOrg);
-                    if (singleOrgPolicy != null && singleOrgPolicy.Enabled)
-                    {
-                        throw new BadRequestException("You cannot join this organization because you are a member of " +
-                            "an organization which forbids it");
-                    }
-                }
+                throw new BadRequestException("You cannot join this organization because you are a member of " +
+                    "an organization which forbids it");
             }
 
             var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
