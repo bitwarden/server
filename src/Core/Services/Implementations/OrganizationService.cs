@@ -1168,7 +1168,7 @@ namespace Bit.Core.Services
             if (thisSingleOrgPolicy != null &&
                 thisSingleOrgPolicy.Enabled &&
                 notExempt(orgUser) &&
-                allOrgUsers.Count(ou => ou.OrganizationId != orgUser.OrganizationId) > 0)
+                allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId))
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
@@ -1177,7 +1177,8 @@ namespace Bit.Core.Services
             // Enforce Single Organization Policy of other organizations user is a member of
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
 
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg).Select(p => p.OrganizationId);
+            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
+                .Select(p => p.OrganizationId);
             var blockedBySingleOrgPolicy = allOrgUsers.Any(ou => notExempt(ou) &&
                 ou.Status != OrganizationUserStatusType.Invited &&
                 orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));

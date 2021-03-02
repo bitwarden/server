@@ -165,7 +165,8 @@ namespace Bit.Api.Controllers
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
             var orgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
 
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg).Select(p => p.OrganizationId);
+            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
+                .Select(p => p.OrganizationId);
             var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou.Type != OrganizationUserType.Owner &&
                                                         ou.Type != OrganizationUserType.Admin &&
                                                         ou.Status != OrganizationUserStatusType.Invited &&
@@ -174,7 +175,7 @@ namespace Bit.Api.Controllers
             if (blockedBySingleOrgPolicy)
             {
                 throw new Exception("You may not create an organization. You belong to an organization " +
-                        "which has a policy that prohibits you from being a member of any other organization.");
+                    "which has a policy that prohibits you from being a member of any other organization.");
             }
 
             var organizationSignup = model.ToOrganizationSignup(user);
