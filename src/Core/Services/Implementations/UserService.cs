@@ -397,8 +397,8 @@ namespace Bit.Core.Services
             var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
 
             provider.MetaData["pending"] = options.ToJson();
-
             providers[TwoFactorProviderType.WebAuthn] = provider;
+            user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
 
             return options;
@@ -417,7 +417,7 @@ namespace Bit.Core.Services
             var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
             // Callback to ensure credential id is unique
-            IsCredentialIdUniqueToUserAsyncDelegate callback = (IsCredentialIdUniqueToUserParams args) => Task.FromResult(true);
+            IsCredentialIdUniqueToUserAsyncDelegate callback = args => Task.FromResult(true);
 
             var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
@@ -436,6 +436,7 @@ namespace Bit.Core.Services
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
+            user.SetTwoFactorProviders(providers);
             await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
 
             return true;
