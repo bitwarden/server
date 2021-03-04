@@ -94,8 +94,12 @@ server {
 
   location = /webauthn-connector.html {
     proxy_pass http://web:5000/webauthn-connector.html;
-  }  
-  
+  }
+
+  location = /webauthn-fallback-connector.html {
+    proxy_pass http://web:5000/webauthn-fallback-connector.html;
+  }
+
   location = /sso-connector.html {
     proxy_pass http://web:5000/sso-connector.html;
   }

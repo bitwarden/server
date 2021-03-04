@@ -416,7 +416,8 @@ namespace Bit.Core.Services
 
             var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
-            // Callback to ensure credential id is unique
+            // Callback to ensure credential id is unique. Always return true since we don't care if another
+            // account uses the same 2fa key.
             IsCredentialIdUniqueToUserAsyncDelegate callback = args => Task.FromResult(true);
 
             var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
