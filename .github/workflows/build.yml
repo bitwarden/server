@@ -106,9 +106,12 @@ jobs:
           chmod +x ./build.sh
           ./build.sh
 
+      - name: tag release branch
+        if: github.ref == 'refs/heads/rc'
+        run: ./build.sh tag rc
+
       - name: Tag dev
         if: github.ref == 'refs/heads/master' || github.event_name == 'release'
-
         run: ./build.sh tag dev
 
       - name: Tag beta
