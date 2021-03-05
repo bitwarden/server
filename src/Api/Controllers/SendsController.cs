@@ -14,6 +14,9 @@ using Bit.Core.Enums;
 using Microsoft.Azure.EventGrid.Models;
 using Bit.Api.Utilities;
 using System.Collections.Generic;
+using Bit.Core.Models.Table;
+using Newtonsoft.Json;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -141,6 +144,36 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("file")]
+        [RequestSizeLimit(105_906_176)]
+        [DisableFormValueModelBinding]
+        public async Task<SendResponseModel> PostFile()
+        {
+            if (!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            {
+                throw new BadRequestException("Max file size is 100 MB.");
+            }
+
+            Send send = null;
+            await Request.GetSendFileAsync(async (stream, fileName, model) =>
+            {
+                model.ValidateCreation();
+                var userId = _userService.GetProperUserId(User).Value;
+                var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
+                send = madeSend;
+                await _sendService.SaveFileSendAsync(send, madeData, model.FileLength.GetValueOrDefault(0));
+                await _sendService.UploadFileToExistingSendAsync(stream, send);
+            });
+
+            return new SendResponseModel(send, _globalSettings);
+        }
+
+
+        [HttpPost("file/v2")]
         public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
         {
             if (model.Type != SendType.File)
@@ -161,6 +194,30 @@ namespace Bit.Api.Controllers
                 Url = uploadUrl,
                 FileUploadType = _sendFileStorageService.FileUploadType,
                 SendResponse = new SendResponseModel(send, _globalSettings)
+            };
+        }
+
+        [HttpGet("{id}/file/{fileId}")]
+        public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var sendId = new Guid(id);
+            var send = await _sendRepository.GetByIdAsync(sendId);
+            var fileData = JsonConvert.DeserializeObject<SendFileData>(send?.Data);
+
+            if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
+                !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
+            {
+                // Not found if Send isn't found, user doesn't have access, request is faulty,
+                // or we've already validated the file. This last is to emulate create-only blob permissions for Azure
+                throw new NotFoundException();
+            }
+
+            return new SendFileUploadDataResponseModel
+            {
+                Url = await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId),
+                FileUploadType = _sendFileStorageService.FileUploadType,
+                SendResponse = new SendResponseModel(send, _globalSettings),
             };
         }
 

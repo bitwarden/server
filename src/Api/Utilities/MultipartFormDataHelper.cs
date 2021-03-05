@@ -66,6 +66,48 @@ namespace Bit.Api.Utilities
             }
         }
 
+        public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, string,
+            SendRequestModel, Task> callback)
+        {
+            var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+                _defaultFormOptions.MultipartBoundaryLengthLimit);
+            var reader = new MultipartReader(boundary, request.Body);
+
+            var firstSection = await reader.ReadNextSectionAsync();
+            if (firstSection != null)
+            {
+                if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out _))
+                {
+                    // Request model json, then data
+                    string requestModelJson = null;
+                    using (var sr = new StreamReader(firstSection.Body))
+                    {
+                        requestModelJson = await sr.ReadToEndAsync();
+                    }
+
+                    var secondSection = await reader.ReadNextSectionAsync();
+                    if (secondSection != null)
+                    {
+                        if (ContentDispositionHeaderValue.TryParse(secondSection.ContentDisposition,
+                            out var secondContent) && HasFileContentDisposition(secondContent))
+                        {
+                            var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
+                            using (secondSection.Body)
+                            {
+                                var model = JsonConvert.DeserializeObject<SendRequestModel>(requestModelJson);
+                                await callback(secondSection.Body, fileName, model);
+                            }
+                        }
+
+                        secondSection = null;
+                    }
+
+                }
+
+                firstSection = null;
+            }
+        }
+
         public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, Task> callback)
         {
             var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
