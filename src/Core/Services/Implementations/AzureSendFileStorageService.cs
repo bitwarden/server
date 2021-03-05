@@ -82,13 +82,13 @@ namespace Bit.Core.Services
             var accessPolicy = new SharedAccessBlobPolicy()
             {
                 SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
-                Permissions = SharedAccessBlobPermissions.Create,
+                Permissions = SharedAccessBlobPermissions.Create | SharedAccessBlobPermissions.Write,
             };
 
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
         }
 
-        public async Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+        public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
         {
             await InitAsync();
 
@@ -96,7 +96,7 @@ namespace Bit.Core.Services
 
             if (!blob.Exists())
             {
-                return false;
+                return (false, null);
             }
 
             blob.FetchAttributes();
@@ -116,10 +116,10 @@ namespace Bit.Core.Services
             var length = blob.Properties.Length;
             if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
             {
-                return false;
+                return (false, length);
             }
 
-            return true;
+            return (true, length);
         }
 
         private async Task InitAsync()

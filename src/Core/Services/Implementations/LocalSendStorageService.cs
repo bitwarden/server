@@ -5,7 +5,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using System.Linq;
 using Bit.Core.Enums;
-using System.Linq;
 
 namespace Bit.Core.Services
 {
@@ -17,8 +16,6 @@ namespace Bit.Core.Services
         private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
         private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
         public FileUploadType FileUploadType => FileUploadType.Direct;
-        private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
-        private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
 
         public LocalSendStorageService(
             GlobalSettings globalSettings)
@@ -92,21 +89,22 @@ namespace Bit.Core.Services
         public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
             => Task.FromResult($"/sends/{send.Id}/file/{fileId}");
 
-        public Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+        public Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
         {
+            long? length = null;
             var path = FilePath(send, fileId);
             if (!File.Exists(path))
             {
-                return Task.FromResult(false);
+                return Task.FromResult((false, length));
             }
 
-            var fileInfo = new FileInfo(path);
-            if (expectedFileSize < fileInfo.Length - leeway || expectedFileSize > fileInfo.Length + leeway)
+            length = new FileInfo(path).Length;
+            if (expectedFileSize < length - leeway || expectedFileSize > length + leeway)
             {
-                return Task.FromResult(false);
+                return Task.FromResult((false, length));
             }
 
-            return Task.FromResult(true);
+            return Task.FromResult((true, length));
         }
     }
 }

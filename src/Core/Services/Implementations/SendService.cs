@@ -99,24 +99,12 @@ namespace Bit.Core.Services
             try
             {
                 data.Id = fileId;
+                data.Size = fileLength;
+                data.Validated = false;
                 send.Data = JsonConvert.SerializeObject(data,
                     new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                 await SaveSendAsync(send);
-                await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
-                // Need to save length of stream since that isn't available until it is read
-                if (stream.Length <= requestLength)
-                {
-                    data.Size = stream.Length;
-                    send.Data = JsonConvert.SerializeObject(data,
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-                    await SaveSendAsync(send);
-                }
-                else
-                {
-                    await DeleteSendAsync(send);
-                    throw new BadRequestException("Content-Length header is smaller than file received.");
-                }
-
+                return await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId);
             }
             catch
             {
@@ -152,13 +140,23 @@ namespace Bit.Core.Services
         {
             var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
 
-            var valid = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
+            var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
             if (!valid)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
                 await DeleteSendAsync(send);
             }
+
+            // Update Send data if necessary
+            if (realSize != fileData.Size)
+            {
+                fileData.Size = realSize.Value;
+            }
+            fileData.Validated = true;
+            send.Data = JsonConvert.SerializeObject(fileData,
+                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            await SaveSendAsync(send);
 
             return valid;
         }

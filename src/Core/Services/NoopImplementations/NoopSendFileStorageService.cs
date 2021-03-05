@@ -40,9 +40,9 @@ namespace Bit.Core.Services
             return Task.FromResult((string)null);
         }
 
-        public Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+        public Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
         {
-            return Task.FromResult(false);
+            return Task.FromResult((false, default(long?)));
         }
     }
 }

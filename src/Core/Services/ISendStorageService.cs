@@ -15,6 +15,6 @@ namespace Bit.Core.Services
         Task DeleteFilesForUserAsync(Guid userId);
         Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId);
         Task<string> GetSendFileUploadUrlAsync(Send send, string fileId);
-        Task<bool> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway);
+        Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway);
     }
 }
