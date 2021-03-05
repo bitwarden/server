@@ -212,7 +212,7 @@ namespace Bit.Core.Services
             }
 
             send.AccessCount++;
-            await SaveSendAsync(send);
+            await _sendRepository.ReplaceAsync(send);
             return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
         }
 
@@ -234,7 +234,7 @@ namespace Bit.Core.Services
                 send.AccessCount++;
             }
 
-            await SaveSendAsync(send);
+            await _sendRepository.ReplaceAsync(send);
             await RaiseReferenceEventAsync(send, ReferenceEventType.SendAccessed);
             return (send, false, false);
         }
