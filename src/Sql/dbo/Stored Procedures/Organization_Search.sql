@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_Search]
     @Name NVARCHAR(50),
-    @UserEmail NVARCHAR(50),
+    @UserEmail NVARCHAR(256),
     @Paid BIT,
     @Skip INT = 0,
     @Take INT = 25
@@ -8,7 +8,7 @@ WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
-    DECLARE @NameLikeSearch NVARCHAR(55) = '%' + @Name + '%'
+    DECLARE @NameLikeSearch NVARCHAR(261) = '%' + @Name + '%'
 
     IF @UserEmail IS NOT NULL
     BEGIN

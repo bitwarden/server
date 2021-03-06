@@ -8,7 +8,7 @@
     [BusinessAddress3]      NVARCHAR (50)    NULL,
     [BusinessCountry]       VARCHAR (2)      NULL,
     [BusinessTaxNumber]     NVARCHAR (30)    NULL,
-    [BillingEmail]          NVARCHAR (50)    NOT NULL,
+    [BillingEmail]          NVARCHAR (256)   NOT NULL,
     [Plan]                  NVARCHAR (50)    NOT NULL,
     [PlanType]              TINYINT          NOT NULL,
     [Seats]                 SMALLINT         NULL,
