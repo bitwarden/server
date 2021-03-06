@@ -394,7 +394,7 @@ namespace Bit.Core.Services
                 .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
                 .ToList();
 
-            var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.Direct);
+            var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.None);
 
             provider.MetaData["pending"] = options.ToJson();
             providers[TwoFactorProviderType.WebAuthn] = provider;
