@@ -2,7 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @GrantorId UNIQUEIDENTIFIER,
     @GranteeId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @KeyEncrypted VARCHAR(MAX),
     @Type TINYINT,
     @Status TINYINT,

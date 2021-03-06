@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[EmergencyAccess_ReadCountByGrantorIdEmail]
     @GrantorId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @OnlyUsers BIT
 AS
 BEGIN

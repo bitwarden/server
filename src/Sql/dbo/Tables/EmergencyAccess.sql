@@ -3,7 +3,7 @@
 	[Id]                    UNIQUEIDENTIFIER NOT NULL,
     [GrantorId]             UNIQUEIDENTIFIER NOT NULL,
     [GranteeId]             UNIQUEIDENTIFIER NULL,
-    [Email]                 NVARCHAR (50)    NULL,
+    [Email]                 NVARCHAR (256)   NULL,
     [KeyEncrypted]          VARCHAR (MAX)    NULL,
     [WaitTimeDays]          SMALLINT         NULL,
     [Type]                  TINYINT          NOT NULL,
