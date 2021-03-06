@@ -213,6 +213,7 @@ namespace Bit.Core.Services
 
             send.AccessCount++;
             await _sendRepository.ReplaceAsync(send);
+            await _pushService.PushSyncSendUpdateAsync(send);
             return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
         }
 
@@ -235,6 +236,7 @@ namespace Bit.Core.Services
             }
 
             await _sendRepository.ReplaceAsync(send);
+            await _pushService.PushSyncSendUpdateAsync(send);
             await RaiseReferenceEventAsync(send, ReferenceEventType.SendAccessed);
             return (send, false, false);
         }
