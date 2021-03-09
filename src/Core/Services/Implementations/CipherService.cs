@@ -222,10 +222,11 @@ namespace Bit.Core.Services
                 AttachmentId = attachmentId,
                 FileName = fileName,
                 Key = key,
-                Size = stream.Length
             };
 
             await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, data);
+            // Must read stream length after it has been saved, otherwise it's 0
+            data.Size = stream.Length;
 
             try
             {
