@@ -96,7 +96,7 @@ renewcert
 rebuild
 help
 
-See more at https://bitwarden.com/help/article/install-on-premise/#script-commands
+See more at https://bitwarden.com/help/article/install-on-premise/#script-commands-reference
 
 EOT
 }
