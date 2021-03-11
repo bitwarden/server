@@ -44,7 +44,7 @@ dotnet build
 dotnet run
 ```
 
-visit http://localhost:5000/alive
+visit http://localhost:4000/alive
 
 ### Identity
 
