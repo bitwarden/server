@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS organization_user (
     id              UUID          NOT NULL,
     organization_id UUID          NOT NULL,
     user_id         UUID          NULL,
-    email           VARCHAR (50)  NULL,
+    email           VARCHAR (256) NULL,
     key             TEXT          NULL,
     status          SMALLINT      NOT NULL,
     type            SMALLINT      NOT NULL,

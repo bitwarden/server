@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS organization (
     business_address_3      VARCHAR (50)  NULL,
     business_country        VARCHAR (2)   NULL,
     business_tax_number     VARCHAR (30)  NULL,
-    billing_email           VARCHAR (50)  NOT NULL,
+    billing_email           VARCHAR (256) NOT NULL,
     plan                    VARCHAR (50)  NOT NULL,
     plan_type               SMALLINT      NOT NULL,
     seats                   SMALLINT      NULL,
