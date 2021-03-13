@@ -249,7 +249,7 @@ WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
-    DECLARE @NameLikeSearch NVARCHAR(261) = '%' + @Name + '%'
+    DECLARE @NameLikeSearch NVARCHAR(55) = '%' + @Name + '%'
 
     IF @UserEmail IS NOT NULL
     BEGIN
