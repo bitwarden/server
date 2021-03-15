@@ -12,6 +12,7 @@ using System.IO;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -30,6 +31,7 @@ namespace Bit.Core.Services
         private readonly IUserService _userService;
         private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
+        private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -130,7 +132,7 @@ namespace Bit.Core.Services
                         {
                             var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
                                 OrganizationUserStatusType.Confirmed);
-                            if(org != null && org.Enabled && org.UsePolicies 
+                            if (org != null && org.Enabled && org.UsePolicies
                                && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
                             {
                                 throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
@@ -166,55 +168,56 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+        {
+            if (attachment == null)
+            {
+                throw new BadRequestException("Cipher attachment does not exist");
+            }
+
+            await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, attachment);
+
+            if (!await ValidateCipherAttachmentFile(cipher, attachment))
+            {
+                throw new BadRequestException("File received does not match expected file length.");
+            }
+        }
+
+        public async Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
+            AttachmentRequestModel request, Guid savingUserId)
+        {
+            await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, request.AdminRequest, request.FileSize);
+
+            var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+            var data = new CipherAttachment.MetaData
+            {
+                AttachmentId = attachmentId,
+                FileName = request.FileName,
+                Key = request.key,
+                Size = request.FileSize,
+                Validated = false,
+           };
+
+            var uploadUrl = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, data);
+
+            await _cipherRepository.UpdateAttachmentAsync(new CipherAttachment
+            {
+                Id = cipher.Id,
+                UserId = cipher.UserId,
+                OrganizationId = cipher.OrganizationId,
+                AttachmentId = attachmentId,
+                AttachmentData = JsonConvert.SerializeObject(data)
+            });
+            cipher.AddAttachment(attachmentId, data);
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+
+            return (attachmentId, uploadUrl);
+        }
+
         public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
             long requestLength, Guid savingUserId, bool orgAdmin = false)
         {
-            if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
-            {
-                throw new BadRequestException("You do not have permissions to edit this.");
-            }
-
-            if (requestLength < 1)
-            {
-                throw new BadRequestException("No data to attach.");
-            }
-
-            var storageBytesRemaining = 0L;
-            if (cipher.UserId.HasValue)
-            {
-                var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
-                if (!(await _userService.CanAccessPremium(user)))
-                {
-                    throw new BadRequestException("You must have premium status to use attachments.");
-                }
-
-                if (user.Premium)
-                {
-                    storageBytesRemaining = user.StorageBytesRemaining();
-                }
-                else
-                {
-                    // Users that get access to file storage/premium from their organization get the default
-                    // 1 GB max storage.
-                    storageBytesRemaining = user.StorageBytesRemaining(
-                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
-                }
-            }
-            else if (cipher.OrganizationId.HasValue)
-            {
-                var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
-                if (!org.MaxStorageGb.HasValue)
-                {
-                    throw new BadRequestException("This organization cannot use attachments.");
-                }
-
-                storageBytesRemaining = org.StorageBytesRemaining();
-            }
-
-            if (storageBytesRemaining < requestLength)
-            {
-                throw new BadRequestException("Not enough storage available.");
-            }
+            await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, requestLength);
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
             var data = new CipherAttachment.MetaData
@@ -242,6 +245,10 @@ namespace Bit.Core.Services
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentCreated);
                 cipher.AddAttachment(attachmentId, data);
+
+                if (!await ValidateCipherAttachmentFile(cipher, data)) {
+                    throw new Exception("Content-Length does not match uploaded file size");
+                }
             }
             catch
             {
@@ -314,6 +321,59 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData)
+        {
+            // var attachmentData = JsonConvert.DeserializeObject<CipherAttachment.MetaData>(attachment.AttachmentData);
+
+            var (valid, realSize) = await _attachmentStorageService.ValidateFileAsync(cipher, attachmentData, _fileSizeLeeway);
+
+            if (!valid)
+            {
+                // File reported differs in size from that promised. Must be a rogue client. Delete Send
+                await DeleteAttachmentAsync(cipher, attachmentData.AttachmentId);
+            } else
+            {
+                // Update Send data if necessary
+                if (realSize != attachmentData.Size)
+                {
+                    attachmentData.Size = realSize.Value;
+                }
+                attachmentData.Validated = true;
+
+                var updatedAttachment = new CipherAttachment
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    AttachmentId = attachmentData.AttachmentId,
+                    AttachmentData = JsonConvert.SerializeObject(attachmentData)
+                };
+
+
+                await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
+            }
+
+            return valid;
+        }
+
+        public async Task<AttachmentResponseModel> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId)
+        {
+            var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
+
+            if (!attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+            {
+                throw new NotFoundException();
+            }
+
+            var data = attachments[attachmentId];
+            var response = new AttachmentResponseModel(attachmentId, data, cipher, _globalSettings)
+            {
+                Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data)
+            };
+
+            return response;
+        }
+
         public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
         {
             if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
@@ -371,14 +431,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var data = cipher.GetAttachments()[attachmentId];
-            await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
-            cipher.DeleteAttachment(attachmentId);
-            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
-            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
-
-            // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+            await DeleteAttachmentAsync(cipher, attachmentId);
         }
 
         public async Task PurgeAsync(Guid organizationId)
@@ -765,7 +818,7 @@ namespace Bit.Core.Services
             {
                 var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
                 deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
-                await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c =>  c.Id), deletingUserId);
+                await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
             }
 
             var events = deletingCiphers.Select(c =>
@@ -851,6 +904,76 @@ namespace Bit.Core.Services
                     "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
                 );
             }
+        }
+
+        private async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId)
+        {
+            var data = cipher.GetAttachments()[attachmentId];
+            await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
+            cipher.DeleteAttachment(attachmentId);
+            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
+            await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
+
+            // push
+            await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        }
+
+        private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
+            long requestLength)
+        {
+            if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
+            {
+                throw new BadRequestException("You do not have permissions to edit this.");
+            }
+
+            if (requestLength < 1)
+            {
+                throw new BadRequestException("No data to attach.");
+            }
+
+            var storageBytesRemaining = await StorageBytesRemainingForCipherAsync(cipher);
+
+            if (storageBytesRemaining < requestLength)
+            {
+                throw new BadRequestException("Not enough storage available.");
+            }
+        }
+
+        private async Task<long> StorageBytesRemainingForCipherAsync(Cipher cipher)
+        {
+            var storageBytesRemaining = 0L;
+            if (cipher.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
+                if (!(await _userService.CanAccessPremium(user)))
+                {
+                    throw new BadRequestException("You must have premium status to use attachments.");
+                }
+
+                if (user.Premium)
+                {
+                    storageBytesRemaining = user.StorageBytesRemaining();
+                }
+                else
+                {
+                    // Users that get access to file storage/premium from their organization get the default
+                    // 1 GB max storage.
+                    storageBytesRemaining = user.StorageBytesRemaining(
+                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                }
+            }
+            else if (cipher.OrganizationId.HasValue)
+            {
+                var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
+                if (!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use attachments.");
+                }
+
+                storageBytesRemaining = org.StorageBytesRemaining();
+            }
+
+            return storageBytesRemaining;
         }
     }
 }
