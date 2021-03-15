@@ -12,7 +12,9 @@ using Bit.Api.Utilities;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-
+using Core.Models.Data;
+using Microsoft.Azure.EventGrid.Models;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -562,6 +564,76 @@ namespace Bit.Api.Controllers
             }
         }
 
+        [HttpPost("{id}/attachment/v2")]
+        public async Task<AttachmentUploadDataResponseModel> PostAttachment(string id, [FromBody] AttachmentRequestModel request)
+        {
+            var idGuid = new Guid(id);
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = request.AdminRequest ?
+                await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid) :
+                await _cipherRepository.GetByIdAsync(idGuid, userId);
+
+            if (cipher == null || (request.AdminRequest && (!cipher.OrganizationId.HasValue ||
+                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))))
+            {
+                throw new NotFoundException();
+            }
+
+            var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher, request, userId);
+            return new AttachmentUploadDataResponseModel
+            {
+                AttachmentId = attachmentId,
+                Url = uploadUrl,
+                FileUploadType = _attachmentStorageService.FileUploadType,
+                CipherResponse = request.AdminRequest ? null : new CipherResponseModel((CipherDetails)cipher, _globalSettings),
+                CipherMiniResponse = request.AdminRequest ? new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp) : null,
+            };
+        }
+
+        [HttpGet("{id}/attachment/{attachmentId}/renew")]
+        public async Task<AttachmentUploadDataResponseModel> RenewFileUploadUrl(string id, string attachmentId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipherId = new Guid(id);
+            var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+            var attachments = cipher?.GetAttachments();
+
+            if (attachments == null || !attachments.ContainsKey(attachmentId))
+            {
+                throw new NotFoundException();
+            }
+
+            return new AttachmentUploadDataResponseModel
+            {
+                Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachments[attachmentId]),
+                FileUploadType = _attachmentStorageService.FileUploadType,
+            };
+        }
+
+        [HttpPost("{id}/attachment/{attachmentId}")]
+        [DisableFormValueModelBinding]
+        public async Task PostFileForExistingAttachment(string id, string attachmentId)
+        {
+            if (!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var attachments = cipher?.GetAttachments();
+            if (attachments == null || !attachments.ContainsKey(attachmentId))
+            {
+                throw new NotFoundException();
+            }
+            var attachmentData = attachments[attachmentId];
+
+            await Request.GetFileAsync(async (stream) =>
+            {
+                await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            });
+        }
+
         [HttpPost("{id}/attachment")]
         [RequestSizeLimit(105_906_176)]
         [DisableFormValueModelBinding]
@@ -616,20 +688,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            var attachments = cipher.GetAttachments();
-
-            if (!attachments.ContainsKey(attachmentId))
-            {
-                throw new NotFoundException();
-            }
-
-            var data = attachments[attachmentId];
-            var response = new AttachmentResponseModel(attachmentId, data, cipher, _globalSettings)
-            {
-                Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data)
-            };
-
-            return response;
+            return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
@@ -682,6 +741,38 @@ namespace Bit.Api.Controllers
             }
 
             await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("attachment/validate/azure")]
+        public async Task<OkObjectResult> AzureValidateFile()
+        {
+            return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+            {
+                {
+                    "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                    {
+                        try
+                        {
+                            var blobName = eventGridEvent.Subject.Split($"{AzureAttachmentStorageService.EventGridEnabledContainerName}/blobs/")[1];
+                            var (cipherId, organizationId, attachmentId) = AzureAttachmentStorageService.IdentifiersFromBlobName(blobName);
+                            var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId));
+                            var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
+
+                            if (cipher == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+                            {
+                                return;
+                            }
+
+                            await _cipherService.ValidateCipherAttachmentFile(cipher, attachments[attachmentId]);
+                        }
+                        catch
+                        {
+                            return;
+                        }
+                    }
+                }
+            });
         }
 
         private void ValidateAttachment()

@@ -240,7 +240,7 @@ namespace Bit.Api.Controllers
             }
 
             var send = await _sendRepository.GetByIdAsync(new Guid(id));
-            await Request.GetSendFileAsync(async (stream) =>
+            await Request.GetFileAsync(async (stream) =>
             {
                 await _sendService.UploadFileToExistingSendAsync(stream, send);
             });
