@@ -13,6 +13,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -23,6 +24,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly ICipherRepository _cipherRepository;
         private readonly IPolicyRepository _policyRepository;
+        private readonly ICipherService _cipherService;
         private readonly IMailService _mailService;
         private readonly IUserService _userService;
         private readonly IDataProtector _dataProtector;
@@ -36,6 +38,7 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IPolicyRepository policyRepository,
+            ICipherService cipherService,
             IMailService mailService,
             IUserService userService,
             IPasswordHasher<User> passwordHasher,
@@ -48,6 +51,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _cipherRepository = cipherRepository;
             _policyRepository = policyRepository;
+            _cipherService = cipherService;
             _mailService = mailService;
             _userService = userService;
             _passwordHasher = passwordHasher;
@@ -350,6 +354,19 @@ namespace Bit.Core.Services
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, false);
             
             return new EmergencyAccessViewResponseModel(_globalSettings, emergencyAccess, ciphers);
+        }
+
+        public async Task<AttachmentResponseModel> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User requestingUser)
+        {
+            var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
+            {
+                throw new BadRequestException("Emergency Access not valid.");
+            }
+
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId), emergencyAccess.GrantorId);
+            return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         }
 
         private async Task SendInviteAsync(EmergencyAccess emergencyAccess, string invitingUsersName)
