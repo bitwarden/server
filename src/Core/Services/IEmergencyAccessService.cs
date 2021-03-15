@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
@@ -26,5 +27,6 @@ namespace Bit.Core.Services
         Task SendNotificationsAsync();
         Task HandleTimedOutRequestsAsync();
         Task<EmergencyAccessViewResponseModel> ViewAsync(Guid id, User user);
+        Task<AttachmentResponseModel> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User user);
     }
 }
