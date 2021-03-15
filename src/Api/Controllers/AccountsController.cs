@@ -41,7 +41,6 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
-            ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
             IUserService userService)
         {
