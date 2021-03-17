@@ -50,9 +50,27 @@ namespace Bit.Core.Repositories.EntityFramework
             builder.Entity<Organization>().Ignore(e => e.TwoFactorProviders);
             builder.Entity<Organization>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
 
-            builder.Entity<User>().ToTable(nameof(User));
             builder.Entity<Cipher>().ToTable(nameof(Cipher));
+            builder.Entity<Collection>().ToTable(nameof(Collection));
+            builder.Entity<CollectionCipher>().ToTable(nameof(CollectionCipher));
+            builder.Entity<Device>().ToTable(nameof(Device));
+            builder.Entity<EmergencyAccess>().ToTable(nameof(EmergencyAccess));
+            builder.Entity<Event>().ToTable(nameof(Event));
+            builder.Entity<Folder>().ToTable(nameof(Folder));
+            builder.Entity<Grant>().ToTable(nameof(Grant));
+            builder.Entity<Group>().ToTable(nameof(Group));
+            builder.Entity<GroupUser>().ToTable(nameof(GroupUser));
+            builder.Entity<Installation>().ToTable(nameof(Installation));
             builder.Entity<Organization>().ToTable(nameof(Organization));
+            builder.Entity<OrganizationUser>().ToTable(nameof(OrganizationUser));
+            builder.Entity<Policy>().ToTable(nameof(Policy));
+            builder.Entity<Send>().ToTable(nameof(Send));
+            builder.Entity<SsoConfig>().ToTable(nameof(SsoConfig));
+            builder.Entity<SsoUser>().ToTable(nameof(SsoUser));
+            builder.Entity<TaxRate>().ToTable(nameof(TaxRate));
+            builder.Entity<Transaction>().ToTable(nameof(Transaction));
+            builder.Entity<U2f>().ToTable(nameof(U2f));
+            builder.Entity<User>().ToTable(nameof(User));
         }
     }
 }
