@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <NoWarn>1701;1702;1705;NU1701</NoWarn>
     <RootNamespace>Bit.Setup</RootNamespace>
   </PropertyGroup>
