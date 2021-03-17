@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Storage;
@@ -45,7 +46,8 @@ namespace Bit.Core.Services
             _logger = logger;
             _globalSettings = globalSettings;
 
-            var certThumbprint = environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
+            var certThumbprint = environment.IsDevelopment() && !_globalSettings.SelfHosted ?
+                "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
             if (_globalSettings.SelfHosted)
             {

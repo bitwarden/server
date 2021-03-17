@@ -45,5 +45,12 @@ namespace Bit.Core.Models.Business
         public short? Seats { get; set; }
 
         public short? Storage { get; set; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public SendType? SendType { get; set; }
+
+        public int? MaxAccessCount { get; set; }
+
+        public bool? HasPassword { get; set; }
     }
 }

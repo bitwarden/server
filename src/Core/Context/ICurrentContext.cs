@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context

@@ -7,10 +7,11 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
+using Bit.Core.Models.Api.Response;
 
 namespace Bit.Api.Controllers
 {
@@ -21,17 +22,20 @@ namespace Bit.Api.Controllers
         private readonly ISendRepository _sendRepository;
         private readonly IUserService _userService;
         private readonly ISendService _sendService;
+        private readonly ISendFileStorageService _sendFileStorageService;
         private readonly GlobalSettings _globalSettings;
 
         public SendsController(
             ISendRepository sendRepository,
             IUserService userService,
             ISendService sendService,
+            ISendFileStorageService sendFileStorageService,
             GlobalSettings globalSettings)
         {
             _sendRepository = sendRepository;
             _userService = userService;
             _sendService = sendService;
+            _sendFileStorageService = sendFileStorageService;
             _globalSettings = globalSettings;
         }
 
@@ -56,7 +60,50 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            return new ObjectResult(new SendAccessResponseModel(send, _globalSettings));
+            var sendResponse = new SendAccessResponseModel(send, _globalSettings);
+            if (send.UserId.HasValue)
+            {
+                var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
+                sendResponse.CreatorIdentifier = creator.Email;
+            }
+            return new ObjectResult(sendResponse);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("{encodedSendId}/access/file/{fileId}")]
+        public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+            string fileId, [FromBody] SendAccessRequestModel model)
+        {
+            var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
+            var send = await _sendRepository.GetByIdAsync(sendId);
+
+            if (send == null)
+            {
+                throw new BadRequestException("Could not locate send");
+            }
+
+            var (url, passwordRequired, passwordInvalid) = await _sendService.GetSendFileDownloadUrlAsync(send, fileId,
+                model.Password);
+
+            if (passwordRequired)
+            {
+                return new UnauthorizedResult();
+            }
+            if (passwordInvalid)
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Invalid password.");
+            }
+            if (send == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new ObjectResult(new SendFileDownloadDataResponseModel()
+            {
+                Id = fileId,
+                Url = url,
+            });
         }
 
         [HttpGet("{id}")]
@@ -113,7 +160,7 @@ namespace Bit.Api.Controllers
                 var userId = _userService.GetProperUserId(User).Value;
                 var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
                 send = madeSend;
-                await _sendService.CreateSendAsync(send, madeData, stream, Request.ContentLength.GetValueOrDefault(0));
+                await _sendService.CreateSendAsync(send, madeData, stream, model.FileLength.GetValueOrDefault(0));
             });
 
             return new SendResponseModel(send, _globalSettings);

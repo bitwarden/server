@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Fido2NetLib.Objects;
 using Fido2NetLib;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Identity
 {

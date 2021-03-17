@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 

@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.Builder;

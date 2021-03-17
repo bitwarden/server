@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Context
 {

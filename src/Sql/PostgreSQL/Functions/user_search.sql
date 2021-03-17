@@ -11,7 +11,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE 
-    email_like_search VARCHAR(55) = _email || '%';
+    email_like_search VARCHAR(261) = _email || '%';
 
 BEGIN
     RETURN QUERY

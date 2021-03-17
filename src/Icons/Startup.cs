@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Globalization;
-using Bit.Core;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Builder;

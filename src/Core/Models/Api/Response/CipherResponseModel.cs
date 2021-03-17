@@ -5,6 +5,7 @@ using Bit.Core.Models.Table;
 using System.Linq;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Api
 {

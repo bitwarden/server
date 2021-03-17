@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Bit.Core;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Admin.Models
 {

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Utilities;
 using IdentityServer4.Services;
 using System.Threading.Tasks;
+using Bit.Core.Settings;
 
 namespace Bit.Core.IdentityServer
 {

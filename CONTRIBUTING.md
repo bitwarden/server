@@ -174,10 +174,10 @@ This is an example user secrets file for both the Api and Identity projects.
   "globalSettings": {
     "selfHosted": true,
     "identityServer": {
-      "certificateThumbprint": "<your Identity certificate thumbprint>"
+      "certificateThumbprint": "<your Identity certificate thumbprint with no spaces>"
     },
     "dataProtection": {
-      "certificateThumbprint": "<your Data Protection certificate thumbprint>"
+      "certificateThumbprint": "<your Data Protection certificate thumbprint with no spaces>"
     },
     "installation": {
       "id": "<your Installation Id>",
@@ -190,6 +190,26 @@ This is an example user secrets file for both the Api and Identity projects.
   }
 }
 ```
+### Possible setup error in `src/Identity`
+
+You may encounter an `Invalid licensing certificate` when running the command `dotnet run` in the project `src/Identity`, like this one: 
+
+```console
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[0]
+      User profile is available. Using '/Users/<username>/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+info: IdentityServer4.Startup[0]
+      Starting IdentityServer4 version 4.0.4+1b36d1b414f4e0f965af97ab2a7e9dd1b5167bca
+crit: Microsoft.AspNetCore.Hosting.Diagnostics[6]
+      Application startup exception
+System.Exception: Invalid licensing certificate.
+```
+As a quick fix, navigate to [`src/Core/Services/Implementations/LicensingService.cs`](https://github.com/bitwarden/server/blob/df7a035d9bdbee40e019a596a1a7a66826db02f4/src/Core/Services/Implementations/LicensingService.cs#L49), line 49, and change that line to 
+
+```cs
+var certThumbprint = !environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
+                "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+``` 
+⚠️  Do not commit this change, as it might ruin the experience for others.
 
 ## Running and Debugging
 After you have completed the above steps, you should be ready to launch your development environment for the Api and Identity projects.

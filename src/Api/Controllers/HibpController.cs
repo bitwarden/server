@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Authorization;
 using System.Net.Http;
 using System.Security.Cryptography;
 using Bit.Core.Services;
-using Bit.Core;
 using Bit.Core.Context;
 using System.Net;
 using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Controllers
 {

@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Bit.Api.Utilities;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Controllers

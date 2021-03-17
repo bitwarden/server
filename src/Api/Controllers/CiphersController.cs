@@ -7,12 +7,12 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
-using Bit.Core.Utilities;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+
 
 namespace Bit.Api.Controllers
 {
@@ -24,6 +24,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
+        private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
@@ -32,6 +33,7 @@ namespace Bit.Api.Controllers
             ICollectionCipherRepository collectionCipherRepository,
             ICipherService cipherService,
             IUserService userService,
+            IAttachmentStorageService attachmentStorageService,
             ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
@@ -39,6 +41,7 @@ namespace Bit.Api.Controllers
             _collectionCipherRepository = collectionCipherRepository;
             _cipherService = cipherService;
             _userService = userService;
+            _attachmentStorageService = attachmentStorageService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -606,6 +609,27 @@ namespace Bit.Api.Controllers
             });
 
             return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
+        }
+
+        [HttpGet("{id}/attachment/{attachmentId}")]
+        public async Task<AttachmentResponseModel> GetAttachmentData(string id, string attachmentId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var attachments = cipher.GetAttachments();
+
+            if (!attachments.ContainsKey(attachmentId))
+            {
+                throw new NotFoundException();
+            }
+
+            var data = attachments[attachmentId];
+            var response = new AttachmentResponseModel(attachmentId, data, cipher, _globalSettings)
+            {
+                Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data)
+            };
+
+            return response;
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]

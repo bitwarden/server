@@ -1,5 +1,6 @@
 using System;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;

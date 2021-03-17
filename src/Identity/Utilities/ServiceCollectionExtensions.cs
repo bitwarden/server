@@ -1,6 +1,6 @@
 ﻿using System;
-using Bit.Core;
 using Bit.Core.IdentityServer;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityServer4.ResponseHandling;
 using IdentityServer4.Services;

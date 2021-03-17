@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
@@ -115,15 +116,19 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid token.");
             }
 
+            if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)
+            {
+                throw new BadRequestException("Invitation already accepted. You will receive an email when the grantor confirms you as an emergency access contact.");
+            }
+            else if (emergencyAccess.Status != EmergencyAccessStatusType.Invited)
+            {
+                throw new BadRequestException("Invitation already accepted.");
+            }
+
             if (string.IsNullOrWhiteSpace(emergencyAccess.Email) ||
                 !emergencyAccess.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadRequestException("User email does not match invite.");
-            }
-
-            if (emergencyAccess.Status != EmergencyAccessStatusType.Invited)
-            {
-                throw new BadRequestException("Already accepted.");
             }
 
             var granteeEmail = emergencyAccess.Email;
@@ -243,8 +248,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -262,8 +266,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -277,8 +280,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -311,8 +313,10 @@ namespace Bit.Core.Services
                 var ea = notify.ToEmergencyAccess();
                 ea.LastNotificationDate = DateTime.UtcNow;
                 await _emergencyAccessRepository.ReplaceAsync(ea);
-                
-                await _mailService.SendEmergencyAccessRecoveryReminder(ea, notify.GranteeName, notify.GrantorEmail);
+
+                var granteeNameOrEmail = string.IsNullOrWhiteSpace(notify.GranteeName) ? notify.GranteeEmail : notify.GranteeName;
+
+                await _mailService.SendEmergencyAccessRecoveryReminder(ea, granteeNameOrEmail, notify.GrantorEmail);
             }
         }
 
@@ -325,9 +329,12 @@ namespace Bit.Core.Services
                 var ea = details.ToEmergencyAccess();
                 ea.Status = EmergencyAccessStatusType.RecoveryApproved;
                 await _emergencyAccessRepository.ReplaceAsync(ea);
-                
-                await _mailService.SendEmergencyAccessRecoveryApproved(ea, details.GrantorName, details.GranteeEmail);
-                await _mailService.SendEmergencyAccessRecoveryTimedOut(ea, details.GranteeName, details.GrantorEmail);
+
+                var grantorNameOrEmail = string.IsNullOrWhiteSpace(details.GrantorName) ? details.GrantorEmail : details.GrantorName;
+                var granteeNameOrEmail = string.IsNullOrWhiteSpace(details.GranteeName) ? details.GranteeEmail : details.GranteeName;
+
+                await _mailService.SendEmergencyAccessRecoveryApproved(ea, grantorNameOrEmail, details.GranteeEmail);
+                await _mailService.SendEmergencyAccessRecoveryTimedOut(ea, granteeNameOrEmail, details.GrantorEmail);
             }
         }
 
@@ -335,8 +342,7 @@ namespace Bit.Core.Services
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
-            if (emergencyAccess == null || emergencyAccess.GranteeId != requestingUser.Id ||
-                emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved)
+            if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
@@ -356,6 +362,13 @@ namespace Bit.Core.Services
         private string NameOrEmail(User user)
         {
             return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
+        }
+
+        private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType) {
+             return availibleAccess != null && 
+                availibleAccess.GranteeId == requestingUser.Id &&
+                availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+                availibleAccess.Type == requestedAccessType;
         }
     }
 }

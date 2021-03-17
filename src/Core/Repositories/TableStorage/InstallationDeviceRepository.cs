@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Repositories.TableStorage

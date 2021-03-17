@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Repositories;
-using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Controllers
 {

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
@@ -1154,38 +1155,48 @@ namespace Bit.Core.Services
                 }
             }
 
-            ICollection<Policy> orgPolicies = null;
-            ICollection<Policy> userPolicies = null;
-            async Task<bool> hasPolicyAsync(PolicyType policyType, bool useUserPolicies = false)
+            bool notExempt(OrganizationUser organizationUser)
             {
-                var policies = useUserPolicies ? 
-                    userPolicies = userPolicies ?? await _policyRepository.GetManyByUserIdAsync(user.Id) : 
-                    orgPolicies = orgPolicies ?? await _policyRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                
-                return policies.Any(p => p.Type == policyType && p.Enabled);
-            }
-            var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-            if (userOrgs.Any(ou => ou.OrganizationId != orgUser.OrganizationId && ou.Status != OrganizationUserStatusType.Invited))
-            {   
-                if (await hasPolicyAsync(PolicyType.SingleOrg))
-                {
-                    throw new BadRequestException("You may not join this organization until you leave or remove " +
-                        "all other organizations.");
-                }
-                if (await hasPolicyAsync(PolicyType.SingleOrg, true))
-                {
-                    throw new BadRequestException("You cannot join this organization because you are a member of " + 
-                        "an organization which forbids it");
-                }
+                return organizationUser.Type != OrganizationUserType.Owner &&
+                        organizationUser.Type != OrganizationUserType.Admin;
             }
 
-            if (!await userService.TwoFactorIsEnabledAsync(user))
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+
+            // Enforce Single Organization Policy of organization user is trying to join
+            var thisSingleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.SingleOrg);
+            if (thisSingleOrgPolicy != null &&
+                thisSingleOrgPolicy.Enabled &&
+                notExempt(orgUser) &&
+                allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId))
             {
-                if (await hasPolicyAsync(PolicyType.TwoFactorAuthentication))
-                {
-                    throw new BadRequestException("You cannot join this organization until you enable " +
-                        "two-step login on your user account.");
-                }
+                throw new BadRequestException("You may not join this organization until you leave or remove " +
+                    "all other organizations.");
+            }
+
+            // Enforce Single Organization Policy of other organizations user is a member of
+            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+
+            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
+                .Select(p => p.OrganizationId);
+            var blockedBySingleOrgPolicy = allOrgUsers.Any(ou => notExempt(ou) &&
+                ou.Status != OrganizationUserStatusType.Invited &&
+                orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
+
+            if (blockedBySingleOrgPolicy)
+            {
+                throw new BadRequestException("You cannot join this organization because you are a member of " +
+                    "an organization which forbids it");
+            }
+
+            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            if (!await userService.TwoFactorIsEnabledAsync(user) &&
+                twoFactorPolicy != null &&
+                twoFactorPolicy.Enabled &&
+                notExempt(orgUser))
+            {
+                throw new BadRequestException("You cannot join this organization until you enable " +
+                    "two-step login on your user account.");
             }
 
             orgUser.Status = OrganizationUserStatusType.Accepted;

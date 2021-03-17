@@ -12,7 +12,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
-using Bit.Core;
+
+using Bit.Core.Settings;
 
 namespace Bit.Billing.Controllers
 {

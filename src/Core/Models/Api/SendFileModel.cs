@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Api
 {
@@ -10,14 +11,12 @@ namespace Bit.Core.Models.Api
         public SendFileModel(SendFileData data, GlobalSettings globalSettings)
         {
             Id = data.Id;
-            Url = $"{globalSettings.Send.BaseUrl}/{data.Id}";
             FileName = data.FileName;
             Size = data.SizeString;
             SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 
         public string Id { get; set; }
-        public string Url { get; set; }
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string FileName { get; set; }

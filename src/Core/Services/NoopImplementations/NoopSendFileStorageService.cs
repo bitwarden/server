@@ -12,7 +12,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task DeleteFileAsync(string fileId)
+        public Task DeleteFileAsync(Send send, string fileId)
         {
             return Task.FromResult(0);
         }
@@ -25,6 +25,11 @@ namespace Bit.Core.Services
         public Task DeleteFilesForUserAsync(Guid userId)
         {
             return Task.FromResult(0);
+        }
+
+        public Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
+        {
+            return Task.FromResult((string)null);
         }
     }
 }

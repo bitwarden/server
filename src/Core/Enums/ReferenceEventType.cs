@@ -24,5 +24,9 @@ namespace Bit.Core.Enums
         InvitedUsers,
         [EnumMember(Value = "rebilled")]
         Rebilled,
+        [EnumMember(Value = "send-created")]
+        SendCreated,
+        [EnumMember(Value = "send-accessed")]
+        SendAccessed,
     }
 }

@@ -19,6 +19,7 @@ using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Bit.Core.Models.Api;
 using Bit.Core.Context;
+using Bit.Core.Settings;
 
 namespace Bit.Core.IdentityServer
 {

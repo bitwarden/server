@@ -13,6 +13,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -424,6 +425,7 @@ namespace Bit.Core.Utilities
             var globalSettings = new GlobalSettings();
             ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
             services.AddSingleton(s => globalSettings);
+            services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
             return globalSettings;
         }
 

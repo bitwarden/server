@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
-using Bit.Core;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.Builder;

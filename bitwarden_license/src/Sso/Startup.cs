@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;

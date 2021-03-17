@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using System.Data;
 using Dapper;
 

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using AspNetCoreRateLimit;
 using System.Globalization;

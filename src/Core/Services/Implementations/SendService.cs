@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 
@@ -23,6 +25,7 @@ namespace Bit.Core.Services
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
+        private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
 
@@ -34,6 +37,7 @@ namespace Bit.Core.Services
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
+            IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
             ICurrentContext currentContext)
@@ -46,6 +50,7 @@ namespace Bit.Core.Services
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
+            _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
             _currentContext = currentContext;
         }
@@ -59,6 +64,7 @@ namespace Bit.Core.Services
             {
                 await _sendRepository.CreateAsync(send);
                 await _pushService.PushSyncSendCreateAsync(send);
+                await RaiseReferenceEventAsync(send, ReferenceEventType.SendCreated);
             }
             else
             {
@@ -118,20 +124,33 @@ namespace Bit.Core.Services
             }
 
             var fileId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
-            await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
 
             try
             {
                 data.Id = fileId;
-                data.Size = stream.Length;
                 send.Data = JsonConvert.SerializeObject(data,
                     new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                 await SaveSendAsync(send);
+                await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
+                // Need to save length of stream since that isn't available until it is read
+                if (stream.Length <= requestLength)
+                {
+                    data.Size = stream.Length;
+                    send.Data = JsonConvert.SerializeObject(data,
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    await SaveSendAsync(send);
+                }
+                else
+                {
+                    await DeleteSendAsync(send);
+                    throw new BadRequestException("Content-Length header is smaller than file received.");
+                }
+
             }
             catch
             {
                 // Clean up since this is not transactional
-                await _sendFileStorageService.DeleteFileAsync(fileId);
+                await _sendFileStorageService.DeleteFileAsync(send, fileId);
                 throw;
             }
         }
@@ -142,27 +161,26 @@ namespace Bit.Core.Services
             if (send.Type == Enums.SendType.File)
             {
                 var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
-                await _sendFileStorageService.DeleteFileAsync(data.Id);
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
             }
             await _pushService.PushSyncSendDeleteAsync(send);
         }
 
-        // Response: Send, password required, password invalid
-        public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
+        public (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(Send send,
+            string password)
         {
-            var send = await _sendRepository.GetByIdAsync(sendId);
             var now = DateTime.UtcNow;
             if (send == null || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
                 send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
                 send.DeletionDate < now)
             {
-                return (null, false, false);
+                return (false, false, false);
             }
             if (!string.IsNullOrWhiteSpace(send.Password))
             {
                 if (string.IsNullOrWhiteSpace(password))
                 {
-                    return (null, true, false);
+                    return (false, true, false);
                 }
                 var passwordResult = _passwordHasher.VerifyHashedPassword(new User(), send.Password, password);
                 if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -171,13 +189,69 @@ namespace Bit.Core.Services
                 }
                 if (passwordResult == PasswordVerificationResult.Failed)
                 {
-                    return (null, false, true);
+                    return (false, false, true);
                 }
             }
-            // TODO: maybe move this to a simple ++ sproc?
+
+            return (true, false, false);
+        }
+
+        // Response: Send, password required, password invalid
+        public async Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
+        {
+            if (send.Type != SendType.File)
+            {
+                throw new BadRequestException("Can only get a download URL for a file type of Send");
+            }
+
+            var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
+
+            if (!grantAccess)
+            {
+                return (null, passwordRequired, passwordInvalid);
+            }
+
             send.AccessCount++;
             await _sendRepository.ReplaceAsync(send);
+            await _pushService.PushSyncSendUpdateAsync(send);
+            return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
+        }
+
+        // Response: Send, password required, password invalid
+        public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
+        {
+            var send = await _sendRepository.GetByIdAsync(sendId);
+            var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
+
+            if (!grantAccess)
+            {
+                return (null, passwordRequired, passwordInvalid);
+            }
+
+            // TODO: maybe move this to a simple ++ sproc?
+            if (send.Type != SendType.File)
+            {
+                // File sends are incremented during file download
+                send.AccessCount++;
+            }
+
+            await _sendRepository.ReplaceAsync(send);
+            await _pushService.PushSyncSendUpdateAsync(send);
+            await RaiseReferenceEventAsync(send, ReferenceEventType.SendAccessed);
             return (send, false, false);
+        }
+
+        private async Task RaiseReferenceEventAsync(Send send, ReferenceEventType eventType)
+        {
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Id = send.UserId ?? default,
+                Type = eventType,
+                Source = ReferenceEventSource.User,
+                SendType = send.Type,
+                MaxAccessCount = send.MaxAccessCount,
+                HasPassword = !string.IsNullOrWhiteSpace(send.Password),
+            });
         }
 
         public string HashPassword(string password)

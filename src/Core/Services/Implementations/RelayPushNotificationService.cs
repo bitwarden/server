@@ -10,6 +10,7 @@ using Bit.Core.Models.Api;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

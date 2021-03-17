@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
+using Bit.Core.Settings;
 using Newtonsoft.Json;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.Http;

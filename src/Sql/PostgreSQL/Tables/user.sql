@@ -3,7 +3,7 @@
 CREATE TABLE "user" (
     id                                 UUID          NOT NULL,
     name                               VARCHAR (50)  NULL,
-    email                              VARCHAR (50)  NOT NULL,
+    email                              VARCHAR (256) NOT NULL,
     email_verified                     BOOLEAN       NOT NULL,
     master_password                    VARCHAR (300) NOT NULL,
     master_password_hint               VARCHAR (50)  NULL,

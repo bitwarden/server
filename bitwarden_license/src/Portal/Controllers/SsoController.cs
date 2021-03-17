@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Bit.Core;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Portal.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
