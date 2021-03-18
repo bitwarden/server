@@ -44,43 +44,89 @@ This means that you don't need to run all services locally for a development env
 
 This guide will show you how to set up the Api, Identity and SQL projects for development. These are the minimum projects for any development work. You may need to set up additional projects depending on the changes you want to make.
 
-## SQL Server
+## Database setup
 
-There are 2 options for deploying your own SQL server.
+### Docker setup
 
-### Without Docker
+We use SQL Server Developer Edition as a Docker Container to run the local development database. More information about the container image is available [on its Docker Hub page](https://hub.docker.com/_/microsoft-mssql-server) (this is especially useful if you're having issues).
 
-1. Install your own SQL server on localhost (e.g. SQL Express)
-2. Right-click the SQL project in Visual Studio and click **Snapshot Project**. This will produce a .dacpac file containing the database schema
-3. Use your preferred database management software (such as SQL Server Management Studio) to deploy a new database from the .dacpac file
+Steps:
 
-### With Docker
+1. Make sure you have already run `git clone` for the server repo, so that you have the migrator scripts required
+2. Install the [Docker desktop runtime](https://hub.docker.com/editions/community/docker-ce-desktop-mac)
+3. Create a Docker account if prompted (optional)
+4. Organize your folders (important for the below scripts to work properly):
+    * Create a folder to house Docker information (e.g. `docker`) - this should be in the same folder as your cloned repositories (e.g. `server`, `web`, `browser` etc)
+    * Create sub-folder to house this specific container (ex: `docker/SQLServer`)
+5. Create `docker-compose.yml` file in `docker/SQLServer` with the following contents:
 
-1. Follow the [Installing and deploying > TL;DR](https://bitwarden.com/help/article/install-on-premise/#tldr) instructions to install and deploy a local Bitwarden Server using Docker. This will give you the entire Bitwarden Server (not just the SQL server), but it is the quickest and easiest method to get what you need.
-2. Stop all containers
- 
-    Bash:
-    ```bash
-    ./bitwarden.sh stop
+    ```Dockerfile
+    version: '3.1'
+
+    services:
+
+      db:
+        image: mcr.microsoft.com/mssql/server:2017-CU14-ubuntu
+        container_name: mssql-dev
+        restart: always
+        environment:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: SET_A_PASSWORD_HERE
+          MSSQL_PID: Developer
+        volumes:
+          - mssql_dev_data:/var/opt/mssql/data
+          - ../../server/util/Migrator/DbScripts:/mnt/migrator/dbscripts
+          - ./:/mnt/migrator/utilscripts
+        ports:
+          - '1433:1433'
+
+    volumes:
+      mssql_dev_data:
     ```
+6. Update the SA_PASSWORD field with a password you want to use. It must include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols.
+7. Open up a terminal window and cd into your folder with the .yml file and execute the following command
+    * `docker-compose up`
+* You should now have a container up and running the SQL Server
 
-    Powershell:
-    ```powershell
-    .\bitwarden.ps1 -stop
-    ```
-4. Open a terminal with elevated privileges and navigate to your `bwdata` install folder
-5. Run the SQL Docker container with these arguments:
+<img width="194" alt="salserver" src="https://user-images.githubusercontent.com/3904944/78942922-b344e880-7a88-11ea-8c1e-ba12ab3446bb.png">
 
-    ```bash
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=<set an SQL password here>" -p 1433:1433 --name mssql-dev \
-    --mount type=bind,source="$(pwd)"/mssql/data,target=/var/opt/mssql/data \
-    --mount type=bind,source="$(pwd)"/logs/mssql,target=/var/opt/mssql/log \
-    --mount type=bind,source="$(pwd)"/mssql/backups,target=/etc/bitwarden/mssql/backups bitwarden/mssql
-    ```
+8. Troubleshooting: if your login details for `sa` are being rejected:
+    * SA_PASSWORD has certain complexity requirements. The Docker Hub page says that it must "include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols" - but your mileage may vary. If these requirements are not met, the password will not be set (without any warning) and your login attempts will be rejected for having an incorrect password. If this is happening and you're sure you're using the right password, try increasing the complexity of SA_PASSWORD.
+    * If you change SA_PASSWORD in `docker-compose.yml`, you may need to delete the Docker container *and volume* for it to take effect. (This will obviously delete all of your container files/setup.) Stop and delete the running container, then delete the volume with `docker volume ls` and `docker volume rm <volume name>`. Then update `docker-compose.yml` and run `docker compose -d up` again.
 
-Note: you will need the `SA_PASSWORD` you set here for the connection string in your user secrets (see below).
-    
-## User Secrets
+### Running Migrator scripts
+
+You now have an empty SQL server instance. The instructions below will automatically create your `vault_dev` database and run the migration scripts located in `server/util/Migrator/DbScripts` to populate it.
+
+Note: you must have followed the steps above to set up your folder structures and the `docker-compose` file for this to work.
+
+1. Create `migrate.sh` file in `docker/SQLServer` with the following content (make sure to insert your SA_PASSWORD):
+
+```
+MIGRATE_DIRECTORY="/mnt/migrator/dbscripts"
+SERVER="localhost"
+DATABASE="vault_dev"
+USER="sa"
+PASSWD="YOUR_SA_PASSWORD"
+
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "CREATE DATABASE $DATABASE;"
+
+for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
+  /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $f
+done;
+```
+2. Execute `migrate.sh`:
+    1. Open the Docker Desktop GUI
+    2. Click the CLI button to open a new terminal in your mssql-dev service
+    3. Run `sh /mnt/migrator/utilscripts/migrate.sh`
+
+![Screen Shot 2021-03-18 at 11 12 30 am](https://user-images.githubusercontent.com/31796059/111558643-e59faf80-87da-11eb-96d7-c26875ce322c.png)
+
+3. (Optional) To confirm this worked correctly, you can connect to the SQL database with an SQL client (such as [Azure Data Studio](https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio?view=sql-server-ver15)). You should see that the `vault_dev` database has been created and has been populated with tables.
+
+Your database is now ready to go!
+
+## Setting up User Secrets
 User secrets are a method for managing application settings on a per-developer basis. They are stored outside of the local git repository so that they are not pushed to remote.
 
 User secrets override the settings in `appsettings.json` of each project. Your user secrets file should match the structure of the `appsettings.json` file for the settings you intend to override.
@@ -108,6 +154,8 @@ View currently set secrets by running:
 ```bash
 dotnet user-secrets list
 ```
+
+By default, user secret files are located in `~/.microsoft/usersecrets/<project name>/secrets.json`. After the file has been created, you can edit this directly with VSCode, which is much easier than using the command line tool.
 
 ### Editing user secrets - Rider
 * Navigate to **Preferences -> Plugins** and Install .NET Core User Secrets
@@ -185,31 +233,11 @@ This is an example user secrets file for both the Api and Identity projects.
     },
     "licenseDirectory": "<full path to licence directory>",
     "sqlServer": {
-      "connectionString": "Data Source=localhost,1433;Initial Catalog=vault;Persist Security Info=False;User ID=sa;Password=<your SQL password>;MultipleActiveResultSets=False;Connect Timeout=30;Encrypt=True;TrustServerCertificate=True"
+      "connectionString": "Server=localhost;Database=vault_dev_self;User Id=sa;Password=<your SA_PASSWORD>"
     }
   }
 }
 ```
-### Possible setup error in `src/Identity`
-
-You may encounter an `Invalid licensing certificate` when running the command `dotnet run` in the project `src/Identity`, like this one: 
-
-```console
-info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[0]
-      User profile is available. Using '/Users/<username>/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
-info: IdentityServer4.Startup[0]
-      Starting IdentityServer4 version 4.0.4+1b36d1b414f4e0f965af97ab2a7e9dd1b5167bca
-crit: Microsoft.AspNetCore.Hosting.Diagnostics[6]
-      Application startup exception
-System.Exception: Invalid licensing certificate.
-```
-As a quick fix, navigate to [`src/Core/Services/Implementations/LicensingService.cs`](https://github.com/bitwarden/server/blob/df7a035d9bdbee40e019a596a1a7a66826db02f4/src/Core/Services/Implementations/LicensingService.cs#L49), line 49, and change that line to 
-
-```cs
-var certThumbprint = !environment.IsDevelopment() ? "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
-                "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-``` 
-⚠️  Do not commit this change, as it might ruin the experience for others.
 
 ## Running and Debugging
 After you have completed the above steps, you should be ready to launch your development environment for the Api and Identity projects.
