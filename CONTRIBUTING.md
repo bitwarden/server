@@ -44,6 +44,8 @@ This means that you don't need to run all services locally for a development env
 
 This guide will show you how to set up the Api, Identity and SQL projects for development. These are the minimum projects for any development work. You may need to set up additional projects depending on the changes you want to make.
 
+We recommend using [Visual Studio](https://visualstudio.microsoft.com/vs/).
+
 ## Database setup
 
 ### Docker setup
@@ -90,10 +92,6 @@ Steps:
 
 <img width="194" alt="salserver" src="https://user-images.githubusercontent.com/3904944/78942922-b344e880-7a88-11ea-8c1e-ba12ab3446bb.png">
 
-8. Troubleshooting: if your login details for `sa` are being rejected:
-    * SA_PASSWORD has certain complexity requirements. The Docker Hub page says that it must "include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols" - but your mileage may vary. If these requirements are not met, the password will not be set (without any warning) and your login attempts will be rejected for having an incorrect password. If this is happening and you're sure you're using the right password, try increasing the complexity of SA_PASSWORD.
-    * If you change SA_PASSWORD in `docker-compose.yml`, you may need to delete the Docker container *and volume* for it to take effect. (This will obviously delete all of your container files/setup.) Stop and delete the running container, then delete the volume with `docker volume ls` and `docker volume rm <volume name>`. Then update `docker-compose.yml` and run `docker compose -d up` again.
-
 ### Running Migrator scripts
 
 You now have an empty SQL server instance. The instructions below will automatically create your `vault_dev` database and run the migration scripts located in `server/util/Migrator/DbScripts` to populate it.
@@ -115,7 +113,7 @@ for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $f
 done;
 ```
-2. Execute `migrate.sh`:
+2. Execute `migrate.sh` from within the Docker container:
     1. Open the Docker Desktop GUI
     2. Click the CLI button to open a new terminal in your mssql-dev service
     3. Run `sh /mnt/migrator/utilscripts/migrate.sh`
@@ -123,6 +121,10 @@ done;
 ![Screen Shot 2021-03-18 at 11 12 30 am](https://user-images.githubusercontent.com/31796059/111558643-e59faf80-87da-11eb-96d7-c26875ce322c.png)
 
 3. (Optional) To confirm this worked correctly, you can connect to the SQL database with an SQL client (such as [Azure Data Studio](https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio?view=sql-server-ver15)). You should see that the `vault_dev` database has been created and has been populated with tables.
+
+4. **Troubleshooting:** if your login details for `sa` are being rejected:
+    * SA_PASSWORD has certain complexity requirements. The Docker Hub page says that it must "include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols" - but your mileage may vary. If these requirements are not met, the password will not be set (without any warning) and your login attempts will be rejected for having an incorrect password. If this is happening and you're sure you're using the right password, try increasing the complexity of SA_PASSWORD.
+    * If you change SA_PASSWORD in `docker-compose.yml`, you may need to delete the Docker container *and volume* for it to take effect. (This will obviously delete all of your container files/setup.) Stop and delete the running container, then delete the volume with `docker volume ls` and `docker volume rm <volume name>`. Then update `docker-compose.yml` and run `docker compose -d up` again.
 
 Your database is now ready to go!
 
@@ -132,6 +134,8 @@ User secrets are a method for managing application settings on a per-developer b
 User secrets override the settings in `appsettings.json` of each project. Your user secrets file should match the structure of the `appsettings.json` file for the settings you intend to override.
 
 For more information, see: [Safe storage of app secrets in development in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-3.1).
+
+Open the server solution file (`bitwarden-server.sln`) in Visual Studio before proceeding.
 
 ### Editing user secrets - Visual Studio on Windows
 Right-click on the project in the Solution Explorer and click **Manage User Secrets**.
