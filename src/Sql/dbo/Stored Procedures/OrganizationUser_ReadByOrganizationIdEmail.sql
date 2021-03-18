@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdEmail]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50)
+    @Email NVARCHAR(256)
 AS
 BEGIN
     SET NOCOUNT ON

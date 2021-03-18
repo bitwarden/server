@@ -8,7 +8,7 @@
     @BusinessAddress3 NVARCHAR(50),
     @BusinessCountry VARCHAR(2),
     @BusinessTaxNumber NVARCHAR(30),
-    @BillingEmail NVARCHAR(50),
+    @BillingEmail NVARCHAR(256),
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
     @Seats SMALLINT,

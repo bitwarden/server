@@ -1,12 +1,12 @@
 ﻿CREATE PROCEDURE [dbo].[User_Search]
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @Skip INT = 0,
     @Take INT = 25
 WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
-    DECLARE @EmailLikeSearch NVARCHAR(55) = @Email + '%'
+    DECLARE @EmailLikeSearch NVARCHAR(261) = @Email + '%'
 
     SELECT
         *

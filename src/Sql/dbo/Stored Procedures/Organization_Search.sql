@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_Search]
     @Name NVARCHAR(50),
-    @UserEmail NVARCHAR(50),
+    @UserEmail NVARCHAR(256),
     @Paid BIT,
     @Skip INT = 0,
     @Take INT = 25

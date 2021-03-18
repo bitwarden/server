@@ -2,7 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @Key VARCHAR(MAX),
     @Status TINYINT,
     @Type TINYINT,
