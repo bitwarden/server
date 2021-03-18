@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @EmailVerified BIT,
     @MasterPassword NVARCHAR(300),
     @MasterPasswordHint NVARCHAR(50),

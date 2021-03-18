@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[User_ReadByEmail]
-    @Email NVARCHAR(50)
+    @Email NVARCHAR(256)
 AS
 BEGIN
     SET NOCOUNT ON

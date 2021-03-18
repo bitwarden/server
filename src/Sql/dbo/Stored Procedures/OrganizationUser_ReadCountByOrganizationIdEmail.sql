@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Email NVARCHAR(50),
+    @Email NVARCHAR(256),
     @OnlyUsers BIT
 AS
 BEGIN

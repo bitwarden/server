@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[User] (
     [Id]                              UNIQUEIDENTIFIER NOT NULL,
     [Name]                            NVARCHAR (50)    NULL,
-    [Email]                           NVARCHAR (50)    NOT NULL,
+    [Email]                           NVARCHAR (256)   NOT NULL,
     [EmailVerified]                   BIT              NOT NULL,
     [MasterPassword]                  NVARCHAR (300)   NULL,
     [MasterPasswordHint]              NVARCHAR (50)    NULL,
