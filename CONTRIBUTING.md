@@ -86,7 +86,7 @@ Steps:
     ```
 6. Update the SA_PASSWORD field with a password you want to use. It must include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols.
 7. Open up a terminal window and cd into your folder with the .yml file and execute the following command
-    * `docker-compose up`
+    * `docker-compose up -d` (omit the `-d` switch if you want to see the output for debugging)
 * You should now have a container up and running the SQL Server
 
 <img width="194" alt="salserver" src="https://user-images.githubusercontent.com/3904944/78942922-b344e880-7a88-11ea-8c1e-ba12ab3446bb.png">
@@ -97,18 +97,17 @@ You now have an empty SQL server instance. The instructions below will automatic
 
 Note: you must have followed the steps above to set up your folder structures and the `docker-compose` file for this to work.
 
-1. Open `util/Migrator/createVaultDev.sh` and insert your SA_PASSWORD where indicated
-2. Open the Docker Desktop GUI
-3. Click the CLI button to open a new terminal in your mssql-dev service
-4. Run `sh /mnt/migrator/createVaultDev.sh`
+1. Open the Docker Desktop GUI
+2. Click the CLI button to open a new terminal in your mssql-dev service
+    ![Screen Shot 2021-03-18 at 11 12 30 am](https://user-images.githubusercontent.com/31796059/111558643-e59faf80-87da-11eb-96d7-c26875ce322c.png)
+3. Run `sh /mnt/migrator/createVaultDev.sh 'SA_PASSWORD'`. Replace `SA_PASSWORD` with the password you set in your `docker-compose.yml` file. You should put your `SA_PASSWORD` in single quotes to avoid special bash characters being caught by the shell.
 
-![Screen Shot 2021-03-18 at 11 12 30 am](https://user-images.githubusercontent.com/31796059/111558643-e59faf80-87da-11eb-96d7-c26875ce322c.png)
+4. (Optional) To confirm this worked correctly, you can connect to the SQL database with an SQL client (such as [Azure Data Studio](https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio?view=sql-server-ver15)). You should see that the `vault_dev` database has been created and has been populated with tables.
 
-3. (Optional) To confirm this worked correctly, you can connect to the SQL database with an SQL client (such as [Azure Data Studio](https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio?view=sql-server-ver15)). You should see that the `vault_dev` database has been created and has been populated with tables.
-
-4. **Troubleshooting:** if your login details for `sa` are being rejected:
-    * SA_PASSWORD has certain complexity requirements. The Docker Hub page says that it must "include at least 8 characters of at least three of these four categories: uppercase letters, lowercase letters, numbers and non-alphanumeric symbols" - but your mileage may vary. If these requirements are not met, the password will not be set (without any warning) and your login attempts will be rejected for having an incorrect password. If this is happening and you're sure you're using the right password, try increasing the complexity of SA_PASSWORD.
-    * If you change SA_PASSWORD in `docker-compose.yml`, you may need to delete the Docker container *and volume* for it to take effect. (This will obviously delete all of your container files/setup.) Stop and delete the running container, then delete the volume with `docker volume ls` and `docker volume rm <volume name>`. Then update `docker-compose.yml` and run `docker compose -d up` again.
+5. **Troubleshooting:** if your login details for `sa` are being rejected:
+    * Make sure your SA_PASSWORD is meeting the complexity requirements above. If these requirements are not met, the password may not be set properly (without any warning) and your login attempts will be rejected for having an incorrect password. If this is happening and you're sure you're using the right password, try increasing the complexity of SA_PASSWORD.
+    * If you change SA_PASSWORD in `docker-compose.yml`, you may need to delete the Docker container *and volume* for it to take effect. (This will obviously delete all of your container files/setup.) Stop and delete the running container, then delete the volume with `docker volume ls` and `docker volume rm <volume name>`. Then update `docker-compose.yml` and run `docker compose up -d` again.
+    * Make sure you are wrapping your SA_PASSWORD in single quotes when executing the `createVaultDev.sh` script.
 
 Your database is now ready to go!
 
@@ -221,7 +220,7 @@ This is an example user secrets file for both the Api and Identity projects.
     },
     "licenseDirectory": "<full path to licence directory>",
     "sqlServer": {
-      "connectionString": "Server=localhost;Database=vault_dev_self;User Id=sa;Password=<your SA_PASSWORD>"
+      "connectionString": "Server=localhost;Database=vault_dev;User Id=sa;Password=<your SA_PASSWORD>"
     }
   }
 }
