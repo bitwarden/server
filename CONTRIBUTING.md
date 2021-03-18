@@ -77,8 +77,7 @@ Steps:
           MSSQL_PID: Developer
         volumes:
           - mssql_dev_data:/var/opt/mssql/data
-          - ../../server/util/Migrator/DbScripts:/mnt/migrator/dbscripts
-          - ./:/mnt/migrator/utilscripts
+          - ../../server/util/Migrator:/mnt/migrator/
         ports:
           - '1433:1433'
 
@@ -98,25 +97,10 @@ You now have an empty SQL server instance. The instructions below will automatic
 
 Note: you must have followed the steps above to set up your folder structures and the `docker-compose` file for this to work.
 
-1. Create `migrate.sh` file in `docker/SQLServer` with the following content (make sure to insert your SA_PASSWORD):
-
-```
-MIGRATE_DIRECTORY="/mnt/migrator/dbscripts"
-SERVER="localhost"
-DATABASE="vault_dev"
-USER="sa"
-PASSWD="YOUR_SA_PASSWORD"
-
-/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "CREATE DATABASE $DATABASE;"
-
-for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
-  /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $f
-done;
-```
-2. Execute `migrate.sh` from within the Docker container:
-    1. Open the Docker Desktop GUI
-    2. Click the CLI button to open a new terminal in your mssql-dev service
-    3. Run `sh /mnt/migrator/utilscripts/migrate.sh`
+1. Open `util/Migrator/createVaultDev.sh` and insert your SA_PASSWORD where indicated
+2. Open the Docker Desktop GUI
+3. Click the CLI button to open a new terminal in your mssql-dev service
+4. Run `sh /mnt/migrator/createVaultDev.sh`
 
 ![Screen Shot 2021-03-18 at 11 12 30 am](https://user-images.githubusercontent.com/31796059/111558643-e59faf80-87da-11eb-96d7-c26875ce322c.png)
 
