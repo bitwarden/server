@@ -98,7 +98,8 @@ namespace Bit.Core.Models
                 try
                 {
                     Descriptor = o.Descriptor;
-                } catch
+                }
+                catch
                 {
                     // Handle newtonsoft parsing
                     Descriptor = JsonConvert.DeserializeObject<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());

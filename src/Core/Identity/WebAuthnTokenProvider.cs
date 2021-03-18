@@ -129,7 +129,7 @@ namespace Bit.Core.Identity
 
         private bool HasProperMetaData(TwoFactorProvider provider)
         {
-            return (provider?.MetaData?.Count ?? 0) > 0;
+            return provider?.MetaData?.Any() ?? false;
         }
 
         private List<Tuple<string, TwoFactorProvider.WebAuthnData>> LoadKeys(TwoFactorProvider provider)
