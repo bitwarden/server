@@ -26,7 +26,9 @@ namespace Bit.Core.Models.Business
             Premium = user.Premium;
             MaxStorageGb = user.MaxStorageGb;
             Issued = DateTime.UtcNow;
-            Expires = subscriptionInfo?.UpcomingInvoice?.Date?.AddDays(7);
+            Expires = subscriptionInfo?.UpcomingInvoice?.Date != null ?
+                subscriptionInfo.UpcomingInvoice.Date.Value.AddDays(7) :
+                user.PremiumExpirationDate?.AddDays(7);
             Refresh = subscriptionInfo?.UpcomingInvoice?.Date;
             Trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
