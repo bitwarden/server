@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Api.Controllers
 {
@@ -28,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ISendService _sendService;
         private readonly ISendFileStorageService _sendFileStorageService;
+        private readonly ILogger<SendsController> _logger;
         private readonly GlobalSettings _globalSettings;
 
         public SendsController(
@@ -35,12 +37,14 @@ namespace Bit.Api.Controllers
             IUserService userService,
             ISendService sendService,
             ISendFileStorageService sendFileStorageService,
+            ILogger<SendsController> logger,
             GlobalSettings globalSettings)
         {
             _sendRepository = sendRepository;
             _userService = userService;
             _sendService = sendService;
             _sendFileStorageService = sendFileStorageService;
+            _logger = logger;
             _globalSettings = globalSettings;
         }
 
@@ -262,8 +266,9 @@ namespace Bit.Api.Controllers
                             }
                             await _sendService.ValidateSendFile(send);
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonConvert.SerializeObject(eventGridEvent)}");
                             return;
                         }
                     }
