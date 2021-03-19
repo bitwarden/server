@@ -87,5 +87,6 @@
         Netcup = 82,
         Yandex = 83,
         Sony = 84,
+        Proton = 85,
     }
 }
