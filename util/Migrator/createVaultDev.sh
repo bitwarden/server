@@ -4,7 +4,7 @@
 
 if [ -z $1 ]; then
   echo "Error: you must provide SA_PASSWORD as the first argument."
-  echo "You should wrap your password in single-quotes to make sure it is correctly interpreted."
+  echo "You should wrap your password in single quotes to make sure it is correctly interpreted."
   exit 1
 fi
 
