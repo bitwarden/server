@@ -21,6 +21,8 @@ The server project is written in C# using .NET Core with ASP.NET Core. The datab
 
 ## Build/Run
 
+Please read the [Setup guide](https://github.com/bitwarden/server/blob/master/SETUP.md) for a step-by-step guide to set up your own local development server.
+
 ### Requirements
 
 - [.NET Core 3.1 SDK](https://www.microsoft.com/net/download/core)
