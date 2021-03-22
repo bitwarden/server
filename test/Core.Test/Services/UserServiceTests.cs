@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using Fido2NetLib;
 using Bit.Core.Context;
 
 namespace Bit.Core.Test.Services
@@ -22,7 +23,6 @@ namespace Bit.Core.Test.Services
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
         private readonly IUserStore<User> _userStore;
@@ -41,6 +41,7 @@ namespace Bit.Core.Test.Services
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly IReferenceEventService _referenceEventService;
+        private readonly IFido2 _fido2;
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
@@ -51,7 +52,6 @@ namespace Bit.Core.Test.Services
             _cipherRepository = Substitute.For<ICipherRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _u2fRepository = Substitute.For<IU2fRepository>();
             _mailService = Substitute.For<IMailService>();
             _pushService = Substitute.For<IPushNotificationService>();
             _userStore = Substitute.For<IUserStore<User>>();
@@ -70,6 +70,7 @@ namespace Bit.Core.Test.Services
             _paymentService = Substitute.For<IPaymentService>();
             _policyRepository = Substitute.For<IPolicyRepository>();
             _referenceEventService = Substitute.For<IReferenceEventService>();
+            _fido2 = Substitute.For<IFido2>();
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
             _organizationService = Substitute.For<IOrganizationService>();
@@ -79,7 +80,6 @@ namespace Bit.Core.Test.Services
                 _cipherRepository,
                 _organizationUserRepository,
                 _organizationRepository,
-                _u2fRepository,
                 _mailService,
                 _pushService,
                 _userStore,
@@ -98,6 +98,7 @@ namespace Bit.Core.Test.Services
                 _paymentService,
                 _policyRepository,
                 _referenceEventService,
+                _fido2,
                 _currentContext,
                 _globalSettings,
                 _organizationService

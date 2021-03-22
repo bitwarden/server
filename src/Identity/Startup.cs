@@ -56,6 +56,15 @@ namespace Bit.Identity
             // Caching
             services.AddMemoryCache();
 
+            // Fido2
+            services.AddFido2(options =>
+            {
+                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
+                options.ServerName = "Bitwarden";
+                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.TimestampDriftTolerance = 300000;
+            });
+
             // Mvc
             services.AddMvc();
 
