@@ -349,5 +349,42 @@ namespace Bit.Core.Services
 
             return storageBytesRemaining;
         }
+
+        private async Task<long> StorageRemainingForSendAsync(Send send)
+        {
+            var storageBytesRemaining = 0L;
+            if (send.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(send.UserId.Value);
+                if (!await _userService.CanAccessPremium(user))
+                {
+                    throw new BadRequestException("You must have premium status to use file sends.");
+                }
+
+                if (user.Premium)
+                {
+                    storageBytesRemaining = user.StorageBytesRemaining();
+                }
+                else
+                {
+                    // Users that get access to file storage/premium from their organization get the default
+                    // 1 GB max storage.
+                    storageBytesRemaining = user.StorageBytesRemaining(
+                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                }
+            }
+            else if (send.OrganizationId.HasValue)
+            {
+                var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
+                if (!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use file sends.");
+                }
+
+                storageBytesRemaining = org.StorageBytesRemaining();
+            }
+
+            return storageBytesRemaining;
+        }
     }
 }
