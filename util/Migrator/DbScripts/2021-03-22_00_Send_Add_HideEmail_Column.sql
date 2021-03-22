@@ -1,7 +1,21 @@
 -- Add HideEmail column
 ALTER TABLE [dbo].[Send]
-ADD HideEmail BIT NOT NULL
-DEFAULT (0)
+ADD HideEmail BIT
+GO
+
+-- Recreate View
+IF OBJECT_ID('[dbo].[SendView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[SendView]
+END
+GO
+
+CREATE VIEW [dbo].[SendView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Send]
 GO
 
 -- Recreate procedures
