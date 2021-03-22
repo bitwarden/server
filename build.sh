@@ -21,6 +21,7 @@ then
     docker push bitwarden/events:$TAG
     docker push bitwarden/admin:$TAG
     docker push bitwarden/nginx:$TAG
+    docker push bitwarden/k8s-proxy:$TAG
     docker push bitwarden/sso:$TAG
     docker push bitwarden/portal:$TAG
     docker push bitwarden/mssql:$TAG
@@ -40,6 +41,7 @@ then
     docker tag bitwarden/events bitwarden/events:$TAG
     docker tag bitwarden/admin bitwarden/admin:$TAG
     docker tag bitwarden/nginx bitwarden/nginx:$TAG
+    docker tag bitwarden/nginx bitwarden/k8s-proxy:$TAG
     docker tag bitwarden/sso bitwarden/sso:$TAG
     docker tag bitwarden/portal bitwarden/portal:$TAG
     docker tag bitwarden/mssql bitwarden/mssql:$TAG
