@@ -26,6 +26,7 @@
     <PackageReference Include="AWSSDK.SQS" Version="3.3.103.15" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.3.2" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
+    <PackageReference Include="Fido2.AspNet" Version="1.1.0" />
     <PackageReference Include="Handlebars.Net" Version="1.10.1" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
     <PackageReference Include="MailKit" Version="2.8.0" />

@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using Fido2NetLib;
 
 namespace Bit.Core.Services
 {
@@ -23,9 +24,9 @@ namespace Bit.Core.Services
         Task SendMasterPasswordHintAsync(string email);
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
-        Task<U2fRegistration> StartU2fRegistrationAsync(User user);
-        Task<bool> DeleteU2fKeyAsync(User user, int id);
-        Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse);
+        Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
+        Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
+        Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
         Task SendEmailVerificationAsync(User user);
         Task<IdentityResult> ConfirmEmailAsync(User user, string token);
         Task InitiateEmailChangeAsync(User user, string newEmail);
@@ -38,7 +39,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
-        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type);
+        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
             IOrganizationService organizationService);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,

@@ -14,6 +14,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Utilities.Duo;
 using Bit.Core.Settings;
+using Fido2NetLib;
 
 namespace Bit.Api.Controllers
 {
@@ -219,45 +220,44 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpPost("get-u2f")]
-        public async Task<TwoFactorU2fResponseModel> GetU2f([FromBody]TwoFactorRequestModel model)
+        [HttpPost("get-webauthn")]
+        public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            var response = new TwoFactorU2fResponseModel(user);
+            var response = new TwoFactorWebAuthnResponseModel(user);
             return response;
         }
 
-        [HttpPost("get-u2f-challenge")]
-        public async Task<TwoFactorU2fResponseModel.ChallengeModel> GetU2fChallenge(
-            [FromBody]TwoFactorRequestModel model)
+        [HttpPost("get-webauthn-challenge")]
+        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody]TwoFactorRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            var reg = await _userService.StartU2fRegistrationAsync(user);
-            var challenge = new TwoFactorU2fResponseModel.ChallengeModel(user, reg);
-            return challenge;
+            var reg = await _userService.StartWebAuthnRegistrationAsync(user);
+            return reg;
         }
 
-        [HttpPut("u2f")]
-        [HttpPost("u2f")]
-        public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
+        [HttpPut("webauthn")]
+        [HttpPost("webauthn")]
+        public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody]TwoFactorWebAuthnRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            var success = await _userService.CompleteU2fRegistrationAsync(
+
+            var success = await _userService.CompleteWebAuthRegistrationAsync(
                 user, model.Id.Value, model.Name, model.DeviceResponse);
             if (!success)
             {
-                throw new BadRequestException("Unable to complete U2F key registration.");
+                throw new BadRequestException("Unable to complete WebAuthn registration.");
             }
-            var response = new TwoFactorU2fResponseModel(user);
+            var response = new TwoFactorWebAuthnResponseModel(user);
             return response;
         }
 
-        [HttpDelete("u2f")]
-        public async Task<TwoFactorU2fResponseModel> DeleteU2f([FromBody]TwoFactorU2fDeleteRequestModel model)
+        [HttpDelete("webauthn")]
+        public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn([FromBody]TwoFactorWebAuthnDeleteRequestModel model)
         {
             var user = await CheckAsync(model.MasterPasswordHash, true);
-            await _userService.DeleteU2fKeyAsync(user, model.Id.Value);
-            var response = new TwoFactorU2fResponseModel(user);
+            await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);
+            var response = new TwoFactorWebAuthnResponseModel(user);
             return response;
         }
 

@@ -294,7 +294,9 @@ namespace Bit.Core.Utilities
                     CoreHelpers.CustomProviderName(TwoFactorProviderType.U2f))
                 .AddTokenProvider<TwoFactorRememberTokenProvider>(
                     CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
-                .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider);
+                .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider)
+                .AddTokenProvider<WebAuthnTokenProvider>(
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn));
 
             return identityBuilder;
         }

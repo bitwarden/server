@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using Fido2NetLib;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -223,14 +224,14 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class TwoFactorU2fRequestModel : TwoFactorU2fDeleteRequestModel
+    public class TwoFactorWebAuthnRequestModel : TwoFactorWebAuthnDeleteRequestModel
     {
         [Required]
-        public string DeviceResponse { get; set; }
+        public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
         public string Name { get; set; }
     }
 
-    public class TwoFactorU2fDeleteRequestModel : TwoFactorRequestModel, IValidatableObject
+    public class TwoFactorWebAuthnDeleteRequestModel : TwoFactorRequestModel, IValidatableObject
     {
         [Required]
         public int? Id { get; set; }

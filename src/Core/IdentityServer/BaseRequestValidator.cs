@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Services;
 using System.Linq;
@@ -367,6 +368,7 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
+                case TwoFactorProviderType.WebAuthn:
                 case TwoFactorProviderType.Remember:
                     if (type != TwoFactorProviderType.Remember &&
                         !(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
@@ -394,6 +396,7 @@ namespace Bit.Core.IdentityServer
             {
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.U2f:
+                case TwoFactorProviderType.WebAuthn:
                 case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.YubiKey:
                     if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
@@ -420,6 +423,10 @@ namespace Bit.Core.IdentityServer
                             ["Challenge"] = tokens != null && tokens.Length > 0 ? tokens[0] : null,
                             ["Challenges"] = tokens != null && tokens.Length > 1 ? tokens[1] : null
                         };
+                    }
+                    else if (type == TwoFactorProviderType.WebAuthn)
+                    {
+                        return JsonSerializer.Deserialize<Dictionary<string, object>>(token);
                     }
                     else if (type == TwoFactorProviderType.Email)
                     {
