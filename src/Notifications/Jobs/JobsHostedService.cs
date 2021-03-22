@@ -22,6 +22,7 @@ namespace Bit.Notifications.Jobs
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             var everyFiveMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryFiveMinutesTrigger")
                 .StartNow()
                 .WithCronSchedule("0 */30 * * * ?")
                 .Build();

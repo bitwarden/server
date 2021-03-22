@@ -22,22 +22,27 @@ namespace Bit.Api.Jobs
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             var everyTopOfTheHourTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryTopOfTheHourTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var emergencyAccessNotificationTrigger = TriggerBuilder.Create()
+                .WithIdentity("EmergencyAccessNotificationTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var emergencyAccessTimeoutTrigger  = TriggerBuilder.Create()
+                .WithIdentity("EmergencyAccessTimeoutTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var everyTopOfTheSixthHourTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryTopOfTheSixthHourTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 */6 * * ?")
                 .Build();
             var everyTwelfthHourAndThirtyMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryTwelfthHourAndThirtyMinutesTrigger")
                 .StartNow()
                 .WithCronSchedule("0 30 */12 * * ?")
                 .Build();
