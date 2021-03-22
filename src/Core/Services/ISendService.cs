@@ -10,9 +10,11 @@ namespace Bit.Core.Services
     {
         Task DeleteSendAsync(Send send);
         Task SaveSendAsync(Send send);
-        Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength);
+        Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength);
+        Task UploadFileToExistingSendAsync(Stream stream, Send send);
         Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password);
         string HashPassword(string password);
         Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
+        Task<bool> ValidateSendFile(Send send);
     }
 }

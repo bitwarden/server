@@ -5,6 +5,7 @@ using System.IO;
 using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -14,6 +15,8 @@ namespace Bit.Core.Services
         private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
         private CloudBlobContainer _sendFilesContainer;
+
+        public FileUploadType FileUploadType => FileUploadType.Azure;
 
         public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
         public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
@@ -69,6 +72,54 @@ namespace Bit.Core.Services
             };
 
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+        }
+
+        public async Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
+        {
+            await InitAsync();
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+
+            var accessPolicy = new SharedAccessBlobPolicy()
+            {
+                SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
+                Permissions = SharedAccessBlobPermissions.Create | SharedAccessBlobPermissions.Write,
+            };
+
+            return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+        }
+
+        public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+        {
+            await InitAsync();
+
+            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+
+            if (!blob.Exists())
+            {
+                return (false, null);
+            }
+
+            blob.FetchAttributes();
+
+            if (send.UserId.HasValue)
+            {
+                blob.Metadata["userId"] = send.UserId.Value.ToString();
+            }
+            else
+            {
+                blob.Metadata["organizationId"] = send.OrganizationId.Value.ToString();
+            }
+            blob.Properties.ContentDisposition = $"attachment; filename=\"{fileId}\"";
+            blob.SetMetadata();
+            blob.SetProperties();
+
+            var length = blob.Properties.Length;
+            if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
+            {
+                return (false, length);
+            }
+
+            return (true, length);
         }
 
         private async Task InitAsync()

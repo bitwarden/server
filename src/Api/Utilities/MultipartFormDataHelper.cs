@@ -108,6 +108,27 @@ namespace Bit.Api.Utilities
             }
         }
 
+        public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, Task> callback)
+        {
+            var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+                _defaultFormOptions.MultipartBoundaryLengthLimit);
+            var reader = new MultipartReader(boundary, request.Body);
+
+            var dataSection = await reader.ReadNextSectionAsync();
+            if (dataSection != null)
+            {
+                if (ContentDispositionHeaderValue.TryParse(dataSection.ContentDisposition, out var dataContent)
+                    && HasFileContentDisposition(dataContent))
+                {
+                    using (dataSection.Body)
+                    {
+                        await callback(dataSection.Body);
+                    }
+                }
+                dataSection = null;
+            }
+        }
+
 
         private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
         {
