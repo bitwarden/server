@@ -65,10 +65,25 @@ namespace Bit.Core.Jobs
             await _scheduler.Start(cancellationToken);
             if (Jobs != null)
             {
-                foreach (var job in Jobs)
+                foreach (var (job, trigger) in Jobs)
                 {
-                    var builtJob = JobBuilder.Create(job.Item1).Build();
-                    await _scheduler.ScheduleJob(builtJob, job.Item2);
+                    var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                    if (dupeT != null)
+                    {
+                        await _scheduler.RescheduleJob(trigger.Key, trigger);
+                    }
+
+                    var jobDetail = JobBuilder.Create(job)
+                        .WithIdentity(job.FullName)
+                        .Build();
+
+                    var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
+                    if (dupeJ != null)
+                    {
+                        await _scheduler.DeleteJob(jobDetail.Key);
+                    }
+
+                    await _scheduler.ScheduleJob(jobDetail, trigger);
                 }
             }
         }
