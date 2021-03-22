@@ -15,6 +15,8 @@ using Bit.Core.Settings;
 using Core.Models.Data;
 using Microsoft.Azure.EventGrid.Models;
 using Bit.Core.Models.Data;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -28,6 +30,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly ICurrentContext _currentContext;
+        private readonly ILogger<CiphersController> _logger;
         private readonly GlobalSettings _globalSettings;
 
         public CiphersController(
@@ -37,6 +40,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IAttachmentStorageService attachmentStorageService,
             ICurrentContext currentContext,
+            ILogger<CiphersController> logger,
             GlobalSettings globalSettings)
         {
             _cipherRepository = cipherRepository;
@@ -45,6 +49,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _attachmentStorageService = attachmentStorageService;
             _currentContext = currentContext;
+            _logger = logger;
             _globalSettings = globalSettings;
         }
 
@@ -766,8 +771,9 @@ namespace Bit.Api.Controllers
 
                             await _cipherService.ValidateCipherAttachmentFile(cipher, attachments[attachmentId]);
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonConvert.SerializeObject(eventGridEvent)}");
                             return;
                         }
                     }
