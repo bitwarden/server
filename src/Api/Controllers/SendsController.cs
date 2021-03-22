@@ -7,11 +7,17 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Api.Utilities;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Models.Api.Response;
+using Bit.Core.Enums;
+using Microsoft.Azure.EventGrid.Models;
+using Bit.Api.Utilities;
+using System.Collections.Generic;
+using Bit.Core.Models.Table;
+using Newtonsoft.Json;
+using Bit.Core.Models.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Api.Controllers
 {
@@ -23,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ISendService _sendService;
         private readonly ISendFileStorageService _sendFileStorageService;
+        private readonly ILogger<SendsController> _logger;
         private readonly GlobalSettings _globalSettings;
 
         public SendsController(
@@ -30,12 +37,14 @@ namespace Bit.Api.Controllers
             IUserService userService,
             ISendService sendService,
             ISendFileStorageService sendFileStorageService,
+            ILogger<SendsController> logger,
             GlobalSettings globalSettings)
         {
             _sendRepository = sendRepository;
             _userService = userService;
             _sendService = sendService;
             _sendFileStorageService = sendFileStorageService;
+            _logger = logger;
             _globalSettings = globalSettings;
         }
 
@@ -160,10 +169,111 @@ namespace Bit.Api.Controllers
                 var userId = _userService.GetProperUserId(User).Value;
                 var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
                 send = madeSend;
-                await _sendService.CreateSendAsync(send, madeData, stream, model.FileLength.GetValueOrDefault(0));
+                await _sendService.SaveFileSendAsync(send, madeData, model.FileLength.GetValueOrDefault(0));
+                await _sendService.UploadFileToExistingSendAsync(stream, send);
             });
 
             return new SendResponseModel(send, _globalSettings);
+        }
+
+
+        [HttpPost("file/v2")]
+        public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
+        {
+            if (model.Type != SendType.File)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            if (!model.FileLength.HasValue)
+            {
+                throw new BadRequestException("Invalid content. File size hint is required.");
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+            var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
+            var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
+            return new SendFileUploadDataResponseModel
+            {
+                Url = uploadUrl,
+                FileUploadType = _sendFileStorageService.FileUploadType,
+                SendResponse = new SendResponseModel(send, _globalSettings)
+            };
+        }
+
+        [HttpGet("{id}/file/{fileId}")]
+        public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var sendId = new Guid(id);
+            var send = await _sendRepository.GetByIdAsync(sendId);
+            var fileData = JsonConvert.DeserializeObject<SendFileData>(send?.Data);
+
+            if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
+                !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
+            {
+                // Not found if Send isn't found, user doesn't have access, request is faulty,
+                // or we've already validated the file. This last is to emulate create-only blob permissions for Azure
+                throw new NotFoundException();
+            }
+
+            return new SendFileUploadDataResponseModel
+            {
+                Url = await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId),
+                FileUploadType = _sendFileStorageService.FileUploadType,
+                SendResponse = new SendResponseModel(send, _globalSettings),
+            };
+        }
+
+        [HttpPost("{id}/file/{fileId}")]
+        [DisableFormValueModelBinding]
+        public async Task PostFileForExistingSend(string id, string fileId)
+        {
+            if (!Request?.ContentType.Contains("multipart/") ?? true)
+            {
+                throw new BadRequestException("Invalid content.");
+            }
+
+            if (Request.ContentLength > 105906176 && !_globalSettings.SelfHosted) // 101 MB, give em' 1 extra MB for cushion
+            {
+                throw new BadRequestException("Max file size for direct upload is 100 MB.");
+            }
+
+            var send = await _sendRepository.GetByIdAsync(new Guid(id));
+            await Request.GetSendFileAsync(async (stream) =>
+            {
+                await _sendService.UploadFileToExistingSendAsync(stream, send);
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("file/validate/azure")]
+        public async Task<OkObjectResult> AzureValidateFile()
+        {
+            return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+            {
+                {
+                    "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                    {
+                        try
+                        {
+                            var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
+                            var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
+                            var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+                            if (send == null)
+                            {
+                                return;
+                            }
+                            await _sendService.ValidateSendFile(send);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonConvert.SerializeObject(eventGridEvent)}");
+                            return;
+                        }
+                    }
+                }
+            });
         }
 
         [HttpPut("{id}")]

@@ -28,6 +28,7 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
+        private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
 
         public SendService(
             ISendRepository sendRepository,
@@ -74,51 +75,21 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task CreateSendAsync(Send send, SendFileData data, Stream stream, long requestLength)
+        public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)
         {
             if (send.Type != SendType.File)
             {
                 throw new BadRequestException("Send is not of type \"file\".");
             }
 
-            if (requestLength < 1)
+            if (fileLength < 1)
             {
                 throw new BadRequestException("No file data.");
             }
 
-            var storageBytesRemaining = 0L;
-            if (send.UserId.HasValue)
-            {
-                var user = await _userRepository.GetByIdAsync(send.UserId.Value);
-                if (!(await _userService.CanAccessPremium(user)))
-                {
-                    throw new BadRequestException("You must have premium status to use file sends.");
-                }
+            var storageBytesRemaining = await StorageRemainingForSendAsync(send);
 
-                if (user.Premium)
-                {
-                    storageBytesRemaining = user.StorageBytesRemaining();
-                }
-                else
-                {
-                    // Users that get access to file storage/premium from their organization get the default
-                    // 1 GB max storage.
-                    storageBytesRemaining = user.StorageBytesRemaining(
-                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
-                }
-            }
-            else if (send.OrganizationId.HasValue)
-            {
-                var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
-                if (!org.MaxStorageGb.HasValue)
-                {
-                    throw new BadRequestException("This organization cannot use file sends.");
-                }
-
-                storageBytesRemaining = org.StorageBytesRemaining();
-            }
-
-            if (storageBytesRemaining < requestLength)
+            if (storageBytesRemaining < fileLength)
             {
                 throw new BadRequestException("Not enough storage available.");
             }
@@ -128,24 +99,12 @@ namespace Bit.Core.Services
             try
             {
                 data.Id = fileId;
+                data.Size = fileLength;
+                data.Validated = false;
                 send.Data = JsonConvert.SerializeObject(data,
                     new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                 await SaveSendAsync(send);
-                await _sendFileStorageService.UploadNewFileAsync(stream, send, fileId);
-                // Need to save length of stream since that isn't available until it is read
-                if (stream.Length <= requestLength)
-                {
-                    data.Size = stream.Length;
-                    send.Data = JsonConvert.SerializeObject(data,
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-                    await SaveSendAsync(send);
-                }
-                else
-                {
-                    await DeleteSendAsync(send);
-                    throw new BadRequestException("Content-Length header is smaller than file received.");
-                }
-
+                return await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId);
             }
             catch
             {
@@ -153,6 +112,53 @@ namespace Bit.Core.Services
                 await _sendFileStorageService.DeleteFileAsync(send, fileId);
                 throw;
             }
+        }
+
+        public async Task UploadFileToExistingSendAsync(Stream stream, Send send)
+        {
+            if (send?.Data == null)
+            {
+                throw new BadRequestException("Send does not have file data");
+            }
+
+            if (send.Type != SendType.File)
+            {
+                throw new BadRequestException("Not a File Type Send.");
+            }
+
+            var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+
+            await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
+
+            if (!await ValidateSendFile(send))
+            {
+                throw new BadRequestException("File received does not match expected file length.");
+            }
+        }
+
+        public async Task<bool> ValidateSendFile(Send send)
+        {
+            var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+
+            var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
+
+            if (!valid)
+            {
+                // File reported differs in size from that promised. Must be a rogue client. Delete Send
+                await DeleteSendAsync(send);
+            }
+
+            // Update Send data if necessary
+            if (realSize != fileData.Size)
+            {
+                fileData.Size = realSize.Value;
+            }
+            fileData.Validated = true;
+            send.Data = JsonConvert.SerializeObject(fileData,
+                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            await SaveSendAsync(send);
+
+            return valid;
         }
 
         public async Task DeleteSendAsync(Send send)
@@ -280,6 +286,43 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
             }
+        }
+
+        private async Task<long> StorageRemainingForSendAsync(Send send)
+        {
+            var storageBytesRemaining = 0L;
+            if (send.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(send.UserId.Value);
+                if (!await _userService.CanAccessPremium(user))
+                {
+                    throw new BadRequestException("You must have premium status to use file sends.");
+                }
+
+                if (user.Premium)
+                {
+                    storageBytesRemaining = user.StorageBytesRemaining();
+                }
+                else
+                {
+                    // Users that get access to file storage/premium from their organization get the default
+                    // 1 GB max storage.
+                    storageBytesRemaining = user.StorageBytesRemaining(
+                        _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                }
+            }
+            else if (send.OrganizationId.HasValue)
+            {
+                var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
+                if (!org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use file sends.");
+                }
+
+                storageBytesRemaining = org.StorageBytesRemaining();
+            }
+
+            return storageBytesRemaining;
         }
     }
 }

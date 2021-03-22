@@ -33,5 +33,6 @@ namespace Bit.Core.Models.Data
 
         public string Id { get; set; }
         public string FileName { get; set; }
+        public bool Validated { get; set; } = true;
     }
 }
