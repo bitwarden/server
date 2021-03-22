@@ -18,6 +18,8 @@ namespace Bit.Core.Services
 {
     public class CipherService : ICipherService
     {
+        public const long MAX_FILE_SIZE = 500L * 1024L * 1024L; // 500MB
+        public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
         private readonly ICollectionRepository _collectionRepository;
@@ -327,31 +329,30 @@ namespace Bit.Core.Services
 
             var (valid, realSize) = await _attachmentStorageService.ValidateFileAsync(cipher, attachmentData, _fileSizeLeeway);
 
-            if (!valid)
+            if (!valid || realSize > MAX_FILE_SIZE)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
                 await DeleteAttachmentAsync(cipher, attachmentData.AttachmentId);
-            } else
-            {
-                // Update Send data if necessary
-                if (realSize != attachmentData.Size)
-                {
-                    attachmentData.Size = realSize.Value;
-                }
-                attachmentData.Validated = true;
-
-                var updatedAttachment = new CipherAttachment
-                {
-                    Id = cipher.Id,
-                    UserId = cipher.UserId,
-                    OrganizationId = cipher.OrganizationId,
-                    AttachmentId = attachmentData.AttachmentId,
-                    AttachmentData = JsonConvert.SerializeObject(attachmentData)
-                };
-
-
-                await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
+                return false;
             }
+            // Update Send data if necessary
+            if (realSize != attachmentData.Size)
+            {
+                attachmentData.Size = realSize.Value;
+            }
+            attachmentData.Validated = true;
+
+            var updatedAttachment = new CipherAttachment
+            {
+                Id = cipher.Id,
+                UserId = cipher.UserId,
+                OrganizationId = cipher.OrganizationId,
+                AttachmentId = attachmentData.AttachmentId,
+                AttachmentData = JsonConvert.SerializeObject(attachmentData)
+            };
+
+
+            await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
 
             return valid;
         }

@@ -584,6 +584,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            if (request.FileSize > CipherService.MAX_FILE_SIZE && !_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
+            }
+
+
             var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher, request, userId);
             return new AttachmentUploadDataResponseModel
             {

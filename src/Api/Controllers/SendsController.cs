@@ -190,6 +190,11 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content. File size hint is required.");
             }
 
+            if (model.FileLength.Value > SendService.MAX_FILE_SIZE)
+            {
+                throw new BadRequestException($"Max file size is {SendService.MAX_FILE_SIZE_READABLE}.");
+            }
+
             var userId = _userService.GetProperUserId(User).Value;
             var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
             var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
