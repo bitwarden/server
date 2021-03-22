@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Table
         public DateTime? ExpirationDate { get; set; }
         public DateTime DeletionDate { get; set; }
         public bool Disabled { get; set; }
+        public bool HideEmail { get; set; }
 
         public void SetNewId()
         {
