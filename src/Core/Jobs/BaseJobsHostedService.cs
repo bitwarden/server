@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -65,11 +66,61 @@ namespace Bit.Core.Jobs
             await _scheduler.Start(cancellationToken);
             if (Jobs != null)
             {
-                foreach (var job in Jobs)
+                foreach (var (job, trigger) in Jobs)
                 {
-                    var builtJob = JobBuilder.Create(job.Item1).Build();
-                    await _scheduler.ScheduleJob(builtJob, job.Item2);
+                    var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                    if (dupeT != null)
+                    {
+                        await _scheduler.RescheduleJob(trigger.Key, trigger);
+                    }
+
+                    var jobDetail = JobBuilder.Create(job)
+                        .WithIdentity(job.FullName)
+                        .Build();
+
+                    var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
+                    if (dupeJ != null)
+                    {
+                        await _scheduler.DeleteJob(jobDetail.Key);
+                    }
+
+                    await _scheduler.ScheduleJob(jobDetail, trigger);
                 }
+            }
+
+            // Delete old Jobs and Triggers
+            var existingJobKeys = await _scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
+            var jobKeys = Jobs.Select(j =>
+            {
+                var job = j.Item1;
+                return JobBuilder.Create(job)
+                    .WithIdentity(job.FullName)
+                    .Build().Key;
+            });
+
+            foreach (var key in existingJobKeys)
+            {
+                if (jobKeys.Contains(key))
+                {
+                    continue;
+                }
+
+                _logger.LogInformation($"Deleting old job with key {key}");
+                await _scheduler.DeleteJob(key);
+            }
+
+            var existingTriggerKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+            var triggerKeys = Jobs.Select(j => j.Item2.Key);
+
+            foreach (var key in existingTriggerKeys)
+            {
+                if (triggerKeys.Contains(key))
+                {
+                    continue;
+                }
+
+                _logger.LogInformation($"Unscheduling old trigger with key {key}");
+                await _scheduler.UnscheduleJob(key);
             }
         }
 

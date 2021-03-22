@@ -31,22 +31,27 @@ namespace Bit.Admin.Jobs
             }
 
             var everyTopOfTheHourTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryTopOfTheHourTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
             var everyFiveMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryFiveMinutesTrigger")
                 .StartNow()
                 .WithCronSchedule("0 */5 * * * ?")
                 .Build();
             var everyFridayAt10pmTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryFridayAt10pmTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
                 .Build();
             var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
+                .WithIdentity("EverySaturdayAtMidnightTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 0 ? * SAT", x => x.InTimeZone(timeZone))
                 .Build();
             var everySundayAtMidnightTrigger = TriggerBuilder.Create()
+                .WithIdentity("EverySundayAtMidnightTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 0 ? * SUN", x => x.InTimeZone(timeZone))
                 .Build();

@@ -31,6 +31,7 @@ namespace Bit.Billing.Jobs
             }
 
             var everyDayAtNinePmTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryDayAtNinePmTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 21 * * ?", x => x.InTimeZone(timeZone))
                 .Build();
