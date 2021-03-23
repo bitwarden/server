@@ -6,3 +6,4 @@
 !security-headers-ssl.conf
 !mime.types
 !logrotate.sh
+!setup-bwuser.sh
