@@ -58,7 +58,7 @@ namespace Bit.Core.Services
         public async Task SaveSendAsync(Send send)
         {
             // Make sure user can save Sends
-            await ValidateUserCanSaveAsync(send.UserId);
+            await ValidateUserCanSaveAsync(send.UserId, send);
 
             if (send.Id == default(Guid))
             {
@@ -259,7 +259,7 @@ namespace Bit.Core.Services
             return _passwordHasher.HashPassword(new User(), password);
         }
 
-        private async Task ValidateUserCanSaveAsync(Guid? userId)
+        private async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
         {
             if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
             {
@@ -275,9 +275,24 @@ namespace Bit.Core.Services
 
             foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
             {
-                if (!_currentContext.ManagePolicies(policy.OrganizationId))
+                if (_currentContext.ManagePolicies(policy.OrganizationId))
+                {
+                    continue;
+                }
+
+                DisableSendPolicyData data = null;
+                if (policy.Data != null)
+                {
+                    data = JsonConvert.DeserializeObject<DisableSendPolicyData>(policy.Data);
+                }
+
+                if ((data?.DisableSend ?? DisableSendPolicyType.DisableAll) == DisableSendPolicyType.DisableAll)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+                }
+                else if (data.DisableSend.GetValueOrDefault() == DisableSendPolicyType.DisableAnonymous && send.HideEmail)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address on a Send.");
                 }
             }
         }
