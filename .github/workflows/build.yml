@@ -75,6 +75,7 @@ jobs:
           echo "${{ secrets.DOCKER_REPO_EVENTS_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_EVENTS_ID.key
           echo "${{ secrets.DOCKER_REPO_ADMIN_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_ADMIN_ID.key
           echo "${{ secrets.DOCKER_REPO_NGINX_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_NGINX_ID.key
+          echo "${{ secrets.DOCKER_REPO_K8SPROXY_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_K8SPROXY_ID.key
           echo "${{ secrets.DOCKER_REPO_SSO_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_SSO_ID.key
           echo "${{ secrets.DOCKER_REPO_PORTAL_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_PORTAL_ID.key
           echo "${{ secrets.DOCKER_REPO_MSSQL_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_MSSQL_ID.key
@@ -90,6 +91,7 @@ jobs:
           DOCKER_REPO_EVENTS_ID: "1020320052e6247f3c5fbfc2a3bfb0efc7e247f8a5a187dc03f60848359ac7c9"
           DOCKER_REPO_ADMIN_ID: "c5d80db8745fcd7a1510c3fba5c65582cfc2453d2b1eeb292abe79eb1351cf5c"
           DOCKER_REPO_NGINX_ID: "bf3d3247f5c2be73bbe830cddbae445c29e4fcc9e2fb4b4d39abf86a2740098b"
+          DOCKER_REPO_K8SPROXY_ID: "bdad34c1202b2bbf8a460b66da08b2c1c1eea5864b29508782c00da145eb1fcd"
           DOCKER_REPO_SSO_ID: "97a5f6d29b255ff709ec63faad27c2f76246f006563bf3ecbb71547325c05815"
           DOCKER_REPO_PORTAL_ID: "4f358aa0a41c9a6650f5d2f907c2de418df34ddf3ee45e0994be7cc2dcd0b56e"
           DOCKER_REPO_MSSQL_ID: "30a44d7efbe48d30ed06abef003d2d8990205dad6a034617cddc03548f8c084e"
