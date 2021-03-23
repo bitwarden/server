@@ -195,7 +195,7 @@ namespace Bit.Core.Services
             {
                 AttachmentId = attachmentId,
                 FileName = request.FileName,
-                Key = request.key,
+                Key = request.Key,
                 Size = request.FileSize,
                 Validated = false,
            };
