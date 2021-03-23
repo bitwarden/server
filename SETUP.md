@@ -89,7 +89,7 @@ User secrets are a method for managing application settings on a per-developer b
 
 User secrets override the settings in `appsettings.json` of each project. Your user secrets file should match the structure of the `appsettings.json` file for the settings you intend to override.
 
-For more information, see: [Safe storage of app secrets in development in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-3.1).
+For more information, see: [Safe storage of app secrets in development in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-5.0).
 
 Open the server solution file (`bitwarden-server.sln`) in Visual Studio before proceeding.
 
