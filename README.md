@@ -2,8 +2,8 @@
   <img src="https://github.com/bitwarden/brand/blob/master/screenshots/apps-combo-logo.png" alt="Bitwarden" />
 </p>
 <p align="center">
-  <a href="https://ci.appveyor.com/project/bitwarden/server/branch/master" target="_blank">
-    <img src="https://ci.appveyor.com/api/projects/status/n4ntjp7ag1uwxckd/branch/master?svg=true" alt="appveyor build" />
+  <a href="https://https://github.com/bitwarden/server/actions/workflows/build.yml?query=branch%3Amaster" target="_blank">
+    <img src="https://github.com/bitwarden/server/actions/workflows/build.yml/badge.svg?branch=master" alt="Github Workflow build on master" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
     <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
