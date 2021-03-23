@@ -1,6 +1,11 @@
 -- Add HideEmail column
+-- Use default value of false for migration only
 ALTER TABLE [dbo].[Send]
-ADD HideEmail BIT
+ADD HideEmail BIT NOT NULL CONSTRAINT hideEmail_default_value DEFAULT 0
+GO
+
+ALTER TABLE [dbo].[Send]
+DROP CONSTRAINT hideEmail_default_value
 GO
 
 -- Recreate View
