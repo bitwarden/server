@@ -10,7 +10,8 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Permissions NVARCHAR(MAX)
+    @Permissions NVARCHAR(MAX),
+    @ResetPasswordKey VARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +29,8 @@ BEGIN
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [Permissions] = @Permissions
+        [Permissions] = @Permissions,
+        [ResetPasswordKey] = @ResetPasswordKey
     WHERE
         [Id] = @Id
 

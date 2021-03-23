@@ -4,6 +4,7 @@
     [UserId]                        UNIQUEIDENTIFIER    NULL,
     [Email]                         NVARCHAR (256)      NULL,
     [Key]                           VARCHAR (MAX)       NULL,
+    [ResetPasswordKey]              VARCHAR (MAX)       NULL,
     [Status]                        TINYINT             NOT NULL,
     [Type]                          TINYINT             NOT NULL,
     [AccessAll]                     BIT                 NOT NULL,

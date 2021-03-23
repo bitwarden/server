@@ -20,6 +20,7 @@ SELECT
     O.[MaxStorageGb],
     O.[Identifier],
     OU.[Key],
+    OU.[ResetPasswordKey],
     OU.[Status],
     OU.[Type],
     SU.[ExternalId] SsoExternalId,

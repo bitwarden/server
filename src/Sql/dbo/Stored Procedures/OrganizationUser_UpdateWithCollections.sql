@@ -11,12 +11,13 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
+    @ResetPasswordKey VARCHAR(MAX),
     @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey
     -- Update
     UPDATE
         [Target]
