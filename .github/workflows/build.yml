@@ -143,6 +143,96 @@ jobs:
       - name: Restore
         run: dotnet tool restore
 
+      - name: Cache Admin build dirs
+        id: admin-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Admin/obj/Docker/publish/Admin
+          key: ${{ github.run_id }}-admin-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-admin-
+
+      - name: Cache Api build dirs
+        id: api-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Api/obj/Docker/publish/Api
+          key: ${{ github.run_id }}-api-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-api-
+
+      - name: Cache Billing build dirs
+        id: billing-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Billing/obj/Docker/publish/Billing
+          key: ${{ github.run_id }}-billing-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-billing-
+
+      - name: Cache Core build dirs
+        id: core-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Core/obj/Docker/publish/Core
+          key: ${{ github.run_id }}-core-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-core-
+
+      - name: Cache Events build dirs
+        id: events-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Events/obj/Docker/publish/Events
+          key: ${{ github.run_id }}-events-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-events-
+
+      - name: Cache Identity build dirs
+        id: identity-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Identity/obj/Docker/publish/Identity
+          key: ${{ github.run_id }}-identity-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-identity-
+
+      - name: Cache Notifications build dirs
+        id: notifications-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Notifications/obj/Docker/publish/Notifications
+          key: ${{ github.run_id }}-notifications-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-notifications-
+
+      - name: Cache Sso build dirs
+        id: sso-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./bitwarden_license/src/Sso/obj/Docker/publish/Sso
+          key: ${{ github.run_id }}-sso-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-sso-
+
+      - name: Cache Portal build dirs
+        id: portal-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./bitwarden_license/src/Portal/obj/Docker/publish/Portal
+          key: ${{ github.run_id }}-portal-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-portal-
+
       - name: Build
         run: |
           chmod +x ./build.sh
@@ -155,7 +245,6 @@ jobs:
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
         run: ./build.sh tag dev
-
 
       - name: List docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
@@ -212,3 +301,58 @@ jobs:
       - name: Log out of docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
+
+  deploy-qa:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: Admin
+            name_lower: admin
+            base_path: .
+          - name: Api
+            name_lower: api
+            base_path: .
+          - name: Billing
+            name_lower: billing
+            base_path: .
+          - name: Events
+            name_lower: events
+            base_path: .
+          - name: Notifications
+            name_lower: notifications
+            base_path: .
+          - name: Sso
+            name_lower: sso
+            base_path: ./bitwarden_license
+          - name: Portal
+            name_lower: portal
+            base_path: ./bitwarden_license
+          - name: Identity
+            name_lower: identity
+            base_path: .
+    needs: build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Cache Core build dirs
+        id: core-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./src/Core/obj/Docker/publish/Core
+          key: ${{ github.run_id }}-core-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-core-
+
+      - name: Cache ${{ matrix.name }} build dirs
+        id: ${{ matrix.name_lower }}-build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ${{ matrix.base_path }}/src/${{ matrix.name_lower }}/obj/Docker/publish/${{ matrix.name }}
+          key: ${{ github.run_id }}-${{ matrix.name_lower}}-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-${{ matrix.name_lower }}-
+
