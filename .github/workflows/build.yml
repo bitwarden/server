@@ -252,19 +252,19 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
-      - name: Push rc images
-        if: github.ref == 'refs/heads/rc'
-        run: ./build.sh push rc 
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
+      #- name: Push rc images
+      #  if: github.ref == 'refs/heads/rc'
+      #  run: ./build.sh push rc 
+      #  env:
+      #    DOCKER_CONTENT_TRUST: 1
+      #    DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
-      - name: Push dev images
-        if: github.ref == 'refs/heads/master'
-        run: ./build.sh push dev
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
+      #- name: Push dev images
+      #  if: github.ref == 'refs/heads/master'
+      #  run: ./build.sh push dev
+      #  env:
+      #    DOCKER_CONTENT_TRUST: 1
+      #    DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
       - name: Make docker stub
         run: |
@@ -300,9 +300,9 @@ jobs:
           name: swagger.json
           path: ./swagger.json
 
-      - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        run: docker logout
+      #- name: Log out of docker
+      #  if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+      #  run: docker logout
 
   deploy-qa:
     runs-on: ubuntu-latest
