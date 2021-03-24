@@ -1,0 +1,38 @@
+name: Success Caching
+
+on:
+  workflow_dispatch: 
+    inputs:
+      status:
+        default: "fail"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H:%M:%S')"
+
+      - name: Log date
+        run: echo "${{ steps.date.outputs.date }}"
+
+      - name: Set default run status
+        run: echo "::set-output name=last_run_status::default" > last_run_status
+
+      - name: Restore last 
+        id: last_run
+        uses: actions/cache@v2
+        with:
+          path: |
+            last_run_status
+          key: ${{ github.run_id }}
+          restore-keys:
+            ${{ github.run_id }}
+
+      - name: Set status
+        run: |
+          echo "Status? $STATUS"
+          echo "$STATUS" > last_run_status
+        env:
+          STATUS: ${{ github.event.inputs.status }}
