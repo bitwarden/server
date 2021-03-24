@@ -49,7 +49,7 @@ jobs:
           fi
 
       - name: Set status
-        if: ${{ always() && steps.last_run_status.outputs.last_run_status != "success" }}
+        if: ${{ always() && steps.last_run_status.outputs.last_run_status != 'success' }}
         run: |
           echo "Last run status: ${{ steps.last_run_status.outputs.last_run_status }}"
           STATUS_NUM=${{ steps.run_task.outputs.status }}
