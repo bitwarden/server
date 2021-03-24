@@ -359,7 +359,7 @@ jobs:
             ${{ github.run_id }}-core-
 
       - name: Cache ${{ env.NAME }} build dirs
-        id: ${{ env.NAME_LOWER }}-build-cache
+        id: build-cache
         uses: actions/cache@v2
         with:
           path: |
