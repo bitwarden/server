@@ -62,3 +62,6 @@ jobs:
             echo "fail" > last_run_status
             cat last_run_status
           fi
+
+      - name: Testing flow with failure & always()
+        run: echo "this is a test"
