@@ -82,4 +82,6 @@ jobs:
             ${{ github.run_id }}-
 
       - name: Test cache
-        run: echo "Status: $(cat last_run_status)"
+        run: |
+          echo "Status: $(cat last_run_status)"
+
