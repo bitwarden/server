@@ -10,8 +10,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - name: Get current date
         id: date
@@ -65,3 +63,22 @@ jobs:
 
       - name: Testing flow with failure & always()
         run: echo "this is a test"
+
+  test2:
+    runs-on: ubuntu-latest
+    needs: test
+      - name: Set default run status
+        run: echo "default" > last_run_status
+
+      - name: Restore last 
+        id: last_run
+        uses: actions/cache@v2
+        with:
+          path: |
+            last_run_status
+          key: ${{ github.run_id }}-${{ steps.date.outputs.date }}
+          restore-keys:
+            ${{ github.run_id }}-
+
+      - name: Test cache
+        run: echo "Status: $(cat last_run_status)"
