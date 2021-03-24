@@ -119,40 +119,42 @@ jobs:
 
       - name: pull docker images
         run: |
-          docker pull bitwarden/api:dev
-          docker pull bitwarden/identity:dev
-          docker pull bitwarden/server:dev
-          docker pull bitwarden/attachments:dev
-          docker pull bitwarden/icons:dev
-          docker pull bitwarden/notifications:dev
-          docker pull bitwarden/events:dev
-          docker pull bitwarden/admin:dev
-          docker pull bitwarden/nginx:dev
-          docker pull bitwarden/nginx:dev
-          docker pull bitwarden/sso:dev
-          docker pull bitwarden/portal:dev
-          docker pull bitwarden/mssql:dev
-          docker pull bitwarden/setup:dev
+          docker pull bitwarden/api:rc
+          docker pull bitwarden/identity:rc
+          docker pull bitwarden/server:rc
+          docker pull bitwarden/attachments:rc
+          docker pull bitwarden/icons:rc
+          docker pull bitwarden/notifications:rc
+          docker pull bitwarden/events:rc
+          docker pull bitwarden/admin:rc
+          docker pull bitwarden/nginx:rc
+          docker pull bitwarden/nginx:rc
+          docker pull bitwarden/sso:rc
+          docker pull bitwarden/portal:rc
+          docker pull bitwarden/mssql:rc
+          docker pull bitwarden/setup:rc
 
 
       - name: re-tag docker images
         run: |
-          foreach TAG (latest beta ${RELEASE_VERSION})
-            docker tag bitwarden/api:dev bitwarden/api:$TAG
-            docker tag bitwarden/identity:dev bitwarden/identity:$TAG
-            docker tag bitwarden/server:dev bitwarden/server:$TAG
-            docker tag bitwarden/attachments:dev bitwarden/attachments:$TAG
-            docker tag bitwarden/icons:dev bitwarden/icons:$TAG
-            docker tag bitwarden/notifications:dev bitwarden/notifications:$TAG
-            docker tag bitwarden/events:dev bitwarden/events:$TAG
-            docker tag bitwarden/admin:dev bitwarden/admin:$TAG
-            docker tag bitwarden/nginx:dev bitwarden/nginx:$TAG
-            docker tag bitwarden/nginx:dev bitwarden/k8s-proxy:$TAG
-            docker tag bitwarden/sso:dev bitwarden/sso:$TAG
-            docker tag bitwarden/portal:dev bitwarden/portal:$TAG
-            docker tag bitwarden/mssql:dev bitwarden/mssql:$TAG
-            docker tag bitwarden/setup:dev bitwarden/setup:$TAG
-          end
+          tags=( latest beta ${RELEASE_VERSION}
+          for TAG in "${tags[@]}"
+          do
+            docker tag bitwarden/api:rc bitwarden/api:$TAG
+            docker tag bitwarden/identity:rc bitwarden/identity:$TAG
+            docker tag bitwarden/server:rc bitwarden/server:$TAG
+            docker tag bitwarden/attachments:rc bitwarden/attachments:$TAG
+            docker tag bitwarden/icons:rc bitwarden/icons:$TAG
+            docker tag bitwarden/notifications:rc bitwarden/notifications:$TAG
+            docker tag bitwarden/events:rc bitwarden/events:$TAG
+            docker tag bitwarden/admin:rc bitwarden/admin:$TAG
+            docker tag bitwarden/nginx:rc bitwarden/nginx:$TAG
+            docker tag bitwarden/nginx:rc bitwarden/k8s-proxy:$TAG
+            docker tag bitwarden/sso:rc bitwarden/sso:$TAG
+            docker tag bitwarden/portal:rc bitwarden/portal:$TAG
+            docker tag bitwarden/mssql:rc bitwarden/mssql:$TAG
+            docker tag bitwarden/setup:rc bitwarden/setup:$TAG
+          done 
 
       - name: Build
         run: |
