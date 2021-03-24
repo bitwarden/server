@@ -306,6 +306,7 @@ jobs:
 
   deploy-qa:
     runs-on: ubuntu-latest
+    #if: github.rf == 'refs/heads/rc'
     strategy:
       matrix:
         include:
@@ -367,3 +368,6 @@ jobs:
           key: ${{ github.run_id }}-${{ env.NAME_LOWER }}-${{ steps.date.outputs.date }}
           restore-keys:
             ${{ github.run_id }}-${{ env.NAME_LOWER }}-
+
+      - name: Test Cache
+        run: ls ${{ env.BASE_PATH }}/src/${{ env.NAME_LOWER }}/obj/Docker/publish/${{ env.NAME}}
