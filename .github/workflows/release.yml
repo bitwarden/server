@@ -10,84 +10,60 @@ on:
       - published
 
 jobs:
-  cloc:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_version: ${{ steps.create_tags.outputs.package_version }}
+      tag_version: ${{ steps.create_tags.outputs.tag_version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Set up cloc
+      - name: Create Release Vars
+        id: create_tags
         run: |
-          sudo apt-get update
-          sudo apt-get -y install cloc
-
-      - name: Print lines of code
-        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
-
-  testing:
-    runs-on: windows-latest
-    steps:
-      - name: Set up NuGet
-        uses: nuget/setup-nuget@v1
-        with:
-          nuget-version: 'latest'
-
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@v1
-
-      - name: Set up Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: '10.x'
-
-      - name: Print environment
-        run: |
-          nuget help
-          msbuild -version
-          dotnet --info
-          node --version
-          npm --version
-          Write-Output "GitHub ref: $env:GITHUB_REF"
-          Write-Output "GitHub event: $env:GITHUB_EVENT"
-        shell: pwsh
+          case "${RELEASE_TAG_NAME_INPUT:0:1}" in
+            v)
+              echo "RELEASE_NAME=${RELEASE_TAG_NAME_INPUT:1}" >> $GITHUB_ENV
+              echo "RELEASE_TAG_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "::set-output name=package_version::${RELEASE_TAG_NAME_INPUT:1}"
+              echo "::set-output name=tag_version::$RELEASE_TAG_NAME_INPUT"
+              ;;
+            [0-9])
+              echo "RELEASE_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "RELEASE_TAG_NAME=v$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "::set-output name=package_version::$RELEASE_TAG_NAME_INPUT"
+              echo "::set-output name=tag_version::v$RELEASE_TAG_NAME_INPUT"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
         env:
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_EVENT: ${{ github.event_name }}
+          RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
 
-      - name: Checkout repo
-        uses: actions/checkout@v2
-
-      - name: Restore
-        run: msbuild /t:restore
-        shell: pwsh
-
-      - name: Build solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
-        shell: pwsh
-
-      - name: Test solution
-        run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
-        shell: pwsh
-
-  build:
-    runs-on: ubuntu-latest
-    needs: testing
-    steps:
-      - name: Set up Node
-        uses: actions/setup-node@v1
+      - name: Create Draft Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          node-version: '10.x'
+          tag_name: ${{ env.RELEASE_TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: true
+          prerelease: false
 
-      - name: Set up gulp
-        run: npm i -g gulp
-
+  release:
+    runs-on: ubuntu-latest
+    needs: setup
+    env:
+      RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+    steps:
       - name: Print environment
         run: |
           whoami
-          dotnet --info
-          node --version
-          npm --version
-          gulp --version
           docker --version
           Write-Output "GitHub ref: $env:GITHUB_REF"
           Write-Output "GitHub event: $env:GITHUB_EVENT"
@@ -97,14 +73,14 @@ jobs:
           GITHUB_EVENT: ${{ github.event_name }}
 
       - name: Log into docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: false
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: false
         run: |
           mkdir -p ~/.docker/trust/private
 
@@ -143,71 +119,70 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Restore
-        run: dotnet tool restore
+      - name: pull docker images
+        run: |
+          docker pull bitwarden/api:dev
+          docker pull bitwarden/identity:dev
+          docker pull bitwarden/server:dev
+          docker pull bitwarden/attachments:dev
+          docker pull bitwarden/icons:dev
+          docker pull bitwarden/notifications:dev
+          docker pull bitwarden/events:dev
+          docker pull bitwarden/admin:dev
+          docker pull bitwarden/nginx:dev
+          docker pull bitwarden/nginx:dev
+          docker pull bitwarden/sso:dev
+          docker pull bitwarden/portal:dev
+          docker pull bitwarden/mssql:dev
+          docker pull bitwarden/setup:dev
+
+
+      - name: re-tag docker images
+        run: |
+          foreach TAG (latest beta ${RELEASE_VERSION})
+            docker tag bitwarden/api:dev bitwarden/api:$TAG
+            docker tag bitwarden/identity:dev bitwarden/identity:$TAG
+            docker tag bitwarden/server:dev bitwarden/server:$TAG
+            docker tag bitwarden/attachments:dev bitwarden/attachments:$TAG
+            docker tag bitwarden/icons:dev bitwarden/icons:$TAG
+            docker tag bitwarden/notifications:dev bitwarden/notifications:$TAG
+            docker tag bitwarden/events:dev bitwarden/events:$TAG
+            docker tag bitwarden/admin:dev bitwarden/admin:$TAG
+            docker tag bitwarden/nginx:dev bitwarden/nginx:$TAG
+            docker tag bitwarden/nginx:dev bitwarden/k8s-proxy:$TAG
+            docker tag bitwarden/sso:dev bitwarden/sso:$TAG
+            docker tag bitwarden/portal:dev bitwarden/portal:$TAG
+            docker tag bitwarden/mssql:dev bitwarden/mssql:$TAG
+            docker tag bitwarden/setup:dev bitwarden/setup:$TAG
+          end
 
       - name: Build
         run: |
           chmod +x ./build.sh
           ./build.sh
 
-      - name: tag rc branch
-        if: github.ref == 'refs/heads/rc'
-        run: ./build.sh tag rc
-
-      - name: Tag dev
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
-        run: ./build.sh tag dev
-
-      - name: Tag beta
-        if: github.event_name == 'release'
-        run: ./build.sh tag beta
-
-      - name: Tag version
-        if: github.event_name == 'release'
-        run: ./build.sh tag $($env:RELEASE_TAG_NAME.TrimStart('v'))
-        shell: pwsh
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-
       - name: List docker images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
         run: docker images
 
-      - name: Push rc images
-        if: github.ref == 'refs/heads/rc'
-        run: ./build.sh push rc 
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push dev images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
-        run: ./build.sh push dev
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
       - name: Push beta images
-        if: github.event_name == 'release'
+        if: false
         run: ./build.sh push beta
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
       - name: Push latest images
-        if: github.event_name == 'release'
+        if: false
         run: ./build.sh push latest
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
       - name: Push version images
-        if: github.event_name == 'release'
-        run: ./build.sh push $($env:RELEASE_TAG_NAME.TrimStart('v'))
+        if: false
+        run: ./build.sh push $($env:$RELEASE_VERSION)
         shell: pwsh
         env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
@@ -246,7 +221,7 @@ jobs:
           path: ./swagger.json
 
       - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: false
         run: docker logout
 
       - name: Upload release assets
@@ -255,10 +230,9 @@ jobs:
           hub release edit `
             -a ./swagger.json `
             -a ./docker-stub.zip `
-            -m "Version $($env:RELEASE_TAG_NAME.TrimStart('v'))" `
+            -m "Version $($env:RELEASE_VERSION)" `
             $env:RELEASE_TAG_NAME
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
