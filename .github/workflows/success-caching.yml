@@ -2,9 +2,7 @@ name: Success Caching
 
 on:
   workflow_dispatch: 
-    inputs:
-      status:
-        default: "fail"
+    inputs: {}
 
 jobs:
   test:
@@ -32,13 +30,18 @@ jobs:
           restore-keys:
             ${{ github.run_id }}
 
+      - name: Set last run status
+        id: last_run_status
+        run: cat last_run_status
+
       - name: Set status
-        #if: steps.last_run.outputs.last_run_status != "success"
+        #if: steps.last_run_status.outputs.last_run_status != "success"
         run: |
+          echo "STATUS=$( $RANDOM % 5 + 1 )" >> $GITHUB_ENV
           echo "Status: $STATUS"
-          echo "$STATUS" > last_run_status
-          if [ "$STATUS" == "fail" ]; then 
+          if [ $STATUS -eq 1 ]; then 
+            echo "success" > last_run_status
+          else
+            echo "fail" > last_run_status
             exit 1
           fi
-        env:
-          STATUS: ${{ github.event.inputs.status }}
