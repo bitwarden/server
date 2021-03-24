@@ -18,7 +18,7 @@ jobs:
         run: echo "${{ steps.date.outputs.date }}"
 
       - name: Set default run status
-        run: echo "::set-output name=last_run_status::default" > last_run_status
+        run: echo "default" > last_run_status
 
       - name: Restore last 
         id: last_run
@@ -32,7 +32,7 @@ jobs:
 
       - name: Set last run status
         id: last_run_status
-        run: cat last_run_status
+        run: echo "::set-output name=last_run_status::$(cat last_run_status)"
 
       - name: Set status
         #if: steps.last_run_status.outputs.last_run_status != "success"
