@@ -41,7 +41,7 @@ jobs:
         id: run_task
         if: steps.last_run_status.outputs.last_run_status != "success"
         run: |
-          STATUS_NUM=$(( $RANDOM % 5 + 1 ))
+          STATUS_NUM=$(( $RANDOM % 3 + 1 ))
           echo "Status: $STATUS_NUM"
           echo "::set-output name=status::$STATUS_NUM"
           if [ $STATUS_NUM -ne 1 ]; then 
