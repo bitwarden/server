@@ -349,6 +349,14 @@ jobs:
           NAME: ${{ matrix.name }}
           NAME_LOWER: ${{ matrix.name_lower }}
 
+      - name: Make Cached directory
+        run: mkdir -p ${{ env.BASE_PATH }}/src/${{ env.NAME }}/obj/Docker/publish/${{ env.NAME}}
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+          NAME_LOWER: ${{ matrix.name_lower }}
+
+
       - name: Cache Core build dirs
         id: core-build-cache
         uses: actions/cache@v2
@@ -364,7 +372,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ${{ env.BASE_PATH }}/src/${{ env.NAME_LOWER }}/obj/Docker/publish/${{ env.NAME}}
+            ${{ env.BASE_PATH }}/src/${{ env.NAME }}/obj/Docker/publish/${{ env.NAME}}
           key: ${{ github.run_id }}-${{ env.NAME_LOWER }}-${{ steps.date.outputs.date }}
           restore-keys:
             ${{ github.run_id }}-${{ env.NAME_LOWER }}-
@@ -374,7 +382,7 @@ jobs:
           NAME_LOWER: ${{ matrix.name_lower }}
 
       - name: Test Cache
-        run: ls ${{ env.BASE_PATH }}/src/${{ env.NAME_LOWER }}/obj/Docker/publish/${{ env.NAME}}
+        run: ls ${{ env.BASE_PATH }}/src/${{ env.NAME }}/obj/Docker/publish/${{ env.NAME}}
         env:
           BASE_PATH: ${{ matrix.base_path }}
           NAME: ${{ matrix.name }}
