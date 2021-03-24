@@ -37,7 +37,7 @@ jobs:
         run: |
           echo "Status: $STATUS"
           echo "$STATUS" > last_run_status
-          if [ "$STATUS" == "fail"]; then 
+          if [ "$STATUS" == "fail" ]; then 
             exit 1
           fi
         env:
