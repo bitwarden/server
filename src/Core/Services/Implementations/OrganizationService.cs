@@ -1515,32 +1515,34 @@ namespace Bit.Core.Services
                     enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
                 }
 
-                if (enoughSeatsAvailable)
+                if (!enoughSeatsAvailable) 
                 {
-                    foreach (var user in newUsers)
-                    {
-                        if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-                        {
-                            continue;
-                        }
+                    throw new BadRequestException($"Organization does not have enough seats available. Need {usersToAdd.Count} but {seatsAvailable} available.");
+                }
 
-                        try
+                foreach (var user in newUsers)
+                {
+                    if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var invite = new OrganizationUserInvite
                         {
-                            var invite = new OrganizationUserInvite
-                            {
-                                Emails = new List<string> { user.Email },
-                                Type = OrganizationUserType.User,
-                                AccessAll = false,
-                                Collections = new List<SelectionReadOnly>(),
-                            };
-                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
-                                    OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
-                            existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
-                        }
-                        catch (BadRequestException)
-                        {
-                            continue;
-                        }
+                            Emails = new List<string> { user.Email },
+                            Type = OrganizationUserType.User,
+                            AccessAll = false,
+                            Collections = new List<SelectionReadOnly>(),
+                        };
+                        var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
+                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                        existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
+                    }
+                    catch (BadRequestException)
+                    {
+                        continue;
                     }
                 }
             }
