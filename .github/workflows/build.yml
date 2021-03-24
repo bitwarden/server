@@ -5,6 +5,8 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
+  workflow_dispatch:
+    inputs: {}
 
 jobs:
   cloc:
