@@ -38,9 +38,9 @@ namespace Bit.Core.Models.Api
                     yield return new ValidationResult($"Email #{i + 1} is not valid.",
                         new string[] { nameof(Emails) });
                 }
-                else if (email.Length > 50)
+                else if (email.Length > 256)
                 {
-                    yield return new ValidationResult($"Email #{i + 1} is longer than 50 characters.",
+                    yield return new ValidationResult($"Email #{i + 1} is longer than 256 characters.",
                         new string[] { nameof(Emails) });
                 }
             }
