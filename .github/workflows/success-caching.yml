@@ -37,9 +37,9 @@ jobs:
       - name: Set status
         #if: steps.last_run_status.outputs.last_run_status != "success"
         run: |
-          echo "STATUS=$( $RANDOM % 5 + 1 )" >> $GITHUB_ENV
+          echo "STATUS=$(( $RANDOM % 5 + 1 ))" >> $GITHUB_ENV
           echo "Status: $STATUS"
-          if [ $STATUS -eq 1 ]; then 
+          if [[ $STATUS -eq 1 ]]; then 
             echo "success" > last_run_status
           else
             echo "fail" > last_run_status
