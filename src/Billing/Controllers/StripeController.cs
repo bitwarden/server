@@ -24,6 +24,7 @@ namespace Bit.Billing.Controllers
     public class StripeController : Controller
     {
         private const decimal PremiumPlanAppleIapPrice = 14.99M;
+        private const string PremiumPlanId = "premium-annually";
 
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
@@ -37,6 +38,7 @@ namespace Bit.Billing.Controllers
         private readonly Braintree.BraintreeGateway _btGateway;
         private readonly IReferenceEventService _referenceEventService;
         private readonly ITaxRateRepository _taxRateRepository;
+        private readonly IUserRepository _userRepository;
 
         public StripeController(
             GlobalSettings globalSettings,
@@ -50,7 +52,8 @@ namespace Bit.Billing.Controllers
             IMailService mailService,
             IReferenceEventService referenceEventService,
             ILogger<StripeController> logger,
-            ITaxRateRepository taxRateRepository)
+            ITaxRateRepository taxRateRepository,
+            IUserRepository userRepository)
         {
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
@@ -62,6 +65,7 @@ namespace Bit.Billing.Controllers
             _mailService = mailService;
             _referenceEventService = referenceEventService;
             _taxRateRepository = taxRateRepository;
+            _userRepository = userRepository;
             _logger = logger;
             _btGateway = new Braintree.BraintreeGateway
             {
@@ -381,26 +385,33 @@ namespace Bit.Billing.Controllers
                             if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
                             {
                                 await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+
+                                var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                                await _referenceEventService.RaiseEventAsync(
+                                    new ReferenceEvent(ReferenceEventType.Rebilled, organization)
+                                    {
+                                        PlanName = organization?.Plan,
+                                        PlanType = organization?.PlanType,
+                                        Seats = organization?.Seats,
+                                        Storage = organization?.MaxStorageGb,
+                                    });
                             }
                         }
                         // user
                         else if (ids.Item2.HasValue)
                         {
-                            if (subscription.Items.Any(i => i.Plan.Id == "premium-annually"))
+                            if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
                             {
                                 await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+
+                                var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
+                                await _referenceEventService.RaiseEventAsync(
+                                    new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                                    {
+                                        PlanName = PremiumPlanId,
+                                        Storage = user?.MaxStorageGb,
+                                    });
                             }
-                        }
-                        if (ids.Item1.HasValue || ids.Item2.HasValue)
-                        {
-                            await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, null)
-                                {
-                                    Id = ids.Item1 ?? ids.Item2 ?? default,
-                                    Source = ids.Item1.HasValue
-                                        ? ReferenceEventSource.Organization
-                                        : ReferenceEventSource.User,
-                                });
                         }
                     }
                 }
