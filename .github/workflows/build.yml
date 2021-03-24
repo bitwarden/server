@@ -338,6 +338,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
+      - name: load env vars
+        run: |
+          echo "Base Path: ${BASE_PATH}"
+          echo "Name: ${NAME}"
+          echo "Name Lower: ${NAME_LOWER}"
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+          NAME_LOWER: ${{ matrix.name_lower }}
+
       - name: Cache Core build dirs
         id: core-build-cache
         uses: actions/cache@v2
@@ -348,17 +358,12 @@ jobs:
           restore-keys:
             ${{ github.run_id }}-core-
 
-      - name: Cache ${NAME} build dirs
-        id: ${NAME_LOWER}-build-cache
+      - name: Cache ${{ env.NAME }} build dirs
+        id: ${{ env.NAME_LOWER }}-build-cache
         uses: actions/cache@v2
         with:
           path: |
-            ${BASE_PATH}/src/${NAME_LOWER}/obj/Docker/publish/${NAME}
-          key: ${{ github.run_id }}-${NAME_LOWER}-${{ steps.date.outputs.date }}
+            ${{ env.BASE_PATH }}/src/${{ env.NAME_LOWER }}/obj/Docker/publish/${{ env.NAME}}
+          key: ${{ github.run_id }}-${{ env.NAME_LOWER }}-${{ steps.date.outputs.date }}
           restore-keys:
-            ${{ github.run_id }}-${NAME_LOWER}-
-        env:
-          BASE_PATH: ${{ matrix.base_path }}
-          NAME: ${{ matrix.name }}
-          NAME_LOWER: ${{ matrix.name_lower }}
-
+            ${{ github.run_id }}-${{ env.NAME_LOWER }}-
