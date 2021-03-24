@@ -158,11 +158,6 @@ jobs:
             docker tag bitwarden/setup:rc bitwarden/setup:$TAG
           done 
 
-      - name: Build
-        run: |
-          chmod +x ./build.sh
-          ./build.sh
-
       - name: List docker images
         run: docker images
 
