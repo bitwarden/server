@@ -39,7 +39,7 @@ jobs:
 
       - name: Randomly succeed or fail
         id: run_task
-        if: steps.last_run_status.outputs.last_run_status != "success"
+        if: steps.last_run_status.outputs.last_run_status != 'success'
         run: |
           STATUS_NUM=$(( $RANDOM % 3 + 1 ))
           echo "Status: $STATUS_NUM"
