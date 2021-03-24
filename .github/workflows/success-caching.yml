@@ -1,6 +1,9 @@
 name: Success Caching
 
 on:
+  push:
+    branchs:
+      - "master"
   workflow_dispatch: 
     inputs: {}
 
