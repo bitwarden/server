@@ -37,18 +37,28 @@ jobs:
         id: last_run_status
         run: echo "::set-output name=last_run_status::$(cat last_run_status)"
 
+      - name: Randomly succeed or fail
+        id: run_task
+        run: |
+          STATUS_NUM=$(( $RANDOM % 5 + 1 ))
+          echo "Status: $STATUS_NUM"
+          if [[ $STATUS_NUM -nq 1 ]]; then 
+            exit 1
+          fi
+          echo "::set-output name=status::$STATUS_NUM"
+
       - name: Set status
+        if: always()
         #if: steps.last_run_status.outputs.last_run_status != "success"
         run: |
           echo "Last run status: ${{ steps.last_run_status.outputs.last_run_status }}"
-
-          STATUS_NUM=$(( $RANDOM % 5 + 1 ))
+          STATUS_NUM=${{ steps.runtask.outputs.status }}
           echo "Status: $STATUS_NUM"
+
           if [[ $STATUS_NUM -eq 1 ]]; then 
             echo "success" > last_run_status
             cat last_run_status
           else
             echo "fail" > last_run_status
             cat last_run_status
-            exit 1
           fi
