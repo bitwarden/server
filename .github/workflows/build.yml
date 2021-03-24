@@ -375,3 +375,7 @@ jobs:
 
       - name: Test Cache
         run: ls ${{ env.BASE_PATH }}/src/${{ env.NAME_LOWER }}/obj/Docker/publish/${{ env.NAME}}
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+          NAME_LOWER: ${{ matrix.name_lower }}
