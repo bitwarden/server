@@ -1542,6 +1542,7 @@ namespace Bit.Core.Services
                     }
                     catch (BadRequestException)
                     {
+                        // Thrown when the user is already invited to the organization
                         continue;
                     }
                 }
