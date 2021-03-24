@@ -117,6 +117,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
+      - name: Restore
+        run: dotnet tool restore
+
       - name: pull docker images
         run: |
           docker pull bitwarden/api:rc
