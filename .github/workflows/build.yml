@@ -348,13 +348,17 @@ jobs:
           restore-keys:
             ${{ github.run_id }}-core-
 
-      - name: Cache ${{ matrix.name }} build dirs
-        id: ${{ matrix.name_lower }}-build-cache
+      - name: Cache $NAME build dirs
+        id: $NAME_LOWER-build-cache
         uses: actions/cache@v2
         with:
           path: |
-            ${{ matrix.base_path }}/src/${{ matrix.name_lower }}/obj/Docker/publish/${{ matrix.name }}
-          key: ${{ github.run_id }}-${{ matrix.name_lower}}-${{ steps.date.outputs.date }}
+            $BASE_PATH/src/$NAME_LOWER/obj/Docker/publish/$NAME
+          key: ${{ github.run_id }}-$NAME_LOWER-${{ steps.date.outputs.date }}
           restore-keys:
-            ${{ github.run_id }}-${{ matrix.name_lower }}-
+            ${{ github.run_id }}-$NAME_LOWER-
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+          NAME_LOWER: ${{ matrix.name_lower }}
 
