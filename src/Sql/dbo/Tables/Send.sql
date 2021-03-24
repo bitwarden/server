@@ -13,6 +13,7 @@
     [ExpirationDate] DATETIME2 (7)    NULL,
     [DeletionDate]   DATETIME2 (7)    NOT NULL,
     [Disabled]       BIT              NOT NULL,
+    [HideEmail]      BIT              NOT NULL,
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
