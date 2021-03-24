@@ -33,10 +33,11 @@ jobs:
             ${{ github.run_id }}
 
       - name: Set status
+        #if: steps.last_run.outputs.last_run_status != "success"
         run: |
           echo "Status: $STATUS"
           echo "$STATUS" > last_run_status
-          if [ "STATUS" == "fail"]; then 
+          if [ "$STATUS" == "fail"]; then 
             exit 1
           fi
         env:
