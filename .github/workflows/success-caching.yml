@@ -31,7 +31,7 @@ jobs:
             last_run_status
           key: ${{ github.run_id }}-${{ steps.date.outputs.date }}
           restore-keys:
-            ${{ github.run_id }}
+            ${{ github.run_id }}-
 
       - name: Set last run status
         id: last_run_status
