@@ -5,9 +5,6 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
-  release:
-    types:
-      - published
 
 jobs:
   cloc:
@@ -97,14 +94,14 @@ jobs:
           GITHUB_EVENT: ${{ github.event_name }}
 
       - name: Log into docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           mkdir -p ~/.docker/trust/private
 
@@ -156,22 +153,12 @@ jobs:
         run: ./build.sh tag rc
 
       - name: Tag dev
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master'
         run: ./build.sh tag dev
 
-      - name: Tag beta
-        if: github.event_name == 'release'
-        run: ./build.sh tag beta
-
-      - name: Tag version
-        if: github.event_name == 'release'
-        run: ./build.sh tag $($env:RELEASE_TAG_NAME.TrimStart('v'))
-        shell: pwsh
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
       - name: List docker images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
       - name: Push rc images
@@ -182,32 +169,9 @@ jobs:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
       - name: Push dev images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/master'
         run: ./build.sh push dev
         env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push beta images
-        if: github.event_name == 'release'
-        run: ./build.sh push beta
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push latest images
-        if: github.event_name == 'release'
-        run: ./build.sh push latest
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push version images
-        if: github.event_name == 'release'
-        run: ./build.sh push $($env:RELEASE_TAG_NAME.TrimStart('v'))
-        shell: pwsh
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
 
@@ -246,19 +210,5 @@ jobs:
           path: ./swagger.json
 
       - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
-
-      - name: Upload release assets
-        if: github.event_name == 'release'
-        run: |
-          hub release edit `
-            -a ./swagger.json `
-            -a ./docker-stub.zip `
-            -m "Version $($env:RELEASE_TAG_NAME.TrimStart('v'))" `
-            $env:RELEASE_TAG_NAME
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-
