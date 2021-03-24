@@ -275,24 +275,26 @@ namespace Bit.Core.Services
 
             foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
             {
-                if (_currentContext.ManagePolicies(policy.OrganizationId))
-                {
-                    continue;
-                }
-
-                DisableSendPolicyData data = null;
-                if (policy.Data != null)
-                {
-                    data = JsonConvert.DeserializeObject<DisableSendPolicyData>(policy.Data);
-                }
-
-                if ((data?.DisableSend ?? DisableSendPolicyType.DisableAll) == DisableSendPolicyType.DisableAll)
+                if (!_currentContext.ManagePolicies(policy.OrganizationId))
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
-                else if (data.DisableSend.GetValueOrDefault() == DisableSendPolicyType.DisableAnonymous && send.HideEmail)
+            }
+
+            if (send.HideEmail)
+            {
+                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
                 {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address on a Send.");
+                    SendOptionsPolicyData data = null;
+                    if (policy.Data != null)
+                    {
+                        data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
+                    }
+
+                    if (data != null && data.DisableHideEmail)
+                    {
+                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address on a Send.");
+                    }
                 }
             }
         }
