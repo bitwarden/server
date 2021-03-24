@@ -43,7 +43,7 @@ jobs:
           STATUS_NUM=$(( $RANDOM % 5 + 1 ))
           echo "Status: $STATUS_NUM"
           echo "::set-output name=status::$STATUS_NUM"
-          if [[ $STATUS_NUM -nq 1 ]]; then 
+          if [ $STATUS_NUM -nq 1 ]; then 
             exit 1
           fi
 
