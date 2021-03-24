@@ -67,6 +67,7 @@ jobs:
   test2:
     runs-on: ubuntu-latest
     needs: test
+    steps:
       - name: Set default run status
         run: echo "default" > last_run_status
 
