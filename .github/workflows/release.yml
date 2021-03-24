@@ -139,7 +139,7 @@ jobs:
 
       - name: re-tag docker images
         run: |
-          tags=( latest beta ${RELEASE_VERSION}
+          tags=( latest beta ${RELEASE_VERSION} )
           for TAG in "${tags[@]}"
           do
             docker tag bitwarden/api:rc bitwarden/api:$TAG
