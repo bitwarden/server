@@ -29,7 +29,7 @@ jobs:
         with:
           path: |
             last_run_status
-          key: ${{ github.run_id }}
+          key: ${{ github.run_id }}-${{ steps.date.outputs.date }}
           restore-keys:
             ${{ github.run_id }}
 
@@ -46,7 +46,9 @@ jobs:
           echo "Status: $STATUS_NUM"
           if [[ $STATUS_NUM -eq 1 ]]; then 
             echo "success" > last_run_status
+            cat last_run_status
           else
             echo "fail" > last_run_status
+            cat last_run_status
             exit 1
           fi
