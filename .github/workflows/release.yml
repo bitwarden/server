@@ -133,6 +133,8 @@ jobs:
           docker pull bitwarden/portal:rc
           docker pull bitwarden/mssql:rc
           docker pull bitwarden/setup:rc
+        env:
+          DOCKER_CONTENT_TRUST: 1
 
 
       - name: re-tag docker images
