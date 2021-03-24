@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     steps:
       - name: Get current date
         id: date
@@ -32,7 +34,10 @@ jobs:
 
       - name: Set status
         run: |
-          echo "Status? $STATUS"
+          echo "Status: $STATUS"
           echo "$STATUS" > last_run_status
+          if [ "STATUS" == "fail"]; then 
+            exit 1
+          fi
         env:
           STATUS: ${{ github.event.inputs.status }}
