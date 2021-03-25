@@ -293,7 +293,7 @@ namespace Bit.Core.Services
 
                     if (data?.DisableHideEmail ?? false)
                     {
-                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address on a Send.");
+                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
                     }
                 }
             }
