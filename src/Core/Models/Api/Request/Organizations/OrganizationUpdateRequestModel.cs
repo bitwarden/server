@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Api
         public string Identifier { get; set; }
         [EmailAddress]
         [Required]
-        [StringLength(50)]
+        [StringLength(256)]
         public string BillingEmail { get; set; }
 
         public Permissions Permissions { get; set; }

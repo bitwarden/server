@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Api
         public class User : IValidatableObject
         {
             [EmailAddress]
-            [StringLength(50)]
+            [StringLength(256)]
             public string Email { get; set; }
             public bool Deleted { get; set; }
             [Required]

@@ -14,7 +14,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [Required]
         [EmailAddress]
-        [StringLength(50)]
+        [StringLength(256)]
         public string Email { get; set; }
         [Required]
         [StringLength(1000)]
