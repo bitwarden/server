@@ -44,7 +44,7 @@ jobs:
           node-version: '10.x'
 
       - name: install gulp
-        run: npm install gulp
+        run: npm install -g gulp
 
       - name: Print Environment
         run: |
