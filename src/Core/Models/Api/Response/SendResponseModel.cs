@@ -67,6 +67,6 @@ namespace Bit.Core.Models.Api
         public DateTime RevisionDate { get; set; }
         public DateTime? ExpirationDate { get; set; }
         public DateTime DeletionDate { get; set; }
-        public bool HideEmail { get; set; }
+        public bool? HideEmail { get; set; }
     }
 }
