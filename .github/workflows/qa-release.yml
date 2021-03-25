@@ -65,7 +65,7 @@ jobs:
 
           cd $dir
           echo "Restore"
-          dotnet restore SERVICE_NAME.csproj
+          dotnet restore $SERVICE_NAME.csproj
           echo "Clean"
           dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
 
