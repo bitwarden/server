@@ -3,6 +3,7 @@ name: QA Deploy
 on:
   push:
     branches:
+      - 'master' # only for testing. Needs to be removed before PR
       - 'rc'
   workflow_dispatch:
     inputs: {}
@@ -10,7 +11,6 @@ on:
 jobs:
   deploy-qa:
     runs-on: ubuntu-latest
-    #if: github.rf == 'refs/heads/rc'
     strategy:
       fail-fast: false
       matrix:
@@ -34,7 +34,6 @@ jobs:
             gulp: true
           - name: Identity
             base_path: .
-    needs: build
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
