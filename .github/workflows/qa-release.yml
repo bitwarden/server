@@ -63,9 +63,9 @@ jobs:
           dir=$BASE_PATH/src/$SERVICE_NAME
 
           echo "Restore"
-          dotnet restore $dir/Api.csproj
+          dotnet restore $dir/$SERVICE_NAME.csproj
           echo "Clean"
-          dotnet clean $dir/Api.csproj -c "Release" -o $dir/obj/Azure/publish
+          dotnet clean $dir/$SERVICE_NAME.csproj -c "Release" -o $dir/obj/Azure/publish
 
           if [ "$GULP" == "true" ]; then
             cd $dir
@@ -75,14 +75,14 @@ jobs:
           fi
 
           echo "Publish"
-          dotnet publish $dir/Api.csproj -c "Release" -o $dir/obj/Azure/publish
+          dotnet publish $dir/$SERVICE_NAME.csproj -c "Release" -o $dir/obj/Azure/publish
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
           GULP: ${{ matrix.gulp }}
 
       - name: Testing build
-        run: $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
+        run: ls $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
