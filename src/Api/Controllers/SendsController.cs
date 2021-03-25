@@ -61,7 +61,7 @@ namespace Bit.Api.Controllers
             }
 
             var sendResponse = new SendAccessResponseModel(send, _globalSettings);
-            if (send.UserId.HasValue && !send.HideEmail)
+            if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
             {
                 var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
                 sendResponse.CreatorIdentifier = creator.Email;

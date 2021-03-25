@@ -281,7 +281,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            if (send.HideEmail)
+            if (send.HideEmail.GetValueOrDefault())
             {
                 foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
                 {

@@ -29,7 +29,7 @@ namespace Bit.Core.Models.Api
             DeletionDate = send.DeletionDate;
             Password = send.Password;
             Disabled = send.Disabled;
-            HideEmail = send.HideEmail;
+            HideEmail = send.HideEmail.GetValueOrDefault();
 
             SendData sendData;
             switch (send.Type)
