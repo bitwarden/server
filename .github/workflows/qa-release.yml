@@ -43,11 +43,15 @@ jobs:
         with:
           node-version: '10.x'
 
+      - name: install gulp
+        run: npm install gulp
+
       - name: Print Environment
         run: |
           dotnet --info
           node --version
           npm --version
+          gulp --version
 
       - name: load env vars
         run: |
