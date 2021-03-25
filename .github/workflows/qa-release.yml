@@ -9,7 +9,7 @@ on:
     inputs: {}
 
 jobs:
-  deploy-qa:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -17,23 +17,23 @@ jobs:
         include:
           - name: Api
             base_path: .
-          #- name: Admin
-          #  base_path: .
-          #  gulp: true
-          #- name: Billing
-          #  base_path: .
-          #- name: Events
-          #  base_path: .
-          #- name: Notifications
-          #  base_path: .
-          #- name: Sso
-          #  base_path: ./bitwarden_license
-          #  gulp: true
-          #- name: Portal
-          #  base_path: ./bitwarden_license
-          #  gulp: true
-          #- name: Identity
-          #  base_path: .
+          - name: Admin
+            base_path: .
+            gulp: true
+          - name: Billing
+            base_path: .
+          - name: Events
+            base_path: .
+          - name: Notifications
+            base_path: .
+          - name: Sso
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Portal
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Identity
+            base_path: .
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -101,14 +101,121 @@ jobs:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
 
-      # Deploy to Azure Web apps
-      - name: 'Run Azure webapp deploy action using publish profile credentials'
+  deploy-identity:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Identity.zip
+
+      - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.API_WEBAPP_NAME }} # Replace with your app name
+          app-name: ${{ secrets.IDENTITY_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.IDENTITY_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Identity.zip
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Api.zip
+
+      - name: Deploy Api 
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.API_WEBAPP_NAME }} 
           slot-name: ${{ secrets.API_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
-          package: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
-        env:
-          SERVICE_NAME: ${{ matrix.name }}
-          BASE_PATH: ${{ matrix.base_path }}
+          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Api.zip
+
+  deploy-billing:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Billing.zip
+
+      - name: Deploy Billing
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.BILLING_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.BILLING_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Billing.zip
+
+  deploy-events:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Events.zip
+
+      - name: Deploy Events
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.EVENTS_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.EVENTS_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Events.zip
+
+  deploy-sso:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Sso.zip
+
+      - name: Deploy Sso
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.SSO_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.SSO_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.SSO_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Sso.zip
+
+  deploy-portal:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Portal.zip
+
+      - name: Deploy Portal
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.PORTAL_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.PORTAL_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Portal.zip
+
+  deploy-admin:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Admin.zip
+
+      - name: Deploy Admin
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.ADMIN_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Admin.zip
