@@ -89,7 +89,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          ref: tags/${{ env.TAG_VERSION }}
+          ref: ${{ env.TAG_VERSION }}
 
       - name: Set up Node
         uses: actions/setup-node@v1
