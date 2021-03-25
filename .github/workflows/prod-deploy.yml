@@ -1,0 +1,287 @@
+name: Prod Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag_name_input:
+        description: "Release Tag Name <X.X.X>"
+        required: true
+  release:
+    types:
+      - published
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.create_tags.outputs.package_version }}
+      tag_version: ${{ steps.create_tags.outputs.tag_version }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Create Deploy version vars
+        id: create_tags
+        run: |
+          if [ "${{ github.event_name }}" != "release" ]; then
+            case "${RELEASE_TAG_NAME_INPUT:0:1}" in
+              v)
+                echo "RELEASE_NAME=${RELEASE_TAG_NAME_INPUT:1}" >> $GITHUB_ENV
+                echo "RELEASE_TAG_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "::set-output name=package_version::${RELEASE_TAG_NAME_INPUT:1}"
+                echo "::set-output name=tag_version::$RELEASE_TAG_NAME_INPUT"
+                ;;
+              [0-9])
+                echo "RELEASE_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "RELEASE_TAG_NAME=v$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "::set-output name=package_version::$RELEASE_TAG_NAME_INPUT"
+                echo "::set-output name=tag_version::v$RELEASE_TAG_NAME_INPUT"
+                ;;
+              *)
+                exit 1
+                ;;
+            esac
+          else
+            TAG_VERSION=$(echo ${{ github.ref }} | cut -d "/" -f 3)
+            PKG_VERSION=${TAG_VERSION:1}
+
+            echo "::set-output name=package_version::$PKG_VERSION"
+            echo "::set-output name=tag_version::$TAG_VERSION"
+          fi
+        env:
+          RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
+
+      - name: test outputs
+        run: |
+          echo "Package Version: ${{ steps.create_tags.outputs.package_version }}"
+          echo "Tag Version: ${{ steps.create_tags.outputs.tag_version }}"
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Api
+            base_path: .
+          - name: Admin
+            base_path: .
+            gulp: true
+          - name: Billing
+            base_path: .
+          - name: Events
+            base_path: .
+          - name: Notifications
+            base_path: .
+          - name: Sso
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Portal
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Identity
+            base_path: .
+    env:
+      PKG_VERSION: ${{ needs.setup.outputs.package_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          ref: refs/tags/release/${{ env.TAG_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Print Environment
+        run: |
+          dotnet --info
+          node --version
+          npm --version
+          gulp --version
+
+      - name: load env vars
+        run: |
+          echo "Base Path: ${BASE_PATH}"
+          echo "Name: ${NAME}"
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+
+      - name: Build Service
+        run: |
+          work_dir=$(pwd)
+          dir=$BASE_PATH/src/$SERVICE_NAME
+
+          cd $dir
+          echo "Restore"
+          dotnet restore $SERVICE_NAME.csproj
+          echo "Clean"
+          dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+
+          if [ "$GULP" == "true" ]; then
+            npm install
+            npm install gulp
+            gulp --gulpfile gulpfile.js build
+          fi
+
+          echo "Publish"
+          dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+
+          cd obj/Azure/publish
+          zip -r $SERVICE_NAME.zip .
+          mv $SERVICE_NAME.zip ../../../
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+          GULP: ${{ matrix.gulp }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: ${{ env.SERVICE_NAME }}.zip
+          path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          SERVICE_NAME: ${{ matrix.name }}
+
+      - name: Test build dir
+        run: ls $BASE_PATH/src/$SERVICE_NAME
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+
+  deploy-identity:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Identity.zip
+
+      - name: Deploy Identity
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.IDENTITY_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.IDENTITY_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Identity.zip
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Api.zip
+
+      - name: Deploy Api 
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.API_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.API_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Api.zip
+
+  deploy-billing:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Billing.zip
+
+      - name: Deploy Billing
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.BILLING_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.BILLING_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Billing.zip
+
+  deploy-events:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Events.zip
+
+      - name: Deploy Events
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.EVENTS_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.EVENTS_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Events.zip
+
+  deploy-sso:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Sso.zip
+
+      - name: Deploy Sso
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.SSO_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.SSO_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.SSO_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Sso.zip
+
+  deploy-portal:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Portal.zip
+
+      - name: Deploy Portal
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.PORTAL_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.PORTAL_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Portal.zip
+
+  deploy-admin:
+    runs-on: ubuntu-latest
+    if: false
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Admin.zip
+
+      - name: Deploy Admin
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
+          slot-name: ${{ secrets.ADMIN_WEBAPP_SLOTNAME }}
+          publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
+          package: ./Admin.zip
