@@ -78,7 +78,9 @@ jobs:
           echo "Publish"
           dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
 
-          zip -r $SERVICE_NAME.zip obj/Azure/publish
+          cd obj/Azure/publish
+          zip -r $SERVICE_NAME.zip .
+          mv $SERVICE_NAME.zip ../../../
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
@@ -88,8 +90,9 @@ jobs:
         uses: actions/upload-artifact@v2-preview
         with:
           name: ${{ env.SERVICE_NAME }}.zip
-          path: ./${{ env.SERVICE_NAME }}.zip
+          path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
         env:
+          BASE_PATH: ${{ matrix.base_path }}
           SERVICE_NAME: ${{ matrix.name }}
 
       - name: Test build dir
