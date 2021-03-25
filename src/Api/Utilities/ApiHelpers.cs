@@ -12,6 +12,7 @@ namespace Bit.Api.Utilities
 {
     public static class ApiHelpers
     {
+        public static string EventGridKey { get; set; }
         public async static Task<T> ReadJsonFileFromBody<T>(HttpContext httpContext, IFormFile file, long maxSize = 51200)
         {
             T obj = default(T);
@@ -42,16 +43,16 @@ namespace Bit.Api.Utilities
         /// <param name="eventTypeHandlers">Dictionary of eventType strings and their associated handlers.</param>
         /// <returns>OkObjectResult</returns>
         /// <remarks>Reference https://docs.microsoft.com/en-us/azure/event-grid/receive-events</remarks>
-        public async static Task<ObjectResult> HandleAzureEvents(HttpRequest request, string key,
+        public async static Task<ObjectResult> HandleAzureEvents(HttpRequest request,
             Dictionary<string, Func<EventGridEvent, Task>> eventTypeHandlers)
         {
             var queryKey = request.Query["key"];
 
-            if (queryKey != key)
+            if (queryKey != EventGridKey)
             {
                 return new UnauthorizedObjectResult("Authentication failed. Please use a valid key.");
             }
-            
+
             var response = string.Empty;
             var requestContent = await new StreamReader(request.Body).ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(requestContent))
