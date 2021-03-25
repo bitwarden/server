@@ -103,7 +103,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.API_WEBAPP_NAME }} # Replace with your app name
-          slot-name: ${{ secrets.API_WEBAPP_NAME }}
+          slot-name: ${{ secrets.API_WEBAPP_SLOTNAME }}
           publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
           package: $BASE_PATH/src/$SERVICE_NAME/$SERVICE_NAME.zip
         env:
