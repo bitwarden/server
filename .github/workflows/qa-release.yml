@@ -77,18 +77,34 @@ jobs:
 
           echo "Publish"
           dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+
+          zip -r $SERVICE_NAME.zip obj/Azure/publish
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
           GULP: ${{ matrix.gulp }}
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: $SERVICE_NAME.zip
+          path: ./$SERVICE_NAME.zip
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+
+      - name: Test build dir
+        run: ls $BASE_PATH/src/$SERVICE_NAME
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+
       # Deploy to Azure Web apps
       - name: 'Run Azure webapp deploy action using publish profile credentials'
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.API_WEBAPP_NAME }} # Replace with your app name
+          app-name: $SERVICE_NAME # Replace with your app name
+          slot-name: ${{ secrets.API_WEBAPP_NAME }}
           publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
-          package: $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
+          package: $BASE_PATH/src/$SERVICE_NAME/$SERVICE_NAME.zip
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
