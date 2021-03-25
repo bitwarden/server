@@ -1,0 +1,90 @@
+name: QA Deploy
+
+on:
+  push:
+    branches:
+      - 'rc'
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  deploy-qa:
+    runs-on: ubuntu-latest
+    #if: github.rf == 'refs/heads/rc'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Admin
+            base_path: .
+            gulp: true
+          - name: Api
+            base_path: .
+          - name: Billing
+            base_path: .
+          - name: Events
+            base_path: .
+          - name: Notifications
+            base_path: .
+          - name: Sso
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Portal
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Identity
+            base_path: .
+    needs: build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Print Environment
+        run: |
+          dotnet --info
+          node --version
+          npm --version
+
+      - name: load env vars
+        run: |
+          echo "Base Path: ${BASE_PATH}"
+          echo "Name: ${NAME}"
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+
+      - name: Build Service
+        run: |
+          work_dir=$(pwd)
+          dir=$BASE_PATH/src/$SERVICE_NAME
+
+          echo "Restore"
+          dotnet restore $dir/Api.csproj
+          echo "Clean"
+          dotnet clean $dir/Api.csproj -c "Release" -o $dir/obj/Azure/publish
+
+          if [ "$GULP" == "true" ]; then
+            cd $dir
+            npm install
+            cd $workDir
+            gulp --gulpfile $dir/gulpfile.js build
+          fi
+
+          echo "Publish"
+          dotnet publish $dir/Api.csproj -c "Release" -o $dir/obj/Azure/publish
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+          GULP: ${{ matrix.gulp }}
+
+      - name: Testing build
+        run: $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+          GULP: ${{ matrix.gulp }}
