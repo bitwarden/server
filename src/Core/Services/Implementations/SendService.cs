@@ -285,13 +285,13 @@ namespace Bit.Core.Services
             {
                 foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
                 {
-                    SendOptionsPolicyData policyDataObj = null;
+                    SendOptionsPolicyData data = null;
                     if (policy.Data != null)
                     {
-                        policyDataObj = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
+                        data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
                     }
 
-                    if (policyDataObj?.DisableHideEmail ?? false)
+                    if (data?.DisableHideEmail ?? false)
                     {
                         throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address on a Send.");
                     }

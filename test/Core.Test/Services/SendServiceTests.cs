@@ -114,14 +114,14 @@ namespace Bit.Core.Test.Services
         {
             SaveSendAsync_DisableHideEmail_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
 
-            var dataObj = new SendOptionsPolicyData();
-            dataObj.DisableHideEmail = false;
-            var dataJson = JsonConvert.SerializeObject(dataObj);
+            var policyData = new SendOptionsPolicyData();
+            policyData.DisableHideEmail = false;
+            var policyDataSerialized = JsonConvert.SerializeObject(policyData);
 
             foreach (var policy in policies.Where(p => p.Type == PolicyType.SendOptions))
             {
                 policies.First().Enabled = true;
-                policies.First().Data = dataJson;
+                policies.First().Data = policyDataSerialized;
             }
 
             await sutProvider.Sut.SaveSendAsync(send);
