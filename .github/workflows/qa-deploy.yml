@@ -3,7 +3,6 @@ name: QA Deploy
 on:
   push:
     branches:
-      - 'master' # only for testing. Needs to be removed before PR
       - 'rc'
   workflow_dispatch:
     inputs: {}
