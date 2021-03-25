@@ -63,21 +63,20 @@ jobs:
           work_dir=$(pwd)
           dir=$BASE_PATH/src/$SERVICE_NAME
 
+          cd $dir
           echo "Restore"
-          dotnet restore $dir/$SERVICE_NAME.csproj
+          dotnet restore SERVICE_NAME.csproj
           echo "Clean"
-          dotnet clean $dir/$SERVICE_NAME.csproj -c "Release" -o $dir/obj/Azure/publish
+          dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
 
           if [ "$GULP" == "true" ]; then
-            cd $dir
             npm install
             npm install gulp
             gulp --gulpfile gulpfile.js build
-            cd $workDir
           fi
 
           echo "Publish"
-          dotnet publish $dir/$SERVICE_NAME.csproj -c "Release" -o $dir/obj/Azure/publish
+          dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
