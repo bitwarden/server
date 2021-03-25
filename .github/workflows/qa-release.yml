@@ -15,25 +15,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Admin
-            base_path: .
-            gulp: true
           - name: Api
             base_path: .
-          - name: Billing
-            base_path: .
-          - name: Events
-            base_path: .
-          - name: Notifications
-            base_path: .
-          - name: Sso
-            base_path: ./bitwarden_license
-            gulp: true
-          - name: Portal
-            base_path: ./bitwarden_license
-            gulp: true
-          - name: Identity
-            base_path: .
+          #- name: Admin
+          #  base_path: .
+          #  gulp: true
+          #- name: Billing
+          #  base_path: .
+          #- name: Events
+          #  base_path: .
+          #- name: Notifications
+          #  base_path: .
+          #- name: Sso
+          #  base_path: ./bitwarden_license
+          #  gulp: true
+          #- name: Portal
+          #  base_path: ./bitwarden_license
+          #  gulp: true
+          #- name: Identity
+          #  base_path: .
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -82,9 +82,13 @@ jobs:
           BASE_PATH: ${{ matrix.base_path }}
           GULP: ${{ matrix.gulp }}
 
-      - name: Testing build
-        run: ls $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
+      # Deploy to Azure Web apps
+      - name: 'Run Azure webapp deploy action using publish profile credentials'
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.API_WEBAPP_NAME }} # Replace with your app name
+          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
+          package: $BASE_PATH/src/$SERVICE_NAME/obj/Azure/publish
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
-          GULP: ${{ matrix.gulp }}
