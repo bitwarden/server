@@ -102,7 +102,7 @@ jobs:
       - name: 'Run Azure webapp deploy action using publish profile credentials'
         uses: azure/webapps-deploy@v2
         with:
-          app-name: $SERVICE_NAME # Replace with your app name
+          app-name: ${{ secrets.API_WEBAPP_NAME }} # Replace with your app name
           slot-name: ${{ secrets.API_WEBAPP_NAME }}
           publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
           package: $BASE_PATH/src/$SERVICE_NAME/$SERVICE_NAME.zip
