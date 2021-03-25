@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -772,6 +772,11 @@ namespace Bit.Api.Controllers
 
                             if (cipher == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
                             {
+                                if (_attachmentStorageService is AzureSendFileStorageService azureFileStorageService)
+                                {
+                                    await azureFileStorageService.DeleteBlobAsync(blobName);
+                                }
+
                                 return;
                             }
 

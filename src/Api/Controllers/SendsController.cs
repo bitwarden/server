@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -267,6 +267,10 @@ namespace Bit.Api.Controllers
                             var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
                             if (send == null)
                             {
+                                if (_sendFileStorageService is AzureSendFileStorageService azureSendFileStorageService)
+                                {
+                                    await azureSendFileStorageService.DeleteBlobAsync(blobName);
+                                }
                                 return;
                             }
                             await _sendService.ValidateSendFile(send);
