@@ -43,9 +43,6 @@ jobs:
         with:
           node-version: '10.x'
 
-      - name: install gulp
-        run: npm install -g gulp
-
       - name: Print Environment
         run: |
           dotnet --info
@@ -74,8 +71,9 @@ jobs:
           if [ "$GULP" == "true" ]; then
             cd $dir
             npm install
+            npm install gulp
+            gulp --gulpfile gulpfile.js build
             cd $workDir
-            gulp --gulpfile $dir/gulpfile.js build
           fi
 
           echo "Publish"
