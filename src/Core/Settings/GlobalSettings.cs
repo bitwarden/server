@@ -21,6 +21,7 @@ namespace Bit.Core.Settings
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+        public virtual string EventGridSecret { get; set; }
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();

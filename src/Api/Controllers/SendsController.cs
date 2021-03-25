@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -253,9 +253,9 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("file/validate/azure")]
-        public async Task<OkObjectResult> AzureValidateFile()
+        public async Task<ObjectResult> AzureValidateFile()
         {
-            return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+            return await ApiHelpers.HandleAzureEvents(Request, _globalSettings.EventGridSecret, new Dictionary<string, Func<EventGridEvent, Task>>
             {
                 {
                     "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>

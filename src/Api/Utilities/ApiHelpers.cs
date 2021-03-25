@@ -42,9 +42,16 @@ namespace Bit.Api.Utilities
         /// <param name="eventTypeHandlers">Dictionary of eventType strings and their associated handlers.</param>
         /// <returns>OkObjectResult</returns>
         /// <remarks>Reference https://docs.microsoft.com/en-us/azure/event-grid/receive-events</remarks>
-        public async static Task<OkObjectResult> HandleAzureEvents(HttpRequest request,
+        public async static Task<ObjectResult> HandleAzureEvents(HttpRequest request, string key,
             Dictionary<string, Func<EventGridEvent, Task>> eventTypeHandlers)
         {
+            var queryKey = request.Query["key"];
+
+            if (queryKey != key)
+            {
+                return new UnauthorizedObjectResult("Authentication failed. Please use a valid key.");
+            }
+            
             var response = string.Empty;
             var requestContent = await new StreamReader(request.Body).ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(requestContent))
