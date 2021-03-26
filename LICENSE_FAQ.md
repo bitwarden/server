@@ -44,4 +44,22 @@ As detailed above, the Bitwarden password management clients for individual use,
 
 ***If I redistribute or provide services related to Bitwarden open source software can I use the "Bitwarden" name?***
 
-The Bitwarden trademark is a trusted mark applied to products distributed by Bitwarden, Inc., owner of the Bitwarden trademarks and products. We have adopted and enforce strict rules governing use of our trademarks. In limited cases, such as our Partner Program, we allow third parties to use our marks if they maintain high standards in the work they do. For more information, contact us at <https://bitwarden.com/contact/>.
+Our licenses do not grant any rights in the trademarks, service marks, or logos of Bitwarden (except as may be necessary to comply with the notice requirements as applicable). The Bitwarden trademark is a trusted mark applied to products distributed by Bitwarden, Inc., owner of the Bitwarden trademarks and products. We have adopted and enforce strict rules governing use of our trademarks. Use of any Bitwarden trademarks must comply with Bitwarden [Trademark Guidelines](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md).
+
+***Bitwarden Trademark Usage***
+
+Because Open Source plays a major part in how we build our products, we see it as a matter of course to give the same effort back to our community by creating valuable, free and easy-to-use software. We need to make sure our trademarks remain distinctive so you know what you're getting and from who.
+
+***Do I need permission to use the Bitwarden Trademarks?***
+
+You don't need permission to use our marks when truthfully referring to our products, services or features, or to explain that your products or services are based on our open- source code so long as not misleading. Any other use requires our permission.
+
+***How should I use the Bitwarden Trademarks when allowed?***
+
+Use the Bitwarden Trademarks exactly as [shown](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md) and without modification. For example, do not abbreviate, hyphenate, or remove elements and separate them from surrounding text, images and other features. Always use the Bitwarden Trademarks as adjectives followed by a generic term, never as a noun or verb.
+
+Use the Bitwarden Trademarks only to reference one of our products or services, but never in a way that implies sponsorship or affiliation by Bitwarden. For example, do not use any part of the Bitwarden Trademarks as the name of your business, product or service name, application, domain name, publication or other offering – this can be confusing to others.
+
+***Where can I find more information?***
+
+For more information on how to use the Bitwarden Trademarks, including in connection with self-hosted options and open-source code, see our [Trademark Guidelines](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md) or [contacts us](https://bitwarden.com/contact/).
