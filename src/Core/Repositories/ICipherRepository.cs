@@ -36,5 +36,6 @@ namespace Bit.Core.Repositories
         Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
         Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
         Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
+        Task DeleteDeletedAsync(DateTime deletedDateBefore);
     }
 }
