@@ -9,3 +9,9 @@ https://github.com/bitwarden/server/blob/master/LICENSE_AGPL.txt
 
 Bitwarden License v1.0:
 https://github.com/bitwarden/server/blob/master/LICENSE_BITWARDEN.txt
+
+No grant of any rights in the trademarks, service marks, or logos of Bitwarden is
+made (except as may be necessary to comply with the notice requirements as
+applicable), and use of any Bitwarden trademarks must comply with Bitwarden
+Trademark Guidelines 
+<https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md>.
