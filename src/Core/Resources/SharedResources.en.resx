@@ -602,6 +602,9 @@
     <value>Send Options</value>
     <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
   </data>
+  <data name="Options" xml:space="preserve">
+    <value>Options</value>
+  </data>
   <data name="DisableHideEmail" xml:space="preserve">
     <value>Do not allow users to hide their email address when creating or editing a Send.</value>
     <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>

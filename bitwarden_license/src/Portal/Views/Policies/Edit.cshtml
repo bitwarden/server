@@ -73,6 +73,17 @@
         </div>
     }
 
+    @if (Model.PolicyType == PolicyType.SendOptions)
+    {
+        <div class="callout callout-warning" role="alert">
+            <h3 class="callout-heading">
+                <i class="fa fa-warning" *ngIf="icon" aria-hidden="true"></i>
+                @i18nService.T("Warning")
+            </h3>
+            @i18nService.T("SendOptionsExemption")
+        </div>
+    }
+
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <div class="form-group">
@@ -189,17 +200,13 @@
 
     @if (Model.PolicyType == PolicyType.SendOptions)
     {
-        <div class="callout callout-warning" role="alert">
-            <h3 class="callout-heading">
-                <i class="fa fa-warning" *ngIf="icon" aria-hidden="true"></i>
-                @i18nService.T("Warning")
-            </h3>
-            @i18nService.T("SendOptionsExemption")
-        </div>
-        <div class="form-group">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" asp-for="SendOptionsDataModel.DisableHideEmail">
-                <label class="form-check-label" asp-for="SendOptionsDataModel.DisableHideEmail"></label>
+        <div class="config-section">
+            <h2>@i18nService.T("Options")</h2>
+            <div class="form-group">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="SendOptionsDataModel.DisableHideEmail">
+                    <label class="form-check-label" asp-for="SendOptionsDataModel.DisableHideEmail"></label>
+                </div>
             </div>
         </div>
     }
