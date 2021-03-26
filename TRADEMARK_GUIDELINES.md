@@ -37,8 +37,8 @@ This Policy covers the following non-exhaustive list of our trademarks:
 
 1. Our trademarks and service marks (the "Marks"):
     
-- Bitwarden®
-- ![Logo](https://i.imgur.com/FIv4bYq.png)
+    - Bitwarden®
+    - ![Logo](https://i.imgur.com/FIv4bYq.png)
 
 2. The unique visual styling of our website and elements used in or otherwise related to
     the products and services we offer (the "Trade Dress"). See our Style Guide for further
@@ -127,8 +127,10 @@ combined with any other word or words).
 - BitWarden
 - Bitward
 
-**Use Marks as Proper Adjectives Followed by a Generic Term.** Trademarks should be used as
-adjectives followed by a generic modifier, and not as nouns or verbs. For example:
+### Use Marks as Proper Adjectives Followed by a Generic Term.
+
+Trademarks should be used as adjectives followed by a generic modifier, and not as nouns
+or verbs. For example:
 
 **Correct**
 
@@ -141,8 +143,10 @@ adjectives followed by a generic modifier, and not as nouns or verbs. For exampl
 
 - Bitwarden® is widely used.
 
-**Do Not Use Marks in the Possessive Form.** Because trademarks are not nouns, they should not
-be used in the possessive form. For example:
+### Do Not Use Marks in the Possessive Form.
+
+Because trademarks are not nouns, they should not be used in the possessive form.
+For example:
 
 **Correct**
 
@@ -152,7 +156,7 @@ be used in the possessive form. For example:
 
 - Bitwarden's platform safely stores and protects passwords.
 
-**Do Not Use Marks to Suggest Endorsement by Bitwarden.**
+### Do Not Use Marks to Suggest Endorsement by Bitwarden.
 
 **Correct**
 
