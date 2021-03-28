@@ -59,7 +59,7 @@ namespace Bit.Core.Services
         public async Task SaveSendAsync(Send send)
         {
             // Make sure user can save Sends
-            await ValidateUserCanSaveAsync(send.UserId);
+            await ValidateUserCanSaveAsync(send.UserId, send);
 
             if (send.Id == default(Guid))
             {
@@ -265,7 +265,7 @@ namespace Bit.Core.Services
             return _passwordHasher.HashPassword(new User(), password);
         }
 
-        private async Task ValidateUserCanSaveAsync(Guid? userId)
+        private async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
         {
             if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
             {
@@ -284,6 +284,23 @@ namespace Bit.Core.Services
                 if (!_currentContext.ManagePolicies(policy.OrganizationId))
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+                }
+            }
+
+            if (send.HideEmail.GetValueOrDefault())
+            {
+                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
+                {
+                    SendOptionsPolicyData data = null;
+                    if (policy.Data != null)
+                    {
+                        data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
+                    }
+
+                    if (data?.DisableHideEmail ?? false)
+                    {
+                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                    }
                 }
             }
         }
