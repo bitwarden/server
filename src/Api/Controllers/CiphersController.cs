@@ -601,7 +601,7 @@ namespace Bit.Api.Controllers
             };
         }
 
-        [HttpGet("{id}/attachment/{attachmentId}/renew")]
+        [HttpGet("{id}/attachment/{attachmentId}")]
         public async Task<AttachmentUploadDataResponseModel> RenewFileUploadUrl(string id, string attachmentId)
         {
             var userId = _userService.GetProperUserId(User).Value;
