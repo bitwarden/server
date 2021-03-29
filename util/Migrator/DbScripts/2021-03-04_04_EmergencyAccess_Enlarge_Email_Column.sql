@@ -3,7 +3,7 @@ IF COL_LENGTH('[dbo].[EmergencyAccess]', 'Email') = 100
 BEGIN
 	ALTER TABLE [dbo].[EmergencyAccess] 
 	ALTER COLUMN 
-		Email NVARCHAR(256) NOT NULL
+		Email NVARCHAR(256) NULL
 END
 GO
 
