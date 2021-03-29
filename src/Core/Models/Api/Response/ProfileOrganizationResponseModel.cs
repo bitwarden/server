@@ -30,6 +30,8 @@ namespace Bit.Core.Models.Api
             SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
             Identifier = organization.Identifier;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
+            ResetPasswordKey = organization.ResetPasswordKey;
+            UserId = organization.UserId?.ToString();
         }
 
         public string Id { get; set; }
@@ -55,5 +57,7 @@ namespace Bit.Core.Models.Api
         public bool SsoBound { get; set; }
         public string Identifier { get; set; }
         public Permissions Permissions { get; set; }
+        public string ResetPasswordKey { get; set; }
+        public string UserId { get; set; }
     }
 }

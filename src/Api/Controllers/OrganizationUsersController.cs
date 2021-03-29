@@ -180,6 +180,12 @@ namespace Bit.Api.Controllers
             var loggedInUserId = _userService.GetProperUserId(User);
             await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
         }
+        
+        [HttpPut("{userId}/reset-password-enrollment")]
+        public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody]OrganizationUserResetPasswordEnrollmentRequestModel model)
+        {
+            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey);
+        }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
