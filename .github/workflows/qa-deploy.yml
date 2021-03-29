@@ -14,25 +14,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Api
-            base_path: .
           - name: Admin
             base_path: .
             gulp: true
-          - name: Billing
-            base_path: .
-          - name: Events
-            base_path: .
-          - name: Notifications
-            base_path: .
-          - name: Sso
-            base_path: ./bitwarden_license
-            gulp: true
-          - name: Portal
-            base_path: ./bitwarden_license
-            gulp: true
-          - name: Identity
-            base_path: .
+          #- name: Api
+          #  base_path: .
+          #- name: Billing
+          #  base_path: .
+          #- name: Events
+          #  base_path: .
+          #- name: Notifications
+          #  base_path: .
+          #- name: Sso
+          #  base_path: ./bitwarden_license
+          #  gulp: true
+          #- name: Portal
+          #  base_path: ./bitwarden_license
+          #  gulp: true
+          #- name: Identity
+          #  base_path: .
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -102,6 +102,7 @@ jobs:
 
   deploy-identity:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -120,6 +121,7 @@ jobs:
 
   deploy-api:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -138,6 +140,7 @@ jobs:
 
   deploy-billing:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -156,6 +159,7 @@ jobs:
 
   deploy-events:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -174,6 +178,7 @@ jobs:
 
   deploy-sso:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -192,6 +197,7 @@ jobs:
 
   deploy-portal:
     runs-on: ubuntu-latest
+    if: false
     needs: build
     environment: QA
     steps:
@@ -222,6 +228,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
-          slot-name: "staging"
+          slot-name: ${{ secrets.ADMIN_WEBAPP_NAME }}-staging
           publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Admin.zip
