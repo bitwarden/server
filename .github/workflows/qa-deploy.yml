@@ -114,7 +114,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.IDENTITY_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.IDENTITY_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Identity.zip
 
@@ -132,7 +132,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.API_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.API_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Api.zip
 
@@ -150,7 +150,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.BILLING_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.BILLING_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Billing.zip
 
@@ -168,7 +168,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.EVENTS_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.EVENTS_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Events.zip
 
@@ -186,7 +186,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.SSO_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.SSO_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.SSO_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Sso.zip
 
@@ -204,7 +204,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.PORTAL_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.PORTAL_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Portal.zip
 
@@ -222,6 +222,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.ADMIN_WEBAPP_SLOTNAME }}
+          slot-name: "staging"
           publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Admin.zip
