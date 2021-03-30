@@ -44,10 +44,12 @@ namespace Bit.Core.Services
             await blob.UploadFromStreamAsync(stream);
         }
 
-        public async Task DeleteFileAsync(Send send, string fileId)
+        public async Task DeleteFileAsync(Send send, string fileId) => await DeleteBlobAsync(BlobName(send, fileId));
+
+        public async Task DeleteBlobAsync(string blobName)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+            var blob = _sendFilesContainer.GetBlockBlobReference(blobName);
             await blob.DeleteIfExistsAsync();
         }
 
