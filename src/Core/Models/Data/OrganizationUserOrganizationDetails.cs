@@ -28,5 +28,6 @@ namespace Bit.Core.Models.Data
         public string SsoExternalId { get; set; }
         public string Identifier { get; set; }
         public string Permissions { get; set; }
+        public string ResetPasswordKey { get; set; }
     }
 }
