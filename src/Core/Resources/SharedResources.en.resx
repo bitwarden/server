@@ -638,4 +638,10 @@
     <value>Requested Authentication Context Class Reference values (acr_values)</value>
     <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
   </data>
+  <data name="LoggedOutMessage" xml:space="preserve">
+    <value>You have been logged out of the Bitwarden Business Portal.</value>
+  </data>
+  <data name="AccessDeniedError" xml:space="preserve">
+    <value>Access Denied to this resource.</value>
+  </data>
 </root>
