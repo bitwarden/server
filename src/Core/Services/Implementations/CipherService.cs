@@ -325,14 +325,12 @@ namespace Bit.Core.Services
 
         public async Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
-            // var attachmentData = JsonConvert.DeserializeObject<CipherAttachment.MetaData>(attachment.AttachmentData);
-
             var (valid, realSize) = await _attachmentStorageService.ValidateFileAsync(cipher, attachmentData, _fileSizeLeeway);
 
             if (!valid || realSize > MAX_FILE_SIZE)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
-                await DeleteAttachmentAsync(cipher, attachmentData.AttachmentId);
+                await DeleteAttachmentAsync(cipher, attachmentData);
                 return false;
             }
             // Update Send data if necessary
@@ -432,7 +430,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await DeleteAttachmentAsync(cipher, attachmentId);
+            await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
         }
 
         public async Task PurgeAsync(Guid organizationId)
@@ -907,12 +905,16 @@ namespace Bit.Core.Services
             }
         }
 
-        private async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId)
+        private async Task DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
-            var data = cipher.GetAttachments()[attachmentId];
-            await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentId);
-            cipher.DeleteAttachment(attachmentId);
-            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
+            if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
+            {
+                return;
+            }
+            
+            await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentData.AttachmentId);
+            cipher.DeleteAttachment(attachmentData.AttachmentId);
+            await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
             await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentDeleted);
 
             // push
