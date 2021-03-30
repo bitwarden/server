@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Data
         public string ExternalId { get; set; }
         public string SsoExternalId { get; set; }
         public string Permissions { get; set; }
+        public string ResetPasswordKey { get; set; }
 
         public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
         {

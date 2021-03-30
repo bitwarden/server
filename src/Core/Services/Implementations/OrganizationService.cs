@@ -1378,6 +1378,24 @@ namespace Bit.Core.Services
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
                 EventType.OrganizationUser_UpdatedGroups);
         }
+        
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
+                orgUser.Status != OrganizationUserStatusType.Confirmed ||
+                orgUser.OrganizationId != organizationId)
+            {
+                throw new BadRequestException("User not valid.");
+            }
+            
+            // TODO - Block certain org types from using this feature?
+
+            orgUser.ResetPasswordKey = resetPasswordKey;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ? 
+                EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
+        }
 
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
         {
