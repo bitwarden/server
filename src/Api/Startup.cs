@@ -50,6 +50,12 @@ namespace Bit.Api
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+            // Event Grid
+            if (!string.IsNullOrWhiteSpace(globalSettings.EventGridKey))
+            {
+                ApiHelpers.EventGridKey = globalSettings.EventGridKey;
+            }
+
             // Stripe Billing
             StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 

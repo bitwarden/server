@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 
@@ -8,6 +9,8 @@ namespace Bit.Core.Services
 {
     public class NoopAttachmentStorageService : IAttachmentStorageService
     {
+        public FileUploadType FileUploadType => FileUploadType.Direct;
+
         public Task CleanupAsync(Guid cipherId)
         {
             return Task.FromResult(0);
@@ -58,5 +61,13 @@ namespace Bit.Core.Services
             return Task.FromResult((string)null);
         }
 
+        public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+        {
+            return Task.FromResult(default(string));
+        }
+        public Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
+        {
+            return Task.FromResult((false, (long?)null));
+        }
     }
 }

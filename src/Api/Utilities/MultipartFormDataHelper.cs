@@ -108,7 +108,7 @@ namespace Bit.Api.Utilities
             }
         }
 
-        public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, Task> callback)
+        public static async Task GetFileAsync(this HttpRequest request, Func<Stream, Task> callback)
         {
             var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
                 _defaultFormOptions.MultipartBoundaryLengthLimit);

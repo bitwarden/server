@@ -17,6 +17,8 @@ namespace Bit.Core.Services
 {
     public class SendService : ISendService
     {
+        public const long MAX_FILE_SIZE = 500L * 1024L * 1024L; // 500MB
+        public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPolicyRepository _policyRepository;
@@ -142,10 +144,11 @@ namespace Bit.Core.Services
 
             var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
-            if (!valid)
+            if (!valid || realSize > MAX_FILE_SIZE)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
                 await DeleteSendAsync(send);
+                return false;
             }
 
             // Update Send data if necessary
