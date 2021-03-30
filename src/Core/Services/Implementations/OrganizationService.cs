@@ -1379,10 +1379,11 @@ namespace Bit.Core.Services
                 EventType.OrganizationUser_UpdatedGroups);
         }
         
-        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey)
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
-            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
+                orgUser.Status != OrganizationUserStatusType.Confirmed ||
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
