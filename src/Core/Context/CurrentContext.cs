@@ -252,6 +252,12 @@ namespace Bit.Core.Context
             return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
                         && (o.Permissions?.ManageUsers ?? false)) ?? false);
         }
+        
+        public bool ManageResetPassword(Guid orgId)
+        {
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+                        && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
+        }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId)
@@ -294,7 +300,8 @@ namespace Bit.Core.Context
                 ManageGroups = hasClaim("managegroups"),
                 ManagePolicies = hasClaim("managepolicies"),
                 ManageSso = hasClaim("managesso"),
-                ManageUsers = hasClaim("manageusers")
+                ManageUsers = hasClaim("manageusers"),
+                ManageResetPassword = hasClaim("manageresetpassword")
             };
         }
     }
