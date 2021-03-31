@@ -70,7 +70,7 @@ namespace Bit.Core.Identity
                 AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
             };
 
-            var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
+            var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
 
             provider.MetaData["login"] = options;
 
