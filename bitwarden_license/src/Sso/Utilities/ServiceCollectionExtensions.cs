@@ -62,6 +62,7 @@ namespace Bit.Sso.Utilities
                         options.UserInteraction.ErrorUrl = "/Error";
                         options.UserInteraction.ErrorIdParameter = "errorId";
                     }
+                    options.InputLengthRestrictions.UserName = 256;
                 })
                 .AddInMemoryCaching()
                 .AddInMemoryClients(new List<Client>
