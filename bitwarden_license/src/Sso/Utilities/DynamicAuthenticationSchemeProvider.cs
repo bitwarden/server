@@ -339,13 +339,29 @@ namespace Bit.Core.Business.Sso
             // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
             if (!string.IsNullOrWhiteSpace(config.AcrValues))
             {
-                oidcOptions.Events = new OpenIdConnectEvents
+                oidcOptions.Events ??= new OpenIdConnectEvents();
+                oidcOptions.Events.OnRedirectToIdentityProvider = ctx =>
                 {
-                    OnRedirectToIdentityProvider = ctx =>
+                    ctx.ProtocolMessage.AcrValues = config.AcrValues;
+                    return Task.CompletedTask;
+                };
+            }
+            if (!string.IsNullOrWhiteSpace(config.ExpectedReturnAcrValue))
+            {
+                oidcOptions.Events ??= new OpenIdConnectEvents();
+                oidcOptions.Events.OnMessageReceived = ctx =>
+                {
+                    // TODO: Determine if this is correct or if there's a different format or parameter to expect this back
+                    if (ctx.ProtocolMessage.AcrValues != config.ExpectedReturnAcrValue)
                     {
-                        ctx.ProtocolMessage.AcrValues = config.AcrValues;
-                        return Task.CompletedTask;
+                        ctx.Fail("Expected acr_values was not returned with the authentication response.");
                     }
+                    return Task.CompletedTask;
+                };
+                oidcOptions.Events.OnTokenResponseReceived = ctx =>
+                {
+                    // TODO: Figure out token validation for return acr_values, if possible
+                    return Task.CompletedTask;
                 };
             }
 
