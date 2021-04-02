@@ -26,3 +26,8 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId]
     ON [dbo].[Cipher]([OrganizationId] ASC);
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Cipher_DeletedDate]
+    ON [dbo].[Cipher]([DeletedDate] ASC);
+
