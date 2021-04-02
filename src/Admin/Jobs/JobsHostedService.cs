@@ -55,13 +55,19 @@ namespace Bit.Admin.Jobs
                 .StartNow()
                 .WithCronSchedule("0 0 0 ? * SUN", x => x.InTimeZone(timeZone))
                 .Build();
+            var everyDayAtMidnightUtc = TriggerBuilder.Create()
+                .WithIdentity("EveryDayAtMidnightUtc")
+                .StartNow()
+                .WithCronSchedule("0 0 0 * * ?")
+                .Build();
 
             var jobs = new List<Tuple<Type, ITrigger>>
             {
                 new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
-                new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger)
+                new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
+                new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc)
             };
 
             if (!_globalSettings.SelfHosted)
@@ -83,6 +89,7 @@ namespace Bit.Admin.Jobs
             services.AddTransient<DatabaseRebuildlIndexesJob>();
             services.AddTransient<DatabaseExpiredGrantsJob>();
             services.AddTransient<DeleteSendsJob>();
+            services.AddTransient<DeleteCiphersJob>();
         }
     }
 }
