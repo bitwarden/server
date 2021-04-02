@@ -23,6 +23,7 @@ namespace Bit.Core.Settings
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
+        public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();

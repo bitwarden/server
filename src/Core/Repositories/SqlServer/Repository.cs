@@ -43,7 +43,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public virtual async Task CreateAsync(T obj)
+        public virtual async Task<T> CreateAsync(T obj)
         {
             obj.SetNewId();
             using (var connection = new SqlConnection(ConnectionString))
@@ -53,6 +53,7 @@ namespace Bit.Core.Repositories.SqlServer
                     obj,
                     commandType: CommandType.StoredProcedure);
             }
+            return obj;
         }
 
         public virtual async Task ReplaceAsync(T obj)
