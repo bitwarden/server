@@ -165,9 +165,20 @@ namespace Bit.Core.Repositories.EntityFramework
             await dbContext.SaveChangesAsync();
         }
 
-        public Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetBySsoUserAsync(dbContext, externalId, organizationId);
+            }
+        }
+
+        internal async Task<User> GetBySsoUserAsync(DatabaseContext dbContext, string externalId, Guid? organizationId)
+        {
+            var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
+                    e.OrganizationId == organizationId && e.ExternalId == externalId);
+            return await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
         }
     }
 }

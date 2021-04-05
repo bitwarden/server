@@ -10,6 +10,10 @@ using System.Collections.Generic;
 using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using System;
+using Bit.Core.Repositories;
+using Bit.Core.Test.Helpers.Factories;
+using Bit.Core.Repositories.EntityFramework;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {

@@ -10,6 +10,7 @@ using TableModel = Bit.Core.Models.Table;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
+using System;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -138,6 +139,144 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
             var distinctItems = savedKdfInformation.Distinct(equalityComparer);
             Assert.True(!distinctItems.Skip(1).Any());
+        }
+
+        [Theory, EfUserAutoData]
+        public async void SearchAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo, 
+                int skip, int take, UserCompare equalityCompare, SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            var searchedEfUsers = new List<TableModel.User>();
+            foreach (var option in DatabaseOptionsFactory.Options)
+            {
+                using (var context = new EfRepo.DatabaseContext(option)) 
+                {
+                    var postEfUser = await sutProvider.Sut.CreateAsync(context, user);
+                    var searchedEfUsersCollection = await sutProvider.Sut.SearchAsync(context, postEfUser.Email, skip, take);
+                    searchedEfUsers.Concat(searchedEfUsersCollection.ToList());
+                }
+            }
+
+            var postSqlUser = await sqlUserRepo.CreateAsync(user);
+            var searchedSqlUsers = await sqlUserRepo.SearchAsync(postSqlUser.Email, skip, take);
+
+            var distinctItems = searchedEfUsers.Concat(searchedSqlUsers).Distinct(equalityCompare);
+            Assert.True(!distinctItems.Skip(1).Any());
+        }
+
+        [Theory, EfUserAutoData]
+        public async void GetManyByPremiumAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            var returnedUsers = new List<TableModel.User>();
+            foreach (var option in DatabaseOptionsFactory.Options)
+            {
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    var postEfUser = await sutProvider.Sut.CreateAsync(context, user);
+                    var searchedEfUsers = await sutProvider.Sut.GetManyByPremiumAsync(context, user.Premium);
+                    returnedUsers.Concat(searchedEfUsers.ToList());
+                }
+            }
+
+            var postSqlUser = await sqlUserRepo.CreateAsync(user);
+            var searchedSqlUsers = await sqlUserRepo.GetManyByPremiumAsync(user.Premium);
+            returnedUsers.Concat(searchedSqlUsers.ToList());
+
+            Assert.True(returnedUsers.All(x => x.Premium == user.Premium));
+        }
+
+        [Theory, EfUserAutoData]
+        public async void GetPublicKeyAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            var returnedKeys = new List<string>();
+            foreach (var option in DatabaseOptionsFactory.Options)
+            {
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    var postEfUser = await sutProvider.Sut.CreateAsync(context, user);
+                    var efKey = await sutProvider.Sut.GetPublicKeyAsync(context, postEfUser.Id);
+                    returnedKeys.Add(efKey);
+                }
+            }
+
+            var postSqlUser = await sqlUserRepo.CreateAsync(user);
+            var sqlKey = await sqlUserRepo.GetPublicKeyAsync(postSqlUser.Id);
+            returnedKeys.Add(sqlKey);
+
+            Assert.True(!returnedKeys.Distinct().Skip(1).Any());
+        }
+
+        [Theory, EfUserAutoData]
+        public async void GetAccountRevisionDateAsync(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            var returnedKeys = new List<string>();
+            foreach (var option in DatabaseOptionsFactory.Options)
+            {
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    var postEfUser = await sutProvider.Sut.CreateAsync(context, user);
+                    var efKey = await sutProvider.Sut.GetPublicKeyAsync(context, postEfUser.Id);
+                    returnedKeys.Add(efKey);
+                }
+            }
+
+            var postSqlUser = await sqlUserRepo.CreateAsync(user);
+            var sqlKey = await sqlUserRepo.GetPublicKeyAsync(postSqlUser.Id);
+            returnedKeys.Add(sqlKey);
+
+            Assert.True(!returnedKeys.Distinct().Skip(1).Any());
+        }
+
+        // TODO: need basic CipherRepo CRUD methods & fixtures to be built out and tested to properly test this method
+        [Theory, EfUserAutoData]
+        public void UpdateStorageAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                List<TableModel.Cipher> ciphers, SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            Assert.True(true);
+        }
+
+        [Theory, EfUserAutoData]
+        public async void UpdateRenewalReminderDateAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                DateTime updatedReminderDate, SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            var savedDates = new List<DateTime?>();
+            foreach(var option in DatabaseOptionsFactory.Options)
+            {
+                var postEfUser = user;
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    postEfUser = await sutProvider.Sut.CreateAsync(context, user);
+                }
+
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    await sutProvider.Sut.UpdateRenewalReminderDateAsync(context, postEfUser.Id, updatedReminderDate);
+                }
+
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    var replacedUser = await sutProvider.Sut.GetByIdAsync(context, postEfUser.Id);
+                    savedDates.Add(replacedUser.RenewalReminderDate);
+                }
+            }
+
+            var postSqlUser = await sqlUserRepo.CreateAsync(user);
+            await sqlUserRepo.UpdateRenewalReminderDateAsync(postSqlUser.Id, updatedReminderDate);
+            var replacedSqlUser = await sqlUserRepo.GetByIdAsync(postSqlUser.Id);
+            savedDates.Add(replacedSqlUser.RenewalReminderDate);
+
+            var distinctItems = savedDates.GroupBy(e => e.ToString());
+            Assert.True(!distinctItems.Skip(1).Any() && savedDates.All(e => e.ToString() == updatedReminderDate.ToString()));
+        }
+
+        // TODO: need basic SsoUserRepo CRUD methoids & fixtures to be built out and tested to properly test this method
+        [Theory, EfUserAutoData]
+        public void GetBySsoUserAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                SutProvider<EfRepo.UserRepository> sutProvider)
+        {
+            Assert.True(true);
         }
     }
 }
