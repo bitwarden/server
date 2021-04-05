@@ -122,6 +122,11 @@ namespace Bit.Core.Services
             {
                 if (cipher.OrganizationId.HasValue && collectionIds != null)
                 {
+                    var existingCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value)).Select(c => c.Id);
+                    if (collectionIds.Except(existingCollectionIds).Any())
+                    {
+                        throw new BadRequestException("Specified CollectionId does not exist on the specified Organization.");
+                    }
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
                 }
                 else
@@ -198,7 +203,7 @@ namespace Bit.Core.Services
                 Key = request.Key,
                 Size = request.FileSize,
                 Validated = false,
-           };
+            };
 
             var uploadUrl = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, data);
 
@@ -248,7 +253,8 @@ namespace Bit.Core.Services
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_AttachmentCreated);
                 cipher.AddAttachment(attachmentId, data);
 
-                if (!await ValidateCipherAttachmentFile(cipher, data)) {
+                if (!await ValidateCipherAttachmentFile(cipher, data))
+                {
                     throw new Exception("Content-Length does not match uploaded file size");
                 }
             }
@@ -911,7 +917,7 @@ namespace Bit.Core.Services
             {
                 return;
             }
-            
+
             await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentData.AttachmentId);
             cipher.DeleteAttachment(attachmentData.AttachmentId);
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
