@@ -43,6 +43,7 @@ namespace Bit.Core.Context
         bool ManagePolicies(Guid orgId);
         bool ManageSso(Guid orgId);
         bool ManageUsers(Guid orgId);
+        bool ManageResetPassword(Guid orgId);
 
         Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId);

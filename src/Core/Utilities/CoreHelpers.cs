@@ -788,6 +788,11 @@ namespace Bit.Core.Utilities
                                 {
                                     claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
                                 }
+                                
+                                if (org.Permissions.ManageResetPassword)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
+                                }
                             }
                             break;
                         default:
