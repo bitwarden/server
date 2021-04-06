@@ -28,7 +28,7 @@ namespace Bit.Setup
 
             if (!_context.Config.Ssl)
             {
-                var skipSSL = false;
+                var skipSSL = _context.Parameters.ContainsKey("skip-ssl") && (_context.Parameters["skip-ssl"] == "true" || _context.Parameters["skip-ssl"] == "1");
                 if (_context.Parameters.ContainsKey("skip-ssl"))
                 {
                     skipSSL = _context.Parameters["skip-ssl"] == "true" ||
