@@ -196,8 +196,8 @@ namespace Bit.Setup
 
         private static bool ValidateInstallation()
         {
-            var installationId = "";
-            var installationKey = "";
+            var installationId = string.Empty;
+            var installationKey = string.Empty;
             
             if (_context.Parameters.ContainsKey("install-id"))
             {
