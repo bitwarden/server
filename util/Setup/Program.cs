@@ -196,15 +196,35 @@ namespace Bit.Setup
 
         private static bool ValidateInstallation()
         {
-            var installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");
+            var installationId = "";
+            var installationKey = "";
+            
+            if (_context.Parameters.ContainsKey("install-id"))
+            {
+                installationId = _context.Parameters["install-id"].ToLowerInvariant();
+            }
+            else
+            {
+                installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");                
+            }
+            
             if (!Guid.TryParse(installationId.Trim(), out var installationidGuid))
             {
                 Console.WriteLine("Invalid installation id.");
                 return false;
             }
 
+            if (_context.Parameters.ContainsKey("install-key"))
+            {
+                installationKey = _context.Parameters["install-key"];
+            }
+            else
+            {
+                installationKey = Helpers.ReadInput("Enter your installation key");
+            }
+            
             _context.Install.InstallationId = installationidGuid;
-            _context.Install.InstallationKey = Helpers.ReadInput("Enter your installation key");
+            _context.Install.InstallationKey = installationKey;
 
             try
             {
