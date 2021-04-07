@@ -67,7 +67,7 @@ namespace Bit.Admin.Models
         [Display(Name = "Plan Name")]
         public string Plan { get; set; }
         [Display(Name = "Seats")]
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
         [Display(Name = "Max. Collections")]
         public short? MaxCollections { get; set; }
         [Display(Name = "Policies")]

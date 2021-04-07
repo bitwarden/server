@@ -11,7 +11,7 @@
     [BillingEmail]          NVARCHAR (256)   NOT NULL,
     [Plan]                  NVARCHAR (50)    NOT NULL,
     [PlanType]              TINYINT          NOT NULL,
-    [Seats]                 SMALLINT         NULL,
+    [Seats]                 INT              NULL,
     [MaxCollections]        SMALLINT         NULL,
     [UsePolicies]           BIT              NOT NULL,
     [UseSso]                BIT              NOT NULL,
