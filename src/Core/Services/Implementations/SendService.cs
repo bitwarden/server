@@ -316,7 +316,12 @@ namespace Bit.Core.Services
                 var user = await _userRepository.GetByIdAsync(send.UserId.Value);
                 if (!await _userService.CanAccessPremium(user))
                 {
-                    throw new BadRequestException("You must have premium status to use file sends.");
+                    throw new BadRequestException("You must have premium status to use file Sends.");
+                }
+
+                if (!user.EmailVerified)
+                {
+                    throw new BadRequestException("You must confirm your email to use file Sends.");
                 }
 
                 if (user.Premium)
