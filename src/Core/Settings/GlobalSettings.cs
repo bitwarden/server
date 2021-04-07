@@ -1,18 +1,36 @@
 ﻿using System;
-using Bit.Core.Enums;
 
 namespace Bit.Core.Settings
 {
     public class GlobalSettings : IGlobalSettings
     {
+        private string _logDirectory;
+        private string _licenseDirectory;
+
+        public GlobalSettings()
+        {
+            BaseServiceUri = new BaseServiceUriSettings(this);
+            Attachment = new FileStorageSettings(this, "attchments", "attchments");
+            Send = new FileStorageSettings(this, "attchments/send", "attchments/send");
+            DataProtection = new DataProtectionSettings(this);
+        }
+
         public bool SelfHosted { get; set; }
         public virtual string KnownProxies { get; set; }
         public virtual string SiteName { get; set; }
         public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
-        public virtual string LogDirectory { get; set; }
+        public virtual string LogDirectory
+        {
+            get => BuildDirectory(_logDirectory, "/logs");
+            set { _logDirectory = value; }
+        }
         public virtual long? LogRollBySizeLimit { get; set; }
-        public virtual string LicenseDirectory { get; set; }
+        public virtual string LicenseDirectory
+        {
+            get => BuildDirectory(_licenseDirectory, "/core/licenses");
+            set { _licenseDirectory = value; }
+        }
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
         public virtual string InternalIdentityKey { get; set; }
@@ -23,17 +41,17 @@ namespace Bit.Core.Settings
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
-        public virtual BaseServiceUriSettings BaseServiceUri { get; set; } = new BaseServiceUriSettings();
+        public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
-        public virtual IFileStorageSettings Attachment { get; set; } = new FileStorageSettings();
-        public virtual FileStorageSettings Send { get; set; } = new FileStorageSettings();
+        public virtual IFileStorageSettings Attachment { get; set; }
+        public virtual FileStorageSettings Send { get; set; }
         public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
-        public virtual DataProtectionSettings DataProtection { get; set; } = new DataProtectionSettings();
+        public virtual DataProtectionSettings DataProtection { get; set; }
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
         public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
         public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
@@ -47,21 +65,137 @@ namespace Bit.Core.Settings
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
         public virtual SsoSettings Sso { get; set; } = new SsoSettings();
 
+        public string BuildExternalUri(string explicitValue, string name)
+        {
+            if (!string.IsNullOrWhiteSpace(explicitValue))
+            {
+                return explicitValue;
+            }
+            if (!SelfHosted)
+            {
+                return null;
+            }
+            return string.Format("{0}/{1}", BaseServiceUri.Vault, name);
+        }
+
+        public string BuildInternalUri(string explicitValue, string name)
+        {
+            if (!string.IsNullOrWhiteSpace(explicitValue))
+            {
+                return explicitValue;
+            }
+            if (!SelfHosted)
+            {
+                return null;
+            }
+            return string.Format("http://{0}:5000", name);
+        }
+
+        public string BuildDirectory(string explicitValue, string appendedPath)
+        {
+            if (!string.IsNullOrWhiteSpace(explicitValue))
+            {
+                return explicitValue;
+            }
+            if (!SelfHosted)
+            {
+                return null;
+            }
+            return string.Concat("/etc/bitwarden", appendedPath);
+        }
+
         public class BaseServiceUriSettings
         {
+            private readonly GlobalSettings _globalSettings;
+
+            private string _api;
+            private string _identity;
+            private string _admin;
+            private string _notifications;
+            private string _sso;
+            private string _portal;
+            private string _internalApi;
+            private string _internalIdentity;
+            private string _internalAdmin;
+            private string _internalNotifications;
+            private string _internalSso;
+            private string _internalVault;
+            private string _internalPortal;
+
+            public BaseServiceUriSettings(GlobalSettings globalSettings)
+            {
+                _globalSettings = globalSettings;
+            }
+
             public string Vault { get; set; }
             public string VaultWithHash => $"{Vault}/#";
-            public string Api { get; set; }
-            public string Identity { get; set; }
-            public string Admin { get; set; }
-            public string Notifications { get; set; }
-            public string Sso { get; set; }
-            public string InternalNotifications { get; set; }
-            public string InternalAdmin { get; set; }
-            public string InternalIdentity { get; set; }
-            public string InternalApi { get; set; }
-            public string InternalVault { get; set; }
-            public string InternalSso { get; set; }
+
+            public string Api
+            {
+                get => _globalSettings.BuildExternalUri(_api, "api");
+                set { _api = value; }
+            }
+            public string Identity
+            {
+                get => _globalSettings.BuildExternalUri(_identity, "identity");
+                set { _identity = value; }
+            }
+            public string Admin
+            {
+                get => _globalSettings.BuildExternalUri(_admin, "admin");
+                set { _admin = value; }
+            }
+            public string Notifications
+            {
+                get => _globalSettings.BuildExternalUri(_notifications, "notifications");
+                set { _notifications = value; }
+            }
+            public string Sso
+            {
+                get => _globalSettings.BuildExternalUri(_sso, "sso");
+                set { _sso = value; }
+            }
+            public string Portal
+            {
+                get => _globalSettings.BuildExternalUri(_portal, "portal");
+                set { _portal = value; }
+            }
+
+            public string InternalNotifications
+            {
+                get => _globalSettings.BuildInternalUri(_internalNotifications, "notifications");
+                set { _internalNotifications = value; }
+            }
+            public string InternalAdmin
+            {
+                get => _globalSettings.BuildInternalUri(_internalAdmin, "admin");
+                set { _internalAdmin = value; }
+            }
+            public string InternalIdentity
+            {
+                get => _globalSettings.BuildInternalUri(_internalIdentity, "identity");
+                set { _internalIdentity = value; }
+            }
+            public string InternalApi
+            {
+                get => _globalSettings.BuildInternalUri(_internalApi, "api");
+                set { _internalApi = value; }
+            }
+            public string InternalVault
+            {
+                get => _globalSettings.BuildInternalUri(_internalVault, "web");
+                set { _internalVault = value; }
+            }
+            public string InternalSso
+            {
+                get => _globalSettings.BuildInternalUri(_internalSso, "sso");
+                set { _internalSso = value; }
+            }
+            public string InternalPortal
+            {
+                get => _globalSettings.BuildInternalUri(_internalPortal, "portal");
+                set { _internalPortal = value; }
+            }
         }
 
         public class SqlSettings
@@ -88,7 +222,7 @@ namespace Bit.Core.Settings
                     _readOnlyConnectionString = value.Trim('"');
                 }
             }
-            
+
             public string JobSchedulerConnectionString
             {
                 get => _jobSchedulerConnectionString;
@@ -115,7 +249,19 @@ namespace Bit.Core.Settings
 
         public class FileStorageSettings : IFileStorageSettings
         {
+            private readonly GlobalSettings _globalSettings;
+            private readonly string _urlName;
+            private readonly string _directoryName;
             private string _connectionString;
+            private string _baseDirectory;
+            private string _baseUrl;
+
+            public FileStorageSettings(GlobalSettings globalSettings, string urlName, string directoryName)
+            {
+                _globalSettings = globalSettings;
+                _urlName = urlName;
+                _directoryName = directoryName;
+            }
 
             public string ConnectionString
             {
@@ -125,8 +271,18 @@ namespace Bit.Core.Settings
                     _connectionString = value.Trim('"');
                 }
             }
-            public string BaseDirectory { get; set; }
-            public string BaseUrl { get; set; }
+
+            public string BaseDirectory
+            {
+                get => _globalSettings.BuildDirectory(_baseDirectory, string.Concat("/core/", _directoryName));
+                set { _baseDirectory = value; }
+            }
+
+            public string BaseUrl
+            {
+                get => _globalSettings.BuildExternalUri(_baseUrl, _urlName);
+                set { _baseUrl = value; }
+            }
         }
 
         public class MailSettings
@@ -157,9 +313,22 @@ namespace Bit.Core.Settings
 
         public class DataProtectionSettings
         {
+            private readonly GlobalSettings _globalSettings;
+
+            private string _directory;
+
+            public DataProtectionSettings(GlobalSettings globalSettings)
+            {
+                _globalSettings = globalSettings;
+            }
+
             public string CertificateThumbprint { get; set; }
             public string CertificatePassword { get; set; }
-            public string Directory { get; set; }
+            public string Directory
+            {
+                get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
+                set { _directory = value; }
+            }
         }
 
         public class DocumentDbSettings
@@ -265,9 +434,15 @@ namespace Bit.Core.Settings
 
         public class InstallationSettings
         {
+            private string _identityUri;
+
             public Guid Id { get; set; }
             public string Key { get; set; }
-            public string IdentityUri { get; set; }
+            public string IdentityUri
+            {
+                get => string.IsNullOrWhiteSpace(_identityUri) ? "https://identity.bitwarden.com" : _identityUri;
+                set { _identityUri = value; }
+            }
         }
 
         public class AmazonSettings
