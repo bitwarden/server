@@ -274,6 +274,7 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
 
 IF OBJECT_ID('[dbo].[SsoUser_DeleteById]') IS NOT NULL
 BEGIN

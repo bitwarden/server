@@ -24,8 +24,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
-                    context.Database.EnsureDeleted();
-                    context.Database.EnsureCreated();
                     var postEfOrganization = await sutProvider.Sut.CreateAsync(context, organization);
                     var savedOrganization = await sutProvider.Sut.GetByIdAsync(context, organization.Id);
                     savedOrganizations.Add(savedOrganization);
