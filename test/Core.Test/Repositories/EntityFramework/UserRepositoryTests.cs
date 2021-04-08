@@ -21,7 +21,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 IMapper mapper, UserCompare equalityComparer, SutProvider<EfRepo.UserRepository> sutProvider)
         {
             var savedUsers = new List<TableModel.User>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -43,7 +43,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SqlRepo.UserRepository sqlUserRepo, UserCompare equalityComparer, SutProvider<EfRepo.UserRepository> sutProvider)
         {
             var savedUsers = new List<TableModel.User>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -68,7 +68,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         public async void DeleteAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo, UserCompare equalityComparer,
                 SutProvider<EfRepo.UserRepository> sutProvider)
         {
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 TableModel.User savedEfUser = null;
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -100,7 +100,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 UserCompare equalityComparer, SutProvider<EfRepo.UserRepository> sutProvider)
         {
             var savedUsers = new List<TableModel.User>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -123,7 +123,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         {
             
             var savedKdfInformation = new List<UserKdfInformation>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -242,7 +242,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 DateTime updatedReminderDate, SutProvider<EfRepo.UserRepository> sutProvider)
         {
             var savedDates = new List<DateTime?>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 var postEfUser = user;
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -278,7 +278,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.SsoUserRepository sqlSsoUserRepo, UserCompare equalityComparer)
         {
             var returnedList = new List<TableModel.User>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {

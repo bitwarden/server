@@ -22,7 +22,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             // init list to hold one instance of the tested object from each database provider
             var savedSsoConfigs = new List<TableModel.SsoConfig>();
 
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -64,7 +64,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             // init list to hold an instance of the tested object from each database provider
             var savedSsoConfigs = new List<TableModel.SsoConfig>();
 
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -116,7 +116,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SutProvider<EfRepo.SsoConfigRepository> ssoConfigRepoSut, SutProvider<EfRepo.OrganizationRepository> orgRepoSut,
                 TableModel.Organization org, SqlRepo.OrganizationRepository sqlOrganizationRepo)
         {
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -165,7 +165,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             // init list to hold one instance of the tested object from each database provider
             var returnedList = new List<TableModel.SsoConfig>();
 
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 TableModel.Organization savedEfOrg;
@@ -215,7 +215,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             // init list to hold one instance of the tested object from each database provider
             var returnedList = new List<TableModel.SsoConfig>();
 
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -260,7 +260,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         public async void GetManyByRevisionNotBeforeDate_Works(TableModel.SsoConfig ssoConfig, SqlRepo.SsoConfigRepository sqlSsoConfigRepo, SsoConfigCompare equalityComparer,
                 SutProvider<EfRepo.SsoConfigRepository> ssoConfigRepoSut, DateTime notBeforeDate, SutProvider<EfRepo.OrganizationRepository> orgRepoSut, TableModel.Organization org)
         {
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 // satisfy any foreign key constraints for the tested object
                 using (var context = new EfRepo.DatabaseContext(option))

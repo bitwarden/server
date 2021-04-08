@@ -20,7 +20,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
             var savedOrganizations = new List<TableModel.Organization>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -45,7 +45,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 OrganizationCompare equalityComparer, SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
             var savedOrganizations = new List<TableModel.Organization>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -71,7 +71,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
                 SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 TableModel.Organization savedEfOrganization = null;
                 using (var context = new EfRepo.DatabaseContext(option))
@@ -104,7 +104,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
             var returnedOrgs = new List<TableModel.Organization>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -127,7 +127,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
             var returnedOrgs = new List<TableModel.Organization>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
@@ -176,7 +176,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 SutProvider<EfRepo.OrganizationRepository> sutProvider)
         {
             var list = new List<DataModel.OrganizationAbility>();
-            foreach(var option in DatabaseOptionsFactory.Options)
+            foreach (var option in DatabaseOptionsFactory.Options)
             {
                 using (var context = new EfRepo.DatabaseContext(option))
                 {
