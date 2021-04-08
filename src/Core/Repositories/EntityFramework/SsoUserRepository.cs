@@ -18,9 +18,20 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.SsoUsers)
         { }
 
-        public Task DeleteAsync(Guid userId, Guid? organizationId)
+        public async Task DeleteAsync(Guid userId, Guid? organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                await DeleteAsync(dbContext, userId, organizationId);
+            }
+        }
+
+        internal async Task DeleteAsync(DatabaseContext dbContext, Guid userId, Guid? organizationId)
+        {
+            var entity = await GetDbSet(dbContext).SingleOrDefaultAsync(su => su.UserId == userId && su.OrganizationId == organizationId);
+            dbContext.Entry(entity).State = EntityState.Deleted;
+            await dbContext.SaveChangesAsync();
         }
     }
 }

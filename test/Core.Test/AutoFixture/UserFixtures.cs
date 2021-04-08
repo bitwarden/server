@@ -1,4 +1,3 @@
-using System.Linq;
 using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -10,10 +9,7 @@ using System.Collections.Generic;
 using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using System;
-using Bit.Core.Repositories;
-using Bit.Core.Test.Helpers.Factories;
-using Bit.Core.Repositories.EntityFramework;
-using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {
@@ -45,10 +41,15 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
       public void Customize(IFixture fixture)
       {
 
-         fixture.Customizations.Add(new UserBuilder());
          fixture.Customizations.Add(new GlobalSettingsBuilder());
+         fixture.Customizations.Add(new UserBuilder());
+         fixture.Customizations.Add(new OrganizationBuilder());
          fixture.Customize<IMapper>(x => x.FromFactory(() => 
-            new MapperConfiguration(cfg => cfg.AddProfile<UserMapperProfile>()).CreateMapper()));
+            new MapperConfiguration(cfg => {
+                cfg.AddProfile<UserMapperProfile>();
+                cfg.AddProfile<OrganizationMapperProfile>();
+                cfg.AddProfile<SsoUserMapperProfile>();
+            }).CreateMapper()));
       }
    }
 

@@ -6,7 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class User : Table.User
     {
-
+        public ICollection<OrganizationUser> OrganizationUsers { get; set; }
     }
 
     public class UserMapperProfile : Profile

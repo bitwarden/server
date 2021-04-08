@@ -6,7 +6,6 @@ using AutoMapper;
 using Bit.Core.Models.Table;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 
@@ -18,19 +17,50 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.SsoConfigs)
         { }
 
-        public Task<SsoConfig> GetByIdentifierAsync(string identifier)
+        public async Task<SsoConfig> GetByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetByOrganizationIdAsync(dbContext, organizationId);
+            }
         }
 
-        public Task<SsoConfig> GetByOrganizationIdAsync(Guid organizationId)
+        internal async Task<SsoConfig> GetByOrganizationIdAsync(DatabaseContext dbContext, Guid organizationId)
         {
-            throw new NotImplementedException();
+            var ssoConfig = await GetDbSet(dbContext).SingleOrDefaultAsync(sc => sc.OrganizationId == organizationId);
+            return Mapper.Map<TableModel.SsoConfig>(ssoConfig);
         }
 
-        public Task<ICollection<SsoConfig>> GetManyByRevisionNotBeforeDate(DateTime? notBefore)
+        public async Task<SsoConfig> GetByIdentifierAsync(string identifier)
         {
-            throw new NotImplementedException();
+
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetByIdentifierAsync(dbContext, identifier);
+            }
+        }
+
+        internal async Task<SsoConfig> GetByIdentifierAsync(DatabaseContext dbContext, string identifier)
+        {
+            var ssoConfig = await GetDbSet(dbContext).SingleOrDefaultAsync(sc => sc.Organization.Identifier == identifier);
+            return Mapper.Map<TableModel.SsoConfig>(ssoConfig);
+        }
+
+        public async Task<ICollection<SsoConfig>> GetManyByRevisionNotBeforeDate(DateTime? notBefore)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetManyByRevisionNotBeforeDate(dbContext, notBefore);
+            }
+        }
+        
+        internal async Task<ICollection<SsoConfig>> GetManyByRevisionNotBeforeDate(DatabaseContext dbContext, DateTime? notBefore)
+        {
+            var ssoConfigs = await GetDbSet(dbContext).Where(sc => sc.Enabled && sc.RevisionDate >= notBefore).ToListAsync();
+            return Mapper.Map<List<TableModel.SsoConfig>>(ssoConfigs);
         }
     }
 }

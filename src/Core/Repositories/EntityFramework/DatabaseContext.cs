@@ -76,11 +76,9 @@ namespace Bit.Core.Repositories.EntityFramework
 
             eGroupUser.HasNoKey();
 
-            eOrganization.Ignore(e => e.TwoFactorProviders);
-            eOrganization.Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
-
             if (Database.IsNpgsql()) 
             {
+                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType("jsonb");
                 eUser.Property(e => e.TwoFactorProviders).HasColumnType("jsonb");
             }
 

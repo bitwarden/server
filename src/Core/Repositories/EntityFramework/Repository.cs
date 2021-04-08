@@ -46,6 +46,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         internal async Task<T> CreateAsync(DatabaseContext dbContext, T obj)
         {
+            obj.SetNewId();
             var entity = Mapper.Map<TEntity>(obj);
             dbContext.Add(entity);
             await dbContext.SaveChangesAsync();

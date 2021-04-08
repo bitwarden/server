@@ -229,11 +229,11 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!returnedKeys.Distinct().Skip(1).Any());
         }
 
-        // TODO: need basic CipherRepo CRUD methods & fixtures to be built out and tested to properly test this method
         [Theory, EfUserAutoData]
         public void UpdateStorageAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
                 List<TableModel.Cipher> ciphers, SutProvider<EfRepo.UserRepository> sutProvider)
         {
+            // TODO: Cipher repo needed
             Assert.True(true);
         }
 
@@ -271,12 +271,39 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any() && savedDates.All(e => e.ToString() == updatedReminderDate.ToString()));
         }
 
-        // TODO: need basic SsoUserRepo CRUD methoids & fixtures to be built out and tested to properly test this method
         [Theory, EfUserAutoData]
-        public void GetBySsoUserAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
-                SutProvider<EfRepo.UserRepository> sutProvider)
+        public async void GetBySsoUserAsync_Works_DataMatches(TableModel.User user, SqlRepo.UserRepository sqlUserRepo,
+                SutProvider<EfRepo.UserRepository> userRepoSut, TableModel.Organization org, TableModel.SsoUser ssoUser,
+                SutProvider<EfRepo.OrganizationRepository> orgRepoSut, SutProvider<EfRepo.SsoUserRepository> ssoUserRepoSut,
+                SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.SsoUserRepository sqlSsoUserRepo, UserCompare equalityComparer)
         {
-            Assert.True(true);
+            var returnedList = new List<TableModel.User>();
+            foreach(var option in DatabaseOptionsFactory.Options)
+            {
+                using (var context = new EfRepo.DatabaseContext(option))
+                {
+                    var postEfUser = await userRepoSut.Sut.CreateAsync(context, user);
+                    var efOrg = await orgRepoSut.Sut.CreateAsync(context, org);
+
+                    ssoUser.UserId = postEfUser.Id;
+                    ssoUser.OrganizationId = efOrg.Id;
+                    var postEfSsoUser = await ssoUserRepoSut.Sut.CreateAsync(context, ssoUser);
+                    var returnedUser = await userRepoSut.Sut.GetBySsoUserAsync(context, postEfSsoUser.ExternalId, efOrg.Id);
+                    returnedList.Add(returnedUser);
+                }
+            }
+
+            var sqlUser = await sqlUserRepo.CreateAsync(user);
+            var sqlOrganization = await sqlOrgRepo.CreateAsync(org);
+
+            ssoUser.UserId = sqlUser.Id;
+            ssoUser.OrganizationId = sqlOrganization.Id;
+            var postSqlSsoUser = await sqlSsoUserRepo.CreateAsync(ssoUser);
+            var returnedSqlUser = await sqlUserRepo.GetBySsoUserAsync(postSqlSsoUser.ExternalId, sqlOrganization.Id);
+            returnedList.Add(returnedSqlUser);
+
+            var distinctItems = returnedList.Distinct(equalityComparer);
+            Assert.True(!distinctItems.Skip(1).Any());
         }
     }
 }

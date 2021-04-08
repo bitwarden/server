@@ -12,7 +12,8 @@ namespace Bit.Core.Models.Table
 
         public void SetNewId()
         {
-            // nothing - int will be auto-populated
+            // int will be auto-populated
+            Id = 0;
         }
     }
 }

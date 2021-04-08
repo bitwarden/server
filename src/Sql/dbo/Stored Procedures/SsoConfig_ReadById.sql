@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[SsoConfig_ReadById]
+﻿CREATE PROCEDURE [dbo].[SsoUser_ReadById]
     @Id BIGINT
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[SsoConfigView]
+        [dbo].[SsoUserView]
     WHERE
         [Id] = @Id
 END
