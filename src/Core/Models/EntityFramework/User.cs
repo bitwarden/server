@@ -13,7 +13,7 @@ namespace Bit.Core.Models.EntityFramework
     {
         public UserMapperProfile()
         {
-           CreateMap<Table.User, User>().ReverseMap();
+            CreateMap<Table.User, User>().ReverseMap();
         }
     }
 }
