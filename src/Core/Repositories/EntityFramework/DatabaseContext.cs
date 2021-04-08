@@ -6,12 +6,9 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class DatabaseContext : DbContext
     {
-        private DbContextOptions<DatabaseContext> _options { get; set; }
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
-        { 
-            _options = options;
-        }
+        { }
 
         public DbSet<Cipher> Ciphers { get; set; }
         public DbSet<Collection> Collections { get; set; }
