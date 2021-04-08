@@ -23,13 +23,13 @@ namespace Bit.Core.Settings
         public virtual string LogDirectory
         {
             get => BuildDirectory(_logDirectory, "/logs");
-            set { _logDirectory = value; }
+            set => _logDirectory = value;
         }
         public virtual long? LogRollBySizeLimit { get; set; }
         public virtual string LicenseDirectory
         {
             get => BuildDirectory(_licenseDirectory, "/core/licenses");
-            set { _licenseDirectory = value; }
+            set => _licenseDirectory = value;
         }
         public string LicenseCertificatePassword { get; set; }
         public virtual string PushRelayBaseUri { get; set; }
@@ -133,68 +133,68 @@ namespace Bit.Core.Settings
             public string Api
             {
                 get => _globalSettings.BuildExternalUri(_api, "api");
-                set { _api = value; }
+                set => _api = value;
             }
             public string Identity
             {
                 get => _globalSettings.BuildExternalUri(_identity, "identity");
-                set { _identity = value; }
+                set => _identity = value;
             }
             public string Admin
             {
                 get => _globalSettings.BuildExternalUri(_admin, "admin");
-                set { _admin = value; }
+                set => _admin = value;
             }
             public string Notifications
             {
                 get => _globalSettings.BuildExternalUri(_notifications, "notifications");
-                set { _notifications = value; }
+                set => _notifications = value;
             }
             public string Sso
             {
                 get => _globalSettings.BuildExternalUri(_sso, "sso");
-                set { _sso = value; }
+                set => _sso = value;
             }
             public string Portal
             {
                 get => _globalSettings.BuildExternalUri(_portal, "portal");
-                set { _portal = value; }
+                set => _portal = value;
             }
 
             public string InternalNotifications
             {
                 get => _globalSettings.BuildInternalUri(_internalNotifications, "notifications");
-                set { _internalNotifications = value; }
+                set => _internalNotifications = value;
             }
             public string InternalAdmin
             {
                 get => _globalSettings.BuildInternalUri(_internalAdmin, "admin");
-                set { _internalAdmin = value; }
+                set => _internalAdmin = value;
             }
             public string InternalIdentity
             {
                 get => _globalSettings.BuildInternalUri(_internalIdentity, "identity");
-                set { _internalIdentity = value; }
+                set => _internalIdentity = value;
             }
             public string InternalApi
             {
                 get => _globalSettings.BuildInternalUri(_internalApi, "api");
-                set { _internalApi = value; }
+                set => _internalApi = value;
             }
             public string InternalVault
             {
                 get => _globalSettings.BuildInternalUri(_internalVault, "web");
-                set { _internalVault = value; }
+                set => _internalVault = value;
             }
             public string InternalSso
             {
                 get => _globalSettings.BuildInternalUri(_internalSso, "sso");
-                set { _internalSso = value; }
+                set => _internalSso = value;
             }
             public string InternalPortal
             {
                 get => _globalSettings.BuildInternalUri(_internalPortal, "portal");
-                set { _internalPortal = value; }
+                set => _internalPortal = value;
             }
         }
 
@@ -207,29 +207,20 @@ namespace Bit.Core.Settings
             public string ConnectionString
             {
                 get => _connectionString;
-                set
-                {
-                    _connectionString = value.Trim('"');
-                }
+                set => _connectionString = value.Trim('"');
             }
 
             public string ReadOnlyConnectionString
             {
                 get => string.IsNullOrWhiteSpace(_readOnlyConnectionString) ?
                     _connectionString : _readOnlyConnectionString;
-                set
-                {
-                    _readOnlyConnectionString = value.Trim('"');
-                }
+                set => _readOnlyConnectionString = value.Trim('"');
             }
 
             public string JobSchedulerConnectionString
             {
                 get => _jobSchedulerConnectionString;
-                set
-                {
-                    _jobSchedulerConnectionString = value.Trim('"');
-                }
+                set => _jobSchedulerConnectionString = value.Trim('"');
             }
         }
 
@@ -240,10 +231,7 @@ namespace Bit.Core.Settings
             public string ConnectionString
             {
                 get => _connectionString;
-                set
-                {
-                    _connectionString = value.Trim('"');
-                }
+                set => _connectionString = value.Trim('"');
             }
         }
 
@@ -266,22 +254,19 @@ namespace Bit.Core.Settings
             public string ConnectionString
             {
                 get => _connectionString;
-                set
-                {
-                    _connectionString = value.Trim('"');
-                }
+                set => _connectionString = value.Trim('"');
             }
 
             public string BaseDirectory
             {
                 get => _globalSettings.BuildDirectory(_baseDirectory, string.Concat("/core/", _directoryName));
-                set { _baseDirectory = value; }
+                set => _baseDirectory = value;
             }
 
             public string BaseUrl
             {
                 get => _globalSettings.BuildExternalUri(_baseUrl, _urlName);
-                set { _baseUrl = value; }
+                set => _baseUrl = value;
             }
         }
 
@@ -327,7 +312,7 @@ namespace Bit.Core.Settings
             public string Directory
             {
                 get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
-                set { _directory = value; }
+                set => _directory = value;
             }
         }
 
@@ -397,10 +382,7 @@ namespace Bit.Core.Settings
             public string ConnectionString
             {
                 get => _connectionString;
-                set
-                {
-                    _connectionString = value.Trim('"');
-                }
+                set => _connectionString = value.Trim('"');
             }
             public string HubName { get; set; }
         }
@@ -441,7 +423,7 @@ namespace Bit.Core.Settings
             public string IdentityUri
             {
                 get => string.IsNullOrWhiteSpace(_identityUri) ? "https://identity.bitwarden.com" : _identityUri;
-                set { _identityUri = value; }
+                set => _identityUri = value;
             }
         }
 
