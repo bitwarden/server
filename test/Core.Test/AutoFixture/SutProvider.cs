@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AutoFixture;
 using AutoFixture.Kernel;
@@ -21,7 +21,7 @@ namespace Bit.Core.Test.AutoFixture
         public SutProvider(IFixture fixture)
         {
             _dependencies = new Dictionary<Type, Dictionary<string, object>>();
-            _fixture = (fixture ?? new Fixture()).WithAutoNSubstitutions();
+            _fixture = (fixture ?? new Fixture()).WithAutoNSubstitutions().Customize(new GlobalSettings());
             _constructorParameterRelay = new ConstructorParameterRelay<TSut>(this, _fixture);
             _fixture.Customizations.Add(_constructorParameterRelay);
         }

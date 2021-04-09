@@ -43,7 +43,7 @@ namespace Bit.Core.Test.Services
             var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
             var ssoUserRepo = Substitute.For<ISsoUserRepository>();
             var referenceEventService = Substitute.For<IReferenceEventService>();
-            var globalSettings = Substitute.For<GlobalSettings>();
+            var globalSettings = Substitute.For<Settings.GlobalSettings>();
             var taxRateRepository = Substitute.For<ITaxRateRepository>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
@@ -105,7 +105,7 @@ namespace Bit.Core.Test.Services
             var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
             var ssoUserRepo = Substitute.For<ISsoUserRepository>();
             var referenceEventService = Substitute.For<IReferenceEventService>();
-            var globalSettings = Substitute.For<GlobalSettings>();
+            var globalSettings = Substitute.For<Settings.GlobalSettings>();
             var taxRateRepo = Substitute.For<ITaxRateRepository>();
 
             var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
