@@ -12,6 +12,7 @@ namespace Bit.Events
         {
             Host
                 .CreateDefaultBuilder(args)
+                .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
