@@ -11,6 +11,7 @@ namespace Bit.Notifications
         {
             Host
                 .CreateDefaultBuilder(args)
+                .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();

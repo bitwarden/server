@@ -11,6 +11,7 @@ namespace Bit.Admin
         {
             Host
                 .CreateDefaultBuilder(args)
+                .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.ConfigureKestrel(o =>
