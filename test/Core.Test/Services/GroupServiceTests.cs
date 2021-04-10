@@ -1,4 +1,7 @@
 using System;
+using System.Threading.Tasks;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
@@ -30,12 +33,116 @@ namespace Bit.Core.Test.Services
             );
         }
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
         [Fact]
-        public void ServiceExists()
+        public async Task SaveAsync_DefaultGroupId_CreatesGroupInRepository()
         {
-            Assert.NotNull(_sut);
+            var organization = new Models.Table.Organization
+            {
+                Id = Guid.NewGuid(),
+                UseGroups = true,
+            };
+            _organizationRepository
+                .GetByIdAsync(organization.Id)
+                .Returns(organization);
+            var group = new Models.Table.Group
+            {
+                OrganizationId = organization.Id,
+            };
+
+            await _sut.SaveAsync(group);
+
+            await _groupRepository.Received().CreateAsync(group);
+        }
+
+        [Fact]
+        public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest()
+        {
+            var group = new Models.Table.Group
+            {
+                Id = Guid.NewGuid(),
+            };
+
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.SaveAsync(group));
+        }
+
+        [Fact]
+        public async Task SaveAsync_OrganizationDoesNotUseGroups_ThrowsBadRequest()
+        {
+            var organization = new Models.Table.Organization
+            {
+                Id = Guid.NewGuid(),
+            };
+            _organizationRepository
+                .GetByIdAsync(organization.Id)
+                .Returns(organization);
+            var group = new Models.Table.Group
+            {
+                OrganizationId = organization.Id,
+            };
+
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.SaveAsync(group));
+        }
+
+        [Fact]
+        public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository()
+        {
+            // organization
+            var organization = new Models.Table.Organization
+            {
+                Id = Guid.NewGuid(),
+                UseGroups = true,
+            };
+            _organizationRepository
+                .GetByIdAsync(organization.Id)
+                .Returns(organization);
+            // user
+            var organizationUser = new Models.Table.OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organization.Id,
+            };
+            _organizationUserRepository.GetByIdAsync(organizationUser.Id)
+                .Returns(organizationUser);
+            // group
+            var group = new Models.Table.Group
+            {
+                OrganizationId = organization.Id,
+            };
+
+            await _sut.DeleteUserAsync(group, organizationUser.Id);
+
+            await _groupRepository.Received().DeleteUserAsync(group.Id, organizationUser.Id);
+        }
+
+        [Fact]
+        public async Task DeleteUserAsync_InvalidUser_ThrowsNotFound()
+        {
+            // user
+            var nonOrganizationUser = new Models.Table.OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+            };
+            _organizationUserRepository.GetByIdAsync(nonOrganizationUser.Id)
+                .Returns(nonOrganizationUser);
+            // organization
+            var organizationId = Guid.NewGuid();
+            var organization = new Models.Table.Organization
+            {
+                Id = organizationId,
+            };
+            _organizationRepository
+                .GetByIdAsync(organization.Id)
+                .Returns(organization);
+            // group
+            var group = new Models.Table.Group
+            {
+                OrganizationId = organization.Id,
+            };
+
+            // user not in organization
+            await Assert.ThrowsAsync<NotFoundException>(() => _sut.DeleteUserAsync(group, nonOrganizationUser.Id));
+            // invalid user
+            await Assert.ThrowsAsync<NotFoundException>(() => _sut.DeleteUserAsync(group, Guid.NewGuid()));
         }
     }
 }
