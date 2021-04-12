@@ -1,5 +1,4 @@
 using Bit.Core.Test.AutoFixture.UserFixtures;
-using Bit.Core.Test.AutoFixture;
 using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
 using System.Collections.Generic;

@@ -2,7 +2,7 @@ namespace Bit.Core.Enums
 {
     public enum SupportedDatabaseProviders 
     {
-        MsSql,
+        SqlServer,
         MySql,
         Postgres
     }

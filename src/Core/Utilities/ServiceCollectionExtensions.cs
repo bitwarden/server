@@ -47,7 +47,7 @@ namespace Bit.Core.Utilities
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
             var selectedDatabaseProvider = globalSettings.DatabaseProvider;
-            var provider = SupportedDatabaseProviders.MsSql;
+            var provider = SupportedDatabaseProviders.SqlServer;
             if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
             {
                 switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -65,7 +65,7 @@ namespace Bit.Core.Utilities
                 }
             }
 
-            var useEf = (provider != SupportedDatabaseProviders.MsSql);
+            var useEf = (provider != SupportedDatabaseProviders.SqlServer);
 
             if (useEf)
             {
