@@ -18,5 +18,14 @@ namespace Bit.Core.Repositories.EntityFramework
         {
             return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
         }
+
+        public void ClearChangeTracking()
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                dbContext.ChangeTracker.Clear();
+            }
+        }
     }
 }

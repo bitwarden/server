@@ -75,8 +75,8 @@ namespace Bit.Core.Repositories.EntityFramework
 
             if (Database.IsNpgsql()) 
             {
-                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType("jsonb");
-                eUser.Property(e => e.TwoFactorProviders).HasColumnType("jsonb");
+                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType("json");
+                eUser.Property(e => e.TwoFactorProviders).HasColumnType("json");
             }
 
             eCipher.ToTable(nameof(Cipher));

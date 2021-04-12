@@ -9,6 +9,8 @@ using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Models.Data;
 using System.Text.Json;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Repositories.EntityFramework;
 
 namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
 {
@@ -42,15 +44,10 @@ namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
       public void Customize(IFixture fixture)
       {
          fixture.Customizations.Add(new GlobalSettingsBuilder());
-         fixture.Customize<IMapper>(x => x.FromFactory(() => 
-            new MapperConfiguration(cfg => cfg.AddProfile<SsoConfigMapperProfile>()).CreateMapper()));
-        fixture.Customize<IMapper>(x => x.FromFactory(() => 
-            new MapperConfiguration(cfg => {
-            cfg.AddProfile<SsoConfigMapperProfile>();
-            cfg.AddProfile<OrganizationMapperProfile>();
-        }).CreateMapper()));
          fixture.Customizations.Add(new OrganizationBuilder());
          fixture.Customizations.Add(new SsoConfigBuilder());
+         fixture.Customizations.Add(new EfRepositoryListBuilder<SsoConfigRepository>());
+         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
       }
    }
 

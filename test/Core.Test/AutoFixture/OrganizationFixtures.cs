@@ -14,6 +14,8 @@ using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Utilities;
 using AutoFixture.Kernel;
 using Bit.Core.Models;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Repositories.EntityFramework;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
@@ -101,8 +103,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         {
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());
-            fixture.Customize<IMapper>(x => x.FromFactory(() => 
-                new MapperConfiguration(cfg => cfg.AddProfile<EfModel.OrganizationMapperProfile>()).CreateMapper()));
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
         }
     }
 

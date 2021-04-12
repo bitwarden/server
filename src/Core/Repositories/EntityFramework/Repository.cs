@@ -98,7 +98,7 @@ namespace Bit.Core.Repositories.EntityFramework
         internal async Task DeleteAsync(DatabaseContext dbContext, T obj)
         {
             var entity = Mapper.Map<TEntity>(obj);
-            dbContext.Entry(entity).State = EntityState.Deleted;
+            dbContext.Remove(entity);
             await dbContext.SaveChangesAsync();
         }
     }

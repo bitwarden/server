@@ -4,8 +4,8 @@ using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
 using System.Collections.Generic;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
-using DataModel = Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Models.Data;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -15,19 +15,19 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class OrganizationRepositoryTests
     {
         [Theory, EfOrganizationAutoData]
-        public async void CreateAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void CreateAsync_Works_DataMatches(
+                Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
-            var savedOrganizations = new List<TableModel.Organization>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var savedOrganizations = new List<Organization>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfOrganization = await sutProvider.Sut.CreateAsync(context, organization);
-                    var savedOrganization = await sutProvider.Sut.GetByIdAsync(context, organization.Id);
-                    savedOrganizations.Add(savedOrganization);
-                }
+                var postEfOrganization = await sut.CreateAsync(organization);
+                sut.ClearChangeTracking();
+
+                var savedOrganization = await sut.GetByIdAsync(organization.Id);
+                savedOrganizations.Add(savedOrganization);
             }
 
             var sqlUser = await sqlOrganizationRepo.CreateAsync(organization);
@@ -38,21 +38,22 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void ReplaceAsync_Works_DataMatches(TableModel.Organization postOrganization,
-                TableModel.Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
-                OrganizationCompare equalityComparer, SutProvider<EfRepo.OrganizationRepository> sutProvider)
+        public async void ReplaceAsync_Works_DataMatches(Organization postOrganization,
+                Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
+                OrganizationCompare equalityComparer, List<EfRepo.OrganizationRepository> suts)
         {
-            var savedOrganizations = new List<TableModel.Organization>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var savedOrganizations = new List<Organization>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfOrganization = await sutProvider.Sut.CreateAsync(context, postOrganization);
-                    replaceOrganization.Id = postEfOrganization.Id;
-                    await sutProvider.Sut.ReplaceAsync(context, replaceOrganization);
-                    var replacedOrganization = await sutProvider.Sut.GetByIdAsync(context, replaceOrganization.Id);
-                    savedOrganizations.Add(replacedOrganization);
-                }
+                var postEfOrganization = await sut.CreateAsync(postOrganization);
+                sut.ClearChangeTracking();
+
+                replaceOrganization.Id = postEfOrganization.Id;
+                await sut.ReplaceAsync(replaceOrganization);
+                sut.ClearChangeTracking();
+
+                var replacedOrganization = await sut.GetByIdAsync(replaceOrganization.Id);
+                savedOrganizations.Add(replacedOrganization);
             }
 
             var postSqlOrganization = await sqlOrganizationRepo.CreateAsync(postOrganization);
@@ -65,26 +66,24 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void DeleteAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void DeleteAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
-            foreach (var option in DatabaseOptionsFactory.Options)
+            foreach (var sut in suts)
             {
-                TableModel.Organization savedEfOrganization = null;
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfOrganization = await sutProvider.Sut.CreateAsync(context, organization);
-                    savedEfOrganization = await sutProvider.Sut.GetByIdAsync(context, postEfOrganization.Id);
-                    Assert.True(savedEfOrganization != null);
-                }
+                var postEfOrganization = await sut.CreateAsync(organization);
+                sut.ClearChangeTracking();
 
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    await sutProvider.Sut.DeleteAsync(context, savedEfOrganization);
-                    savedEfOrganization = await sutProvider.Sut.GetByIdAsync(context, savedEfOrganization.Id);
-                    Assert.True(savedEfOrganization == null);
-                }
+                var savedEfOrganization = await sut.GetByIdAsync(postEfOrganization.Id);
+                sut.ClearChangeTracking();
+                Assert.True(savedEfOrganization != null);
+
+                await sut.DeleteAsync(savedEfOrganization);
+                sut.ClearChangeTracking();
+
+                savedEfOrganization = await sut.GetByIdAsync(savedEfOrganization.Id);
+                Assert.True(savedEfOrganization == null);
             }
 
             var postSqlOrganization = await sqlOrganizationRepo.CreateAsync(organization);
@@ -97,19 +96,18 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void GetByIdentifierAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void GetByIdentifierAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
-            var returnedOrgs = new List<TableModel.Organization>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var returnedOrgs = new List<Organization>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfOrg = await sutProvider.Sut.CreateAsync(context, organization);
-                    var returnedOrg = await sutProvider.Sut.GetByIdentifierAsync(context, postEfOrg.Identifier);
-                    returnedOrgs.Add(returnedOrg);
-                }
+                var postEfOrg = await sut.CreateAsync(organization);
+                sut.ClearChangeTracking();
+
+                var returnedOrg = await sut.GetByIdentifierAsync(postEfOrg.Identifier);
+                returnedOrgs.Add(returnedOrg);
             }
 
             var postSqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
@@ -120,19 +118,18 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void GetManyByEnabledAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void GetManyByEnabledAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
-            var returnedOrgs = new List<TableModel.Organization>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var returnedOrgs = new List<Organization>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfOrg = await sutProvider.Sut.CreateAsync(context, organization);
-                    var efReturnedOrgs = await sutProvider.Sut.GetManyByEnabledAsync(context);
-                    returnedOrgs.Concat(efReturnedOrgs);
-                }
+                var postEfOrg = await sut.CreateAsync(organization);
+                sut.ClearChangeTracking();
+
+                var efReturnedOrgs = await sut.GetManyByEnabledAsync();
+                returnedOrgs.Concat(efReturnedOrgs);
             }
 
             var postSqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
@@ -142,48 +139,46 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void GetManyByUserIdAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void GetManyByUserIdAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
             // TODO: OrgUser repo needed
             Assert.True(true);
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void SearchAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void SearchAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
             // TODO: OrgUser repo needed
             Assert.True(true);
         }
 
         [Theory, EfOrganizationAutoData]
-        public async void UpdateStorageAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void UpdateStorageAsync_Works_DataMatches(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
             // TODO: Cipher repo needed
             Assert.True(true);
         }
 
+        // testing data matches here would require manipulating all organization abilities in the db
         [Theory, EfOrganizationAutoData]
-        public async void GetManyAbilitiesAsync_Works_DataMatches(TableModel.Organization organization,
+        public async void GetManyAbilitiesAsync_Works(Organization organization,
                 SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-                SutProvider<EfRepo.OrganizationRepository> sutProvider)
+                List<EfRepo.OrganizationRepository> suts)
         {
-            var list = new List<DataModel.OrganizationAbility>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var list = new List<OrganizationAbility>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    list.Concat(await sutProvider.Sut.GetManyAbilitiesAsync(context));
-                }
+                list.Concat(await sut.GetManyAbilitiesAsync());
             }
 
             list.Concat(await sqlOrganizationRepo.GetManyAbilitiesAsync());
-            Assert.True(list.All(x => x.GetType() == typeof(DataModel.OrganizationAbility)));
+            Assert.True(list.All(x => x.GetType() == typeof(OrganizationAbility)));
         }
     }
 }

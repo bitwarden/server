@@ -4,7 +4,7 @@ using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
 using System.Collections.Generic;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
+using Bit.Core.Models.Table;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Test.AutoFixture.SsoUserFixtures;
@@ -14,81 +14,77 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class SsoUserRepositoryTests
     {
         [Theory, EfSsoUserAutoData]
-        public async void CreateAsync_Works_DataMatches(TableModel.SsoUser ssoUser, SqlRepo.SsoUserRepository sqlSsoUserRepo,
-                SsoUserCompare equalityComparer, SutProvider<EfRepo.SsoUserRepository> ssoUserRepoSut,
-                SutProvider<EfRepo.UserRepository> userRepoSut, SutProvider<EfRepo.OrganizationRepository> orgRepoSut,
-                TableModel.User user, TableModel.Organization org, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo)
+        public async void CreateAsync_Works_DataMatches(SsoUser ssoUser, User user, Organization org,
+                SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
+                List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
+                SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo,
+                SqlRepo.UserRepository sqlUserRepo)
         {
-            // init list to hold an instance of the tested object from each database provider
-            var createdSsoUsers = new List<TableModel.SsoUser>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var createdSsoUsers = new List<SsoUser>();
+            foreach (var sut in suts)
             {
-                // satisfy any foreign key constraints for the tested object
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var efUser = await userRepoSut.Sut.CreateAsync(context, user);
-                    var efOrg = await orgRepoSut.Sut.CreateAsync(context, org);
-                    ssoUser.UserId = efUser.Id;
-                    ssoUser.OrganizationId = efOrg.Id;
-                }
+                var i = suts.IndexOf(sut);
 
-                // save the tested object & assert its existance
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfSsoUser = await ssoUserRepoSut.Sut.CreateAsync(context, ssoUser);
-                    var savedSsoUser = await ssoUserRepoSut.Sut.GetByIdAsync(context, ssoUser.Id);
-                    createdSsoUsers.Add(savedSsoUser);
-                }
+                var efUser = await efUserRepos[i].CreateAsync(user);
+                var efOrg = await efOrgRepos[i].CreateAsync(org);
+                sut.ClearChangeTracking();
+
+                ssoUser.UserId = efUser.Id;
+                ssoUser.OrganizationId = efOrg.Id;
+                var postEfSsoUser = await sut.CreateAsync(ssoUser);
+                sut.ClearChangeTracking();
+
+                var savedSsoUser = await sut.GetByIdAsync(ssoUser.Id);
+                createdSsoUsers.Add(savedSsoUser);
             }
 
-            //satisfy any foreign key constraints for the tested object
             var sqlUser = await sqlUserRepo.CreateAsync(user);
             var sqlOrganization = await sqlOrgRepo.CreateAsync(org);
+
             ssoUser.UserId = sqlUser.Id;
             ssoUser.OrganizationId = sqlOrganization.Id;
-
-            // save the tested object and assert its existance
             var sqlSsoUser = await sqlSsoUserRepo.CreateAsync(ssoUser);
+
             createdSsoUsers.Add(await sqlSsoUserRepo.GetByIdAsync(sqlSsoUser.Id));
 
-            // assert all saved objects contain the same user relevant data
             var distinctSsoUsers = createdSsoUsers.Distinct(equalityComparer);
             Assert.True(!distinctSsoUsers.Skip(1).Any());
         }
 
         [Theory, EfSsoUserAutoData]
-        public async void ReplaceAsync_Works_DataMatches(TableModel.SsoUser postSsoUser, TableModel.SsoUser replaceSsoUser, 
-                SqlRepo.SsoUserRepository sqlSsoUserRepo, SsoUserCompare equalityComparer, SutProvider<EfRepo.SsoUserRepository> sutProvider,
-                SutProvider<EfRepo.UserRepository> userRepoSut, SutProvider<EfRepo.OrganizationRepository> orgRepoSut,
-                TableModel.Organization org, TableModel.User user, SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
+        public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser, 
+                Organization org, User user, SsoUserCompare equalityComparer,
+                List<EfRepo.SsoUserRepository> suts, List<EfRepo.UserRepository> efUserRepos,
+                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoUserRepository sqlSsoUserRepo,
+                SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
         {
-            // 
-            var savedSsoUsers = new List<TableModel.SsoUser>();
-            foreach (var option in DatabaseOptionsFactory.Options)
+            var savedSsoUsers = new List<SsoUser>();
+            foreach (var sut in suts)
             {
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var efUser = await userRepoSut.Sut.CreateAsync(context, user);
-                    var efOrg = await orgRepoSut.Sut.CreateAsync(context, org);
-                    postSsoUser.UserId = efUser.Id;
-                    postSsoUser.OrganizationId = efOrg.Id;
-                }
+                var i = suts.IndexOf(sut);
 
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfSsoUser = await sutProvider.Sut.CreateAsync(context, postSsoUser);
-                    replaceSsoUser.Id = postEfSsoUser.Id;
-                    replaceSsoUser.UserId = postEfSsoUser.UserId;
-                    replaceSsoUser.OrganizationId = postEfSsoUser.OrganizationId;
-                    await sutProvider.Sut.ReplaceAsync(context, replaceSsoUser);
-                    var replacedSsoUser = await sutProvider.Sut.GetByIdAsync(context, replaceSsoUser.Id);
-                    savedSsoUsers.Add(replacedSsoUser);
-                }
+                var efUser = await efUserRepos[i].CreateAsync(user);
+                var efOrg = await efOrgRepos[i].CreateAsync(org);
+                sut.ClearChangeTracking();
+
+                postSsoUser.UserId = efUser.Id;
+                postSsoUser.OrganizationId = efOrg.Id;
+                var postEfSsoUser = await sut.CreateAsync(postSsoUser);
+                sut.ClearChangeTracking();
+
+                replaceSsoUser.Id = postEfSsoUser.Id;
+                replaceSsoUser.UserId = postEfSsoUser.UserId;
+                replaceSsoUser.OrganizationId = postEfSsoUser.OrganizationId;
+                await sut.ReplaceAsync(replaceSsoUser);
+                sut.ClearChangeTracking();
+
+                var replacedSsoUser = await sut.GetByIdAsync(replaceSsoUser.Id);
+                savedSsoUsers.Add(replacedSsoUser);
             }
 
             var sqlUser = await sqlUserRepo.CreateAsync(user);
             var sqlOrganization = await sqlOrgRepo.CreateAsync(org);
-            postSsoUser.Id = 0;
+
             postSsoUser.UserId = sqlUser.Id;
             postSsoUser.OrganizationId = sqlOrganization.Id;
             var postSqlSsoUser = await sqlSsoUserRepo.CreateAsync(postSsoUser);
@@ -105,102 +101,89 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [Theory, EfSsoUserAutoData]
-        public async void DeleteAsync_Works_DataMatches(TableModel.SsoUser ssoUser, SqlRepo.SsoUserRepository sqlSsoUserRepo, SsoUserCompare equalityComparer,
-                SutProvider<EfRepo.SsoUserRepository> ssoUserRepoSut, SutProvider<EfRepo.UserRepository> userRepoSut, SutProvider<EfRepo.OrganizationRepository> orgRepoSut,
-                TableModel.User user, TableModel.Organization org, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrganizationRepo)
+        public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user,
+                SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
+                List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+                SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo,
+                SqlRepo.OrganizationRepository sqlOrganizationRepo
+                )
         {
-            foreach (var option in DatabaseOptionsFactory.Options)
+            foreach (var sut in suts)
             {
-                // satisfy any foreign key constraints for the tested object
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var savedEfUser = await userRepoSut.Sut.CreateAsync(context, user);
-                    var savedEfOrg = await orgRepoSut.Sut.CreateAsync(context, org);
-                    ssoUser.UserId = savedEfUser.Id;
-                    ssoUser.OrganizationId = savedEfOrg.Id;
-                }
+                var i = suts.IndexOf(sut);
 
-                // save the tested object & assert its existance
-                TableModel.SsoUser savedEfSsoUser = null;
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfSsoUser = await ssoUserRepoSut.Sut.CreateAsync(context, ssoUser);
-                    savedEfSsoUser = await ssoUserRepoSut.Sut.GetByIdAsync(context, postEfSsoUser.Id);
-                    Assert.True(savedEfSsoUser != null);
-                }
+                var savedEfUser = await efUserRepos[i].CreateAsync(user);
+                var savedEfOrg = await efOrgRepos[i].CreateAsync(org);
+                sut.ClearChangeTracking();
 
-                // delete the tested object & assert its nonexistance
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    await ssoUserRepoSut.Sut.DeleteAsync(context, savedEfSsoUser);
-                    savedEfSsoUser = await ssoUserRepoSut.Sut.GetByIdAsync(context, savedEfSsoUser.Id);
-                    Assert.True(savedEfSsoUser == null);
-                }
+                ssoUser.UserId = savedEfUser.Id;
+                ssoUser.OrganizationId = savedEfOrg.Id;
+                var postEfSsoUser = await sut.CreateAsync(ssoUser);
+                sut.ClearChangeTracking();
+
+                var savedEfSsoUser = await sut.GetByIdAsync(postEfSsoUser.Id);
+                Assert.True(savedEfSsoUser != null);
+                sut.ClearChangeTracking();
+
+                await sut.DeleteAsync(savedEfSsoUser);
+                savedEfSsoUser = await sut.GetByIdAsync(savedEfSsoUser.Id);
+                Assert.True(savedEfSsoUser == null);
             }
 
-            //init any objects that will be written to the database
             var sqlUser = await sqlUserRepo.CreateAsync(user);
             var sqlOrganization = await sqlOrganizationRepo.CreateAsync(org);
             ssoUser.UserId = sqlUser.Id;
             ssoUser.OrganizationId = sqlOrganization.Id;
 
-            // save the tested object and assert its existance
             var postSqlSsoUser = await sqlSsoUserRepo.CreateAsync(ssoUser);
             var savedSqlSsoUser = await sqlSsoUserRepo.GetByIdAsync(postSqlSsoUser.Id);
             Assert.True(savedSqlSsoUser != null);
 
-            // delete the tested object and assert its nonexistance
             await sqlSsoUserRepo.DeleteAsync(savedSqlSsoUser);
             savedSqlSsoUser = await sqlSsoUserRepo.GetByIdAsync(postSqlSsoUser.Id);
             Assert.True(savedSqlSsoUser == null);
         }
 
         [Theory, EfSsoUserAutoData]
-        public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(TableModel.SsoUser ssoUser, SqlRepo.SsoUserRepository sqlSsoUserRepo, SsoUserCompare equalityComparer,
-                SutProvider<EfRepo.SsoUserRepository> ssoUserRepoSut, SutProvider<EfRepo.UserRepository> userRepoSut, SutProvider<EfRepo.OrganizationRepository> orgRepoSut,
-                TableModel.User user, TableModel.Organization org, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrganizationRepo)
+        public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
+                User user, Organization org, SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
+                List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+                SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo
+                )
         {
-            foreach (var option in DatabaseOptionsFactory.Options)
+            foreach (var sut in suts)
             {
-                // satisfy any foreign key constraints for the tested object
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var savedEfUser = await userRepoSut.Sut.CreateAsync(context, user);
-                    var savedEfOrg = await orgRepoSut.Sut.CreateAsync(context, org);
-                    ssoUser.UserId = savedEfUser.Id;
-                    ssoUser.OrganizationId = savedEfOrg.Id;
-                }
+                var i = suts.IndexOf(sut);
 
-                // save the tested object & assert its existance
-                TableModel.SsoUser savedEfSsoUser = null;
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    var postEfSsoUser = await ssoUserRepoSut.Sut.CreateAsync(context, ssoUser);
-                    savedEfSsoUser = await ssoUserRepoSut.Sut.GetByIdAsync(context, postEfSsoUser.Id);
-                    Assert.True(savedEfSsoUser != null);
-                }
+                var savedEfUser = await efUserRepos[i].CreateAsync(user);
+                var savedEfOrg = await efOrgRepos[i].CreateAsync(org);
+                sut.ClearChangeTracking();
 
-                // delete the tested object & assert its nonexistance
-                using (var context = new EfRepo.DatabaseContext(option))
-                {
-                    await ssoUserRepoSut.Sut.DeleteAsync(context, savedEfSsoUser.UserId, savedEfSsoUser.OrganizationId);
-                    savedEfSsoUser = await ssoUserRepoSut.Sut.GetByIdAsync(context, savedEfSsoUser.Id);
-                    Assert.True(savedEfSsoUser == null);
-                }
+                ssoUser.UserId = savedEfUser.Id;
+                ssoUser.OrganizationId = savedEfOrg.Id;
+                var postEfSsoUser = await sut.CreateAsync(ssoUser);
+                sut.ClearChangeTracking();
+
+                var savedEfSsoUser = await sut.GetByIdAsync(postEfSsoUser.Id);
+                Assert.True(savedEfSsoUser != null);
+                sut.ClearChangeTracking();
+
+                await sut.DeleteAsync(savedEfSsoUser.UserId, savedEfSsoUser.OrganizationId);
+                sut.ClearChangeTracking();
+
+                savedEfSsoUser = await sut.GetByIdAsync(savedEfSsoUser.Id);
+                Assert.True(savedEfSsoUser == null);
             }
 
-            //init any objects that will be written to the database
             var sqlUser = await sqlUserRepo.CreateAsync(user);
-            var sqlOrganization = await sqlOrganizationRepo.CreateAsync(org);
+            var sqlOrganization = await sqlOrgRepo.CreateAsync(org);
             ssoUser.UserId = sqlUser.Id;
             ssoUser.OrganizationId = sqlOrganization.Id;
 
-            // save the tested object and assert its existance
             var postSqlSsoUser = await sqlSsoUserRepo.CreateAsync(ssoUser);
             var savedSqlSsoUser = await sqlSsoUserRepo.GetByIdAsync(postSqlSsoUser.Id);
             Assert.True(savedSqlSsoUser != null);
 
-            // delete the tested object and assert its nonexistance
             await sqlSsoUserRepo.DeleteAsync(savedSqlSsoUser.UserId, savedSqlSsoUser.OrganizationId);
             savedSqlSsoUser = await sqlSsoUserRepo.GetByIdAsync(postSqlSsoUser.Id);
             Assert.True(savedSqlSsoUser == null);

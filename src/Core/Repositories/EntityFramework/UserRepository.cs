@@ -23,13 +23,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetByEmailAsync(dbContext, email);
+                var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+                return Mapper.Map<TableModel.User>(entity);
             }
-        }
-
-        internal async Task<TableModel.User> GetByEmailAsync(DatabaseContext dbContext, string email)
-        {
-            return await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
         }
 
         public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(string email)
@@ -37,18 +33,13 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetKdfInformationByEmailAsync(dbContext, email);
+                return await GetDbSet(dbContext).Where(e => e.Email == email)
+                    .Select(e => new DataModel.UserKdfInformation
+                    {
+                        Kdf = e.Kdf,
+                        KdfIterations = e.KdfIterations
+                    }).SingleOrDefaultAsync();
             }
-        }
-
-        public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(DatabaseContext dbContext, string email)
-        {
-            return await GetDbSet(dbContext).Where(e => e.Email == email)
-                .Select(e => new DataModel.UserKdfInformation
-                {
-                    Kdf = e.Kdf,
-                    KdfIterations = e.KdfIterations
-                }).SingleOrDefaultAsync();
         }
 
         public async Task<ICollection<TableModel.User>> SearchAsync(string email, int skip, int take)
@@ -56,18 +47,13 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await SearchAsync(dbContext, email, skip, take);
+                var users = await GetDbSet(dbContext)
+                    .Where(e => email == null || e.Email.StartsWith(email))
+                    .OrderBy(e => e.Email)
+                    .Skip(skip).Take(take)
+                    .ToListAsync();
+                return Mapper.Map<List<TableModel.User>>(users);
             }
-        }
-
-        internal async Task<ICollection<TableModel.User>> SearchAsync(DatabaseContext dbContext, string email, int skip, int take)
-        {
-            var users = await GetDbSet(dbContext)
-                .Where(e => email == null || e.Email.StartsWith(email))
-                .OrderBy(e => e.Email)
-                .Skip(skip).Take(take)
-                .ToListAsync();
-            return Mapper.Map<List<TableModel.User>>(users);
         }
 
         public async Task<ICollection<TableModel.User>> GetManyByPremiumAsync(bool premium)
@@ -75,14 +61,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetManyByPremiumAsync(dbContext, premium);
+                var users = await GetDbSet(dbContext).Where(e => e.Premium == premium).ToListAsync();
+                return Mapper.Map<List<TableModel.User>>(users);
             }
-        }
-
-        internal async Task<ICollection<TableModel.User>> GetManyByPremiumAsync(DatabaseContext dbContext, bool premium)
-        {
-            var users = await GetDbSet(dbContext).Where(e => e.Premium == premium).ToListAsync();
-            return Mapper.Map<List<TableModel.User>>(users);
         }
 
         public async Task<string> GetPublicKeyAsync(Guid id)
@@ -90,29 +71,18 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetPublicKeyAsync(dbContext, id);
+                return await GetDbSet(dbContext).Where(e => e.Id == id).Select(e => e.PublicKey).SingleOrDefaultAsync();
             }
         }
-
-        internal async Task<string> GetPublicKeyAsync(DatabaseContext dbContext, Guid id)
-        {
-            return await GetDbSet(dbContext).Where(e => e.Id == id).Select(e => e.PublicKey).SingleOrDefaultAsync();
-        }
-
 
         public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetAccountRevisionDateAsync(dbContext, id);
+                return await GetDbSet(dbContext).Where(e => e.Id == id).Select(e => e.AccountRevisionDate)
+                    .SingleOrDefaultAsync();
             }
-        }
-
-        internal async Task<DateTime> GetAccountRevisionDateAsync(DatabaseContext dbContext, Guid id)
-        {
-            return await GetDbSet(dbContext).Where(e => e.Id == id).Select(e => e.AccountRevisionDate)
-                .SingleOrDefaultAsync();
         }
 
         public async Task UpdateStorageAsync(Guid id)
@@ -120,27 +90,22 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                await UpdateStorageAsync(dbContext, id);
+                var ciphers = await dbContext.Ciphers.Where(e => e.UserId == id).ToListAsync();
+                var storage = ciphers.Sum(e => e.AttachmentsJson?.RootElement.EnumerateArray()
+                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
+                var user = new EFModel.User
+                {
+                    Id = id,
+                    RevisionDate = DateTime.UtcNow,
+                    Storage = storage,
+                };
+                var set = GetDbSet(dbContext);
+                set.Attach(user);
+                var entry = dbContext.Entry(user);
+                entry.Property(e => e.RevisionDate).IsModified = true;
+                entry.Property(e => e.Storage).IsModified = true;
+                await dbContext.SaveChangesAsync();
             }
-        }
-
-        internal async Task UpdateStorageAsync(DatabaseContext dbContext, Guid id)
-        {
-            var ciphers = await dbContext.Ciphers.Where(e => e.UserId == id).ToListAsync();
-            var storage = ciphers.Sum(e => e.AttachmentsJson?.RootElement.EnumerateArray()
-                .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
-            var user = new EFModel.User
-            {
-                Id = id,
-                RevisionDate = DateTime.UtcNow,
-                Storage = storage,
-            };
-            var set = GetDbSet(dbContext);
-            set.Attach(user);
-            var entry = dbContext.Entry(user);
-            entry.Property(e => e.RevisionDate).IsModified = true;
-            entry.Property(e => e.Storage).IsModified = true;
-            await dbContext.SaveChangesAsync();
         }
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
@@ -148,21 +113,16 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                await UpdateRenewalReminderDateAsync(dbContext, id, renewalReminderDate);
+                var user = new EFModel.User
+                {
+                    Id = id,
+                    RenewalReminderDate = renewalReminderDate
+                };
+                var set = GetDbSet(dbContext);
+                set.Attach(user);
+                dbContext.Entry(user).Property(e => e.RenewalReminderDate).IsModified = true;
+                await dbContext.SaveChangesAsync();
             }
-        }
-
-        internal async Task UpdateRenewalReminderDateAsync(DatabaseContext dbContext, Guid id, DateTime renewalReminderDate)
-        {
-            var user = new EFModel.User
-            {
-                Id = id,
-                RenewalReminderDate = renewalReminderDate
-            };
-            var set = GetDbSet(dbContext);
-            set.Attach(user);
-            dbContext.Entry(user).Property(e => e.RenewalReminderDate).IsModified = true;
-            await dbContext.SaveChangesAsync();
         }
 
         public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
@@ -170,15 +130,11 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetBySsoUserAsync(dbContext, externalId, organizationId);
+                var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
+                        e.OrganizationId == organizationId && e.ExternalId == externalId);
+                var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
+                return Mapper.Map<TableModel.User>(entity);
             }
-        }
-
-        internal async Task<User> GetBySsoUserAsync(DatabaseContext dbContext, string externalId, Guid? organizationId)
-        {
-            var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
-                    e.OrganizationId == organizationId && e.ExternalId == externalId);
-            return await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
         }
     }
 }

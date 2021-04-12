@@ -10,6 +10,8 @@ using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using System;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {
@@ -30,7 +32,7 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
 
             var fixture = new Fixture();
             var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-            var user = new Fixture().WithAutoNSubstitutions().Create<TableModel.User>();
+            var user = fixture.WithAutoNSubstitutions().Create<TableModel.User>();
             user.SetTwoFactorProviders(providers);
             return user;
         }
@@ -40,16 +42,12 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
    {
       public void Customize(IFixture fixture)
       {
-
          fixture.Customizations.Add(new GlobalSettingsBuilder());
          fixture.Customizations.Add(new UserBuilder());
          fixture.Customizations.Add(new OrganizationBuilder());
-         fixture.Customize<IMapper>(x => x.FromFactory(() => 
-            new MapperConfiguration(cfg => {
-                cfg.AddProfile<UserMapperProfile>();
-                cfg.AddProfile<OrganizationMapperProfile>();
-                cfg.AddProfile<SsoUserMapperProfile>();
-            }).CreateMapper()));
+         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+         fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
+         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
       }
    }
 

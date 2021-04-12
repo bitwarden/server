@@ -1,12 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Bit.Core.Models.Table;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 
@@ -23,15 +19,10 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                await DeleteAsync(dbContext, userId, organizationId);
+                var entity = await GetDbSet(dbContext).SingleOrDefaultAsync(su => su.UserId == userId && su.OrganizationId == organizationId);
+                dbContext.Entry(entity).State = EntityState.Deleted;
+                await dbContext.SaveChangesAsync();
             }
-        }
-
-        internal async Task DeleteAsync(DatabaseContext dbContext, Guid userId, Guid? organizationId)
-        {
-            var entity = await GetDbSet(dbContext).SingleOrDefaultAsync(su => su.UserId == userId && su.OrganizationId == organizationId);
-            dbContext.Entry(entity).State = EntityState.Deleted;
-            await dbContext.SaveChangesAsync();
         }
     }
 }
