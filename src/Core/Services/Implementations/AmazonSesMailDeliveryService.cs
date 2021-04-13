@@ -9,6 +9,7 @@ using Amazon;
 using Amazon.SimpleEmail.Model;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -21,6 +22,7 @@ namespace Bit.Core.Services
         private readonly string _source;
         private readonly string _senderTag;
         private readonly string _configSetName;
+        private const int MAX_BATCH_MESSAGE_RECIPIENTS = 50;
 
         public AmazonSesMailDeliveryService(
             GlobalSettings globalSettings,
@@ -77,10 +79,7 @@ namespace Bit.Core.Services
             {
                 ConfigurationSetName = _configSetName,
                 Source = _source,
-                Destination = new Destination
-                {
-                    ToAddresses = message.ToEmails.ToList()
-                },
+                Destination = MakeDestination(message),
                 Message = new Message
                 {
                     Subject = new Content(message.Subject),
@@ -105,11 +104,6 @@ namespace Bit.Core.Services
                 }
             };
 
-            if (message.BccEmails?.Any() ?? false)
-            {
-                request.Destination.BccAddresses = message.BccEmails.ToList();
-            }
-
             if (!string.IsNullOrWhiteSpace(message.Category))
             {
                 request.Tags.Add(new MessageTag { Name = "Category", Value = message.Category });
@@ -127,6 +121,92 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task SendBulkTemplatedEmailAsync<T>(string templateName, Dictionary<string, string> defaultModel,
+            IEnumerable<(MailMessage message, T model)> templatedMessages)
+        {
+            var exceptions = new List<Exception>();
+            foreach(var batch in BatchMessages(templatedMessages))
+            {
+                var destinations = batch.Select((templatedMessage) => new BulkEmailDestination
+                {
+                    Destination = MakeDestination(templatedMessage.message),
+                    ReplacementTemplateData = JsonConvert.SerializeObject(templatedMessage.model),
+                });
+                var request = new SendBulkTemplatedEmailRequest
+                {
+                    ConfigurationSetName = _configSetName,
+                    Source = _source,
+                    Destinations = destinations.ToList(),
+                    Template = templateName,
+                    DefaultTemplateData = JsonConvert.SerializeObject(defaultModel),
+                    DefaultTags = new List<MessageTag>
+                    {
+                        new MessageTag { Name = "Environment", Value = _hostingEnvironment.EnvironmentName },
+                        new MessageTag { Name = "Sender", Value = _senderTag },
+                    }
+                };
+                try
+                {
+                    await SendBulkEmails(request, false);
+                }
+                catch (Exception e)
+                {
+                    try
+                    {
+                        _logger.LogWarning(e, "Failed to send emails. Re-retying...");
+                        await SendBulkEmails(request, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
+                }
+            }
+
+            if (exceptions.Any())
+            {
+                throw new AggregateException("Exceptions thrown while sending bulk emails", exceptions);
+            }
+        }
+
+        public async Task UpsertTemplate(string templateName, string subjectPart, string textPart = null, string htmlPart = null)
+        {
+            var template = new Template { TemplateName = templateName };
+            if (subjectPart != null)
+            {
+                template.SubjectPart = subjectPart;
+            }
+            if (textPart != null)
+            {
+                template.TextPart = textPart;
+            }
+            if (htmlPart != null)
+            {
+                template.HtmlPart = htmlPart;
+            }
+
+            try
+            {
+                // Throws if not found
+                var existingTemplate = await _client.GetTemplateAsync(new GetTemplateRequest
+                {
+                    TemplateName = templateName
+                });
+
+                await _client.UpdateTemplateAsync(new UpdateTemplateRequest
+                {
+                    Template = template
+                });
+            }
+            catch (TemplateDoesNotExistException)
+            {
+                await _client.CreateTemplateAsync(new CreateTemplateRequest
+                {
+                    Template = template
+                });
+            }
+        }
+
         private async Task SendAsync(SendEmailRequest request, bool retry)
         {
             if (retry)
@@ -135,6 +215,60 @@ namespace Bit.Core.Services
                 await Task.Delay(2000);
             }
             await _client.SendEmailAsync(request);
+        }
+
+        private async Task SendBulkEmails(SendBulkTemplatedEmailRequest request, bool retry)
+        {
+            if (retry)
+            {
+                // wait and try again
+                await Task.Delay(2000);
+            }
+            await _client.SendBulkTemplatedEmailAsync(request);
+        }
+
+        private Destination MakeDestination(MailMessage message)
+        {
+            var destination = new Destination
+            {
+                ToAddresses = message.ToEmails.ToList(),
+            };
+            if (message.BccEmails?.Any() ?? false)
+            {
+                destination.BccAddresses = message.BccEmails.ToList();
+            }
+            return destination;
+        }
+
+        private IEnumerable<IEnumerable<(MailMessage message, T model)>> BatchMessages<T>(
+        IEnumerable<(MailMessage message, T model)> templatedMessages)
+        {
+            var batches = new List<IEnumerable<(MailMessage message, T model)>>();
+
+            var batchRecipientCount = 0;
+            var batch = new List<(MailMessage message, T model)>();
+            foreach (var (message, model) in templatedMessages)
+            {
+                if (batches.Count == 0)
+                {
+                    batches.Add(batch);
+                }
+
+                var messageRecipientCount = message?.ToEmails?.Count() ?? 0 + message?.BccEmails?.Count() ?? 0;
+                if (batchRecipientCount + messageRecipientCount < MAX_BATCH_MESSAGE_RECIPIENTS)
+                {
+                    batch.Add((message, model));
+                    batchRecipientCount += messageRecipientCount;
+                }
+                else
+                {
+                    batches.Add(batch);
+                    batch = new List<(MailMessage message, T model)>();
+                    batchRecipientCount = 0;
+                }
+            }
+
+            return batches;
         }
     }
 }
