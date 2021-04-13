@@ -6,6 +6,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {
@@ -89,16 +90,16 @@ namespace Bit.Core.Models.Api
         {
             FolderId = cipher.FolderId?.ToString();
             Favorite = cipher.Favorite;
-            PasswordPrompt = cipher.PasswordPrompt;
             Edit = cipher.Edit;
             ViewPassword = cipher.ViewPassword;
+            Reprompt = cipher.Reprompt;
         }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
-        public bool PasswordPrompt { get; set; }
         public bool Edit { get; set; }
         public bool ViewPassword { get; set; }
+        public CipherRepromptType Reprompt { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel

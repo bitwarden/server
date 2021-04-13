@@ -18,7 +18,6 @@ SELECT
         THEN 0
         ELSE 1
     END [Favorite],
-    C.[PasswordPrompt],
     CASE
         WHEN
             @UserId IS NULL
@@ -26,6 +25,7 @@ SELECT
         THEN NULL
         ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
     END [FolderId],
-    C.[DeletedDate]
+    C.[DeletedDate],
+    C.[Reprompt]
 FROM
     [dbo].[Cipher] C

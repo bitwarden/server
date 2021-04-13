@@ -1,8 +1,20 @@
-﻿IF COL_LENGTH('[dbo].[Cipher]', 'PasswordPrompt') IS NULL
+﻿IF COL_LENGTH('[dbo].[Cipher]', 'Reprompt') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Cipher]
-        ADD [PasswordPrompt] BIT DEFAULT 0 NULL;
+        ADD [Reprompt] TINYINT NULL;
 END
+GO
+
+UPDATE
+    [dbo].[Cipher]
+SET
+    [Reprompt] = 0
+GO
+
+ALTER TABLE
+    [dbo].[Cipher]
+ALTER COLUMN
+    [Reprompt] TINYINT NOT NULL
 GO
 
 IF OBJECT_ID('[dbo].[CipherDetails]') IS NOT NULL
@@ -31,7 +43,6 @@ SELECT
         THEN 0
         ELSE 1
     END [Favorite],
-    C.[PasswordPrompt],
     CASE
         WHEN
             @UserId IS NULL
@@ -39,7 +50,8 @@ SELECT
         THEN NULL
         ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
     END [FolderId],
-    C.[DeletedDate]
+    C.[DeletedDate],
+    C.[Reprompt]
 FROM
     [dbo].[Cipher] C
 GO
@@ -63,11 +75,11 @@ CREATE PROCEDURE [dbo].[CipherDetails_Create]
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
-    @PasswordPrompt BIT,
     @Edit BIT, -- not used
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(7)
+    @DeletedDate DATETIME2(7),
+    @Reprompt TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -83,11 +95,11 @@ BEGIN
         [Type],
         [Data],
         [Favorites],
-        [PasswordPrompt],
         [Folders],
         [CreationDate],
         [RevisionDate],
-        [DeletedDate]
+        [DeletedDate],
+        [Reprompt]
     )
     VALUES
     (
@@ -97,11 +109,11 @@ BEGIN
         @Type,
         @Data,
         CASE WHEN @Favorite = 1 THEN CONCAT('{', @UserIdKey, ':true}') ELSE NULL END,
-        @PasswordPrompt,
         CASE WHEN @FolderId IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}') ELSE NULL END,
         @CreationDate,
         @RevisionDate,
-        @DeletedDate
+        @DeletedDate,
+        @Reprompt
     )
 
     IF @OrganizationId IS NOT NULL
@@ -128,7 +140,6 @@ CREATE PROCEDURE [dbo].[CipherDetails_Update]
     @Type TINYINT,
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX), -- not used
-    @PasswordPrompt Binary,
     @Folders NVARCHAR(MAX), -- not used
     @Attachments NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
@@ -138,7 +149,8 @@ CREATE PROCEDURE [dbo].[CipherDetails_Update]
     @Edit BIT, -- not used
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(2)
+    @DeletedDate DATETIME2(2),
+    @Reprompt TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -171,7 +183,7 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
-        [PasswordPrompt] = @PasswordPrompt,
+        [Reprompt] = @Reprompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate
