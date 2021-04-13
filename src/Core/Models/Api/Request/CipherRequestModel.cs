@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Api
         public string OrganizationId { get; set; }
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
+        public bool PasswordPrompt { get; set; }
         [Required]
         [EncryptedString]
         [EncryptedStringLength(1000)]
@@ -59,6 +60,7 @@ namespace Bit.Core.Models.Api
         {
             existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingCipher.Favorite = Favorite;
+            existingCipher.PasswordPrompt = PasswordPrompt;
             ToCipher(existingCipher);
             return existingCipher;
         }

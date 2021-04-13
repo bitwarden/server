@@ -5,6 +5,7 @@
     @Type TINYINT,
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX), -- not used
+    @PasswordPrompt Binary,
     @Folders NVARCHAR(MAX), -- not used
     @Attachments NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
@@ -47,6 +48,7 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
+        [PasswordPrompt] = @PasswordPrompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate

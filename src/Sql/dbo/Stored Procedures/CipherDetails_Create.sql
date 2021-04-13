@@ -11,6 +11,7 @@
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
     @Favorite BIT,
+    @PasswordPrompt BIT,
     @Edit BIT, -- not used
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
@@ -30,6 +31,7 @@ BEGIN
         [Type],
         [Data],
         [Favorites],
+        [PasswordPrompt],
         [Folders],
         [CreationDate],
         [RevisionDate],
@@ -43,6 +45,7 @@ BEGIN
         @Type,
         @Data,
         CASE WHEN @Favorite = 1 THEN CONCAT('{', @UserIdKey, ':true}') ELSE NULL END,
+        @PasswordPrompt,
         CASE WHEN @FolderId IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}') ELSE NULL END,
         @CreationDate,
         @RevisionDate,

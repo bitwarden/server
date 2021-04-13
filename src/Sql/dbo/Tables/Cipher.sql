@@ -5,6 +5,7 @@
     [Type]           TINYINT          NOT NULL,
     [Data]           NVARCHAR (MAX)   NOT NULL,
     [Favorites]      NVARCHAR (MAX)   NULL,
+    [PasswordPrompt] BIT              DEFAULT 0,
     [Folders]        NVARCHAR (MAX)   NULL,
     [Attachments]    NVARCHAR (MAX)   NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,

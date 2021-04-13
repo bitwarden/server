@@ -18,6 +18,7 @@ SELECT
         THEN 0
         ELSE 1
     END [Favorite],
+    C.[PasswordPrompt],
     CASE
         WHEN
             @UserId IS NULL
