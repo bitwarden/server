@@ -147,5 +147,11 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task BulkSendOrganizationInviteEmailAsync(string organizationName,
+            IEnumerable<(OrganizationUser orgUser, string token)> invites)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

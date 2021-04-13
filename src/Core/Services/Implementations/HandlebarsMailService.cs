@@ -182,9 +182,35 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            await AddMessageContentAsync(message, "OrganizationUserInvited", model);
-            message.Category = "OrganizationUserInvited";
-            await _mailDeliveryService.SendEmailAsync(message);
+            await SendOrganizationInviteEmailAsync(message, model);
+        }
+
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites)
+        {
+            MailMessage CreateMessage(string email)
+            {
+                var message = CreateDefaultMessage(null, email);
+                message.Category = "OrganizationUserConfirmed";
+                return message;
+            }
+
+            var messageModels = invites.Select(invite => (CreateMessage(invite.orgUser.Email),
+                new OrganizationUserInvitedViewModel
+                {
+                    OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                    Email = WebUtility.UrlEncode(invite.orgUser.Email),
+                    OrganizationId = invite.orgUser.OrganizationId.ToString(),
+                    OrganizationUserId = invite.orgUser.Id.ToString(),
+                    Token = WebUtility.UrlEncode(invite.token),
+                    OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                }
+            ));
+
+            await SendBulkAsync("OrganizationUserInvited", messageModels,
+                (message, model) => SendOrganizationInviteEmailAsync(message, model),
+                nameof(OrganizationUserInvitedViewModel.Url));
         }
 
         public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
@@ -279,7 +305,7 @@ namespace Bit.Core.Services
             message.Category = "AddedCredit";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
         {
             var message = CreateDefaultMessage("License Expired", emails);
@@ -358,9 +384,21 @@ namespace Bit.Core.Services
 
         private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
         {
-            message.HtmlContent = await RenderAsync($"{templateName}.html", model);
-            message.TextContent = await RenderAsync($"{templateName}.text", model);
+            var (subject, html, text) = await GetMessageContentAsync(templateName, model);
+            if (subject != null)
+            {
+                message.Subject = subject;
+            }
+            message.HtmlContent = html;
+            message.TextContent = text;
         }
+
+        private async Task<(string subjectPart, string htmlPart, string textPart)> GetMessageContentAsync<T>(string templateName, T model) =>
+        (
+            await RenderAsync($"{templateName}.subject", model),
+            await RenderAsync($"{templateName}.html", model),
+            await RenderAsync($"{templateName}.text", model)
+        );
 
         private async Task<string> RenderAsync<T>(string templateName, T model)
         {
@@ -491,6 +529,60 @@ namespace Bit.Core.Services
             });
         }
 
+        private async Task SendOrganizationInviteEmailAsync(MailMessage message, OrganizationUserInvitedViewModel model)
+        {
+            await AddMessageContentAsync(message, "OrganizationUserInvited", model);
+            message.Category = "OrganizationUserInvited";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        private async Task SendBulkAsync<T>(string templateName,
+            IEnumerable<(MailMessage message, T model)> messageModels, Func<MailMessage, T, Task> fallbackSender,
+            params string[] unescapedModelProperties)
+        {
+            if (_mailDeliveryService is AmazonSesMailDeliveryService sesService && messageModels.Skip(1).Any())
+            {
+                var bulkTemplate = GenerateModelForBulkSend(messageModels.First().model.GetType(), unescapedModelProperties);
+                var (subjectPart, htmlPart, textPart) = await GetMessageContentAsync(templateName, bulkTemplate);
+
+                await sesService.UpsertTemplate(templateName, subjectPart, textPart, htmlPart);
+
+                await sesService.SendBulkTemplatedEmailAsync(templateName, bulkTemplate, messageModels);
+            }
+            else
+            {
+                foreach (var (message, model) in messageModels)
+                {
+                    await fallbackSender(message, model);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a self-referential model which, if processed through Handlebars, creates a valid Handlebars template.
+        /// The resulting template is a single-file template which can be uploaded to an SMTP service such as Amazon SES
+        /// for bulk email requests.
+        /// </summary>
+        /// <param name="modelType">The type of the Handlebars model to make self-reference</param>
+        /// <param name="unescapedProperties">The names of properties to encapsulate with triple-stash (`{{{}}}`) rather than double.
+        /// These properties will not be escaped in when rendered. https://handlebarsjs.com/guide/expressions.html#html-escaping
+        /// </param>
+        /// <returns></returns>
+        private Dictionary<string, string> GenerateModelForBulkSend(Type modelType, params string[] unescapedProperties)
+        {
+            var model = new Dictionary<string, string>();
+            foreach (var pi in modelType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                var escape = !unescapedProperties.Contains(pi.Name);
+                model.Add(pi.Name, string.Concat(
+                    escape ? "{{" : "{{{",
+                    pi.Name,
+                    escape ? "}}" : "}}}"
+                ));
+            }
+            return model;
+        }
+
         public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
         {
             var message = CreateDefaultMessage($"Emergency Access Contact Invite", emergencyAccess.Email);
@@ -539,7 +631,7 @@ namespace Bit.Core.Services
         public async Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email)
         {
             var message = CreateDefaultMessage("Emergency Access Initiated", email);
-            
+
             var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
 
             var model = new EmergencyAccessRecoveryViewModel
@@ -552,7 +644,7 @@ namespace Bit.Core.Services
             message.Category = "EmergencyAccessRecovery";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email)
         {
             var message = CreateDefaultMessage("Emergency Access Approved", email);
@@ -582,7 +674,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Pending Emergency Access Request", email);
 
             var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
-            
+
             var model = new EmergencyAccessRecoveryViewModel
             {
                 Name = CoreHelpers.SanitizeForEmail(initiatingName),
