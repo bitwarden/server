@@ -178,24 +178,31 @@ namespace Bit.Core.Services
         }
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-            DateTime? date = null)
+            DateTime? date = null) =>
+            await LogOrganizationUserEventsAsync(new[] {(organizationUser, type, date)});
+
+        public async Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            var eventMessages = new List<IEvent>();
+            foreach(var (organizationUser, type, date) in events)
             {
-                return;
+                if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+                {
+                    continue;
+                }
+                eventMessages.Add(new EventMessage
+                {
+                    OrganizationId = organizationUser.OrganizationId,
+                    UserId = organizationUser.UserId,
+                    OrganizationUserId = organizationUser.Id,
+                    Type = type,
+                    ActingUserId = _currentContext?.UserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                });
             }
 
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = organizationUser.OrganizationId,
-                UserId = organizationUser.UserId,
-                OrganizationUserId = organizationUser.Id,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
+            await _eventWriteService.CreateManyAsync(eventMessages);
         }
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
