@@ -16,9 +16,9 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     {
         [Theory, EfSsoConfigAutoData]
         public async void CreateAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-                SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
-                SqlRepo.OrganizationRepository sqlOrganizationRepo)
+            SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo)
         {
             var savedSsoConfigs = new List<SsoConfig>();
 
@@ -52,9 +52,9 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfSsoConfigAutoData]
         public async void ReplaceAsync_Works_DataMatches(SsoConfig postSsoConfig, SsoConfig replaceSsoConfig, 
-                Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
-                SqlRepo.OrganizationRepository sqlOrganizationRepo)
+            Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo)
         {
             var savedSsoConfigs = new List<SsoConfig>();
 
@@ -97,9 +97,9 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfSsoConfigAutoData]
         public async void DeleteAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-                SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
-                SqlRepo.OrganizationRepository sqlOrganizationRepo)
+            SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo)
         {
             foreach (var sut in suts)
             {
@@ -135,9 +135,9 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfSsoConfigAutoData]
         public async void GetByOrganizationIdAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-                SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
-                SqlRepo.OrganizationRepository sqlOrgRepo)
+            SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
+            SqlRepo.OrganizationRepository sqlOrgRepo)
         {
             var returnedList = new List<SsoConfig>();
 
@@ -172,9 +172,9 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfSsoConfigAutoData]
         public async void GetByIdentifierAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-                SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
-                SqlRepo.OrganizationRepository sqlOrgRepo)
+            SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
+            SqlRepo.OrganizationRepository sqlOrgRepo)
         {
             var returnedList = new List<SsoConfig>();
 
@@ -210,8 +210,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         // Testing that data matches here would involve manipulating all SsoConfig records in the db
         [Theory, EfSsoConfigAutoData]
         public async void GetManyByRevisionNotBeforeDate_Works(SsoConfig ssoConfig, DateTime notBeforeDate,
-                Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-                List<EfRepo.OrganizationRepository> efOrgRepos)
+            Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrgRepos)
         {
             foreach (var sut in suts)
             {

@@ -54,7 +54,7 @@ namespace Bit.Core.Repositories.EntityFramework
         }
 
         public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail,
-                bool? paid, int skip, int take)
+            bool? paid, int skip, int take)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

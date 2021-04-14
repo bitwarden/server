@@ -15,11 +15,12 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     {
         [Theory, EfUserAutoData]
         public async void CreateAsync_Works_DataMatches(User user, UserCompare equalityComparer,
-                List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
             var savedUsers = new List<User>();
             foreach (var sut in suts)
             {
+
                 var postEfUser = await sut.CreateAsync(user);
                 var savedUser = await sut.GetByIdAsync(postEfUser.Id);
                 savedUsers.Add(savedUser);
@@ -34,8 +35,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void ReplaceAsync_Works_DataMatches(User postUser, User replaceUser,
-                UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
-                SqlRepo.UserRepository sqlUserRepo)
+            UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var savedUsers = new List<User>();
             foreach (var sut in suts)
@@ -93,14 +94,13 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             foreach (var sut in suts)
             {
                 var postEfUser = await sut.CreateAsync(user);
-                sut.ClearChangeTracking();    
-
-                var savedUser = await sut.GetByEmailAsync(postEfUser.Email);
+                sut.ClearChangeTracking();     pk
+                var savedUser = await sut.GetByEmailAsync(postEfUser.Email.ToUpperInvariant());
                 savedUsers.Add(savedUser);
             }
 
             var postSqlUser = await sqlUserRepo.CreateAsync(user);
-            savedUsers.Add(await sqlUserRepo.GetByEmailAsync(postSqlUser.Email));
+            savedUsers.Add(await sqlUserRepo.GetByEmailAsync(postSqlUser.Email.ToUpperInvariant()));
 
             var distinctItems = savedUsers.Distinct(equalityComparer);
             Assert.True(!distinctItems.Skip(1).Any());
@@ -108,16 +108,15 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void GetKdfInformationByEmailAsync_Works_DataMatches(User user,
-                UserKdfInformationCompare equalityComparer, List<EfRepo.UserRepository> suts,
-                SqlRepo.UserRepository sqlUserRepo)
+            UserKdfInformationCompare equalityComparer, List<EfRepo.UserRepository> suts,
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var savedKdfInformation = new List<UserKdfInformation>();
             foreach (var sut in suts)
             {
                 var postEfUser = await sut.CreateAsync(user);
                 sut.ClearChangeTracking();    
-
-                var kdfInformation = await sut.GetKdfInformationByEmailAsync(postEfUser.Email);
+                var kdfInformation = await sut.GetKdfInformationByEmailAsync(postEfUser.Email.ToUpperInvariant());
                 savedKdfInformation.Add(kdfInformation);
             }
 
@@ -131,8 +130,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void SearchAsync_Works_DataMatches(User user, int skip, int take, 
-                UserCompare equalityCompare, List<EfRepo.UserRepository> suts, 
-                SqlRepo.UserRepository sqlUserRepo)
+            UserCompare equalityCompare, List<EfRepo.UserRepository> suts, 
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var searchedEfUsers = new List<User>();
             foreach (var sut in suts)
@@ -140,12 +139,12 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 var postEfUser = await sut.CreateAsync(user);
                 sut.ClearChangeTracking();    
 
-                var searchedEfUsersCollection = await sut.SearchAsync(postEfUser.Email, skip, take);
+                var searchedEfUsersCollection = await sut.SearchAsync(postEfUser.Email.ToUpperInvariant(), skip, take);
                 searchedEfUsers.Concat(searchedEfUsersCollection.ToList());
             }
 
             var postSqlUser = await sqlUserRepo.CreateAsync(user);
-            var searchedSqlUsers = await sqlUserRepo.SearchAsync(postSqlUser.Email, skip, take);
+            var searchedSqlUsers = await sqlUserRepo.SearchAsync(postSqlUser.Email.ToUpperInvariant(), skip, take);
 
             var distinctItems = searchedEfUsers.Concat(searchedSqlUsers).Distinct(equalityCompare);
             Assert.True(!distinctItems.Skip(1).Any());
@@ -153,7 +152,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void GetManyByPremiumAsync_Works_DataMatches(User user,
-                List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
             var returnedUsers = new List<User>();
             foreach (var sut in suts)
@@ -174,7 +173,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void GetPublicKeyAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts,
-                SqlRepo.UserRepository sqlUserRepo)
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var returnedKeys = new List<string>();
             foreach (var sut in suts)
@@ -195,7 +194,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void GetAccountRevisionDateAsync(User user, List<EfRepo.UserRepository> suts,
-                SqlRepo.UserRepository sqlUserRepo)
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var returnedKeys = new List<string>();
             foreach (var sut in suts)
@@ -216,7 +215,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public void UpdateStorageAsync_Works_DataMatches(User user, List<Cipher> ciphers,
-                List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
             // TODO: Cipher repo needed
             Assert.True(true);
@@ -224,8 +223,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
-                DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
-                SqlRepo.UserRepository sqlUserRepo)
+            DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
+            SqlRepo.UserRepository sqlUserRepo)
         {
             var savedDates = new List<DateTime?>();
             foreach (var sut in suts)
@@ -253,10 +252,10 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [Theory, EfUserAutoData]
         public async void GetBySsoUserAsync_Works_DataMatches(User user, Organization org, 
-                SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
-                List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,
-                SqlRepo.UserRepository sqlUserRepo, SqlRepo.SsoUserRepository sqlSsoUserRepo,
-                SqlRepo.OrganizationRepository sqlOrgRepo)
+            SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
+            List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,
+            SqlRepo.UserRepository sqlUserRepo, SqlRepo.SsoUserRepository sqlSsoUserRepo,
+            SqlRepo.OrganizationRepository sqlOrgRepo)
         {
             var returnedList = new List<User>();
             foreach (var sut in suts)
@@ -274,7 +273,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 var postEfSsoUser = await ssoUserRepos[i].CreateAsync(ssoUser);
                 sut.ClearChangeTracking();
 
-                var returnedUser = await sut.GetBySsoUserAsync(postEfSsoUser.ExternalId, efOrg.Id);
+                var returnedUser = await sut.GetBySsoUserAsync(postEfSsoUser.ExternalId.ToUpperInvariant(), efOrg.Id);
                 returnedList.Add(returnedUser);
             }
 

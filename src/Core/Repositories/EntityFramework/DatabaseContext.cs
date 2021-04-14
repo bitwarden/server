@@ -6,6 +6,8 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class DatabaseContext : DbContext
     {
+        public static string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
+
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
         { }
@@ -75,8 +77,17 @@ namespace Bit.Core.Repositories.EntityFramework
 
             if (Database.IsNpgsql()) 
             {
-                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType("json");
-                eUser.Property(e => e.TwoFactorProviders).HasColumnType("json");
+                // the postgres provider doesn't currently support database level non-deterministic collations.
+                // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
+                builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
+                eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
+                eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
+                eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
+                //
+
+                var jsonColumnType = "json";
+                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
+                eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
             }
 
             eCipher.ToTable(nameof(Cipher));

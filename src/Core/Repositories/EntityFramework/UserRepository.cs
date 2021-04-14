@@ -47,11 +47,23 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var users = await GetDbSet(dbContext)
-                    .Where(e => email == null || e.Email.StartsWith(email))
-                    .OrderBy(e => e.Email)
-                    .Skip(skip).Take(take)
-                    .ToListAsync();
+                List<EFModel.User> users;
+                if (dbContext.Database.IsNpgsql())
+                {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => e.Email == null || 
+                            EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), "a%"))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
+                else {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => email == null || e.Email.StartsWith(email))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
                 return Mapper.Map<List<TableModel.User>>(users);
             }
         }
