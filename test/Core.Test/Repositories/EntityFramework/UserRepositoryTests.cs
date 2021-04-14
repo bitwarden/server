@@ -94,7 +94,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             foreach (var sut in suts)
             {
                 var postEfUser = await sut.CreateAsync(user);
-                sut.ClearChangeTracking();     pk
+                sut.ClearChangeTracking();
                 var savedUser = await sut.GetByEmailAsync(postEfUser.Email.ToUpperInvariant());
                 savedUsers.Add(savedUser);
             }
