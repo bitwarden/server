@@ -103,125 +103,167 @@ jobs:
   deploy-identity:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Identity.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          IDENTITY_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/identity_webapp_name
+          IDENTITY_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/identity_webapp_publish_profile
+
       - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.IDENTITY_WEBAPP_NAME }} 
+          app-name: ${{ env.IDENTITY_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Identity.zip
 
   deploy-api:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Api.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          API_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/api_webapp_name
+          API_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/api_webapp_publish_profile
+
       - name: Deploy Api 
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.API_WEBAPP_NAME }} 
+          app-name: ${{ env.API_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.API_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Api.zip
 
   deploy-billing:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Billing.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          BILLING_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/billing_webapp_name
+          BILLING_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/billing_webapp_publish_profile
+
       - name: Deploy Billing
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.BILLING_WEBAPP_NAME }} 
+          app-name: ${{ env.BILLING_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Billing.zip
 
   deploy-events:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Events.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          EVENTS_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/events_webapp_name
+          EVENTS_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/events_webapp_publish_profile
+
       - name: Deploy Events
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.EVENTS_WEBAPP_NAME }} 
+          app-name: ${{ env.EVENTS_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Events.zip
 
   deploy-sso:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Sso.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          SSO_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/sso_webapp_name
+          SSO_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/sso_webapp_publish_profile
+
       - name: Deploy Sso
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.SSO_WEBAPP_NAME }} 
+          app-name: ${{ env.SSO_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.SSO_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.SSO_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Sso.zip
 
   deploy-portal:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Portal.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          PORTAL_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/portal_webapp_name
+          PORTAL_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/portal_webapp_publish_profile
+
       - name: Deploy Portal
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.PORTAL_WEBAPP_NAME }} 
+          app-name: ${{ env.PORTAL_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Portal.zip
 
   deploy-admin:
     runs-on: ubuntu-latest
     needs: build
-    environment: QA
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
         with:
           name: Admin.zip
 
+      - name: Retrieve Secrets
+        uses: secrethub/actions/env-export@v0.2.1
+        env:
+          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
+          ADMIN_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/admin_webapp_name
+          ADMIN_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/admin_webapp_publish_profile
+
       - name: Deploy Admin
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
+          app-name: ${{ env.ADMIN_WEBAPP_NAME }} 
           slot-name: "staging"
-          publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ env.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
           package: ./Admin.zip
