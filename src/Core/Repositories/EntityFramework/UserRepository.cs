@@ -23,7 +23,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+                var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+                return Mapper.Map<TableModel.User>(entity);
             }
         }
 
@@ -46,11 +47,23 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var users = await GetDbSet(dbContext)
-                    .Where(e => email == null || e.Email.StartsWith(email))
-                    .OrderBy(e => e.Email)
-                    .Skip(skip).Take(take)
-                    .ToListAsync();
+                List<EFModel.User> users;
+                if (dbContext.Database.IsNpgsql())
+                {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => e.Email == null || 
+                            EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), "a%"))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
+                else {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => email == null || e.Email.StartsWith(email))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
                 return Mapper.Map<List<TableModel.User>>(users);
             }
         }
@@ -124,9 +137,16 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
+                        e.OrganizationId == organizationId && e.ExternalId == externalId);
+                var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
+                return Mapper.Map<TableModel.User>(entity);
+            }
         }
     }
 }

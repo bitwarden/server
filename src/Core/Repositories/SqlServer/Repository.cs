@@ -43,16 +43,21 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public virtual async Task CreateAsync(T obj)
+        public virtual async Task<T> CreateAsync(T obj)
         {
             obj.SetNewId();
             using (var connection = new SqlConnection(ConnectionString))
             {
+                var parameters = new DynamicParameters();
+                parameters.AddDynamicParams(obj);
+                parameters.Add("Id", obj.Id, direction: ParameterDirection.InputOutput);
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_Create]",
-                    obj,
+                    parameters,
                     commandType: CommandType.StoredProcedure);
+                obj.Id = parameters.Get<TId>(nameof(obj.Id));
             }
+            return obj;
         }
 
         public virtual async Task ReplaceAsync(T obj)

@@ -46,20 +46,37 @@ namespace Bit.Core.Utilities
     {
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            var usePostgreSql = CoreHelpers.SettingHasValue(globalSettings.PostgreSql?.ConnectionString);
-            var useMySql = CoreHelpers.SettingHasValue(globalSettings.MySql?.ConnectionString);
-            var useEf = usePostgreSql || useMySql;
+            var selectedDatabaseProvider = globalSettings.DatabaseProvider;
+            var provider = SupportedDatabaseProviders.SqlServer;
+            if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+            {
+                switch (selectedDatabaseProvider.ToLowerInvariant())
+                {
+                    case "postgres":
+                    case "postgresql":
+                        provider = SupportedDatabaseProviders.Postgres;
+                        break;
+                    case "mysql":
+                    case "mariadb":
+                        provider = SupportedDatabaseProviders.MySql;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            var useEf = (provider != SupportedDatabaseProviders.SqlServer);
 
             if (useEf)
             {
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
                 services.AddDbContext<EntityFrameworkRepos.DatabaseContext>(options =>
                 {
-                    if (usePostgreSql)
+                    if (provider == SupportedDatabaseProviders.Postgres)
                     {
                         options.UseNpgsql(globalSettings.PostgreSql.ConnectionString);
                     } 
-                    else if (useMySql)
+                    else if (provider == SupportedDatabaseProviders.MySql)
                     {
                         options.UseMySql(globalSettings.MySql.ConnectionString);
                     }

@@ -3,15 +3,45 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AutoFixture;
+using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using EfModel = Bit.Core.Models.EntityFramework;
 using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Utilities;
+using AutoFixture.Kernel;
+using Bit.Core.Models;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Repositories.EntityFramework;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
+    internal class OrganizationBuilder: ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            if (context == null) 
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            var type = request as Type;
+            if (type == null || type != typeof(Organization))
+            {
+                return new NoSpecimen();
+            }
+
+            var fixture = new Fixture();
+            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+            var organization = new Fixture().WithAutoNSubstitutions().Create<Organization>();
+            organization.SetTwoFactorProviders(providers);
+            return organization;
+        }
+    }
+
     internal class PaidOrganization : ICustomization
     {
         public PlanType CheckedPlanType { get; set; }
@@ -67,6 +97,16 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
+    internal class EfOrganization: ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
+
     internal class PaidOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public PaidOrganizationAutoDataAttribute(int planType = 0) : base(new SutProviderCustomization(),
@@ -110,6 +150,19 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public InlineOrganizationInviteAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(OrganizationInvite) }, values)
+        { }
+    }
+
+    internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
+        { }
+    }
+
+    internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfOrganization) }, values)
         { }
     }
 }

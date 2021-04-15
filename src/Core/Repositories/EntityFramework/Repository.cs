@@ -26,19 +26,21 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await GetDbSet(dbContext).FindAsync(id);
-                return entity as T;
+                return Mapper.Map<T>(entity);
             }
         }
 
-        public virtual async Task CreateAsync(T obj)
+        public virtual async Task<T> CreateAsync(T obj)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
+                obj.SetNewId();
                 var entity = Mapper.Map<TEntity>(obj);
                 dbContext.Add(entity);
                 await dbContext.SaveChangesAsync();
                 obj.Id = entity.Id;
+                return obj;
             }
         }
 
@@ -75,7 +77,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = Mapper.Map<TEntity>(obj);
-                dbContext.Entry(entity).State = EntityState.Deleted;
+                dbContext.Remove(entity);
                 await dbContext.SaveChangesAsync();
             }
         }

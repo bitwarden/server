@@ -6,6 +6,8 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class DatabaseContext : DbContext
     {
+        public static string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
+
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
         { }
@@ -24,7 +26,6 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
-        public DbSet<Role> Roles { get; set; }
         public DbSet<Send> Sends { get; set; }
         public DbSet<SsoConfig> SsoConfigs { get; set; }
         public DbSet<SsoUser> SsoUsers { get; set; }
@@ -35,42 +36,81 @@ namespace Bit.Core.Repositories.EntityFramework
         
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            builder.Entity<Cipher>().Ignore(e => e.Data);
-            builder.Entity<Cipher>().Property(e => e.DataJson).HasColumnName("Data");
-            builder.Entity<Cipher>().Ignore(e => e.Attachments);
-            builder.Entity<Cipher>().Property(e => e.AttachmentsJson).HasColumnName("Attachments");
-            builder.Entity<Cipher>().Ignore(e => e.Favorites);
-            builder.Entity<Cipher>().Property(e => e.FavoritesJson).HasColumnName("Favorites");
-            builder.Entity<Cipher>().Ignore(e => e.Folders);
-            builder.Entity<Cipher>().Property(e => e.FoldersJson).HasColumnName("Folders");
+            var eCipher = builder.Entity<Cipher>();
+            var eCollection = builder.Entity<Collection>();
+            var eCollectionCipher = builder.Entity<CollectionCipher>();
+            var eDevice = builder.Entity<Device>();
+            var eEmergencyAccess = builder.Entity<EmergencyAccess>();
+            var eEvent = builder.Entity<Event>();
+            var eFolder = builder.Entity<Folder>();
+            var eGrant = builder.Entity<Grant>();
+            var eGroup = builder.Entity<Group>();
+            var eGroupUser = builder.Entity<GroupUser>();
+            var eInstallation = builder.Entity<Installation>();
+            var eOrganization = builder.Entity<Organization>();
+            var eOrganizationUser = builder.Entity<OrganizationUser>();
+            var ePolicy = builder.Entity<Policy>();
+            var eSend = builder.Entity<Send>();
+            var eSsoConfig = builder.Entity<SsoConfig>();
+            var eSsoUser = builder.Entity<SsoUser>();
+            var eTaxRate = builder.Entity<TaxRate>();
+            var eTransaction = builder.Entity<Transaction>();
+            var eU2f = builder.Entity<U2f>();
+            var eUser = builder.Entity<User>();
 
-            builder.Entity<User>().Ignore(e => e.TwoFactorProviders);
-            builder.Entity<User>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
+            eCipher.Property(e => e.AttachmentsJson).HasColumnName("Attachments");
+            eCipher.Ignore(e => e.Attachments);
+            eCipher.Property(e => e.DataJson).HasColumnName("Data");
+            eCipher.Ignore(e => e.Data);
+            eCipher.Property(e => e.FavoritesJson).HasColumnName("Favorites");
+            eCipher.Ignore(e => e.Favorites);
+            eCipher.Ignore(e => e.Folders);
+            eCipher.Property(e => e.FoldersJson).HasColumnName("Folders");
 
-            builder.Entity<Organization>().Ignore(e => e.TwoFactorProviders);
-            builder.Entity<Organization>().Property(e => e.TwoFactorProvidersJson).HasColumnName("TwoFactorProviders");
+            eCollectionCipher.HasNoKey();
 
-            builder.Entity<Cipher>().ToTable(nameof(Cipher));
-            builder.Entity<Collection>().ToTable(nameof(Collection));
-            builder.Entity<CollectionCipher>().ToTable(nameof(CollectionCipher));
-            builder.Entity<Device>().ToTable(nameof(Device));
-            builder.Entity<EmergencyAccess>().ToTable(nameof(EmergencyAccess));
-            builder.Entity<Event>().ToTable(nameof(Event));
-            builder.Entity<Folder>().ToTable(nameof(Folder));
-            builder.Entity<Grant>().ToTable(nameof(Grant));
-            builder.Entity<Group>().ToTable(nameof(Group));
-            builder.Entity<GroupUser>().ToTable(nameof(GroupUser));
-            builder.Entity<Installation>().ToTable(nameof(Installation));
-            builder.Entity<Organization>().ToTable(nameof(Organization));
-            builder.Entity<OrganizationUser>().ToTable(nameof(OrganizationUser));
-            builder.Entity<Policy>().ToTable(nameof(Policy));
-            builder.Entity<Send>().ToTable(nameof(Send));
-            builder.Entity<SsoConfig>().ToTable(nameof(SsoConfig));
-            builder.Entity<SsoUser>().ToTable(nameof(SsoUser));
-            builder.Entity<TaxRate>().ToTable(nameof(TaxRate));
-            builder.Entity<Transaction>().ToTable(nameof(Transaction));
-            builder.Entity<U2f>().ToTable(nameof(U2f));
-            builder.Entity<User>().ToTable(nameof(User));
+            eGrant.HasNoKey();
+            eCipher.Property(e => e.DataJson).HasColumnName("Data");
+            eCipher.Ignore(e => e.Data);
+
+            eGroupUser.HasNoKey();
+
+            if (Database.IsNpgsql()) 
+            {
+                // the postgres provider doesn't currently support database level non-deterministic collations.
+                // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
+                builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
+                eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
+                eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
+                eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
+                //
+
+                var jsonColumnType = "json";
+                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
+                eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
+            }
+
+            eCipher.ToTable(nameof(Cipher));
+            eCollection.ToTable(nameof(Collection));
+            eCollectionCipher.ToTable(nameof(CollectionCipher));
+            eDevice.ToTable(nameof(Device));
+            eEmergencyAccess.ToTable(nameof(EmergencyAccess));
+            eEvent.ToTable(nameof(Event));
+            eFolder.ToTable(nameof(Folder));
+            eGrant.ToTable(nameof(Grant));
+            eGroup.ToTable(nameof(Group));
+            eGroupUser.ToTable(nameof(GroupUser));
+            eInstallation.ToTable(nameof(Installation));
+            eOrganization.ToTable(nameof(Organization));
+            eOrganizationUser.ToTable(nameof(OrganizationUser));
+            ePolicy.ToTable(nameof(Policy));
+            eSend.ToTable(nameof(Send));
+            eSsoConfig.ToTable(nameof(SsoConfig));
+            eSsoUser.ToTable(nameof(SsoUser));
+            eTaxRate.ToTable(nameof(TaxRate));
+            eTransaction.ToTable(nameof(Transaction));
+            eU2f.ToTable(nameof(U2f));
+            eUser.ToTable(nameof(User));
         }
     }
 }
