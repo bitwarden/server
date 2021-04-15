@@ -33,7 +33,7 @@ namespace Bit.Sso.Utilities
             }
 
             // We need to pull out and parse the response or request SAML envelope
-            XmlDocument xmlDocument = null;
+            XmlElement envelope = null;
             try
             {
                 if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
@@ -52,8 +52,8 @@ namespace Bit.Sso.Utilities
                     {
                         return false;
                     }
-                    xmlDocument = XmlHelpers.XmlDocumentFromString(
-                        Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)));
+                    envelope = XmlHelpers.XmlDocumentFromString(
+                        Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
                 }
                 else if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
                 {
@@ -67,8 +67,8 @@ namespace Bit.Sso.Utilities
                         using var deCompressed = new MemoryStream();
                         await decompressedStream.CopyToAsync(deCompressed);
 
-                        xmlDocument = XmlHelpers.XmlDocumentFromString(
-                            Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length));
+                        envelope = XmlHelpers.XmlDocumentFromString(
+                            Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
                     }
                     catch (FormatException ex)
                     {
@@ -81,18 +81,16 @@ namespace Bit.Sso.Utilities
                 return false;
             }
 
-            XmlElement rootEl = xmlDocument?.DocumentElement;
-            if (rootEl == null)
+            if (envelope == null)
             {
                 return false;
             }
 
             if (options.SPOptions.WantAssertionsSigned)
             {
-                var nsmgr = new XmlNamespaceManager(xmlDocument.NameTable);
-                nsmgr.AddNamespace("saml2", Saml2Namespaces.Saml2Name);
-                var assertion = rootEl.SelectSingleNode("saml2:Assertion", nsmgr) as XmlElement;
-                var IsAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys, options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var IsAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
                 if (!IsAssertionSigned)
                 {
                     throw new Exception("Cannot verify SAML assertion signature.");
@@ -100,7 +98,7 @@ namespace Bit.Sso.Utilities
             }
 
             // Double check the entity Ids
-            var entityId = rootEl["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+            var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
             return string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase);
         }
     }
