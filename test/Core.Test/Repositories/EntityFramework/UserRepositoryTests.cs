@@ -8,12 +8,13 @@ using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
 using System;
+using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class UserRepositoryTests
     {
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void CreateAsync_Works_DataMatches(User user, UserCompare equalityComparer,
             List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
@@ -33,7 +34,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void ReplaceAsync_Works_DataMatches(User postUser, User replaceUser,
             UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)
@@ -57,7 +58,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void DeleteAsync_Works_DataMatches(User user, UserCompare equalityComparer,
                 List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
@@ -86,7 +87,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(savedSqlUser == null);
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetByEmailAsync_Works_DataMatches(User user, UserCompare equalityComparer,
                 List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
@@ -106,7 +107,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetKdfInformationByEmailAsync_Works_DataMatches(User user,
             UserKdfInformationCompare equalityComparer, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)
@@ -128,7 +129,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void SearchAsync_Works_DataMatches(User user, int skip, int take, 
             UserCompare equalityCompare, List<EfRepo.UserRepository> suts, 
             SqlRepo.UserRepository sqlUserRepo)
@@ -150,7 +151,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetManyByPremiumAsync_Works_DataMatches(User user,
             List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
@@ -171,7 +172,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(returnedUsers.All(x => x.Premium == user.Premium));
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetPublicKeyAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)
         {
@@ -192,7 +193,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!returnedKeys.Distinct().Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetAccountRevisionDateAsync(User user, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)
         {
@@ -213,7 +214,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!returnedKeys.Distinct().Skip(1).Any());
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public void UpdateStorageAsync_Works_DataMatches(User user, List<Cipher> ciphers,
             List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
         {
@@ -221,7 +222,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(true);
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
             DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)
@@ -250,7 +251,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                     savedDates.All(e => e.ToString() == updatedReminderDate.ToString()));
         }
 
-        [Theory, EfUserAutoData]
+        [CiSkippedTheory, EfUserAutoData]
         public async void GetBySsoUserAsync_Works_DataMatches(User user, Organization org, 
             SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
             List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,

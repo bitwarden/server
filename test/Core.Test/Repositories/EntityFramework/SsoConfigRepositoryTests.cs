@@ -9,12 +9,13 @@ using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Test.AutoFixture.SsoConfigFixtures;
 using System;
+using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class SsoConfigRepositoryTests
     {
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void CreateAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
             SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
@@ -50,7 +51,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void ReplaceAsync_Works_DataMatches(SsoConfig postSsoConfig, SsoConfig replaceSsoConfig, 
             Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
@@ -95,7 +96,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(2).Any());
         }
 
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void DeleteAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
             SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
@@ -133,7 +134,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(savedSqlSsoConfig == null);
         }
 
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void GetByOrganizationIdAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
             SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
@@ -170,7 +171,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void GetByIdentifierAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
             SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
@@ -208,7 +209,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         // Testing that data matches here would involve manipulating all SsoConfig records in the db
-        [Theory, EfSsoConfigAutoData]
+        [CiSkippedTheory, EfSsoConfigAutoData]
         public async void GetManyByRevisionNotBeforeDate_Works(SsoConfig ssoConfig, DateTime notBeforeDate,
             Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos)

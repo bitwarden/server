@@ -9,6 +9,7 @@ using Bit.Core.Models.Data;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -37,7 +38,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void ReplaceAsync_Works_DataMatches(Organization postOrganization,
             Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
             OrganizationCompare equalityComparer, List<EfRepo.OrganizationRepository> suts)
@@ -65,7 +66,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void DeleteAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
             List<EfRepo.OrganizationRepository> suts)
@@ -95,7 +96,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(savedSqlOrganization == null);
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetByIdentifierAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
             List<EfRepo.OrganizationRepository> suts)
@@ -117,7 +118,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetManyByEnabledAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
             List<EfRepo.OrganizationRepository> suts)
@@ -138,7 +139,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(returnedOrgs.All(o => o.Enabled));
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetManyByUserIdAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
             List<EfRepo.OrganizationRepository> suts)
@@ -147,7 +148,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(true);
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void SearchAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
             List<EfRepo.OrganizationRepository> suts)
@@ -156,7 +157,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(true);
         }
 
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void UpdateStorageAsync_Works_DataMatches(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
             List<EfRepo.OrganizationRepository> suts)
@@ -166,7 +167,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         // testing data matches here would require manipulating all organization abilities in the db
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetManyAbilitiesAsync_Works(Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
             List<EfRepo.OrganizationRepository> suts)

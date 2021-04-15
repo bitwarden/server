@@ -8,12 +8,13 @@ using Bit.Core.Models.Table;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Test.AutoFixture.SsoUserFixtures;
+using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class SsoUserRepositoryTests
     {
-        [Theory, EfSsoUserAutoData]
+        [CiSkippedTheory, EfSsoUserAutoData]
         public async void CreateAsync_Works_DataMatches(SsoUser ssoUser, User user, Organization org,
             SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
@@ -51,7 +52,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctSsoUsers.Skip(1).Any());
         }
 
-        [Theory, EfSsoUserAutoData]
+        [CiSkippedTheory, EfSsoUserAutoData]
         public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser, 
             Organization org, User user, SsoUserCompare equalityComparer,
             List<EfRepo.SsoUserRepository> suts, List<EfRepo.UserRepository> efUserRepos,
@@ -100,7 +101,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [Theory, EfSsoUserAutoData]
+        [CiSkippedTheory, EfSsoUserAutoData]
         public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user,
             SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
@@ -143,7 +144,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(savedSqlSsoUser == null);
         }
 
-        [Theory, EfSsoUserAutoData]
+        [CiSkippedTheory, EfSsoUserAutoData]
         public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
             User user, Organization org, SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
