@@ -41,22 +41,33 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<ICollection<TableModel.Organization>> GetManyByUserIdAsync(Guid userId)
         {
-            // TODO
-            return await Task.FromResult(null as ICollection<TableModel.Organization>);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var organizations = await GetDbSet(dbContext)
+                    .Select(e => e.OrganizationUsers
+                        .Where(ou => ou.UserId == userId)
+                        .Select(ou => ou.Organization))
+                    .ToListAsync();
+                return Mapper.Map<List<TableModel.Organization>>(organizations);
+            }
         }
 
-        public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail, bool? paid,
-            int skip, int take)
+        public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail,
+            bool? paid, int skip, int take)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: more filters
                 var organizations = await GetDbSet(dbContext)
-                .Where(e => name == null || e.Name.StartsWith(name))
-                .OrderBy(e => e.Name)
-                .Skip(skip).Take(take)
-                .ToListAsync();
+                    .Where(e => name == null || e.Name.Contains(name))
+                    .Where(e => userEmail == null || e.OrganizationUsers.Any(u => u.Email == userEmail))
+                    .Where(e => paid == null || 
+                            (paid == true && !string.IsNullOrWhiteSpace(e.GatewaySubscriptionId)) ||
+                            (paid == false && e.GatewaySubscriptionId == null))
+                    .OrderBy(e => e.CreationDate)
+                    .Skip(skip).Take(take)
+                    .ToListAsync();
                 return Mapper.Map<List<TableModel.Organization>>(organizations);
             }
         }

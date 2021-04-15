@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Table
 {
@@ -12,15 +13,25 @@ namespace Bit.Core.Models.Table
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
         public Guid Id { get; set; }
+        [MaxLength(50)]
         public string Identifier { get; set; }
+        [MaxLength(50)]
         public string Name { get; set; }
+        [MaxLength(50)]
         public string BusinessName { get; set; }
+        [MaxLength(50)]
         public string BusinessAddress1 { get; set; }
+        [MaxLength(50)]
         public string BusinessAddress2 { get; set; }
+        [MaxLength(50)]
         public string BusinessAddress3 { get; set; }
+        [MaxLength(2)]
         public string BusinessCountry { get; set; }
+        [MaxLength(30)]
         public string BusinessTaxNumber { get; set; }
+        [MaxLength(256)]
         public string BillingEmail { get; set; }
+        [MaxLength(50)]
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
         public int? Seats { get; set; }
@@ -39,11 +50,15 @@ namespace Bit.Core.Models.Table
         public long? Storage { get; set; }
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }
+        [MaxLength(50)]
         public string GatewayCustomerId { get; set; }
+        [MaxLength(50)]
         public string GatewaySubscriptionId { get; set; }
         public string ReferenceData { get; set; }
         public bool Enabled { get; set; } = true;
+        [MaxLength(100)]
         public string LicenseKey { get; set; }
+        [MaxLength(30)]
         public string ApiKey { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }

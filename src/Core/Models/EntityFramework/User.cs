@@ -6,20 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class User : Table.User
     {
-        private JsonDocument _twoFactorProvidersJson;
-
-        public ICollection<Cipher> Ciphers { get; set; }
-
-        [IgnoreMap]
-        public JsonDocument TwoFactorProvidersJson
-        {
-            get => _twoFactorProvidersJson;
-            set
-            {
-                TwoFactorProviders = value?.ToString();
-                _twoFactorProvidersJson = value;
-            }
-        }
+        public ICollection<OrganizationUser> OrganizationUsers { get; set; }
     }
 
     public class UserMapperProfile : Profile
