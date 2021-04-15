@@ -5,10 +5,17 @@ on:
     branches:
       - 'rc'
   workflow_dispatch:
-    inputs: {}
+    inputs: 
+      migrateDb:
+        required: true
+        default: true
+      resetDb:
+        required: true
+        default: false
 
 jobs:
   build:
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -99,6 +106,26 @@ jobs:
         env:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
+
+
+  reset-db:
+    if: ${{ github.events.inputs.resetDb }} == "true"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Reset Test Data - Stub
+        run: |
+          echo "placeholder for cleaning DB"
+          echo "placeholder for loading test dataset"
+
+  update-db:
+    if: ${{ github.events.inputs.migrateDb }} == "true"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: migrate db
+        run: 
+
 
   deploy-identity:
     runs-on: ubuntu-latest
