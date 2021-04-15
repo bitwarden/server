@@ -15,7 +15,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class OrganizationRepositoryTests
     {
-        [Theory, EfOrganizationAutoData]
+        [CiSkippedTheory, EfOrganizationAutoData]
         public async void CreateAsync_Works_DataMatches(
             Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
