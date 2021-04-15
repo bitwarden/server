@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    if: false
+    #if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -109,11 +109,11 @@ jobs:
 
 
   reset-db:
-    if: ${{ github.events.inputs.resetDb }} == "true"
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Reset Test Data - Stub
+        if: ${{ github.events.inputs.resetDb }} == "true"
         run: |
           echo "placeholder for cleaning DB"
           echo "placeholder for loading test dataset"
@@ -124,6 +124,7 @@ jobs:
     needs: build
     steps:
       - name: migrate db
+        if: ${{ github.events.inputs.resetDb }} == "true"
         run: |
           echo "placeholder for updateing DB"
 
