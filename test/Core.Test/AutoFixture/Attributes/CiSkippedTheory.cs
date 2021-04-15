@@ -14,6 +14,6 @@ namespace Bit.Core.Test.AutoFixture.Attributes
     }
     
     private static bool IsGithubActions()
-        => Environment.GetEnvironmentVariable("GITHUB_CONTEXT") != null;   
+        => Environment.GetEnvironmentVariable("CI") != null;   
     }
 }
