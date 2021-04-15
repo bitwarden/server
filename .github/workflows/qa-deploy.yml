@@ -124,7 +124,8 @@ jobs:
     needs: build
     steps:
       - name: migrate db
-        run: 
+        run: |
+          echo "placeholder for updateing DB"
 
 
   deploy-identity:
