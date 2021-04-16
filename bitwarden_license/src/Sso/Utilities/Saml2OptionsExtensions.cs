@@ -86,6 +86,13 @@ namespace Bit.Sso.Utilities
                 return false;
             }
 
+            // Double check the entity Ids
+            var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+            if (!string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return false;
+            }
+
             if (options.SPOptions.WantAssertionsSigned)
             {
                 var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
@@ -97,9 +104,7 @@ namespace Bit.Sso.Utilities
                 }
             }
 
-            // Double check the entity Ids
-            var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
-            return string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase);
+            return true;
         }
     }
 }
