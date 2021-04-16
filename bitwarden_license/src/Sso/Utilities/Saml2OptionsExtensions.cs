@@ -89,9 +89,9 @@ namespace Bit.Sso.Utilities
             if (options.SPOptions.WantAssertionsSigned)
             {
                 var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
-                var IsAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
                     options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
-                if (!IsAssertionSigned)
+                if (!isAssertionSigned)
                 {
                     throw new Exception("Cannot verify SAML assertion signature.");
                 }
