@@ -33,7 +33,7 @@ namespace Bit.Core.Models.Data
         public string Password { get; set; }
         public DateTime? PasswordRevisionDate { get; set; }
         public string Totp { get; set; }
-        public AutofillOnPageLoadOptions AutofillOnPageLoad { get; set; }
+        public bool? AutofillOnPageLoad { get; set; }
 
         public class CipherLoginUriData
         {

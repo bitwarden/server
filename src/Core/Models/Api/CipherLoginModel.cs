@@ -58,7 +58,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string Totp { get; set; }
-        public AutofillOnPageLoadOptions AutofillOnPageLoad { get; set; }
+        public bool? AutofillOnPageLoad { get; set; }
 
         public class CipherLoginUriModel
         {
