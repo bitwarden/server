@@ -9,7 +9,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Controllers
 {
@@ -86,6 +88,33 @@ namespace Bit.Api.Controllers
             var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
             var responses = groupIds.Select(g => g.ToString());
             return responses;
+        }
+        
+        [HttpGet("{userId}/reset-password-details")]
+        public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(string orgId, string userId)
+        {
+            // Make sure the calling user can reset passwords for this org
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageResetPassword(orgGuidId))
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
+            // Retrieve data necessary for response (KDF, KDF Iterations, ResetPasswordKey)
+            // TODO Revisit this and create SPROC to reduce DB calls
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException();
+            }
+            
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(orgGuidId, new Guid(userId));
+            if (organizationUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user));
         }
 
         [HttpPost("invite")]
@@ -187,6 +216,45 @@ namespace Bit.Api.Controllers
             var callingUserId = _userService.GetProperUserId(User);
             await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
         }
+        
+        [HttpPut("{userId}/reset-password")]
+        public async Task PutResetPassword(string orgId, string userId, [FromBody]OrganizationUserResetPasswordRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            // Calling user must have Manage Reset Password permission
+            if (!_currentContext.ManageResetPassword(orgGuidId))
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var userGuidId = new Guid(userId);
+            var user = await _userService.GetUserByIdAsync(userGuidId);
+            if (user == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgGuidId, userGuidId);
+            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
+                orgUser.OrganizationId != orgGuidId || string.IsNullOrEmpty(orgUser.ResetPasswordKey))
+            {
+                throw new BadRequestException("Organization User not valid");
+            }
+
+            var result = await _userService.AdminResetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            await Task.Delay(2000);
+            throw new BadRequestException(ModelState);
+            }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
