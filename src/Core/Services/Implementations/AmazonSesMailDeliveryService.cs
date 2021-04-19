@@ -147,14 +147,14 @@ namespace Bit.Core.Services
                 };
                 try
                 {
-                    await SendBulkEmails(request, false);
+                    await SendBulkEmailsAsync(request, false);
                 }
                 catch (Exception e)
                 {
                     try
                     {
                         _logger.LogWarning(e, "Failed to send emails. Re-retying...");
-                        await SendBulkEmails(request, true);
+                        await SendBulkEmailsAsync(request, true);
                     }
                     catch (Exception ex)
                     {
@@ -169,7 +169,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task UpsertTemplate(string templateName, string subjectPart, string textPart = null, string htmlPart = null)
+        public async Task UpsertTemplateAsync(string templateName, string subjectPart, string textPart = null, string htmlPart = null)
         {
             var template = new Template { TemplateName = templateName };
             if (subjectPart != null)
@@ -217,7 +217,7 @@ namespace Bit.Core.Services
             await _client.SendEmailAsync(request);
         }
 
-        private async Task SendBulkEmails(SendBulkTemplatedEmailRequest request, bool retry)
+        private async Task SendBulkEmailsAsync(SendBulkTemplatedEmailRequest request, bool retry)
         {
             if (retry)
             {

@@ -545,7 +545,7 @@ namespace Bit.Core.Services
                 var bulkTemplate = GenerateModelForBulkSend(messageModels.First().model.GetType(), unescapedModelProperties);
                 var (subjectPart, htmlPart, textPart) = await GetMessageContentAsync(templateName, bulkTemplate);
 
-                await sesService.UpsertTemplate(templateName, subjectPart, textPart, htmlPart);
+                await sesService.UpsertTemplateAsync(templateName, subjectPart, textPart, htmlPart);
 
                 await sesService.SendBulkTemplatedEmailAsync(templateName, bulkTemplate, messageModels);
             }
