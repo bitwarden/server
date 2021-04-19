@@ -33,6 +33,17 @@ namespace Bit.Core.Services
 
         public async Task CreateManyAsync(IList<IEvent> e)
         {
+            if (!e?.Any() ?? true)
+            {
+                return;
+            }
+
+            if (e.Count == 1)
+            {
+                await CreateAsync(e.First());
+                return;
+            }
+
             foreach(var json in SerializeMany(e))
             {
                 await _queueClient.SendMessageAsync(json);
