@@ -97,7 +97,7 @@ namespace Bit.Api.Controllers
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageResetPassword(orgGuidId))
             {
-                throw new UnauthorizedAccessException();
+                throw new NotFoundException();
             }
             
             // Retrieve data necessary for response (KDF, KDF Iterations, ResetPasswordKey)
@@ -224,7 +224,7 @@ namespace Bit.Api.Controllers
             // Calling user must have Manage Reset Password permission
             if (!_currentContext.ManageResetPassword(orgGuidId))
             {
-                throw new UnauthorizedAccessException();
+                throw new NotFoundException();
             }
 
             var userGuidId = new Guid(userId);
