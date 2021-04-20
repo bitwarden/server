@@ -29,6 +29,7 @@ namespace Bit.Core.Repositories
         Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
         Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
+        Task DeleteManyAsync(IEnumerable<Guid> userIds);
         Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email);
     }
 }
