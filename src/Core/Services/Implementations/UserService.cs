@@ -600,6 +600,24 @@ namespace Bit.Core.Services
             
             return IdentityResult.Success;
         }
+        
+        public async Task<IdentityResult> AdminResetPasswordAsync(User user, string newMasterPassword, string key)
+        {
+            var result = await UpdatePasswordHash(user, newMasterPassword);
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.Key = key;
+
+            await _userRepository.ReplaceAsync(user);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+            await _pushService.PushLogOutAsync(user.Id);
+
+            return IdentityResult.Success;
+        }
 
         public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
             string key, KdfType kdf, int kdfIterations)

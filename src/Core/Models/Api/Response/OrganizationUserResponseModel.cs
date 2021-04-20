@@ -23,6 +23,7 @@ namespace Bit.Core.Models.Api
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+            ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         }
 
         public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
@@ -39,6 +40,7 @@ namespace Bit.Core.Models.Api
             Status = organizationUser.Status;
             AccessAll = organizationUser.AccessAll;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+            ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         }
 
         public string Id { get; set; }
@@ -47,6 +49,7 @@ namespace Bit.Core.Models.Api
         public OrganizationUserStatusType Status { get; set; }
         public bool AccessAll { get; set; }
         public Permissions Permissions { get; set; }
+        public bool ResetPasswordEnrolled { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
@@ -82,5 +85,25 @@ namespace Bit.Core.Models.Api
         public string Email { get; set; }
         public bool TwoFactorEnabled { get; set; }
         public bool SsoBound { get; set; }
+    }
+
+    public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
+    {
+        public OrganizationUserResetPasswordDetailsResponseModel(OrganizationUserResetPasswordDetails orgUser,
+            string obj = "organizationUserResetPasswordDetails") : base(obj)
+        {
+            if (orgUser == null)
+            {
+                throw new ArgumentNullException(nameof(orgUser));
+            }
+
+            Kdf = orgUser.Kdf;
+            KdfIterations = orgUser.KdfIterations;
+            ResetPasswordKey = orgUser.ResetPasswordKey;
+        }
+        
+        public KdfType Kdf { get; set; }
+        public int KdfIterations { get; set; }
+        public string ResetPasswordKey { get; set; }
     }
 }
