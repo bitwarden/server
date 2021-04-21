@@ -33,7 +33,7 @@ namespace Bit.Core.Services
 
         public async Task CreateManyAsync(IList<IEvent> e)
         {
-            if (!e?.Any() ?? true)
+            if (e?.Any() != true)
             {
                 return;
             }
