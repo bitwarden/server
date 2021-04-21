@@ -1,5 +1,14 @@
-ALTER TABLE [dbo].[Organization]
-ALTER COLUMN [Seats] INT; 
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'Seats' AND 
+        DATA_TYPE = 'smallint' AND
+        TABLE_NAME = 'Organization')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN [Seats] INT NULL
+END
+GO
 
 IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
 BEGIN
