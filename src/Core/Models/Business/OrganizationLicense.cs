@@ -99,7 +99,7 @@ namespace Bit.Core.Models.Business
         public bool Enabled { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
