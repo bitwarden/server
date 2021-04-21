@@ -33,7 +33,7 @@ namespace Bit.Sso.Utilities
             }
 
             // We need to pull out and parse the response or request SAML envelope
-            XmlElement assertion = null;
+            XmlElement envelope = null;
             try
             {
                 if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
@@ -52,7 +52,7 @@ namespace Bit.Sso.Utilities
                     {
                         return false;
                     }
-                    assertion = XmlHelpers.XmlDocumentFromString(
+                    envelope = XmlHelpers.XmlDocumentFromString(
                         Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
                 }
                 else if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
@@ -67,7 +67,7 @@ namespace Bit.Sso.Utilities
                         using var deCompressed = new MemoryStream();
                         await decompressedStream.CopyToAsync(deCompressed);
 
-                        assertion = XmlHelpers.XmlDocumentFromString(
+                        envelope = XmlHelpers.XmlDocumentFromString(
                             Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
                     }
                     catch (FormatException ex)
@@ -81,14 +81,30 @@ namespace Bit.Sso.Utilities
                 return false;
             }
 
-            if (assertion == null)
+            if (envelope == null)
             {
                 return false;
             }
 
             // Double check the entity Ids
-            var entityId = assertion["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
-            return string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase);
+            var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+            if (!string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return false;
+            }
+
+            if (options.SPOptions.WantAssertionsSigned)
+            {
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
+            }
+
+            return true;
         }
     }
 }
