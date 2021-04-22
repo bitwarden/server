@@ -11,8 +11,8 @@ namespace Bit.Core.Services
 {
     public class AzureQueueEventWriteService : IEventWriteService
     {
+        private const int _maxMessageBody = 64000; // 64 MB
         private readonly QueueClient _queueClient;
-        private const int MAX_MESSAGE_BODY = 128000;
 
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
         {
@@ -44,7 +44,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            foreach(var json in SerializeMany(e))
+            foreach (var json in SerializeMany(e))
             {
                 await _queueClient.SendMessageAsync(json);
             }
@@ -52,25 +52,25 @@ namespace Bit.Core.Services
 
         private IEnumerable<string> SerializeMany(IList<IEvent> events)
         {
+            var eventsList = new List<List<IEvent>> { new List<IEvent>() };
             var strings = new List<string>();
-            var jsonEvents = events.Select(e => JsonConvert.SerializeObject(e, _jsonSettings));
-            var stringBuilder = new StringBuilder("[");
-            foreach(var jsonEvent in jsonEvents)
+            var messageLength = 2; // to account for json array brackets "[]"
+            foreach (var (ev, jsonEvent) in events.Select(e => (e, JsonConvert.SerializeObject(e, _jsonSettings))))
             {
-                if (stringBuilder.Length + jsonEvent.Length + 2 < MAX_MESSAGE_BODY)
+
+                var eventLength = jsonEvent.Length + 1; // To account for json array comma
+                if (messageLength + eventLength > _maxMessageBody)
                 {
-                    stringBuilder.Append($",{jsonEvent}");
+                    eventsList.Add(new List<IEvent> { ev });
+                    messageLength = 2 + eventLength;
                 }
                 else
                 {
-                    stringBuilder.Append("]");
-                    strings.Append(stringBuilder.ToString());
-                    stringBuilder = new StringBuilder("[");
+                    eventsList.Last().Add(ev);
+                    messageLength += eventLength;
                 }
             }
-            stringBuilder.Append("]");
-            strings.Append(stringBuilder.ToString());
-            return strings;
+            return eventsList.Select(l => JsonConvert.SerializeObject(l, _jsonSettings));
         }
     }
 }

@@ -179,15 +179,15 @@ namespace Bit.Core.Services
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
             DateTime? date = null) =>
-            await LogOrganizationUserEventsAsync(new[] {(organizationUser, type, date)});
+            await LogOrganizationUserEventsAsync(new[] { (organizationUser, type, date) });
 
         public async Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             var eventMessages = new List<IEvent>();
-            foreach(var (organizationUser, type, date) in events)
+            foreach (var (organizationUser, type, date) in events)
             {
-                if(!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+                if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
                 {
                     continue;
                 }
