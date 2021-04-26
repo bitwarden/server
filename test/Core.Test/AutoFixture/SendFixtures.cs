@@ -1,7 +1,14 @@
 using System;
 using AutoFixture;
+using AutoFixture.Kernel;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Core.Test.AutoFixture.UserFixtures;
 
 namespace Bit.Core.Test.AutoFixture.SendFixtures
 {
@@ -60,6 +67,63 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
     {
         public InlineOrganizationSendAutoDataAttribute(params object[] values) : base(new[] { typeof(CurrentContextFixtures.CurrentContext),
             typeof(SutProviderCustomization), typeof(OrganizationSend) }, values)
+        { }
+    }
+
+    internal class SendBuilder: ISpecimenBuilder
+    {
+        public bool OrganizationOwned { get; set; }
+        public object Create(object request, ISpecimenContext context)
+        {
+            if (context == null) 
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            var type = request as Type;
+            if (type == null || type != typeof(Send))
+            {
+                return new NoSpecimen();
+            }
+
+            var fixture = new Fixture();
+            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+            if (!OrganizationOwned)
+            {
+                fixture.Customize<Send>(composer => composer
+                        .Without(c => c.OrganizationId));
+            }
+            var obj = fixture.WithAutoNSubstitutions().Create<Send>();
+            return obj;
+        }
+    }
+
+    internal class EfSend: ICustomization 
+    {
+        public bool OrganizationOwned { get; set; }
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new SendBuilder());
+            fixture.Customizations.Add(new UserBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<SendRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
+
+    internal class EfUserSendAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfUserSendAutoDataAttribute() : base(new SutProviderCustomization(), new EfSend())
+        { }
+    }
+
+    internal class EfOrganizationSendAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfOrganizationSendAutoDataAttribute() : base(new SutProviderCustomization(), new EfSend(){
+                OrganizationOwned = true,
+            })
         { }
     }
 }

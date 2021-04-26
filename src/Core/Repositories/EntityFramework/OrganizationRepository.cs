@@ -9,6 +9,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Models.Table;
+using System.Text.Json;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -79,7 +80,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
                     .Where(e => e.UserId == null && e.OrganizationId == id).ToListAsync();
-                var storage = ciphers.Sum(e => e.AttachmentsJson?.RootElement.EnumerateArray()
+                var storage = ciphers.Sum(e => JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
                     .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
                 var organization = new EFModel.Organization
                 {

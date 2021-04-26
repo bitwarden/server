@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -12,6 +13,7 @@ namespace Bit.Core.Models.Table
         public SendType Type { get; set; }
         public string Data { get; set; }
         public string Key { get; set; }
+        [MaxLength(300)]
         public string Password { get; set; }
         public int? MaxAccessCount { get; set; }
         public int AccessCount { get; set; }

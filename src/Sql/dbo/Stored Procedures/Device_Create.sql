@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Device_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Type TINYINT,

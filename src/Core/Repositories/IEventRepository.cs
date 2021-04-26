@@ -16,7 +16,7 @@ namespace Bit.Core.Repositories
             DateTime startDate, DateTime endDate, PageOptions pageOptions);
         Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
             PageOptions pageOptions);
-        Task CreateAsync(IEvent e);
+        Task<IEvent> CreateAsync(IEvent e);
         Task CreateManyAsync(IList<IEvent> e);
     }
 }

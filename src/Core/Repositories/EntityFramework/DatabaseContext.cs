@@ -15,6 +15,8 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Cipher> Ciphers { get; set; }
         public DbSet<Collection> Collections { get; set; }
         public DbSet<CollectionCipher> CollectionCiphers { get; set; }
+        public DbSet<CollectionGroup> CollectionGroups { get; set; }
+        public DbSet<CollectionUser> CollectionUsers { get; set; }
         public DbSet<Device> Devices { get; set; }
         public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
         public DbSet<Event> Events { get; set; }
@@ -39,6 +41,8 @@ namespace Bit.Core.Repositories.EntityFramework
             var eCipher = builder.Entity<Cipher>();
             var eCollection = builder.Entity<Collection>();
             var eCollectionCipher = builder.Entity<CollectionCipher>();
+            var eCollectionUser = builder.Entity<CollectionUser>();
+            var eCollectionGroup = builder.Entity<CollectionGroup>();
             var eDevice = builder.Entity<Device>();
             var eEmergencyAccess = builder.Entity<EmergencyAccess>();
             var eEvent = builder.Entity<Event>();
@@ -58,20 +62,11 @@ namespace Bit.Core.Repositories.EntityFramework
             var eU2f = builder.Entity<U2f>();
             var eUser = builder.Entity<User>();
 
-            eCipher.Property(e => e.AttachmentsJson).HasColumnName("Attachments");
-            eCipher.Ignore(e => e.Attachments);
-            eCipher.Property(e => e.DataJson).HasColumnName("Data");
-            eCipher.Ignore(e => e.Data);
-            eCipher.Property(e => e.FavoritesJson).HasColumnName("Favorites");
-            eCipher.Ignore(e => e.Favorites);
-            eCipher.Ignore(e => e.Folders);
-            eCipher.Property(e => e.FoldersJson).HasColumnName("Folders");
-
             eCollectionCipher.HasNoKey();
+            eCollectionUser.HasNoKey();
+            eCollectionGroup.HasNoKey();
 
             eGrant.HasNoKey();
-            eCipher.Property(e => e.DataJson).HasColumnName("Data");
-            eCipher.Ignore(e => e.Data);
 
             eGroupUser.HasNoKey();
 
@@ -86,6 +81,10 @@ namespace Bit.Core.Repositories.EntityFramework
                 //
 
                 var jsonColumnType = "json";
+                eCipher.Property(e => e.Data).HasColumnType(jsonColumnType);
+                eCipher.Property(e => e.Favorites).HasColumnType(jsonColumnType);
+                eCipher.Property(e => e.Attachments).HasColumnType(jsonColumnType);
+                eCipher.Property(e => e.Folders).HasColumnType(jsonColumnType);
                 eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
                 eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
             }

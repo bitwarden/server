@@ -62,11 +62,29 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                 fixture.Customize<IServiceScopeFactory>(x => x.FromFactory(new ServiceScopeFactoryBuilder(option)));
                 fixture.Customize<IMapper>(x => x.FromFactory(() => 
                     new MapperConfiguration(cfg => {
-                    cfg.AddProfile<UserMapperProfile>();
-                    cfg.AddProfile<OrganizationMapperProfile>();
-                    cfg.AddProfile<SsoUserMapperProfile>();
-                    cfg.AddProfile<SsoConfigMapperProfile>();
-                }).CreateMapper()));
+                        cfg.AddProfile<CipherMapperProfile>();
+                        cfg.AddProfile<CollectionCipherMapperProfile>();
+                        cfg.AddProfile<CollectionMapperProfile>();
+                        cfg.AddProfile<DeviceMapperProfile>();
+                        cfg.AddProfile<EmergencyAccessMapperProfile>();
+                        cfg.AddProfile<EventMapperProfile>();
+                        cfg.AddProfile<FolderMapperProfile>();
+                        cfg.AddProfile<GrantMapperProfile>();
+                        cfg.AddProfile<GroupMapperProfile>();
+                        cfg.AddProfile<GroupUserMapperProfile>();
+                        cfg.AddProfile<InstallationMapperProfile>();
+                        cfg.AddProfile<OrganizationMapperProfile>();
+                        cfg.AddProfile<OrganizationUserMapperProfile>();
+                        cfg.AddProfile<PolicyMapperProfile>();
+                        cfg.AddProfile<SendMapperProfile>();
+                        cfg.AddProfile<SsoConfigMapperProfile>();
+                        cfg.AddProfile<SsoUserMapperProfile>();
+                        cfg.AddProfile<TaxRateMapperProfile>();
+                        cfg.AddProfile<TransactionMapperProfile>();
+                        cfg.AddProfile<U2fMapperProfile>();
+                        cfg.AddProfile<UserMapperProfile>();
+                    })
+                .CreateMapper()));
 
                 var repo = fixture.Create<T>();
                 list.Add(repo);

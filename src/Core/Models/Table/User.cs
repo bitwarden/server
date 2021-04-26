@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Table
         [MaxLength(50)]
         public string Name { get; set; }
         [Required]
-        [MaxLength(50)]
+        [MaxLength(256)]
         public string Email { get; set; }
         public bool EmailVerified { get; set; }
         [MaxLength(300)]

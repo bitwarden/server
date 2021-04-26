@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Policy_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data NVARCHAR(MAX),

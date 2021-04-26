@@ -81,5 +81,15 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
         }
+
+        public virtual async Task RefreshDb()
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var context = GetDatabaseContext(scope);
+                await context.Database.EnsureDeletedAsync();
+                await context.Database.EnsureCreatedAsync();
+            }
+        }
     }
 }

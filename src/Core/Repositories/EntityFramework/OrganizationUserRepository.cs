@@ -22,17 +22,25 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
+            // TODO: need collections
             throw new NotImplementedException();
         }
 
         public Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
+            // TODO: need collections
             throw new NotImplementedException();
         }
 
-        public Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
+        public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await GetDbSet(dbContext)
+                    .FirstOrDefaultAsync(e => e.OrganizationId == organizationId && e.UserId == userId);
+                return entity;
+            }
         }
 
         public Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)

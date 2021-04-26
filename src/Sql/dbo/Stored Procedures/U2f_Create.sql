@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[U2f_Create]
-    @Id INT,
+    @Id INT OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @KeyHandle VARCHAR(200),
     @Challenge VARCHAR(200),
@@ -28,4 +28,6 @@ BEGIN
         @Version,
         @CreationDate
     )
+
+    SET @Id = (SELECT scope_identity())
 END

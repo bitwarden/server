@@ -19,6 +19,17 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Collections)
         { }
 
+        public override async Task<TableModel.Collection> CreateAsync(Collection obj)
+        {
+            await base.CreateAsync(obj);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // TODO: User_BumpAccountRevisionDateByCollectionId
+            }
+            return obj;
+        }
+
         public Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             throw new NotImplementedException();

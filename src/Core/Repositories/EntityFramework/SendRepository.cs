@@ -18,6 +18,15 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Sends)
         { }
 
+        public override async Task<Send> CreateAsync(Send send)
+        {
+           send = await base.CreateAsync(send);
+
+           // User_UpdateStorage
+           // User_BumpAccountRevisionDate
+           return send;
+        }
+
         public Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
         {
             throw new NotImplementedException();

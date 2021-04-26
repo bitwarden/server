@@ -6,6 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class Collection : Table.Collection
     {
+        List<CollectionUser> CollectionUsers { get; set; }
     }
 
     public class CollectionMapperProfile : Profile

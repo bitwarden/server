@@ -8,6 +8,8 @@ namespace Bit.Core.Models.EntityFramework
     {
         public Organization Organization { get; set; }
         public User User { get; set; }
+
+        List<CollectionUser> CollectionUsers { get; set; }
     }
 
     public class OrganizationUserMapperProfile : Profile
