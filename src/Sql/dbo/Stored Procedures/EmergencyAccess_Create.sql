@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[EmergencyAccess_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @GrantorId UNIQUEIDENTIFIER,
     @GranteeId UNIQUEIDENTIFIER,
     @Email NVARCHAR(256),

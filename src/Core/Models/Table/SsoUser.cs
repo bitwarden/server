@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Table
 {
@@ -7,6 +8,7 @@ namespace Bit.Core.Models.Table
         public long Id { get; set; }
         public Guid UserId { get; set; }
         public Guid? OrganizationId { get; set; }
+        [MaxLength(50)]
         public string ExternalId { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
 

@@ -11,6 +11,8 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Core.Models.Data;
 
@@ -158,6 +160,27 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
     {
         public InlineOrganizationCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(OrganizationCipher) }, values)
+        { }
+    }
+
+    internal class EfUserCipherAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfUserCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher())
+        { }
+    }
+
+    internal class EfOrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfOrganizationCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher(){
+                OrganizationOwned = true,
+            })
+        { }
+    }
+
+    internal class InlineEfCipherAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfCipher) }, values)
         { }
     }
 }

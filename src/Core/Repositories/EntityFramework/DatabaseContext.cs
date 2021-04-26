@@ -15,6 +15,8 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Cipher> Ciphers { get; set; }
         public DbSet<Collection> Collections { get; set; }
         public DbSet<CollectionCipher> CollectionCiphers { get; set; }
+        public DbSet<CollectionGroup> CollectionGroups { get; set; }
+        public DbSet<CollectionUser> CollectionUsers { get; set; }
         public DbSet<Device> Devices { get; set; }
         public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
         public DbSet<Event> Events { get; set; }
@@ -39,6 +41,8 @@ namespace Bit.Core.Repositories.EntityFramework
             var eCipher = builder.Entity<Cipher>();
             var eCollection = builder.Entity<Collection>();
             var eCollectionCipher = builder.Entity<CollectionCipher>();
+            var eCollectionUser = builder.Entity<CollectionUser>();
+            var eCollectionGroup = builder.Entity<CollectionGroup>();
             var eDevice = builder.Entity<Device>();
             var eEmergencyAccess = builder.Entity<EmergencyAccess>();
             var eEvent = builder.Entity<Event>();
@@ -61,9 +65,7 @@ namespace Bit.Core.Repositories.EntityFramework
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
             eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
-
             eGrant.HasKey(x => x.Key);
-
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
 

@@ -19,9 +19,14 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Events)
         { }
 
-        public Task CreateAsync(IEvent e)
+        public async Task<IEvent> CreateAsync(IEvent e)
         {
-            throw new NotImplementedException();
+            if (!(e is Event ev))
+            {
+                ev = new Event(e);
+            }
+
+            return await base.CreateAsync(ev);
         }
 
         public async Task CreateManyAsync(IList<IEvent> entities)

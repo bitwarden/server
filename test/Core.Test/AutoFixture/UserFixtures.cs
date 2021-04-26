@@ -25,13 +25,12 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.User))
+            if (type == typeof(TableModel.User))
             {
                 var fixture = new Fixture();
                 var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                var user = fixture.Create<TableModel.User>();
+                var user = fixture.WithAutoNSubstitutions().Create<TableModel.User>();
                 user.SetTwoFactorProviders(providers);
-
                 return user;
             }
             else if (type == typeof(List<TableModel.User>))
@@ -46,11 +45,7 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
                 return users;
             }
 
-            var fixture = new Fixture();
-            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-            var user = fixture.WithAutoNSubstitutions().Create<TableModel.User>();
-            user.SetTwoFactorProviders(providers);
-            return user;
+            return new NoSpecimen();
         }
     }
 

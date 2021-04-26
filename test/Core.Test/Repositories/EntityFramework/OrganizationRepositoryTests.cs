@@ -31,8 +31,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 savedOrganizations.Add(savedOrganization);
             }
 
-            var sqlUser = await sqlOrganizationRepo.CreateAsync(organization);
-            savedOrganizations.Add(await sqlOrganizationRepo.GetByIdAsync(sqlUser.Id));
+            var sqlOrganization = await sqlOrganizationRepo.CreateAsync(organization);
+            savedOrganizations.Add(await sqlOrganizationRepo.GetByIdAsync(sqlOrganization.Id));
 
             var distinctItems = savedOrganizations.Distinct(equalityComparer);
             Assert.True(!distinctItems.Skip(1).Any());

@@ -20,7 +20,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class CipherRepositoryTests
     {
         // TODO: delete this
-        [Theory, EfUserCipherAutoData]
+        [Theory (Skip = "Run ad-hoc"), EfUserCipherAutoData]
         public async void RefreshDb(List<EfRepo.CipherRepository> suts)
         {
             foreach (var sut in suts)

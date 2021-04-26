@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Installation_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Email NVARCHAR(256),
     @Key VARCHAR(150),
     @Enabled BIT,
