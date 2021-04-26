@@ -609,7 +609,7 @@ namespace Bit.Api.Controllers
             var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
             var attachments = cipher?.GetAttachments();
 
-            if (attachments == null || !attachments.ContainsKey(attachmentId))
+            if (attachments == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
             {
                 throw new NotFoundException();
             }

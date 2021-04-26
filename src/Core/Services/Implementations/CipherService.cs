@@ -365,7 +365,7 @@ namespace Bit.Core.Services
         {
             var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
-            if (!attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+            if (!attachments.ContainsKey(attachmentId))
             {
                 throw new NotFoundException();
             }
