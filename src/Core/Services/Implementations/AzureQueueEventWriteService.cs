@@ -9,9 +9,8 @@ using System.Text;
 
 namespace Bit.Core.Services
 {
-    public class AzureQueueEventWriteService : IEventWriteService
+    public class AzureQueueEventWriteService : AzureQueueService, IEventWriteService
     {
-        private const int _maxMessageBody = 64000; // 64 MB
         private readonly QueueClient _queueClient;
 
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
@@ -44,33 +43,10 @@ namespace Bit.Core.Services
                 return;
             }
 
-            foreach (var json in SerializeMany(e))
+            foreach (var json in SerializeMany(e, _jsonSettings))
             {
                 await _queueClient.SendMessageAsync(json);
             }
-        }
-
-        private IEnumerable<string> SerializeMany(IList<IEvent> events)
-        {
-            var eventsList = new List<List<IEvent>> { new List<IEvent>() };
-            var strings = new List<string>();
-            var messageLength = 2; // to account for json array brackets "[]"
-            foreach (var (ev, jsonEvent) in events.Select(e => (e, JsonConvert.SerializeObject(e, _jsonSettings))))
-            {
-
-                var eventLength = jsonEvent.Length + 1; // To account for json array comma
-                if (messageLength + eventLength > _maxMessageBody)
-                {
-                    eventsList.Add(new List<IEvent> { ev });
-                    messageLength = 2 + eventLength;
-                }
-                else
-                {
-                    eventsList.Last().Add(ev);
-                    messageLength += eventLength;
-                }
-            }
-            return eventsList.Select(l => JsonConvert.SerializeObject(l, _jsonSettings));
         }
     }
 }
