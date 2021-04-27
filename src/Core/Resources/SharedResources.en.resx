@@ -639,8 +639,8 @@
     <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
   </data>
   <data name="ExpectedReturnAcrValue" xml:space="preserve">
-    <value>Expected acr_values In Authentication Response (validation)</value>
-    <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
+    <value>Expected "acr" Claim Value In Response (acr validation)</value>
+    <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
   </data>
   <data name="LoggedOutMessage" xml:space="preserve">
     <value>You have been logged out of the Bitwarden Business Portal.</value>
