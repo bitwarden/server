@@ -333,6 +333,10 @@ namespace Bit.Core.Business.Sso
             {
                 oidcOptions.Scope.AddIfNotExists(scope);
             }
+            if (!string.IsNullOrWhiteSpace(config.ExpectedReturnAcrValue))
+            {
+                oidcOptions.Scope.AddIfNotExists(OpenIdConnectScopes.Acr);
+            }
 
             oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
 
@@ -343,24 +347,6 @@ namespace Bit.Core.Business.Sso
                 oidcOptions.Events.OnRedirectToIdentityProvider = ctx =>
                 {
                     ctx.ProtocolMessage.AcrValues = config.AcrValues;
-                    return Task.CompletedTask;
-                };
-            }
-            if (!string.IsNullOrWhiteSpace(config.ExpectedReturnAcrValue))
-            {
-                oidcOptions.Events ??= new OpenIdConnectEvents();
-                oidcOptions.Events.OnMessageReceived = ctx =>
-                {
-                    // TODO: Determine if this is correct or if there's a different format or parameter to expect this back
-                    if (ctx.ProtocolMessage.AcrValues != config.ExpectedReturnAcrValue)
-                    {
-                        ctx.Fail("Expected acr_values was not returned with the authentication response.");
-                    }
-                    return Task.CompletedTask;
-                };
-                oidcOptions.Events.OnTokenResponseReceived = ctx =>
-                {
-                    // TODO: Figure out token validation for return acr_values, if possible
                     return Task.CompletedTask;
                 };
             }

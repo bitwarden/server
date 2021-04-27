@@ -648,4 +648,8 @@
   <data name="AccessDeniedError" xml:space="preserve">
     <value>Access Denied to this resource.</value>
   </data>
+  <data name="AcrMissingOrInvalid" xml:space="preserve">
+    <value>Expected authentication context class reference (acr) was not returned with the authentication response or is invalid.</value>
+    <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
+  </data>
 </root>
