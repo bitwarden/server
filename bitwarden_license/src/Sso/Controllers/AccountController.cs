@@ -326,6 +326,16 @@ namespace Bit.Sso.Controllers
 
             var externalUser = result.Principal;
 
+            // Validate acr claim against expectation before going further
+            if (!string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
+            {
+                var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
+                if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
+                {
+                    throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
+                }
+            }
+
             // Ensure the NameIdentifier used is not a transient name ID, if so, we need a different attribute
             //  for the user identifier.
             static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier

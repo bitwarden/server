@@ -54,6 +54,7 @@ namespace Bit.Portal.Models
             AdditionalEmailClaimTypes = configurationData.AdditionalEmailClaimTypes;
             AdditionalNameClaimTypes = configurationData.AdditionalNameClaimTypes;
             AcrValues = configurationData.AcrValues;
+            ExpectedReturnAcrValue = configurationData.ExpectedReturnAcrValue;
         }
 
         [Required]
@@ -87,6 +88,8 @@ namespace Bit.Portal.Models
         public string AdditionalNameClaimTypes { get; set; }
         [Display(Name = "AcrValues")]
         public string AcrValues { get; set; }
+        [Display(Name = "ExpectedReturnAcrValue")]
+        public string ExpectedReturnAcrValue { get; set; }
 
         // SAML2 SP
         [Display(Name = "SpEntityId")]
@@ -238,6 +241,7 @@ namespace Bit.Portal.Models
                 AdditionalEmailClaimTypes = AdditionalEmailClaimTypes,
                 AdditionalNameClaimTypes = AdditionalNameClaimTypes,
                 AcrValues = AcrValues,
+                ExpectedReturnAcrValue = ExpectedReturnAcrValue,
             };
         }
 

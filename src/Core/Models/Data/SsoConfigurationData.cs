@@ -27,6 +27,7 @@ namespace Bit.Core.Models.Data
         public string AdditionalEmailClaimTypes { get; set; }
         public string AdditionalNameClaimTypes { get; set; }
         public string AcrValues { get; set; }
+        public string ExpectedReturnAcrValue { get; set; }
 
         // SAML2 IDP
         public string IdpEntityId { get; set; }

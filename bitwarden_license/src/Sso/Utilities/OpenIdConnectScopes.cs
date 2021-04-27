@@ -49,5 +49,16 @@
         /// not present (not logged in).
         /// </summary>
         public const string OfflineAccess = "offline_access";
+
+        /// <summary>
+        /// OPTIONAL. Authentication Context Class Reference. String specifying
+        /// an Authentication Context Class Reference value that identifies the
+        /// Authentication Context Class that the authentication performed
+        /// satisfied.
+        /// </summary>
+        /// <remarks>
+        /// See: https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2
+        /// </remarks>
+        public const string Acr = "acr";
     }
 }
