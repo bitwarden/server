@@ -11,17 +11,16 @@ namespace Bit.Core.Models.Mail
         public string TemplateName { get; set; }
         public object Model { get; set; }
 
-        public static MailQueueMessage FromMailMessage(MailMessage message, string templateName, object model)
+        public MailQueueMessage() { }
+
+        public MailQueueMessage(MailMessage message, string templateName, object model)
         {
-            return new MailQueueMessage
-            {
-                Subject = message.Subject,
-                ToEmails = message.ToEmails,
-                BccEmails = message.BccEmails,
-                Category = string.IsNullOrEmpty(message.Category) ? templateName : message.Category,
-                TemplateName = templateName,
-                Model = model
-            };
+            Subject = message.Subject;
+            ToEmails = message.ToEmails;
+            BccEmails = message.BccEmails;
+            Category = string.IsNullOrEmpty(message.Category) ? templateName : message.Category;
+            TemplateName = templateName;
+            Model = model;
         }
     }
 }

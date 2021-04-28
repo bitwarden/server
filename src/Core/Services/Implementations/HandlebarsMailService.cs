@@ -179,7 +179,7 @@ namespace Bit.Core.Services
             MailQueueMessage CreateMessage(string email, object model)
             {
                 var message = CreateDefaultMessage($"Join {organizationName}", email);
-                return MailQueueMessage.FromMailMessage(message, "OrganizationUserInvited", model);
+                return new MailQueueMessage(message, "OrganizationUserInvited", model);
             }
 
             var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
