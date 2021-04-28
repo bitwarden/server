@@ -99,6 +99,10 @@ namespace Bit.Admin
                 {
                     services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
                 }
+                if (CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
+                {
+                    services.AddHostedService<HostedServices.AzureQueueMailHostedService>();
+                }
             }
         }
 
