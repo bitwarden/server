@@ -12,16 +12,15 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        UserId
+        OU.UserId
     INTO
         #UserIds
     FROM
         [dbo].[OrganizationUser] OU
-        INNER JOIN
+    INNER JOIN
         @OrganizationUserIds OUIds on OUIds.Id = OU.Id
     WHERE
-        OU.[Status] = 2
-    -- Confirmed
+        OU.[Status] = 2 -- Confirmed
 
     UPDATE
         U
@@ -29,7 +28,7 @@ BEGIN
         U.[AccountRevisionDate] = GETUTCDATE()
     FROM
         [dbo].[User] U
-        Inner JOIN
+    Inner JOIN
         #UserIds ON U.[Id] = #UserIds.[UserId]
 END
 GO
