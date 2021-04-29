@@ -18,7 +18,7 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        @OrganizationUserIds OUIds on OUIds.Id = OU.Id
+        @OrganizationUserIds OUIds ON OUIds.Id = OU.Id
     WHERE
         OU.[Status] = 2 -- Confirmed
 
@@ -28,7 +28,7 @@ BEGIN
         U.[AccountRevisionDate] = GETUTCDATE()
     FROM
         [dbo].[User] U
-    Inner JOIN
+    INNER JOIN
         #UserIds ON U.[Id] = #UserIds.[UserId]
 END
 GO

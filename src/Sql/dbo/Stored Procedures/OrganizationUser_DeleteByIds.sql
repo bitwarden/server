@@ -15,7 +15,7 @@ BEGIN
         OrganizationId
     FROM
         [dbo].[OrganizationUser] OU
-        INNER JOIN
+    INNER JOIN
         @Ids OUIds on OUIds.Id = OU.Id
     WHERE
         UserId IS NOT NULL AND
@@ -28,19 +28,19 @@ BEGIN
     DELETE CU
     FROM
         [dbo].[CollectionUser] CU
-        INNER JOIN
+    INNER JOIN
         @Ids I ON I.Id = CU.OrganizationUserId
 
     DELETE GU
     FROM
         [dbo].[GroupUser] GU
-        INNER JOIN
+    INNER JOIN
         @IDs I ON I.Id = GU.OrganizationUserId
 
     DELETE OU
     FROM
         [dbo].[OrganizationUser] OU
-        INNER JOIN
+    INNER JOIN
         @IDs I ON I.Id = OU.Id
 END
 GO

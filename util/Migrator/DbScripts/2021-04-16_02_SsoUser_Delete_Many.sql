@@ -18,7 +18,7 @@ BEGIN
         #SSOIds
     FROM
         [dbo].[SsoUser] SU
-        INNER JOIN
+    INNER JOIN
         @UserAndOrganizationIds UOI ON UOI.Id1 = SU.UserId AND UOI.Id2 = SU.OrganizationId
 
     DECLARE @BatchSize INT = 100
@@ -31,7 +31,7 @@ BEGIN
         DELETE TOP(@BatchSize) SU
         FROM
             [dbo].[SsoUser] SU
-            INNER JOIN
+        INNER JOIN
             #SSOIDs ON #SSOIds.Id = SU.Id
 
         SET @BatchSize = @@ROWCOUNT

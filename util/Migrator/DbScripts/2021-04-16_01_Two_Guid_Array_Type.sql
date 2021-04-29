@@ -1,9 +1,12 @@
 -- Create TwoGuidIdArray Type
 IF NOT EXISTS (
-    SELECT *
-FROM sys.types
-WHERE [Name] = 'TwoGuidIdArray'
-    AND is_user_defined = 1
+    SELECT 
+        *
+    FROM 
+        sys.types
+    WHERE 
+        [Name] = 'TwoGuidIdArray' AND
+        is_user_defined = 1
 )
 CREATE TYPE [dbo].[TwoGuidIdArray] AS TABLE (
     [Id1] UNIQUEIDENTIFIER NOT NULL,
