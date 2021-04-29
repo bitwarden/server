@@ -92,7 +92,7 @@ namespace Bit.Core.Models.Api
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
             ViewPassword = cipher.ViewPassword;
-            Reprompt = cipher.Reprompt;
+            Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         }
 
         public string FolderId { get; set; }

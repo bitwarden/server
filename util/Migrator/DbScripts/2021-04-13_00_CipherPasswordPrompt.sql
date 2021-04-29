@@ -5,18 +5,6 @@ BEGIN
 END
 GO
 
-UPDATE
-    [dbo].[Cipher]
-SET
-    [Reprompt] = 0
-GO
-
-ALTER TABLE
-    [dbo].[Cipher]
-ALTER COLUMN
-    [Reprompt] TINYINT NOT NULL
-GO
-
 IF OBJECT_ID('[dbo].[CipherDetails]') IS NOT NULL
 BEGIN
     DROP FUNCTION [dbo].[CipherDetails]
