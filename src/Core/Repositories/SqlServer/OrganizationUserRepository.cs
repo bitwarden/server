@@ -285,5 +285,14 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.SingleOrDefault();
             }
         }
+
+        public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync("[dbo].[OrganizationUser_DeleteByIds]",
+                    new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }
