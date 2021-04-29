@@ -23,7 +23,7 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        @Ids OUIds on OUIds.Id = OU.Id
+        @Ids OUIds ON OUIds.Id = OU.Id
     WHERE
         UserId IS NOT NULL AND
         OrganizationId IS NOT NULL
