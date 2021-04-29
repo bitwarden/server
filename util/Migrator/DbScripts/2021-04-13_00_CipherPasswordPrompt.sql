@@ -44,6 +44,12 @@ FROM
     [dbo].[Cipher] C
 GO
 
+IF OBJECT_ID('[dbo].[UserCipherDetails]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[UserCipherDetails]';
+END
+GO
+
 IF OBJECT_ID('[dbo].[CipherDetails_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[CipherDetails_Create]
