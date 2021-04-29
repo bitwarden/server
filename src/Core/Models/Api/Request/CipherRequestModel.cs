@@ -60,7 +60,7 @@ namespace Bit.Core.Models.Api
         {
             existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingCipher.Favorite = Favorite;
-            existingCipher.Reprompt = Reprompt == CipherRepromptType.None ? null: (CipherRepromptType?)Reprompt;
+            existingCipher.Reprompt = Reprompt;
             ToCipher(existingCipher);
             return existingCipher;
         }
