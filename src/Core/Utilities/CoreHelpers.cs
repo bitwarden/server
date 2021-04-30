@@ -148,6 +148,56 @@ namespace Bit.Core.Utilities
             return table;
         }
 
+        public static DataTable ToTVP<T>(string tableTypeName, IEnumerable<T> values)
+        {
+            var table = new DataTable();
+            table.SetTypeName(tableTypeName);
+
+            var columnDictionary = new Dictionary<PropertyInfo, DataColumn>();
+            var valueType = typeof(T) == typeof(object) && values.Any() ? values.First().GetType() : typeof(T);
+            foreach (var propertyInfo in valueType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(pi => Attribute.IsDefined(pi, typeof(DbOrderAttribute)))
+                .OrderBy(pi => pi.GetCustomAttribute<DbOrderAttribute>().ParameterOrder))
+            {
+                var columnType = TypeToTableType(propertyInfo.PropertyType);
+                var column = new DataColumn(propertyInfo.Name, columnType);
+
+                if (columnType == typeof(DateTime))
+                {
+                    column.DateTimeMode = DataSetDateTime.Utc;
+                }
+
+                table.Columns.Add(column);
+                columnDictionary[propertyInfo] = column;
+            }
+
+            foreach (var value in values ?? new T[] {})
+            {
+                var row = table.NewRow();
+                foreach (var propertyInfo in columnDictionary.Keys)
+                {
+                    row.SetField(columnDictionary[propertyInfo], propertyInfo.GetValue(value));
+                }
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+
+        private static Type TypeToTableType(Type type)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null)
+            {
+                return underlyingType;
+            }
+            if (type.IsEnum)
+            {
+                return typeof(byte);
+            }
+            return type;
+        }
+
         public static string CleanCertificateThumbprint(string thumbprint)
         {
             // Clean possible garbage characters from thumbprint copy/paste
