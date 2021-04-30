@@ -12,6 +12,7 @@ namespace Bit.Portal
         {
             Host
                 .CreateDefaultBuilder(args)
+                .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
