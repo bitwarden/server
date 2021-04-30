@@ -601,7 +601,7 @@ namespace Bit.Api.Controllers
             };
         }
 
-        [HttpGet("{id}/attachment/{attachmentId}")]
+        [HttpGet("{id}/attachment/{attachmentId}/renew")]
         public async Task<AttachmentUploadDataResponseModel> RenewFileUploadUrl(string id, string attachmentId)
         {
             var userId = _userService.GetProperUserId(User).Value;
@@ -609,7 +609,7 @@ namespace Bit.Api.Controllers
             var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
             var attachments = cipher?.GetAttachments();
 
-            if (attachments == null || !attachments.ContainsKey(attachmentId))
+            if (attachments == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
             {
                 throw new NotFoundException();
             }

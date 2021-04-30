@@ -14,7 +14,8 @@
     @Edit BIT, -- not used
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
-    @DeletedDate DATETIME2(2)
+    @DeletedDate DATETIME2(2),
+    @Reprompt TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -47,6 +48,7 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
+        [Reprompt] = @Reprompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate
