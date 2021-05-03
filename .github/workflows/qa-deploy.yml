@@ -156,9 +156,9 @@ jobs:
       - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ steps.secrets.output.appservices-identity-webapp-name }} 
+          app-name: ${{ steps.secrets.outputs.appservices-identity-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ steps.secrets.output.appservice-identity-webapp-publish-profile }} 
+          publish-profile: ${{ steps.secrets.outputs.appservice-identity-webapp-publish-profile }} 
           package: ./Identity.zip
 
 
