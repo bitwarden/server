@@ -76,13 +76,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<string>> GetExistingByOrganizationAsync(Guid organizationId, IEnumerable<string> emails,
+        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
             bool onlyRegisteredUsers)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.QueryAsync<string>(
-                    "[dbo].[OrganizationUser_ReadExistingByOrganizationIdEmail]",
+                    "[dbo].[OrganizationUser_SelectKnownEmails]",
                     new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 

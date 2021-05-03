@@ -1,11 +1,11 @@
-IF OBJECT_ID('[dbo].[OrganizationUser_ReadExistingByOrganizationIdEmail]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationUser_SelectKnownEmails]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_ReadExistingByOrganizationIdEmail]
+    DROP PROCEDURE [dbo].[OrganizationUser_SelectKnownEmails]
 END
 GO
 
 -- Create sproc to return existing users
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadExistingByOrganizationIdEmail]
+CREATE PROCEDURE [dbo].[OrganizationUser_SelectKnownEmails]
     @OrganizationId UNIQUEIDENTIFIER,
     @Emails [dbo].[EmailArray] READONLY,
     @OnlyUsers BIT

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadExistingByOrganizationIdEmail]
+CREATE PROCEDURE [dbo].[OrganizationUser_SelectKnownEmails]
     @OrganizationId UNIQUEIDENTIFIER,
     @Emails [dbo].[EmailArray] READONLY,
     @OnlyUsers BIT
