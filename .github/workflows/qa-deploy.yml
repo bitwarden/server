@@ -140,20 +140,27 @@ jobs:
         with:
           name: Identity.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          IDENTITY_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/identity_webapp_name
-          IDENTITY_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/identity_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-identity-webapp-name, 
+                    appservices-identity-webapp-publish-profile"
 
       - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.IDENTITY_WEBAPP_NAME }} 
+          app-name: ${{ steps.secrets.output.appservices-identity-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.secrets.output.appservice-identity-webapp-publish-profile }} 
           package: ./Identity.zip
+
 
   deploy-api:
     runs-on: ubuntu-latest
