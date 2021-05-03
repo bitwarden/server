@@ -68,6 +68,8 @@ namespace Bit.Core.Repositories.EntityFramework
             eCipher.Property(e => e.FoldersJson).HasColumnName("Folders");
 
             eCollectionCipher.HasNoKey();
+            eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
+            eCollectionGroup.HasNoKey();
 
             eGrant.HasNoKey();
             eCipher.Property(e => e.DataJson).HasColumnName("Data");

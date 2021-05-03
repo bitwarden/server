@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -19,6 +20,42 @@ namespace Bit.Core.Repositories.EntityFramework
         public CipherRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Ciphers)
         { }
+
+        public override async Task<Cipher> CreateAsync(Cipher cipher)
+        {
+            cipher = await base.CreateAsync(cipher);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                if (cipher.OrganizationId.HasValue)
+                {
+                    var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                    var users = query.Run(dbContext);
+
+                    await users.ForEachAsync(e => {
+                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
+                    });
+                    await dbContext.SaveChangesAsync();
+                }
+                else
+                {
+                    var user = await dbContext.Users.FindAsync(cipher.UserId);
+                    user.AccountRevisionDate = DateTime.UtcNow;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+            return cipher;
+        }
+
+        public IQueryable<User> GetBumpedAccountsByCipherId(Cipher cipher)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                return query.Run(dbContext);
+            }
+        }
 
         public Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
@@ -146,6 +183,11 @@ namespace Bit.Core.Repositories.EntityFramework
         }
 
         public Task UpsertAsync(CipherDetails cipher)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteDeletedAsync(DateTime deletedDateBefore)
         {
             throw new NotImplementedException();
         }
