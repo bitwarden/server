@@ -16,10 +16,11 @@ namespace Bit.Core.Models.Api
         public bool PremiumAccessAddon { get; set; }
         public string BillingAddressCountry { get; set; }
         public string BillingAddressPostalCode { get; set; }
+        public OrganizationKeysRequestModel Keys { get; set; }
 
         public OrganizationUpgrade ToOrganizationUpgrade()
         {
-            return new OrganizationUpgrade
+            var orgUpgrade = new OrganizationUpgrade
             {
                 AdditionalSeats = AdditionalSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(),
@@ -32,6 +33,10 @@ namespace Bit.Core.Models.Api
                     BillingAddressPostalCode = BillingAddressPostalCode
                 }
             };
+
+            Keys.ToOrganizationUpgrade(orgUpgrade);
+
+            return orgUpgrade;
         }
     }
 }

@@ -20,6 +20,7 @@ namespace Bit.Core.Models.Api.Public
             Type = user.Type;
             AccessAll = user.AccessAll;
             ExternalId = user.ExternalId;
+            ResetPasswordEnrolled = user.ResetPasswordKey != null;
         }
 
         public MemberBaseModel(OrganizationUserUserDetails user)
@@ -32,6 +33,7 @@ namespace Bit.Core.Models.Api.Public
             Type = user.Type;
             AccessAll = user.AccessAll;
             ExternalId = user.ExternalId;
+            ResetPasswordEnrolled = user.ResetPasswordKey != null;
         }
 
         /// <summary>
@@ -51,5 +53,10 @@ namespace Bit.Core.Models.Api.Public
         /// <example>external_id_123456</example>
         [StringLength(300)]
         public string ExternalId { get; set; }
+        /// <summary>
+        /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
+        /// </summary>
+        [Required]
+        public bool ResetPasswordEnrolled { get; set; }
     }
 }

@@ -20,7 +20,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
             ILicensingService licenseService, int? version = null)
         {
-            Version = version.GetValueOrDefault(6); // TODO: bump to version 7
+            Version = version.GetValueOrDefault(7); // TODO: bump to version 8
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -40,6 +40,7 @@ namespace Bit.Core.Models.Business
             UseTotp = org.UseTotp;
             Use2fa = org.Use2fa;
             UseApi = org.UseApi;
+            UseResetPassword = org.UseResetPassword;
             MaxStorageGb = org.MaxStorageGb;
             SelfHost = org.SelfHost;
             UsersGetPremium = org.UsersGetPremium;
@@ -109,6 +110,7 @@ namespace Bit.Core.Models.Business
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
+        public bool UseResetPassword { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
@@ -125,7 +127,7 @@ namespace Bit.Core.Models.Business
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if (Version >= 1 && Version <= 7)
+            if (Version >= 1 && Version <= 8)
             {
                 var props = typeof(OrganizationLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -144,6 +146,8 @@ namespace Bit.Core.Models.Business
                         (Version >= 6 || !p.Name.Equals(nameof(UsePolicies))) &&
                         // UseSso was added in Version 7
                         (Version >= 7 || !p.Name.Equals(nameof(UseSso))) &&
+                        // UseResetPassword was added in Version 8
+                        (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword))) &&
                         (
                             !forHash ||
                             (
@@ -180,7 +184,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if (Version >= 1 && Version <= 7)
+            if (Version >= 1 && Version <= 8)
             {
                 return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
@@ -197,7 +201,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if (Version >= 1 && Version <= 7)
+            if (Version >= 1 && Version <= 8)
             {
                 var valid =
                     globalSettings.Installation.Id == InstallationId &&
@@ -240,6 +244,11 @@ namespace Bit.Core.Models.Business
                 if (valid && Version >= 7)
                 {
                     valid = organization.UseSso == UseSso;
+                }
+                
+                if (valid && Version >= 8)
+                {
+                    valid = organization.UseResetPassword == UseResetPassword;
                 }
 
                 return valid;
