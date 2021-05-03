@@ -146,7 +146,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Retrieve secrets
-        id: secrets
+        id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-qa-kv"
@@ -156,9 +156,9 @@ jobs:
       - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ steps.secrets.outputs.appservices-identity-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ steps.secrets.outputs.appservice-identity-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservice-identity-webapp-publish-profile }} 
           package: ./Identity.zip
 
 
