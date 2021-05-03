@@ -364,7 +364,7 @@ BEGIN
         END AS [Using2fa],
         [UsersGetPremium],
         [UseSso],
-        [UseResetPasword],
+        [UseResetPassword],
         [Enabled]
     FROM
         [dbo].[Organization]
