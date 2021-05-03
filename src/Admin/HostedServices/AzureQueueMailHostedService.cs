@@ -74,15 +74,15 @@ namespace Bit.Admin.HostedServices
 
                 foreach (var message in mailMessages)
                 {
+                    CloudBlockBlob blob = null;
                     try
                     {
                         var queueMessage = JsonConvert.DeserializeObject<AzureQueueMessage<MailQueueMessage>>(message.MessageText);
                         if (queueMessage.BlobBackedMessage)
                         {
-                            var blob = _queueMessageContainer.GetBlockBlobReference($"{queueMessage.MessageId}");
+                            blob = _queueMessageContainer.GetBlockBlobReference($"{queueMessage.MessageId}");
                             var fullMessageJson = await blob.DownloadTextAsync();
                             queueMessage = JsonConvert.DeserializeObject<AzureQueueMessage<MailQueueMessage>>(fullMessageJson);
-                            await blob.DeleteAsync();
                         }
 
                         if (queueMessage.Message != null)
@@ -105,6 +105,10 @@ namespace Bit.Admin.HostedServices
                     }
                     
                     await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                    if (blob != null)
+                    {
+                        await blob.DeleteIfExistsAsync();
+                    }
 
                     if (cancellationToken.IsCancellationRequested)
                     {
