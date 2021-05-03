@@ -158,7 +158,7 @@ jobs:
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservice-identity-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-publish-profile }} 
           package: ./Identity.zip
 
 
