@@ -36,6 +36,7 @@ namespace Bit.Identity.Utilities
                     {
                         options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                     }
+                    options.InputLengthRestrictions.UserName = 256;
                 })
                 .AddInMemoryCaching()
                 .AddInMemoryApiResources(ApiResources.GetApiResources())

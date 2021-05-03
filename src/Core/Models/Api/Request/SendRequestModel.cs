@@ -35,6 +35,7 @@ namespace Bit.Core.Models.Api
         public string Password { get; set; }
         [Required]
         public bool? Disabled { get; set; }
+        public bool? HideEmail { get; set; }
 
         public Send ToSend(Guid userId, ISendService sendService)
         {
@@ -125,6 +126,7 @@ namespace Bit.Core.Models.Api
                 existingSend.Password = sendService.HashPassword(Password);
             }
             existingSend.Disabled = Disabled.GetValueOrDefault();
+            existingSend.HideEmail = HideEmail.GetValueOrDefault();
             return existingSend;
         }
     }

@@ -52,6 +52,12 @@ extent any condition of this Agreement conflicts with any license to the Open
 Source Software, the Open Source Software license will govern with respect to
 such Open Source Software only.
 
+2.5 This Agreement does not grant any rights in the trademarks, service marks, or
+logos of any Contributor (except as may be necessary to comply with the notice
+requirements in Section 2.3), and use of any Bitwarden trademarks must comply with
+Bitwarden Trademark Guidelines
+<https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md>.
+
 3. TERMINATION
 
 3.1   Termination. This Agreement will automatically terminate upon notice from

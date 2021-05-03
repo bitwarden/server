@@ -1378,6 +1378,24 @@ namespace Bit.Core.Services
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
                 EventType.OrganizationUser_UpdatedGroups);
         }
+        
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
+                orgUser.Status != OrganizationUserStatusType.Confirmed ||
+                orgUser.OrganizationId != organizationId)
+            {
+                throw new BadRequestException("User not valid.");
+            }
+            
+            // TODO - Block certain org types from using this feature?
+
+            orgUser.ResetPasswordKey = resetPasswordKey;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ? 
+                EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
+        }
 
         public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
         {
@@ -1515,32 +1533,35 @@ namespace Bit.Core.Services
                     enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
                 }
 
-                if (enoughSeatsAvailable)
+                if (!enoughSeatsAvailable) 
                 {
-                    foreach (var user in newUsers)
-                    {
-                        if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-                        {
-                            continue;
-                        }
+                    throw new BadRequestException($"Organization does not have enough seats available. Need {usersToAdd.Count} but {seatsAvailable} available.");
+                }
 
-                        try
+                foreach (var user in newUsers)
+                {
+                    if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var invite = new OrganizationUserInvite
                         {
-                            var invite = new OrganizationUserInvite
-                            {
-                                Emails = new List<string> { user.Email },
-                                Type = OrganizationUserType.User,
-                                AccessAll = false,
-                                Collections = new List<SelectionReadOnly>(),
-                            };
-                            var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
-                                    OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
-                            existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
-                        }
-                        catch (BadRequestException)
-                        {
-                            continue;
-                        }
+                            Emails = new List<string> { user.Email },
+                            Type = OrganizationUserType.User,
+                            AccessAll = false,
+                            Collections = new List<SelectionReadOnly>(),
+                        };
+                        var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
+                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
+                        existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
+                    }
+                    catch (BadRequestException)
+                    {
+                        // Thrown when the user is already invited to the organization
+                        continue;
                     }
                 }
             }

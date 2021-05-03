@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
             }
 
             var sendResponse = new SendAccessResponseModel(send, _globalSettings);
-            if (send.UserId.HasValue)
+            if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
             {
                 var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
                 sendResponse.CreatorIdentifier = creator.Email;
@@ -190,6 +190,11 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content. File size hint is required.");
             }
 
+            if (model.FileLength.Value > SendService.MAX_FILE_SIZE)
+            {
+                throw new BadRequestException($"Max file size is {SendService.MAX_FILE_SIZE_READABLE}.");
+            }
+
             var userId = _userService.GetProperUserId(User).Value;
             var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
             var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
@@ -240,7 +245,7 @@ namespace Bit.Api.Controllers
             }
 
             var send = await _sendRepository.GetByIdAsync(new Guid(id));
-            await Request.GetSendFileAsync(async (stream) =>
+            await Request.GetFileAsync(async (stream) =>
             {
                 await _sendService.UploadFileToExistingSendAsync(stream, send);
             });
@@ -248,7 +253,7 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("file/validate/azure")]
-        public async Task<OkObjectResult> AzureValidateFile()
+        public async Task<ObjectResult> AzureValidateFile()
         {
             return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
             {
@@ -262,6 +267,10 @@ namespace Bit.Api.Controllers
                             var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
                             if (send == null)
                             {
+                                if (_sendFileStorageService is AzureSendFileStorageService azureSendFileStorageService)
+                                {
+                                    await azureSendFileStorageService.DeleteBlobAsync(blobName);
+                                }
                                 return;
                             }
                             await _sendService.ValidateSendFile(send);

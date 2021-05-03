@@ -7,16 +7,44 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
     public class AzureAttachmentStorageService : IAttachmentStorageService
     {
+        public FileUploadType FileUploadType => FileUploadType.Azure;
+        public const string EventGridEnabledContainerName = "attachments-v2";
         private const string _defaultContainerName = "attachments";
         private readonly static string[] _attachmentContainerName = { "attachments", "attachments-v2" };
-        private static readonly TimeSpan downloadLinkLiveTime = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan blobLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly CloudBlobClient _blobClient;
         private readonly Dictionary<string, CloudBlobContainer> _attachmentContainers = new Dictionary<string, CloudBlobContainer>();
+        private string BlobName(Guid cipherId, CipherAttachment.MetaData attachmentData, Guid? organizationId = null, bool temp = false) =>
+            string.Concat(
+                temp ? "temp/" : "",
+                $"{cipherId}/",
+                organizationId != null ? $"{organizationId.Value}/" : "",
+                attachmentData.AttachmentId
+            );
+
+        public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName) {
+            var parts = blobName.Split('/');
+            switch (parts.Length) {
+                case 4:
+                    return (parts[1], parts[2], parts[3]);
+                case 3:
+                    if (parts[0] ==  "temp") {
+                        return (parts[1], null, parts[2]);
+                    } else {
+                        return (parts[0], parts[1], parts[2]);
+                    }
+                case 2:
+                    return (parts[0], null, parts[1]);
+                default:
+                    throw new Exception("Cannot determine cipher information from blob name");
+            }
+        }
 
         public AzureAttachmentStorageService(
             GlobalSettings globalSettings)
@@ -28,21 +56,35 @@ namespace Bit.Core.Services
         public async Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
             await InitAsync(attachmentData.ContainerName);
-            var blob = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference($"{cipher.Id}/{attachmentData.AttachmentId}");
+            var blob = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference(BlobName(cipher.Id, attachmentData));
             var accessPolicy = new SharedAccessBlobPolicy()
             {
-                SharedAccessExpiryTime = DateTime.UtcNow.Add(downloadLinkLiveTime),
+                SharedAccessExpiryTime = DateTime.UtcNow.Add(blobLinkLiveTime),
                 Permissions = SharedAccessBlobPermissions.Read
             };
 
             return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
         }
 
-        public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+        public async Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
         {
-            attachment.ContainerName = _defaultContainerName;
+            await InitAsync(EventGridEnabledContainerName);
+            var blob = _attachmentContainers[EventGridEnabledContainerName].GetBlockBlobReference(BlobName(cipher.Id, attachmentData));
+            attachmentData.ContainerName = EventGridEnabledContainerName;
+            var accessPolicy = new SharedAccessBlobPolicy()
+            {
+                SharedAccessExpiryTime = DateTime.UtcNow.Add(blobLinkLiveTime),
+                Permissions = SharedAccessBlobPermissions.Create | SharedAccessBlobPermissions.Write,
+            };
+
+            return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+        }
+
+        public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentData)
+        {
+            attachmentData.ContainerName = _defaultContainerName;
             await InitAsync(_defaultContainerName);
-            var blob = _attachmentContainers[_defaultContainerName].GetBlockBlobReference($"{cipher.Id}/{attachment.AttachmentId}");
+            var blob = _attachmentContainers[_defaultContainerName].GetBlockBlobReference(BlobName(cipher.Id, attachmentData));
             blob.Metadata.Add("cipherId", cipher.Id.ToString());
             if (cipher.UserId.HasValue)
             {
@@ -52,7 +94,7 @@ namespace Bit.Core.Services
             {
                 blob.Metadata.Add("organizationId", cipher.OrganizationId.Value.ToString());
             }
-            blob.Properties.ContentDisposition = $"attachment; filename=\"{attachment.AttachmentId}\"";
+            blob.Properties.ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\"";
             await blob.UploadFromStreamAsync(stream);
         }
 
@@ -60,7 +102,8 @@ namespace Bit.Core.Services
         {
             attachmentData.ContainerName = _defaultContainerName;
             await InitAsync(_defaultContainerName);
-            var blob = _attachmentContainers[_defaultContainerName].GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentData.AttachmentId}");
+            var blob = _attachmentContainers[_defaultContainerName].GetBlockBlobReference(
+                BlobName(cipherId, attachmentData, organizationId, temp: true));
             blob.Metadata.Add("cipherId", cipherId.ToString());
             blob.Metadata.Add("organizationId", organizationId.ToString());
             blob.Properties.ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\"";
@@ -70,20 +113,22 @@ namespace Bit.Core.Services
         public async Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData data)
         {
             await InitAsync(data.ContainerName);
-            var source = _attachmentContainers[data.ContainerName].GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{data.AttachmentId}");
+            var source = _attachmentContainers[data.ContainerName].GetBlockBlobReference(
+                    BlobName(cipherId, data, organizationId, temp: true));
             if (!(await source.ExistsAsync()))
             {
                 return;
             }
 
             await InitAsync(_defaultContainerName);
-            var dest = _attachmentContainers[_defaultContainerName].GetBlockBlobReference($"{cipherId}/{data.AttachmentId}");
+            var dest = _attachmentContainers[_defaultContainerName].GetBlockBlobReference(BlobName(cipherId, data));
             if (!(await dest.ExistsAsync()))
             {
                 return;
             }
 
-            var original = _attachmentContainers[_defaultContainerName].GetBlockBlobReference($"temp/{cipherId}/{data.AttachmentId}");
+            var original = _attachmentContainers[_defaultContainerName].GetBlockBlobReference(
+                BlobName(cipherId, data, temp: true));
             await original.DeleteIfExistsAsync();
             await original.StartCopyAsync(dest);
 
@@ -94,28 +139,81 @@ namespace Bit.Core.Services
         public async Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData, string originalContainer)
         {
             await InitAsync(attachmentData.ContainerName);
-            var source = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference($"temp/{cipherId}/{organizationId}/{attachmentData.AttachmentId}");
+            var source = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference(
+                BlobName(cipherId, attachmentData, organizationId, temp: true));
             await source.DeleteIfExistsAsync();
 
             await InitAsync(originalContainer);
-            var original = _attachmentContainers[originalContainer].GetBlockBlobReference($"temp/{cipherId}/{attachmentData.AttachmentId}");
+            var original = _attachmentContainers[originalContainer].GetBlockBlobReference(
+                BlobName(cipherId, attachmentData, temp: true));
             if (!(await original.ExistsAsync()))
             {
                 return;
             }
 
-            var dest = _attachmentContainers[originalContainer].GetBlockBlobReference($"{cipherId}/{attachmentData.AttachmentId}");
+            var dest = _attachmentContainers[originalContainer].GetBlockBlobReference(
+                BlobName(cipherId, attachmentData));
             await dest.DeleteIfExistsAsync();
             await dest.StartCopyAsync(original);
             await original.DeleteIfExistsAsync();
         }
 
-        public async Task DeleteAttachmentAsync(Guid cipherId, CipherAttachment.MetaData attachment)
+        public async Task DeleteAttachmentAsync(Guid cipherId, CipherAttachment.MetaData attachmentData)
         {
-            await InitAsync(attachment.ContainerName);
-            var blobName = $"{cipherId}/{attachment.AttachmentId}";
-            var blob = _attachmentContainers[attachment.ContainerName].GetBlockBlobReference(blobName);
+            await InitAsync(attachmentData.ContainerName);
+            var blob = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference(
+                BlobName(cipherId, attachmentData));
             await blob.DeleteIfExistsAsync();
+        }
+
+        public async Task CleanupAsync(Guid cipherId) => await DeleteAttachmentsForPathAsync($"temp/{cipherId}");
+
+        public async Task DeleteAttachmentsForCipherAsync(Guid cipherId) =>
+            await DeleteAttachmentsForPathAsync(cipherId.ToString());
+
+        public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+        {
+            await InitAsync(_defaultContainerName);
+        }
+
+        public async Task DeleteAttachmentsForUserAsync(Guid userId)
+        {
+            await InitAsync(_defaultContainerName);
+        }
+
+        public async Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
+        {
+            await InitAsync(attachmentData.ContainerName);
+
+            var blob = _attachmentContainers[attachmentData.ContainerName].GetBlockBlobReference(BlobName(cipher.Id, attachmentData));
+
+            if (!blob.Exists())
+            {
+                return (false, null);
+            }
+
+            blob.FetchAttributes();
+
+            blob.Metadata["cipherId"] = cipher.Id.ToString();
+            if (cipher.UserId.HasValue)
+            {
+                blob.Metadata["userId"] = cipher.UserId.Value.ToString();
+            }
+            else
+            {
+                blob.Metadata["organizationId"] = cipher.OrganizationId.Value.ToString();
+            }
+            blob.Properties.ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\"";
+            blob.SetMetadata();
+            blob.SetProperties();
+
+            var length = blob.Properties.Length;
+            if (length < attachmentData.Size - leeway || length > attachmentData.Size + leeway)
+            {
+                return (false, length);
+            }
+
+            return (true, length);
         }
 
         private async Task DeleteAttachmentsForPathAsync(string path)
@@ -143,21 +241,6 @@ namespace Bit.Core.Services
                     segment = await _attachmentContainers[container].ListBlobsSegmentedAsync(segment.ContinuationToken);
                 }
             }
-        }
-
-
-        public async Task CleanupAsync(Guid cipherId) => await DeleteAttachmentsForPathAsync($"temp/{cipherId}");
-
-        public async Task DeleteAttachmentsForCipherAsync(Guid cipherId) => await DeleteAttachmentsForPathAsync(cipherId.ToString());
-
-        public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
-        {
-            await InitAsync(_defaultContainerName);
-        }
-
-        public async Task DeleteAttachmentsForUserAsync(Guid userId)
-        {
-            await InitAsync(_defaultContainerName);
         }
 
         private async Task InitAsync(string containerName)

@@ -598,6 +598,24 @@
   <data name="DisableSendExemption" xml:space="preserve">
     <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
   </data>
+  <data name="SendOptions" xml:space="preserve">
+    <value>Send Options</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
+  </data>
+  <data name="Options" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="DisableHideEmail" xml:space="preserve">
+    <value>Do not allow users to hide their email address when creating or editing a Send.</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
+  </data>
+  <data name="SendOptionsDescription" xml:space="preserve">
+    <value>Set options for creating and editing Sends.</value>
+    <comment>'Send' is a noun and the name of a feature called 'Bitwarden Send'. It should not be translated.</comment>
+  </data>
+  <data name="SendOptionsExemption" xml:space="preserve">
+    <value>Organization Owners and Administrators are exempt from this policy's enforcement.</value>
+  </data>
   <data name="DisableRequireSsoError" xml:space="preserve">
     <value>You must manually disable the Single Sign-On Authentication policy before this policy can be disabled.</value>
   </data>
@@ -619,5 +637,19 @@
   <data name="AcrValues" xml:space="preserve">
     <value>Requested Authentication Context Class Reference values (acr_values)</value>
     <comment>'acr_values' is an explicit OIDC param, see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest. It should not be translated.</comment>
+  </data>
+  <data name="ExpectedReturnAcrValue" xml:space="preserve">
+    <value>Expected "acr" Claim Value In Response (acr validation)</value>
+    <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
+  </data>
+  <data name="LoggedOutMessage" xml:space="preserve">
+    <value>You have been logged out of the Bitwarden Business Portal.</value>
+  </data>
+  <data name="AccessDeniedError" xml:space="preserve">
+    <value>Access Denied to this resource.</value>
+  </data>
+  <data name="AcrMissingOrInvalid" xml:space="preserve">
+    <value>Expected authentication context class reference (acr) was not returned with the authentication response or is invalid.</value>
+    <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
   </data>
 </root>

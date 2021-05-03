@@ -12,7 +12,8 @@
     @RevisionDate DATETIME2(7),
     @ExpirationDate DATETIME2(7),
     @DeletionDate DATETIME2(7),
-    @Disabled BIT
+    @Disabled BIT,
+    @HideEmail BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -32,7 +33,8 @@ BEGIN
         [RevisionDate],
         [ExpirationDate],
         [DeletionDate],
-        [Disabled]
+        [Disabled],
+        [HideEmail]
     )
     VALUES
     (
@@ -49,7 +51,8 @@ BEGIN
         @RevisionDate,
         @ExpirationDate,
         @DeletionDate,
-        @Disabled
+        @Disabled,
+        @HideEmail
     )
 
     IF @UserId IS NOT NULL

@@ -28,6 +28,7 @@
         Cipher_ClientAutofilled = 1114,
         Cipher_SoftDeleted = 1115,
         Cipher_Restored = 1116,
+        Cipher_ClientToggledCardNumberVisible = 1117,
 
         Collection_Created = 1300,
         Collection_Updated = 1301,
@@ -43,6 +44,8 @@
         OrganizationUser_Removed = 1503,
         OrganizationUser_UpdatedGroups = 1504,
         OrganizationUser_UnlinkedSso = 1505,
+        OrganizationUser_ResetPassword_Enroll = 1506,
+        OrganizationUser_ResetPassword_Withdraw = 1507,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,

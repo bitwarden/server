@@ -624,6 +624,18 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task DeleteDeletedAsync(DateTime deletedDateBefore)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Cipher_DeleteDeleted]",
+                    new { DeletedDateBefore = deletedDateBefore },
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 43200);
+            }
+        }
+
         private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
         {
             var c = ciphers.FirstOrDefault();

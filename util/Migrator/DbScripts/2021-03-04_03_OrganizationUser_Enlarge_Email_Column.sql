@@ -3,7 +3,7 @@ IF COL_LENGTH('[dbo].[OrganizationUser]', 'Email') = 100
 BEGIN
 	ALTER TABLE [dbo].[OrganizationUser] 
 	ALTER COLUMN 
-		Email NVARCHAR(256) NOT NULL
+		Email NVARCHAR(256) NULL
 END
 GO
 

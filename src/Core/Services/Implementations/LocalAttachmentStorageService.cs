@@ -4,6 +4,7 @@ using System;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -12,6 +13,8 @@ namespace Bit.Core.Services
         private readonly string _baseAttachmentUrl;
         private readonly string _baseDirPath;
         private readonly string _baseTempDirPath;
+
+        public FileUploadType FileUploadType => FileUploadType.Direct;
 
         public LocalAttachmentStorageService(
             IGlobalSettings globalSettings)
@@ -173,6 +176,25 @@ namespace Bit.Core.Services
             organizationId.HasValue ?
             AttachmentFilePath(OrganizationDirectoryPath(cipherId, organizationId.Value, temp), attachmentId) :
             AttachmentFilePath(CipherDirectoryPath(cipherId, temp), attachmentId);
+        public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+            => Task.FromResult($"{cipher.Id}/attachment/{attachmentData.AttachmentId}");
 
+        public Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
+        {
+            long? length = null;
+            var path = AttachmentFilePath(attachmentData.AttachmentId, cipher.Id, temp: false);
+            if (!File.Exists(path))
+            {
+                return Task.FromResult((false, length));
+            }
+
+            length = new FileInfo(path).Length;
+            if (attachmentData.Size < length - leeway || attachmentData.Size > length + leeway)
+            {
+                return Task.FromResult((false, length));
+            }
+
+            return Task.FromResult((true, length));
+        }
     }
 }

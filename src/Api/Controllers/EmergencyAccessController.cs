@@ -163,5 +163,12 @@ namespace Bit.Api.Controllers
             var user = await _userService.GetUserByPrincipalAsync(User);
             return await _emergencyAccessService.ViewAsync(new Guid(id), user);
         }
+
+        [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
+        public async Task<AttachmentResponseModel> GetAttachmentData(string id, string cipherId, string attachmentId)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            return await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
+        }
     }
 }

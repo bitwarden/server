@@ -333,19 +333,21 @@ namespace Bit.Core.Business.Sso
             {
                 oidcOptions.Scope.AddIfNotExists(scope);
             }
+            if (!string.IsNullOrWhiteSpace(config.ExpectedReturnAcrValue))
+            {
+                oidcOptions.Scope.AddIfNotExists(OpenIdConnectScopes.Acr);
+            }
 
             oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
 
             // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
             if (!string.IsNullOrWhiteSpace(config.AcrValues))
             {
-                oidcOptions.Events = new OpenIdConnectEvents
+                oidcOptions.Events ??= new OpenIdConnectEvents();
+                oidcOptions.Events.OnRedirectToIdentityProvider = ctx =>
                 {
-                    OnRedirectToIdentityProvider = ctx =>
-                    {
-                        ctx.ProtocolMessage.AcrValues = config.AcrValues;
-                        return Task.CompletedTask;
-                    }
+                    ctx.ProtocolMessage.AcrValues = config.AcrValues;
+                    return Task.CompletedTask;
                 };
             }
 

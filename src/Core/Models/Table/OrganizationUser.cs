@@ -11,6 +11,7 @@ namespace Bit.Core.Models.Table
         public Guid? UserId { get; set; }
         public string Email { get; set; }
         public string Key { get; set; }
+        public string ResetPasswordKey { get; set; }
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }
         public bool AccessAll { get; set; }

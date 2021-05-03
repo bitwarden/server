@@ -17,6 +17,8 @@ namespace Bit.Core.Services
 {
     public class SendService : ISendService
     {
+        public const long MAX_FILE_SIZE = 500L * 1024L * 1024L; // 500MB
+        public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPolicyRepository _policyRepository;
@@ -59,7 +61,7 @@ namespace Bit.Core.Services
         public async Task SaveSendAsync(Send send)
         {
             // Make sure user can save Sends
-            await ValidateUserCanSaveAsync(send.UserId);
+            await ValidateUserCanSaveAsync(send.UserId, send);
 
             if (send.Id == default(Guid))
             {
@@ -142,10 +144,11 @@ namespace Bit.Core.Services
 
             var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
-            if (!valid)
+            if (!valid || realSize > MAX_FILE_SIZE)
             {
                 // File reported differs in size from that promised. Must be a rogue client. Delete Send
                 await DeleteSendAsync(send);
+                return false;
             }
 
             // Update Send data if necessary
@@ -265,7 +268,7 @@ namespace Bit.Core.Services
             return _passwordHasher.HashPassword(new User(), password);
         }
 
-        private async Task ValidateUserCanSaveAsync(Guid? userId)
+        private async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
         {
             if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
             {
@@ -286,6 +289,23 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
             }
+
+            if (send.HideEmail.GetValueOrDefault())
+            {
+                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
+                {
+                    SendOptionsPolicyData data = null;
+                    if (policy.Data != null)
+                    {
+                        data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
+                    }
+
+                    if (data?.DisableHideEmail ?? false)
+                    {
+                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                    }
+                }
+            }
         }
 
         private async Task<long> StorageRemainingForSendAsync(Send send)
@@ -296,7 +316,12 @@ namespace Bit.Core.Services
                 var user = await _userRepository.GetByIdAsync(send.UserId.Value);
                 if (!await _userService.CanAccessPremium(user))
                 {
-                    throw new BadRequestException("You must have premium status to use file sends.");
+                    throw new BadRequestException("You must have premium status to use file Sends.");
+                }
+
+                if (!user.EmailVerified)
+                {
+                    throw new BadRequestException("You must confirm your email to use file Sends.");
                 }
 
                 if (user.Premium)

@@ -13,6 +13,7 @@ namespace Bit.Api
         {
             Host
                 .CreateDefaultBuilder(args)
+                .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();

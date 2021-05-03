@@ -59,7 +59,7 @@ namespace Bit.Core.Services
             _logger = logger;
             _client = amazonSimpleEmailService;
             _source = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
-            _senderTag = $"Server_{globalSettings.ProjectName}";
+            _senderTag = $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
             if (!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
             {
                 _configSetName = _globalSettings.Mail.AmazonConfigSetName;

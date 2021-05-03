@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api.Request
     {
         [Required]
         [EmailAddress]
-        [StringLength(50)]
+        [StringLength(256)]
         public string Email { get; set; }
         [Required]
         public Enums.EmergencyAccessType? Type { get; set; }

@@ -137,6 +137,7 @@ namespace Bit.Portal.Controllers
                 case PolicyType.TwoFactorAuthentication:
                 case PolicyType.PersonalOwnership:
                 case PolicyType.DisableSend:
+                case PolicyType.SendOptions:
                     break;
                 
                 case PolicyType.SingleOrg:
