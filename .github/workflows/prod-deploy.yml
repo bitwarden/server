@@ -154,9 +154,9 @@ jobs:
           SERVICE_NAME: ${{ matrix.name }}
           BASE_PATH: ${{ matrix.base_path }}
 
+
   deploy-identity:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -165,17 +165,30 @@ jobs:
         with:
           name: Identity.zip
 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-identity-webapp-name, 
+                    appservices-identity-webapp-publish-profile"
+
       - name: Deploy Identity
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.IDENTITY_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.IDENTITY_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.IDENTITY_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-publish-profile }} 
           package: ./Identity.zip
+
 
   deploy-api:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -184,17 +197,30 @@ jobs:
         with:
           name: Api.zip
 
-      - name: Deploy Api 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-api-webapp-name, 
+                    appservices-api-webapp-publish-profile"
+
+      - name: Deploy Api
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.API_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.API_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.API_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-publish-profile }} 
           package: ./Api.zip
+
 
   deploy-billing:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -203,17 +229,30 @@ jobs:
         with:
           name: Billing.zip
 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-billing-webapp-name, 
+                    appservices-billing-webapp-publish-profile"
+
       - name: Deploy Billing
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.BILLING_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.BILLING_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-publish-profile }} 
           package: ./Billing.zip
+
 
   deploy-events:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -222,17 +261,30 @@ jobs:
         with:
           name: Events.zip
 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-events-webapp-name, 
+                    appservices-events-webapp-publish-profile"
+
       - name: Deploy Events
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.EVENTS_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.EVENTS_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-publish-profile }} 
           package: ./Events.zip
+
 
   deploy-sso:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -241,17 +293,30 @@ jobs:
         with:
           name: Sso.zip
 
-      - name: Deploy Sso
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-sso-webapp-name, 
+                    appservices-sso-webapp-publish-profile"
+
+      - name: Deploy SSO
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.SSO_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.SSO_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.SSO_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }} 
           package: ./Sso.zip
+
 
   deploy-portal:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -260,17 +325,30 @@ jobs:
         with:
           name: Portal.zip
 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-portal-webapp-name, 
+                    appservices-portal-webapp-publish-profile"
+
       - name: Deploy Portal
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.PORTAL_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.PORTAL_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }} 
           package: ./Portal.zip
+
 
   deploy-admin:
     runs-on: ubuntu-latest
-    if: false
     needs: build
     environment: Production
     steps:
@@ -279,10 +357,24 @@ jobs:
         with:
           name: Admin.zip
 
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-admin-webapp-name, 
+                    appservices-admin-webapp-publish-profile"
+
       - name: Deploy Admin
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.ADMIN_WEBAPP_NAME }} 
-          slot-name: ${{ secrets.ADMIN_WEBAPP_SLOTNAME }}
-          publish-profile: ${{ secrets.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-publish-profile }} 
           package: ./Admin.zip
+

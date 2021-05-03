@@ -143,7 +143,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -176,7 +176,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -209,7 +209,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -242,7 +242,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -275,7 +275,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -308,7 +308,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -341,7 +341,7 @@ jobs:
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
