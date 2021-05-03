@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
@@ -80,9 +81,22 @@ namespace Bit.Core.Repositories.EntityFramework
             throw new NotImplementedException();
         }
 
-        public Task UpdateUsersAsync(Guid id, IEnumerable<SelectionReadOnly> users)
+        public async Task UpdateUsersAsync(Guid id, IEnumerable<SelectionReadOnly> users)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                var procedure = new CollectionUserUpdateUsers(id, users);
+
+                var update = procedure.Update.Run(dbContext).AsEnumerable();
+                dbContext.UpdateRange(update.ToList());
+
+                var insert = procedure.Insert.Run(dbContext).AsEnumerable();
+                await dbContext.AddRangeAsync(insert.ToList());
+
+                dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
+            }
         }
     }
 }

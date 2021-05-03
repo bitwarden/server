@@ -10,6 +10,7 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
@@ -100,9 +101,12 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
             });
             fixture.Customizations.Add(new UserBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new OrganizationUserBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<CipherRepository>());
             fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
             fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionRepository>());
         }
     }
 

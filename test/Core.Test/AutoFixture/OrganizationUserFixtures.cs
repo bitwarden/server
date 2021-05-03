@@ -28,18 +28,31 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.OrganizationUser))
+            if (type == typeof(OrganizationUser))
             {
-                return new NoSpecimen();
+                var fixture = new Fixture();
+                var orgUser = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationUser>();
+                var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
+                orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+                return orgUser;
             }
-
-            var fixture = new Fixture();
-            var orgUser = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationUser>();
-            var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
-            orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
-            return orgUser;
+            else if (type == typeof(List<OrganizationUser>))
+            {
+                var fixture = new Fixture();
+                var orgUsers = fixture.WithAutoNSubstitutions().CreateMany<TableModel.OrganizationUser>(2);
+                foreach (var orgUser in orgUsers)
+                {
+                    var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+                    var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
+                    orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    });
+                }
+                return orgUsers;
+            }
+            return new NoSpecimen();
         }
     }
 

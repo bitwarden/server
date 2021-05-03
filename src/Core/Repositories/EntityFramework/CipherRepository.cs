@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -29,52 +30,32 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 if (cipher.OrganizationId.HasValue)
                 {
-                    var query = from u in dbContext.Set<EfModel.User>()
-                                join ou in dbContext.Set<EfModel.OrganizationUser>()
-                                    on u.Id equals ou.UserId
-                                join collectionCipher in dbContext.Set<EfModel.CollectionCipher>()
-                                    on cipher.Id equals collectionCipher.CipherId into cc_g
-                                from cc in cc_g.DefaultIfEmpty()
-                                join collectionUser in dbContext.Set<EfModel.CollectionUser>()
-                                    on cc.CollectionId equals collectionUser.CollectionId into cu_g
-                                from cu in cu_g.DefaultIfEmpty()
-                                where ou.AccessAll && 
-                                      cu.OrganizationUserId == ou.Id
-                                join groupUser in dbContext.Set<EfModel.GroupUser>()
-                                    on ou.Id equals groupUser.OrganizationUserId into gu_g
-                                from gu in gu_g.DefaultIfEmpty()
-                                where cu.CollectionId == null &&
-                                      !ou.AccessAll
-                                join grp in dbContext.Set<EfModel.Group>()
-                                    on gu.GroupId equals grp.Id into g_g
-                                from g in g_g.DefaultIfEmpty()
-                                join collectionGroup in dbContext.Set<EfModel.CollectionGroup>()
-                                    on cc.CollectionId equals collectionGroup.CollectionId into cg_g
-                                from cg in cg_g.DefaultIfEmpty()
-                                where !g.AccessAll &&
-                                      cg.GroupId == gu.GroupId
-                                where ou.OrganizationId == cipher.OrganizationId &&
-                                      ou.Status == OrganizationUserStatusType.Confirmed &&
-                                      (cu.CollectionId != null ||
-                                       cg.CollectionId != null ||
-                                       ou.AccessAll ||
-                                       g.AccessAll)
-                                select new { u, ou, cc, cu, gu, g, cg};
-                    var users = query.Select(x => x.u);
+                    var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                    var users = query.Run(dbContext);
+
                     await users.ForEachAsync(e => {
                         dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
                     });
-                    var t = await users.ToListAsync();
                     await dbContext.SaveChangesAsync();
                 }
                 else
                 {
                     var user = await dbContext.Users.FindAsync(cipher.UserId);
-                    dbContext.Entry(user).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
+                    user.AccountRevisionDate = DateTime.UtcNow;
                     await dbContext.SaveChangesAsync();
                 }
             }
             return cipher;
+        }
+
+        public IQueryable<User> GetBumpedAccountsByCipherId(Cipher cipher)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                return query.Run(dbContext);
+            }
         }
 
         public Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

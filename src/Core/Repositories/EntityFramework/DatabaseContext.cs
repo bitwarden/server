@@ -63,7 +63,7 @@ namespace Bit.Core.Repositories.EntityFramework
             var eUser = builder.Entity<User>();
 
             eCollectionCipher.HasNoKey();
-            eCollectionUser.HasNoKey();
+            eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
             eCollectionGroup.HasNoKey();
 
             eGrant.HasNoKey();

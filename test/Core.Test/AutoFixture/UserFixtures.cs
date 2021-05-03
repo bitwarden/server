@@ -29,8 +29,9 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
             {
                 var fixture = new Fixture();
                 var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                var user = fixture.WithAutoNSubstitutions().Create<TableModel.User>();
+                var user = fixture.Create<TableModel.User>();
                 user.SetTwoFactorProviders(providers);
+
                 return user;
             }
             else if (type == typeof(List<TableModel.User>))
