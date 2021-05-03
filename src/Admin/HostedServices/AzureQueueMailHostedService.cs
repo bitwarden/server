@@ -10,8 +10,9 @@ using Newtonsoft.Json;
 using Bit.Core.Models.Mail;
 using Azure.Storage.Queues.Models;
 using System.Linq;
-using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Bit.Core.Models.Data;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage;
 
 namespace Bit.Admin.HostedServices
 {
@@ -24,6 +25,8 @@ namespace Bit.Admin.HostedServices
         private Task _executingTask;
 
         private QueueClient _mailQueueClient;
+        private CloudBlobContainer _queueMessageContainer;
+        private CloudBlobClient _blobClient;
 
         public AzureQueueMailHostedService(
             ILogger<AzureQueueMailHostedService> logger,
@@ -56,6 +59,10 @@ namespace Bit.Admin.HostedServices
         private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             _mailQueueClient = new QueueClient(_globalSettings.Mail.ConnectionString, "mail");
+            var storageAccount = CloudStorageAccount.Parse(_globalSettings.Mail.ConnectionString);
+            _blobClient = storageAccount.CreateCloudBlobClient();
+            _queueMessageContainer = _blobClient.GetContainerReference(AzureQueueMailService.QueueMessageContainerName);
+            await _queueMessageContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
 
             QueueMessage[] mailMessages;
             while (!cancellationToken.IsCancellationRequested)
@@ -69,18 +76,26 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var token = JToken.Parse(message.MessageText);
-                        if (token is JArray)
+                        var queueMessage = JsonConvert.DeserializeObject<AzureQueueMessage<MailQueueMessage>>(message.MessageText);
+                        if (queueMessage.BlobBackedMessage)
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())
+                            var blob = _queueMessageContainer.GetBlockBlobReference($"{queueMessage.MessageId}");
+                            var fullMessageJson = await blob.DownloadTextAsync();
+                            queueMessage = JsonConvert.DeserializeObject<AzureQueueMessage<MailQueueMessage>>(fullMessageJson);
+                            await blob.DeleteAsync();
+                        }
+
+                        if (queueMessage.Message != null)
+                        {
+                            await _mailService.SendEnqueuedMailMessageAsync(queueMessage.Message);
+                        }
+
+                        if (queueMessage.Messages != null)
+                        {
+                            foreach (var mailQueueMessage in queueMessage.Messages)
                             {
                                 await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                             }
-                        }
-                        else if (token is JObject)
-                        {
-                            var mailQueueMessage = token.ToObject<MailQueueMessage>();
-                            await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }
                     catch (Exception e)
