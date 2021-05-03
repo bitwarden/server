@@ -173,20 +173,27 @@ jobs:
         with:
           name: Api.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          API_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/api_webapp_name
-          API_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/api_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy Api 
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-api-webapp-name, 
+                    appservices-api-webapp-publish-profile"
+
+      - name: Deploy Api
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.API_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.API_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-publish-profile }} 
           package: ./Api.zip
+
 
   deploy-billing:
     runs-on: ubuntu-latest
@@ -199,20 +206,27 @@ jobs:
         with:
           name: Billing.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          BILLING_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/billing_webapp_name
-          BILLING_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/billing_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-billing-webapp-name, 
+                    appservices-billing-webapp-publish-profile"
 
       - name: Deploy Billing
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.BILLING_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.BILLING_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-publish-profile }} 
           package: ./Billing.zip
+
 
   deploy-events:
     runs-on: ubuntu-latest
@@ -225,20 +239,27 @@ jobs:
         with:
           name: Events.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          EVENTS_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/events_webapp_name
-          EVENTS_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/events_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-events-webapp-name, 
+                    appservices-events-webapp-publish-profile"
 
       - name: Deploy Events
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.EVENTS_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.EVENTS_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-publish-profile }} 
           package: ./Events.zip
+
 
   deploy-sso:
     runs-on: ubuntu-latest
@@ -251,20 +272,27 @@ jobs:
         with:
           name: Sso.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          SSO_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/sso_webapp_name
-          SSO_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/sso_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy Sso
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-sso-webapp-name, 
+                    appservices-sso-webapp-publish-profile"
+
+      - name: Deploy SSO
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.SSO_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.SSO_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }} 
           package: ./Sso.zip
+
 
   deploy-portal:
     runs-on: ubuntu-latest
@@ -277,20 +305,27 @@ jobs:
         with:
           name: Portal.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          PORTAL_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/portal_webapp_name
-          PORTAL_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/portal_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-portal-webapp-name, 
+                    appservices-portal-webapp-publish-profile"
 
       - name: Deploy Portal
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.PORTAL_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.PORTAL_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }} 
           package: ./Portal.zip
+
 
   deploy-admin:
     runs-on: ubuntu-latest
@@ -303,17 +338,24 @@ jobs:
         with:
           name: Admin.zip
 
-      - name: Retrieve Secrets
-        uses: secrethub/actions/env-export@v0.2.1
-        env:
-          SECRETHUB_CREDENTIAL: ${{ secrets.SECRETHUB_CREDENTIAL }}
-          ADMIN_WEBAPP_NAME: secrethub://bitwarden/devops/azure/dev/appservices/admin_webapp_name
-          ADMIN_WEBAPP_PUBLISH_PROFILE: secrethub://bitwarden/devops/azure/dev/appservices/admin_webapp_publish_profile
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "appservices-admin-webapp-name, 
+                    appservices-admin-webapp-publish-profile"
 
       - name: Deploy Admin
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.ADMIN_WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ env.ADMIN_WEBAPP_PUBLISH_PROFILE  }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-publish-profile }} 
           package: ./Admin.zip
+
