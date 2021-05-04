@@ -136,21 +136,21 @@ jobs:
         run: |
           mkdir -p ~/.docker/trust/private
 
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT-DELEGATION-KEY-ID.key
-          echo "$DCT_REPO_API_KEY" > ~/.docker/trust/private/$DCT-REPO-API-ID.key
-          echo "$DCT_REPO_IDENTITY_KEY" > ~/.docker/trust/private/$DCT-REPO-IDENTITY-ID.key
-          echo "$DCT_REPO_SERVER_KEY" > ~/.docker/trust/private/$DCT-REPO-SERVER-ID.key
-          echo "$DCT_REPO_ATTACHMENTS_KEY" > ~/.docker/trust/private/$DCT-REPO-ATTACHMENTS-ID.key
-          echo "$DCT_REPO_ICONS_KEY" > ~/.docker/trust/private/$DCT-REPO-ICONS-ID.key
-          echo "$DCT_REPO_NOTIFICATIONS_KEY" > ~/.docker/trust/private/$DCT-REPO-NOTIFICATIONS-ID.key
-          echo "$DCT_REPO_EVENTS_KEY" > ~/.docker/trust/private/$DCT-REPO-EVENTS-ID.key
-          echo "$DCT_REPO_ADMIN_KEY" > ~/.docker/trust/private/$DCT-REPO-ADMIN-ID.key
-          echo "$DCT_REPO_NGINX_KEY" > ~/.docker/trust/private/$DCT-REPO-NGINX-ID.key
-          echo "$DCT_REPO_K8SPROXY_KEY" > ~/.docker/trust/private/$DCT-REPO-K8SPROXY-ID.key
-          echo "$DCT_REPO_SSO_KEY" > ~/.docker/trust/private/$DCT-REPO-SSO-ID.key
-          echo "$DCT_REPO_PORTAL_KEY" > ~/.docker/trust/private/$DCT-REPO-PORTAL-ID.key
-          echo "$DCT_REPO_MSSQL_KEY" > ~/.docker/trust/private/$DCT-REPO-MSSQL-ID.key
-          echo "$DCT_REPO_SETUP_KEY" > ~/.docker/trust/private/$DCT-REPO-SETUP-ID.key
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+          echo "$DCT_REPO_API_KEY" > ~/.docker/trust/private/$DCT_REPO_API_ID.key
+          echo "$DCT_REPO_IDENTITY_KEY" > ~/.docker/trust/private/$DCT_REPO_IDENTITY_ID.key
+          echo "$DCT_REPO_SERVER_KEY" > ~/.docker/trust/private/$DCT_REPO_SERVER_ID.key
+          echo "$DCT_REPO_ATTACHMENTS_KEY" > ~/.docker/trust/private/$DCT_REPO_ATTACHMENTS_ID.key
+          echo "$DCT_REPO_ICONS_KEY" > ~/.docker/trust/private/$DCT_REPO_ICONS_ID.key
+          echo "$DCT_REPO_NOTIFICATIONS_KEY" > ~/.docker/trust/private/$DCT_REPO_NOTIFICATIONS_ID.key
+          echo "$DCT_REPO_EVENTS_KEY" > ~/.docker/trust/private/$DCT_REPO_EVENTS_ID.key
+          echo "$DCT_REPO_ADMIN_KEY" > ~/.docker/trust/private/$DCT_REPO_ADMIN_ID.key
+          echo "$DCT_REPO_NGINX_KEY" > ~/.docker/trust/private/$DCT_REPO_NGINX_ID.key
+          echo "$DCT_REPO_K8SPROXY_KEY" > ~/.docker/trust/private/$DCT_REPO_K8SPROXY_ID.key
+          echo "$DCT_REPO_SSO_KEY" > ~/.docker/trust/private/$DCT_REPO_SSO_ID.key
+          echo "$DCT_REPO_PORTAL_KEY" > ~/.docker/trust/private/$DCT_REPO_PORTAL_ID.key
+          echo "$DCT_REPO_MSSQL_KEY" > ~/.docker/trust/private/$DCT_REPO_MSSQL_ID.key
+          echo "$DCT_REPO_SETUP_KEY" > ~/.docker/trust/private/$DCT_REPO_SETUP_ID.key
         env:
           DCT_DELEGATION_KEY_ID: "5702b22123e058cbd96a7a43000cb981ae98ef3f2f4aa34138ab3dc1d011e446"
           DCT_REPO_API_ID: "525fa3e70b84669c9fe489c5a3d0974898d14c0807b19447242c60ed8d4ca766"
@@ -200,7 +200,8 @@ jobs:
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
-        run: ./build.sh tag dev
+        #run: ./build.sh tag dev
+        run: ./build.sh tag qa
 
       - name: List docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
