@@ -41,7 +41,7 @@ jobs:
 
       - name: Print environment
         run: |
-          nuget help
+          nuget help | grep "Version"
           msbuild -version
           dotnet --info
           node --version
