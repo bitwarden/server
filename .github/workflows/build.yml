@@ -216,7 +216,8 @@ jobs:
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
-        run: ./build.sh push dev
+        #run: ./build.sh push dev
+        run: ./build.sh push qa
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
