@@ -76,6 +76,20 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+            bool onlyRegisteredUsers)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var result = await connection.QueryAsync<string>(
+                    "[dbo].[OrganizationUser_SelectKnownEmails]",
+                    new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
+                    commandType: CommandType.StoredProcedure);
+
+                return result;
+            }
+        }
+
         public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
