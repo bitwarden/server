@@ -25,6 +25,7 @@ jobs:
 
   testing:
     runs-on: windows-latest
+    if: false
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@v1
@@ -70,7 +71,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: testing
+    #needs: testing
     steps:
       - name: Set up Node
         uses: actions/setup-node@v1
