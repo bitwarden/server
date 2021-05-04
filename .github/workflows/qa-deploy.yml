@@ -15,7 +15,6 @@ on:
 
 jobs:
   build:
-    #if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -25,7 +25,6 @@ jobs:
 
   testing:
     runs-on: windows-latest
-    if: false
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@v1
@@ -71,7 +70,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    #needs: testing
+    needs: testing
     steps:
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -129,7 +128,7 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username}}
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
@@ -201,8 +200,7 @@ jobs:
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
-        #run: ./build.sh tag dev
-        run: ./build.sh tag qa
+        run: ./build.sh tag dev
 
       - name: List docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
@@ -217,8 +215,7 @@ jobs:
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
-        #run: ./build.sh push dev
-        run: ./build.sh push qa
+        run: ./build.sh push dev
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
