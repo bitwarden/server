@@ -118,7 +118,7 @@ jobs:
                     dct-repo-api-key,
                     dct-repo-portal-key,
                     dct-repo-setup-key,
-                    dct-repo-notificactions-key,
+                    dct-repo-notifications-key,
                     dct-repo-events-key,
                     dct-repo-web-key,
                     dct-repo-icons-key,
