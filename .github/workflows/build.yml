@@ -167,7 +167,7 @@ jobs:
           DCT_REPO_PORTAL_ID: "4f358aa0a41c9a6650f5d2f907c2de418df34ddf3ee45e0994be7cc2dcd0b56e"
           DCT_REPO_MSSQL_ID: "30a44d7efbe48d30ed06abef003d2d8990205dad6a034617cddc03548f8c084e"
           DCT_REPO_SETUP_ID: "2932fb9c39b7eacf4418c7c9ee4c823f973c426412ddd64d7f9f0b6f940b8428"
-          DCT_REPO_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-ey }}
+          DCT_REPO_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-key }}
           DCT_REPO_API_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-api-key }}
           DCT_REPO_IDENTITY_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-identity-key }}
           DCT_REPO_SERVER_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-server-key }}
