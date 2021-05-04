@@ -158,7 +158,6 @@ jobs:
   deploy-identity:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -190,7 +189,6 @@ jobs:
   deploy-api:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -222,7 +220,6 @@ jobs:
   deploy-billing:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -254,7 +251,6 @@ jobs:
   deploy-events:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -286,7 +282,6 @@ jobs:
   deploy-sso:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -318,7 +313,6 @@ jobs:
   deploy-portal:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
@@ -350,7 +344,6 @@ jobs:
   deploy-admin:
     runs-on: ubuntu-latest
     needs: build
-    environment: Production
     steps:
       - name: Download aritifacts
         uses: actions/download-artifact@v2
