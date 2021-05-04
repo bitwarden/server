@@ -129,7 +129,7 @@ jobs:
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username}}
-          DOCKER_PASSWORD: ${{ setps.retrieve-secrets.outputs.docker-password }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
