@@ -110,7 +110,6 @@ jobs:
         if: false
         run: |
           mkdir -p ~/.docker/trust/private
-
           echo "${{ steps.retrieve-secrets.outputs.dct-delegate-key }}" > ~/.docker/trust/private/$DOCKER_DELEGATION_KEY_ID.key
           echo "${{ steps.retrieve-secrets.outputs.dct-repo-api-key }}" > ~/.docker/trust/private/$DOCKER_REPO_API_ID.key
           echo "${{ steps.retrieve-secrets.outputs.dct-repo-identity-key }}" > ~/.docker/trust/private/$DOCKER_REPO_IDENTITY_ID.key
