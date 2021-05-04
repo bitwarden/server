@@ -93,7 +93,7 @@ jobs:
           GULP: ${{ matrix.gulp }}
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2-preview
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.SERVICE_NAME }}.zip
           path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
