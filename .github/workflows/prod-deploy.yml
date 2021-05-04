@@ -1,0 +1,380 @@
+name: Prod Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag_name_input:
+        description: "Release Tag Name <X.X.X>"
+        required: true
+  release:
+    types:
+      - published
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.create_tags.outputs.package_version }}
+      tag_version: ${{ steps.create_tags.outputs.tag_version }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Create Deploy version vars
+        id: create_tags
+        run: |
+          if [ "${{ github.event_name }}" != "release" ]; then
+            case "${RELEASE_TAG_NAME_INPUT:0:1}" in
+              v)
+                echo "RELEASE_NAME=${RELEASE_TAG_NAME_INPUT:1}" >> $GITHUB_ENV
+                echo "RELEASE_TAG_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "::set-output name=package_version::${RELEASE_TAG_NAME_INPUT:1}"
+                echo "::set-output name=tag_version::$RELEASE_TAG_NAME_INPUT"
+                ;;
+              [0-9])
+                echo "RELEASE_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "RELEASE_TAG_NAME=v$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+                echo "::set-output name=package_version::$RELEASE_TAG_NAME_INPUT"
+                echo "::set-output name=tag_version::v$RELEASE_TAG_NAME_INPUT"
+                ;;
+              *)
+                exit 1
+                ;;
+            esac
+          else
+            TAG_VERSION=$(echo ${{ github.ref }} | cut -d "/" -f 3)
+            PKG_VERSION=${TAG_VERSION:1}
+
+            echo "::set-output name=package_version::$PKG_VERSION"
+            echo "::set-output name=tag_version::$TAG_VERSION"
+          fi
+        env:
+          RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
+
+      - name: test outputs
+        run: |
+          echo "Package Version: ${{ steps.create_tags.outputs.package_version }}"
+          echo "Tag Version: ${{ steps.create_tags.outputs.tag_version }}"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Api
+            base_path: .
+          - name: Admin
+            base_path: .
+            gulp: true
+          - name: Billing
+            base_path: .
+          - name: Events
+            base_path: .
+          - name: Notifications
+            base_path: .
+          - name: Sso
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Portal
+            base_path: ./bitwarden_license
+            gulp: true
+          - name: Identity
+            base_path: .
+    env:
+      PKG_VERSION: ${{ needs.setup.outputs.package_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.TAG_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Print Environment
+        run: |
+          dotnet --info
+          node --version
+          npm --version
+          gulp --version
+
+      - name: load env vars
+        run: |
+          echo "Base Path: ${BASE_PATH}"
+          echo "Name: ${NAME}"
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          NAME: ${{ matrix.name }}
+
+      - name: Build Service
+        run: |
+          work_dir=$(pwd)
+          dir=$BASE_PATH/src/$SERVICE_NAME
+
+          cd $dir
+          echo "Restore"
+          dotnet restore $SERVICE_NAME.csproj
+          echo "Clean"
+          dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+
+          if [ "$GULP" == "true" ]; then
+            npm install
+            npm install gulp
+            gulp --gulpfile gulpfile.js build
+          fi
+
+          echo "Publish"
+          dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+
+          cd obj/Azure/publish
+          zip -r $SERVICE_NAME.zip .
+          mv $SERVICE_NAME.zip ../../../
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+          GULP: ${{ matrix.gulp }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.SERVICE_NAME }}.zip
+          path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
+        env:
+          BASE_PATH: ${{ matrix.base_path }}
+          SERVICE_NAME: ${{ matrix.name }}
+
+      - name: Test build dir
+        run: ls $BASE_PATH/src/$SERVICE_NAME
+        env:
+          SERVICE_NAME: ${{ matrix.name }}
+          BASE_PATH: ${{ matrix.base_path }}
+
+
+  deploy-identity:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Identity.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-identity-webapp-name, 
+                    appservices-identity-webapp-publish-profile"
+
+      - name: Deploy Identity
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-publish-profile }} 
+          package: ./Identity.zip
+
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Api.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-api-webapp-name, 
+                    appservices-api-webapp-publish-profile"
+
+      - name: Deploy Api
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-publish-profile }} 
+          package: ./Api.zip
+
+
+  deploy-billing:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Billing.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-billing-webapp-name, 
+                    appservices-billing-webapp-publish-profile"
+
+      - name: Deploy Billing
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-publish-profile }} 
+          package: ./Billing.zip
+
+
+  deploy-events:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Events.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-events-webapp-name, 
+                    appservices-events-webapp-publish-profile"
+
+      - name: Deploy Events
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-publish-profile }} 
+          package: ./Events.zip
+
+
+  deploy-sso:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Sso.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-sso-webapp-name, 
+                    appservices-sso-webapp-publish-profile"
+
+      - name: Deploy SSO
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }} 
+          package: ./Sso.zip
+
+
+  deploy-portal:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Portal.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-portal-webapp-name, 
+                    appservices-portal-webapp-publish-profile"
+
+      - name: Deploy Portal
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }} 
+          package: ./Portal.zip
+
+
+  deploy-admin:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: Production
+    steps:
+      - name: Download aritifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: Admin.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "appservices-admin-webapp-name, 
+                    appservices-admin-webapp-publish-profile"
+
+      - name: Deploy Admin
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
+          slot-name: "staging"
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-publish-profile }} 
+          package: ./Admin.zip
+
