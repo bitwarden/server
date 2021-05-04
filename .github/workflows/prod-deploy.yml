@@ -140,7 +140,7 @@ jobs:
           GULP: ${{ matrix.gulp }}
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2-preview
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.SERVICE_NAME }}.zip
           path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
@@ -174,7 +174,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-identity-webapp-name, 
                     appservices-identity-webapp-publish-profile"
 
@@ -206,7 +206,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-api-webapp-name, 
                     appservices-api-webapp-publish-profile"
 
@@ -238,7 +238,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-billing-webapp-name, 
                     appservices-billing-webapp-publish-profile"
 
@@ -270,7 +270,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-events-webapp-name, 
                     appservices-events-webapp-publish-profile"
 
@@ -302,7 +302,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-sso-webapp-name, 
                     appservices-sso-webapp-publish-profile"
 
@@ -334,7 +334,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-portal-webapp-name, 
                     appservices-portal-webapp-publish-profile"
 
@@ -366,7 +366,7 @@ jobs:
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
-          keyvault: "bitwarden-qa-kv"
+          keyvault: "bitwarden-prod-kv"
           secrets: "appservices-admin-webapp-name, 
                     appservices-admin-webapp-publish-profile"
 
