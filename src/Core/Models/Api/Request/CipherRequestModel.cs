@@ -60,7 +60,6 @@ namespace Bit.Core.Models.Api
         {
             existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
             existingCipher.Favorite = Favorite;
-            existingCipher.Reprompt = Reprompt;
             ToCipher(existingCipher);
             return existingCipher;
         }
@@ -90,6 +89,8 @@ namespace Bit.Core.Models.Api
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
             }
+
+            existingCipher.Reprompt = Reprompt;
 
             var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
             var hasAttachments = (Attachments?.Count ?? 0) > 0;
