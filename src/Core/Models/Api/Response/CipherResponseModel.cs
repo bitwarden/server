@@ -63,6 +63,7 @@ namespace Bit.Core.Models.Api
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
             OrganizationUseTotp = orgUseTotp;
             DeletedDate = cipher.DeletedDate;
+            Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         }
 
         public string Id { get; set; }
@@ -81,6 +82,7 @@ namespace Bit.Core.Models.Api
         public bool OrganizationUseTotp { get; set; }
         public DateTime RevisionDate { get; set; }
         public DateTime? DeletedDate { get; set; }
+        public CipherRepromptType Reprompt { get; set; }
     }
 
     public class CipherResponseModel : CipherMiniResponseModel
@@ -92,14 +94,12 @@ namespace Bit.Core.Models.Api
             Favorite = cipher.Favorite;
             Edit = cipher.Edit;
             ViewPassword = cipher.ViewPassword;
-            Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         }
 
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public bool Edit { get; set; }
         public bool ViewPassword { get; set; }
-        public CipherRepromptType Reprompt { get; set; }
     }
 
     public class CipherDetailsResponseModel : CipherResponseModel

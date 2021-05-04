@@ -9,7 +9,8 @@
     @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @DeletedDate DATETIME2(7)
+    @DeletedDate DATETIME2(7),
+    @Reprompt TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [Attachments],
         [CreationDate],
         [RevisionDate],
-        [DeletedDate]
+        [DeletedDate],
+        [Reprompt]
     )
     VALUES
     (
@@ -40,7 +42,8 @@ BEGIN
         @Attachments,
         @CreationDate,
         @RevisionDate,
-        @DeletedDate
+        @DeletedDate,
+        @Reprompt
     )
 
     IF @OrganizationId IS NOT NULL

@@ -668,6 +668,8 @@ namespace Bit.Core.Repositories.SqlServer
             ciphersTable.Columns.Add(revisionDateColumn);
             var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), typeof(DateTime));
             ciphersTable.Columns.Add(deletedDateColumn);
+            var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
+            ciphersTable.Columns.Add(repromptColumn);
 
             foreach (DataColumn col in ciphersTable.Columns)
             {
@@ -693,6 +695,7 @@ namespace Bit.Core.Repositories.SqlServer
                 row[creationDateColumn] = cipher.CreationDate;
                 row[revisionDateColumn] = cipher.RevisionDate;
                 row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
+                row[repromptColumn] = cipher.Reprompt;
 
                 ciphersTable.Rows.Add(row);
             }
