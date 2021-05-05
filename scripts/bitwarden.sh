@@ -32,7 +32,7 @@ fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
-COREVERSION="1.40.0"
+COREVERSION="1.41.1"
 WEBVERSION="2.19.0"
 
 echo "bitwarden.sh version $COREVERSION"
