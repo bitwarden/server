@@ -24,8 +24,7 @@ BEGIN
     INNER JOIN
         @OrganizationUsersInput OUI ON OU.Id = OUI.Id
 
-
-    EXEC [dbo].[User_BumpManyAccountRevisionDates ]
+    EXEC [dbo].[User_BumpManyAccountRevisionDates]
     (
         SELECT UserId
         FROM @OrganizationUsersInput

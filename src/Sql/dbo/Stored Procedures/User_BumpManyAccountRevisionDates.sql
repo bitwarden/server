@@ -10,7 +10,7 @@ BEGIN
         [AccountRevisionDate] = GETUTCDATE()
     FROM
         [dbo].[User] U
-        INNER JOIN
+    INNER JOIN
         @Ids IDs ON IDs.Id = U.Id
 END
 GO
