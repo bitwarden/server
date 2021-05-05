@@ -220,8 +220,7 @@ jobs:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
 
       - name: Push version images
-        run: ./build.sh push $($env:$RELEASE_VERSION)
-        shell: pwsh
+        run: ./build.sh push $RELEASE_VERSION
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
