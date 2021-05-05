@@ -271,12 +271,11 @@ jobs:
 
       - name: Upload release assets
         run: |
-          hub release edit `
-            -a ./swagger.json `
-            -a ./docker-stub.zip `
-            -m "Version $($env:RELEASE_VERSION)" `
-            $env:RELEASE_TAG_NAME
-        shell: pwsh
+          hub release edit \
+            -a ./swagger.json \
+            -a ./docker-stub.zip \
+            -m "Version $($env:RELEASE_VERSION)" \
+            $RELEASE_TAG_NAME
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
