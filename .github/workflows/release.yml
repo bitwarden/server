@@ -270,6 +270,7 @@ jobs:
         run: docker logout
 
       - name: Upload release assets
+        if: false
         run: |
           hub release edit \
             -a ./swagger.json \
