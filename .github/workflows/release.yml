@@ -270,7 +270,6 @@ jobs:
         run: docker logout
 
       - name: Upload release assets
-        if: github.event_name == 'release'
         run: |
           hub release edit `
             -a ./swagger.json `
