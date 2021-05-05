@@ -23,6 +23,7 @@ namespace Bit.Core.Test.Services
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
         private readonly IUserStore<User> _userStore;
@@ -52,6 +53,7 @@ namespace Bit.Core.Test.Services
             _cipherRepository = Substitute.For<ICipherRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
+            _u2fRepository = Substitute.For<IU2fRepository>();
             _mailService = Substitute.For<IMailService>();
             _pushService = Substitute.For<IPushNotificationService>();
             _userStore = Substitute.For<IUserStore<User>>();
@@ -80,6 +82,7 @@ namespace Bit.Core.Test.Services
                 _cipherRepository,
                 _organizationUserRepository,
                 _organizationRepository,
+                _u2fRepository,
                 _mailService,
                 _pushService,
                 _userStore,
