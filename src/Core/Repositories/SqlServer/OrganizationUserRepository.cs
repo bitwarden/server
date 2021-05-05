@@ -308,5 +308,62 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
             }
         }
+
+        public async Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            var createUsers = new List<OrganizationUser>();
+            var replaceUsers = new List<OrganizationUser>();
+            foreach (var organizationUser in organizationUsers)
+            {
+                if (organizationUser.Id.Equals(default))
+                {
+                    createUsers.Add(organizationUser);
+                }
+                else
+                {
+                    replaceUsers.Add(organizationUser);
+                }
+            }
+
+            await CreateManyAsync(createUsers);
+            await ReplaceManyAsync(replaceUsers);
+        }
+
+        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            foreach(var organizationUser in organizationUsers)
+            {
+                organizationUser.SetNewId();
+            }
+
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_CreateMany]",
+                    new { OrganizationUsersInput = CoreHelpers.ToTVP("[dbo].[OrganizationUserType]", organizationUsers) },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_UpdateMany]",
+                    new { OrganizationUsersInput = CoreHelpers.ToTVP("[dbo].[OrganizationUserType]", organizationUsers) },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }

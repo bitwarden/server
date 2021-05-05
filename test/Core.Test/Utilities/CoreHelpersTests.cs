@@ -1,7 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using AutoFixture.Xunit2;
+using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Dapper;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
@@ -68,6 +73,44 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(2, dt.Rows.Count);
             Assert.Equal(item0, dt.Rows[0][0]);
             Assert.Equal(item1, dt.Rows[1][0]);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ToTVP_Success(string tableTypeName, Random random)
+        {
+            var i = 0;
+            var expectedDataTable = new DataTable();
+            expectedDataTable.Columns.AddRange(new []
+            {
+                new DataColumn("StringProp", typeof(string)),
+                new DataColumn("IntProp", typeof(int)),
+                new DataColumn("GuidProp", typeof(Guid)),
+                new DataColumn("BoolProp", typeof(bool))
+            });
+            dynamic CreateObject()
+            {
+                ++i;
+                var row = expectedDataTable.NewRow();
+                row["StringProp"] = $"string_{i}";
+                row["IntProp"] = i;
+                row["GuidProp"] = Guid.NewGuid();
+                row["BoolProp"] = random.NextDouble() > 0.5;
+                expectedDataTable.Rows.Add(row);
+
+                return new ToTvpTestClass
+                {
+                    StringProp = (string)row["StringProp"],
+                    IntProp = (int?)row["IntProp"],
+                    GuidProp = (Guid)row["GuidProp"],
+                    BoolProp = (bool)row["BoolProp"]
+                };
+            }
+
+            var actual = CoreHelpers.ToTVP(tableTypeName, new[] { CreateObject(), CreateObject(), CreateObject() });
+
+            Assert.Equal(tableTypeName, actual.GetTypeName());
+            Assert.Equal(JsonConvert.SerializeObject(expectedDataTable), JsonConvert.SerializeObject(actual));
         }
 
         // TODO: Test the other ToArrayTVP Methods
@@ -215,6 +258,18 @@ namespace Bit.Core.Test.Utilities
 
             // Assert
             Assert.Equal(startingUri, newUri.ToString());
+        }
+
+        private class ToTvpTestClass
+        {
+            [DbOrder(2)]
+            public int? IntProp { get; set; }
+            [DbOrder(1)]
+            public string StringProp { get; set; }
+            [DbOrder(3)]
+            public Guid GuidProp { get; set; }
+            [DbOrder(4)]
+            public bool BoolProp { get; set; }
         }
     }
 }
