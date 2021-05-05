@@ -63,7 +63,7 @@ namespace Bit.Admin
             }
 
             // Services
-            services.AddBaseServices(globalSettings);
+            services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
 
             // Mvc

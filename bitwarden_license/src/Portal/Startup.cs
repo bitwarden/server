@@ -57,7 +57,7 @@ namespace Bit.Portal
             }
 
             // Services
-            services.AddBaseServices(globalSettings);
+            services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 

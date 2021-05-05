@@ -108,11 +108,8 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static void AddBaseServices(this IServiceCollection services, GlobalSettings globalSettings)
+        public static void AddBaseServices(this IServiceCollection services)
         {
-            // Required for UserService
-            services.AddWebAuthn(globalSettings);
-
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
@@ -129,6 +126,9 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
+            // Required for UserService
+            services.AddWebAuthn(globalSettings);
+
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
