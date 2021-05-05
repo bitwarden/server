@@ -108,8 +108,11 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static void AddBaseServices(this IServiceCollection services)
+        public static void AddBaseServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
+            // Required for UserService
+            services.AddWebAuthn(globalSettings);
+
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
@@ -534,6 +537,17 @@ namespace Bit.Core.Utilities
             );
 
             return services;
+        }
+
+        public static void AddWebAuthn(this IServiceCollection services, GlobalSettings globalSettings)
+        {
+            services.AddFido2(options =>
+            {
+                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
+                options.ServerName = "Bitwarden";
+                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.TimestampDriftTolerance = 300000;
+            });
         }
     }
 }

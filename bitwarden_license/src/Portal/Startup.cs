@@ -57,18 +57,9 @@ namespace Bit.Portal
             }
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
-
-            // Fido2
-            services.AddFido2(options =>
-            {
-                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
-                options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
-                options.TimestampDriftTolerance = 300000;
-            });
 
             // Mvc
             services.AddControllersWithViews()
