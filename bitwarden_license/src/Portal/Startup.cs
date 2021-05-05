@@ -46,15 +46,6 @@ namespace Bit.Portal
             services.AddScoped<ICurrentContext, CurrentContext>((serviceProvider) =>
                 serviceProvider.GetService<EnterprisePortalCurrentContext>());
 
-            // Fido2
-            services.AddFido2(options =>
-            {
-                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
-                options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
-                options.TimestampDriftTolerance = 300000;
-            });
-
             // Identity
             services.AddEnterprisePortalTokenIdentityServices();
             if (globalSettings.SelfHosted)
