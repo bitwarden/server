@@ -24,7 +24,7 @@ BEGIN
         FROM
             [dbo].[SsoUser] SU
         INNER JOIN
-            #SSOIDs ON #SSOIds.Id = SU.Id
+            #SSOIds ON #SSOIds.Id = SU.Id
 
         SET @BatchSize = @@ROWCOUNT
 

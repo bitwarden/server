@@ -35,12 +35,12 @@ BEGIN
     FROM
         [dbo].[GroupUser] GU
     INNER JOIN
-        @IDs I ON I.Id = GU.OrganizationUserId
+        @Ids I ON I.Id = GU.OrganizationUserId
 
     DELETE OU
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        @IDs I ON I.Id = OU.Id
+        @Ids I ON I.Id = OU.Id
 END
 GO
