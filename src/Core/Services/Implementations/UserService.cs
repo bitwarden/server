@@ -366,8 +366,8 @@ namespace Bit.Core.Services
             return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + email, token);
         }
-        
-                public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
+
+        public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
         {
             await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
             var reg = U2fLib.StartRegistration(CoreHelpers.U2fAppIdUrl(_globalSettings));
