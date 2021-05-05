@@ -62,7 +62,7 @@ namespace Bit.Core.Repositories.TableStorage
             await CreateEntityAsync(entity);
         }
 
-        public async Task CreateManyAsync(IEnumerable<IEvent> e)
+        public async Task CreateManyAsync(IList<IEvent> e)
         {
             if (!e?.Any() ?? true)
             {
