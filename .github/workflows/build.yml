@@ -111,14 +111,14 @@ jobs:
                     dct-delegate-2-key"
 
       - name: Log into docker
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           mkdir -p ~/.docker/trust/private
 
@@ -137,44 +137,6 @@ jobs:
         run: |
           chmod +x ./build.sh
           ./build.sh
-
-      #- name: setting up testing
-      #  run: |
-      #    cd ~/
-      #    mkdir .notary
-      #    echo "{\"trust_dir\":\"~/.docker/trust\",\"remote_server\":{\"url\":\"https://notary.docker.io\"}}" > .notary/config.json
-      #    wget -O notary.sh https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
-      #    chmod +x ./notary.sh
-
-      #- name: testing notary keys
-      #  run: |
-      #    ls -atlh ~/.docker/trust/private
-      #    ~/notary.sh key list
-      #    ~/notary.sh delegation list docker.io/bitwarden/icons
-
-      #- name: testing docker
-      #  run: docker trust inspect --pretty bitwarden/icons
-
-      - name: testing new docker signing
-        run: |
-          docker trust sign bitwarden/icons:latest
-          docker trust sign bitwarden/web:latest
-          docker trust sign bitwarden/notifications:latest
-          docker trust sign bitwarden/portal:latest
-          docker trust sign bitwarden/mssql:latest
-          docker trust sign bitwarden/identity:latest
-          docker trust sign bitwarden/sso:latest
-          docker trust sign bitwarden/api:latest
-          docker trust sign bitwarden/setup:latest
-          docker trust sign bitwarden/events:latest
-          docker trust sign bitwarden/k8s-proxy:latest
-          docker trust sign bitwarden/nginx:latest
-          docker trust sign bitwarden/admin:latest
-          docker trust sign bitwarden/attachments:latest
-          docker trust sign bitwarden/server:latest
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Tag rc branch
         if: github.ref == 'refs/heads/rc'
