@@ -107,8 +107,8 @@ jobs:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password, 
                     docker-username,
-                    dct-delegate-repo-passphrase,
-                    dct-delegate-key"
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
 
       - name: Log into docker
         #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
@@ -125,7 +125,7 @@ jobs:
           echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-key }}
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -140,6 +140,7 @@ jobs:
 
       - name: setting up testing
         run: |
+          cd ~/
           mkdir .notary
           echo "{\"trust_dir\":\"~/.docker/trust\",\"remote_server\":{\"url\":\"https://notary.docker.io\"}}" > .notary/config.json
           wget -O notary.sh https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
@@ -173,7 +174,7 @@ jobs:
           docker trust sign bitwarden/server:latest
         env:
           DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Tag rc branch
         if: github.ref == 'refs/heads/rc'
@@ -192,14 +193,14 @@ jobs:
         run: ./build.sh push rc 
         env:
           DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
         run: ./build.sh push dev
         env:
           DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Make docker stub
         run: |
