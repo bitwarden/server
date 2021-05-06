@@ -147,9 +147,9 @@ jobs:
 
       - name: testing notary keys
         run: |
-          ls -atlh .docker/trust/private
-          ./notary.sh key list
-          ./notary.sh delegation list docker.io/bitwarden/icons
+          ls -atlh ~/.docker/trust/private
+          ~/notary.sh key list
+          ~/notary.sh delegation list docker.io/bitwarden/icons
 
       - name: testing docker
         run: docker trust inspect --pretty bitwarden/icons
