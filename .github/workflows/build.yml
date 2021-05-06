@@ -140,14 +140,13 @@ jobs:
 
       - name: setting up testing
         run: |
-          cd ~/local/bin
           wget -O notary https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
-          chmod +x notary
+          chmod +x ./notary
 
       - name: testing notary keys
         run: |
-          notary key list
-          notary delegation list docker.io/bitwarden/icons
+          ./notary key list
+          ./notary delegation list docker.io/bitwarden/icons
 
       - name: testing docker
         run: docker trust inspect --pretty bitwarden/icons
