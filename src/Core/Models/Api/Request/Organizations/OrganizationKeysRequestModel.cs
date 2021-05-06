@@ -6,13 +6,14 @@ namespace Bit.Core.Models.Api
 {
     public class OrganizationKeysRequestModel
     {
+        [Required]
         public string PublicKey { get; set; }
         [Required]
         public string EncryptedPrivateKey { get; set; }
         
         public OrganizationSignup ToOrganizationSignup(OrganizationSignup existingSignup)
         {
-            if (string.IsNullOrWhiteSpace(existingSignup.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+            if (string.IsNullOrWhiteSpace(existingSignup.PublicKey))
             {
                 existingSignup.PublicKey = PublicKey;
             }
@@ -27,7 +28,7 @@ namespace Bit.Core.Models.Api
         
         public OrganizationUpgrade ToOrganizationUpgrade(OrganizationUpgrade existingUpgrade)
         {
-            if (string.IsNullOrWhiteSpace(existingUpgrade.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+            if (string.IsNullOrWhiteSpace(existingUpgrade.PublicKey))
             {
                 existingUpgrade.PublicKey = PublicKey;
             }
@@ -42,7 +43,7 @@ namespace Bit.Core.Models.Api
 
         public Organization ToOrganization(Organization existingOrg)
         {
-            if (string.IsNullOrWhiteSpace(existingOrg.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+            if (string.IsNullOrWhiteSpace(existingOrg.PublicKey))
             {
                 existingOrg.PublicKey = PublicKey;
             }
