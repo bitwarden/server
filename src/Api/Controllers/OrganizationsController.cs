@@ -206,7 +206,8 @@ namespace Bit.Api.Controllers
                      "which has a policy that prohibits you from being a member of any other organization.");
             }
 
-            var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
+            var result = await _organizationService.SignUpAsync(license, user, model.Key,
+                model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
             return new OrganizationResponseModel(result.Item1);
         }
 

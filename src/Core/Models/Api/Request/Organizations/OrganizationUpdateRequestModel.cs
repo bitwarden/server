@@ -18,8 +18,8 @@ namespace Bit.Core.Models.Api
         [Required]
         [StringLength(256)]
         public string BillingEmail { get; set; }
-
         public Permissions Permissions { get; set; }
+        public OrganizationKeysRequestModel Keys { get; set; }
 
         public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
         {
@@ -31,6 +31,7 @@ namespace Bit.Core.Models.Api
                 existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
             }
             existingOrganization.Identifier = Identifier;
+            Keys?.ToOrganization(existingOrganization);
             return existingOrganization;
         }
     }
