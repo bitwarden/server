@@ -97,6 +97,8 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Yandex, new List<string> { "yandex.com", "ya.ru", "yandex.az", "yandex.by", "yandex.co.il", "yandex.com.am", "yandex.com.ge", "yandex.com.tr", "yandex.ee", "yandex.fi", "yandex.fr", "yandex.kg", "yandex.kz", "yandex.lt", "yandex.lv", "yandex.md", "yandex.pl", "yandex.ru", "yandex.tj", "yandex.tm", "yandex.ua", "yandex.uz" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Sony, new List<string> { "sonyentertainmentnetwork.com", "sony.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "protonmail.com", "protonvpn.com" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "nintendo.com", "nintendo.ch", "nintendo.de", "nintendo.net", "nintendo.co.uk", "nintendo.be", "nintendo.es", "nintendo.fr", "nintendo.it", "nintendo.nl", "nintendo.at", "nintendo.pt", "nintendo.ru", "nintendo.co.za" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "minecraft.net", "mojang.com" });
             #endregion
 
             #region Plans
