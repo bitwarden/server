@@ -49,15 +49,6 @@ namespace Bit.Billing
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
 
-            // Fido2
-            services.AddFido2(options =>
-            {
-                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
-                options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
-                options.TimestampDriftTolerance = 300000;
-            });
-
             // Identity
             services.AddCustomIdentityServices(globalSettings);
             //services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
