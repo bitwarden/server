@@ -56,6 +56,11 @@ namespace Bit.Portal.Models
                     NameKey = "SendOptions";
                     DescriptionKey = "SendOptionsDescription";
                     break;
+                
+                case PolicyType.ResetPassword:
+                    NameKey = "ResetPassword";
+                    DescriptionKey = "ResetPasswordDescription";
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException();

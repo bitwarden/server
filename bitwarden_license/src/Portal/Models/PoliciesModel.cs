@@ -8,7 +8,7 @@ namespace Bit.Portal.Models
 {
     public class PoliciesModel
     {
-        public PoliciesModel(ICollection<Policy> policies, bool useSso)
+        public PoliciesModel(ICollection<Policy> policies, bool useSso, bool useResetPassword)
         {
             if (policies == null)
             {
@@ -24,6 +24,12 @@ namespace Bit.Portal.Models
                 {
                     continue;
                 }
+
+                if (type == PolicyType.ResetPassword && !useResetPassword)
+                {
+                    continue;
+                }
+                
                 var enabled = policyDict.ContainsKey(type) ? policyDict[type].Enabled : false;
                 Policies.Add(new PolicyModel(type, enabled));
             }

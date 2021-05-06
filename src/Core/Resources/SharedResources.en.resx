@@ -652,4 +652,10 @@
     <value>Expected authentication context class reference (acr) was not returned with the authentication response or is invalid.</value>
     <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
   </data>
+  <data name="ResetPassword" xml:space="preserve">
+    <value>Password Reset</value>
+  </data>
+  <data name="ResetPasswordDescription" xml:space="preserve">
+    <value>Allow administrators to reset organization users' master password.</value>
+  </data>
 </root>
