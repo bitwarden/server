@@ -126,6 +126,9 @@ namespace Bit.Core.Utilities
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
+            // Required for UserService
+            services.AddWebAuthn(globalSettings);
+
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
@@ -534,6 +537,17 @@ namespace Bit.Core.Utilities
             );
 
             return services;
+        }
+
+        public static void AddWebAuthn(this IServiceCollection services, GlobalSettings globalSettings)
+        {
+            services.AddFido2(options =>
+            {
+                options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
+                options.ServerName = "Bitwarden";
+                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.TimestampDriftTolerance = 300000;
+            });
         }
     }
 }
