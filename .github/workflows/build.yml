@@ -138,22 +138,22 @@ jobs:
           chmod +x ./build.sh
           ./build.sh
 
-      - name: setting up testing
-        run: |
-          cd ~/
-          mkdir .notary
-          echo "{\"trust_dir\":\"~/.docker/trust\",\"remote_server\":{\"url\":\"https://notary.docker.io\"}}" > .notary/config.json
-          wget -O notary.sh https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
-          chmod +x ./notary.sh
+      #- name: setting up testing
+      #  run: |
+      #    cd ~/
+      #    mkdir .notary
+      #    echo "{\"trust_dir\":\"~/.docker/trust\",\"remote_server\":{\"url\":\"https://notary.docker.io\"}}" > .notary/config.json
+      #    wget -O notary.sh https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
+      #    chmod +x ./notary.sh
 
-      - name: testing notary keys
-        run: |
-          ls -atlh ~/.docker/trust/private
-          ~/notary.sh key list
-          ~/notary.sh delegation list docker.io/bitwarden/icons
+      #- name: testing notary keys
+      #  run: |
+      #    ls -atlh ~/.docker/trust/private
+      #    ~/notary.sh key list
+      #    ~/notary.sh delegation list docker.io/bitwarden/icons
 
-      - name: testing docker
-        run: docker trust inspect --pretty bitwarden/icons
+      #- name: testing docker
+      #  run: docker trust inspect --pretty bitwarden/icons
 
       - name: testing new docker signing
         run: |
