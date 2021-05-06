@@ -10,5 +10,6 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string CollectionName { get; set; }
+        public OrganizationKeysRequestModel Keys { get; set; }
     }
 }

@@ -392,6 +392,7 @@ namespace Bit.Core.Utilities
                     Has2fa = true,
                     HasApi = true,
                     HasSso = true,
+                    HasResetPassword = true,
                     UsersGetPremium = true,
 
                     UpgradeSortOrder = 3,
@@ -427,6 +428,7 @@ namespace Bit.Core.Utilities
                     HasApi = true,
                     HasSelfHost = true,
                     HasSso = true,
+                    HasResetPassword = true,
                     UsersGetPremium = true,
 
                     UpgradeSortOrder = 3,

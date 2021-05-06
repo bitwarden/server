@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Api
         public PlanType PlanType { get; set; }
         [Required]
         public string Key { get; set; }
+        public OrganizationKeysRequestModel Keys { get; set; }
         public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
         [Range(0, double.MaxValue)]
@@ -42,7 +43,7 @@ namespace Bit.Core.Models.Api
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
         {
-            return new OrganizationSignup
+            var orgSignup = new OrganizationSignup
             {
                 Owner = user,
                 OwnerKey = Key,
@@ -67,6 +68,10 @@ namespace Bit.Core.Models.Api
                     BillingAddressCountry = BillingAddressCountry,
                 },
             };
+
+            Keys?.ToOrganizationSignup(orgSignup);
+
+            return orgSignup;
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
