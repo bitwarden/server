@@ -140,7 +140,7 @@ jobs:
 
       - name: setting up testing
         run: |
-          cd /usr/local/bin
+          cd ~/local/bin
           wget -O notary https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64
           chmod +x notary
 
