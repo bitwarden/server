@@ -286,9 +286,10 @@ namespace Bit.Core.IdentityServer
 
         private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
         {
-            if (grantType == "authorization_code")
+            if (grantType == "authorization_code" || grantType == "client_credentials")
             {
                 // Already using SSO to authorize, finish successfully
+                // Or login via api key, skip SSO requirement
                 return true;
             }
 
