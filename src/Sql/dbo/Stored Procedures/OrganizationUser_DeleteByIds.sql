@@ -25,6 +25,8 @@ BEGIN
         EXEC [dbo].[SsoUser_DeleteMany] @UserAndOrganizationIds
     END
 
+    DECLARE @BatchSize INT = 100
+
     -- Delete CollectionUsers
     WHILE @BatchSize > 0
     BEGIN
