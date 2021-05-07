@@ -40,7 +40,7 @@ IF NOT EXISTS (
     FROM
         sys.types
     WHERE
-            [Name] = 'TwoGuidIdArray' AND
+        [Name] = 'TwoGuidIdArray' AND
         is_user_defined = 1
 )
 CREATE TYPE [dbo].[TwoGuidIdArray] AS TABLE (
@@ -68,7 +68,7 @@ BEGIN
         #SSOIds
     FROM
         [dbo].[SsoUser] SU
-        INNER JOIN
+    INNER JOIN
         @UserAndOrganizationIds UOI ON UOI.Id1 = SU.UserId AND UOI.Id2 = SU.OrganizationId
 
     DECLARE @BatchSize INT = 100
@@ -81,7 +81,7 @@ BEGIN
         DELETE TOP(@BatchSize) SU
         FROM
             [dbo].[SsoUser] SU
-            INNER JOIN
+        INNER JOIN
             #SSOIDs ON #SSOIds.Id = SU.Id
 
         SET @BatchSize = @@ROWCOUNT
@@ -92,6 +92,12 @@ END
 GO
 
 -- Create OrganizationUser Delete many by Id procedure
+IF OBJECT_ID('[dbo].[OrganizationUser_DeleteByIds]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
+END
+GO
+
 CREATE PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
     @Ids [dbo].[GuidIdArray] READONLY
 AS
@@ -119,29 +125,12 @@ BEGIN
         EXEC [dbo].[SsoUser_DeleteMany] @UserAndOrganizationIds
     END
 
-
     DECLARE @BatchSize INT = 100
-
-    -- Delete SSO Users
-    WHILE @BatchSize > 0
-    BEGIN
-        BEGIN TRANSACTION SsoUser_DeleteMany_SsoUsers
-
-        DELETE TOP(@BatchSize) SU
-        FROM
-            [dbo].[SsoUser] SU
-        INNER JOIN
-            #SSOIds ON #SSOIds.Id = SU.Id
-
-        SET @BatchSize = @@ROWCOUNT
-
-        COMMIT TRANSACTION SsoUser_DeleteMany_SsoUsers
-    END
 
     -- Delete CollectionUsers
     WHILE @BatchSize > 0
     BEGIN
-        BEGIN TRANSACTION CollectionUser_DeleteMany_CollectionUsers
+        BEGIN TRANSACTION CollectionUser_DeleteMany_CUs
 
         DELETE TOP(@BatchSize) CU
         FROM
@@ -151,7 +140,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION CollectionUser_DeleteMany_CollectionUsers
+        COMMIT TRANSACTION CollectionUser_DeleteMany_CUs
     END
 
     SET @BatchSize = 100;
@@ -164,7 +153,7 @@ BEGIN
         DELETE TOP(@BatchSize) GU
         FROM
             [dbo].[GroupUser] GU
-            INNER JOIN
+        INNER JOIN
             @Ids I ON I.Id = GU.OrganizationUserId
 
         SET @BatchSize = @@ROWCOUNT
@@ -178,7 +167,7 @@ BEGIN
     -- Delete OrganizationUsers
     WHILE @BatchSize > 0
     BEGIN
-        BEGIN TRANSACTION OrganizationUser_DeleteMany_OrganizationUsers
+        BEGIN TRANSACTION OrganizationUser_DeleteMany_OUs
 
         DELETE TOP(@BatchSize) OU
         FROM
@@ -188,7 +177,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION OrganizationUser_DeleteMany_OrganizationUsers
+        COMMIT TRANSACTION OrganizationUser_DeleteMany_OUs
     END
 END
 GO
