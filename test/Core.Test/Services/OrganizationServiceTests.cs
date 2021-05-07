@@ -6,7 +6,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 using Bit.Core.Test.AutoFixture;
@@ -16,135 +15,108 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
 using Organization = Bit.Core.Models.Table.Organization;
+using System.Linq;
 
 namespace Bit.Core.Test.Services
 {
     public class OrganizationServiceTests
     {
-        [Fact]
-        public async Task OrgImportCreateNewUsers()
+        // [Fact]
+        [Theory, PaidOrganizationAutoData]
+        public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
+            Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
         {
-            var orgRepo = Substitute.For<IOrganizationRepository>();
-            var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-            var collectionRepo = Substitute.For<ICollectionRepository>();
-            var userRepo = Substitute.For<IUserRepository>();
-            var groupRepo = Substitute.For<IGroupRepository>();
-            var dataProtector = Substitute.For<IDataProtector>();
-            var mailService = Substitute.For<IMailService>();
-            var pushNotService = Substitute.For<IPushNotificationService>();
-            var pushRegService = Substitute.For<IPushRegistrationService>();
-            var deviceRepo = Substitute.For<IDeviceRepository>();
-            var licenseService = Substitute.For<ILicensingService>();
-            var eventService = Substitute.For<IEventService>();
-            var installationRepo = Substitute.For<IInstallationRepository>();
-            var appCacheService = Substitute.For<IApplicationCacheService>();
-            var paymentService = Substitute.For<IPaymentService>();
-            var policyRepo = Substitute.For<IPolicyRepository>();
-            var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-            var ssoUserRepo = Substitute.For<ISsoUserRepository>();
-            var referenceEventService = Substitute.For<IReferenceEventService>();
-            var globalSettings = Substitute.For<Settings.GlobalSettings>();
-            var taxRateRepository = Substitute.For<ITaxRateRepository>();
-
-            var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
-                groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
-                licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
-                ssoConfigRepo, ssoUserRepo, referenceEventService, globalSettings, taxRateRepository);
-
-            var id = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-            var org = new Organization
+            org.UseDirectory = true;
+            newUsers.Add(new ImportedOrganizationUser
             {
-                Id = id,
-                Name = "Test Org",
-                UseDirectory = true,
-                UseGroups = true,
-                Seats = 3
-            };
-            orgRepo.GetByIdAsync(id).Returns(org);
-
-            var existingUsers = new List<OrganizationUserUserDetails>();
-            existingUsers.Add(new OrganizationUserUserDetails
-            {
-                Id = Guid.NewGuid(),
-                ExternalId = "a",
-                Email = "a@test.com"
+                Email = existingUsers.First().Email,
+                ExternalId = existingUsers.First().ExternalId
             });
-            orgUserRepo.GetManyDetailsByOrganizationAsync(id).Returns(existingUsers);
-            orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
+            var expectedNewUsersCount = newUsers.Count - 1;
 
-            var newUsers = new List<ImportedOrganizationUser>();
-            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
-            await orgService.ImportAsync(id, userId, null, newUsers, null, false);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
+                .Returns(existingUsers);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
+                .Returns(existingUsers.Count);
 
-            await orgUserRepo.DidNotReceive().UpsertAsync(Arg.Any<OrganizationUser>());
-            await orgUserRepo.Received(2).CreateAsync(Arg.Any<OrganizationUser>());
+            await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+
+            await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+                .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 0));
+            await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+                .CreateAsync(default);
+
+            // Create new users
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+                .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .BulkSendOrganizationInviteEmailAsync(org.Name,
+                Arg.Is<IEnumerable<(OrganizationUser, string)>>(messages => messages.Count() == expectedNewUsersCount));
+            
+            // Send events
+            await sutProvider.GetDependency<IEventService>().Received(1)
+                .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Count() == expectedNewUsersCount));
+            await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+                .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
+                referenceEvent.Users == expectedNewUsersCount));
         }
 
-        [Fact]
-        public async Task OrgImportCreateNewUsersAndMarryExistingUser()
+        [Theory, PaidOrganizationAutoData]
+        public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<OrganizationService> sutProvider,
+            Guid userId, Organization org, List<OrganizationUserUserDetails> existingUsers,
+            List<ImportedOrganizationUser> newUsers)
         {
-            var orgRepo = Substitute.For<IOrganizationRepository>();
-            var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-            var collectionRepo = Substitute.For<ICollectionRepository>();
-            var userRepo = Substitute.For<IUserRepository>();
-            var groupRepo = Substitute.For<IGroupRepository>();
-            var dataProtector = Substitute.For<IDataProtector>();
-            var mailService = Substitute.For<IMailService>();
-            var pushNotService = Substitute.For<IPushNotificationService>();
-            var pushRegService = Substitute.For<IPushRegistrationService>();
-            var deviceRepo = Substitute.For<IDeviceRepository>();
-            var licenseService = Substitute.For<ILicensingService>();
-            var eventService = Substitute.For<IEventService>();
-            var installationRepo = Substitute.For<IInstallationRepository>();
-            var appCacheService = Substitute.For<IApplicationCacheService>();
-            var paymentService = Substitute.For<IPaymentService>();
-            var policyRepo = Substitute.For<IPolicyRepository>();
-            var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-            var ssoUserRepo = Substitute.For<ISsoUserRepository>();
-            var referenceEventService = Substitute.For<IReferenceEventService>();
-            var globalSettings = Substitute.For<Settings.GlobalSettings>();
-            var taxRateRepo = Substitute.For<ITaxRateRepository>();
-
-            var orgService = new OrganizationService(orgRepo, orgUserRepo, collectionRepo, userRepo,
-                groupRepo, dataProtector, mailService, pushNotService, pushRegService, deviceRepo,
-                licenseService, eventService, installationRepo, appCacheService, paymentService, policyRepo,
-                ssoConfigRepo, ssoUserRepo, referenceEventService, globalSettings, taxRateRepo);
-
-            var id = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-            var org = new Organization
+            org.UseDirectory = true;
+            var reInvitedUser = existingUsers.First();
+            reInvitedUser.ExternalId = null;
+            newUsers.Add(new ImportedOrganizationUser
             {
-                Id = id,
-                Name = "Test Org",
-                UseDirectory = true,
-                UseGroups = true,
-                Seats = 3
-            };
-            orgRepo.GetByIdAsync(id).Returns(org);
-
-            var existingUserAId = Guid.NewGuid();
-            var existingUsers = new List<OrganizationUserUserDetails>();
-            existingUsers.Add(new OrganizationUserUserDetails
-            {
-                Id = existingUserAId,
-                // No external id here
-                Email = "a@test.com"
+                Email = reInvitedUser.Email,
+                ExternalId = reInvitedUser.Email,
             });
-            orgUserRepo.GetManyDetailsByOrganizationAsync(id).Returns(existingUsers);
-            orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
-            orgUserRepo.GetByIdAsync(existingUserAId).Returns(new OrganizationUser { Id = existingUserAId });
+            var expectedNewUsersCount = newUsers.Count - 1;
 
-            var newUsers = new List<ImportedOrganizationUser>();
-            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
-            await orgService.ImportAsync(id, userId, null, newUsers, null, false);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
+                .Returns(existingUsers);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
+                .Returns(existingUsers.Count);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
+                .Returns(new OrganizationUser { Id = reInvitedUser.Id });
 
-            await orgUserRepo.Received(1).UpsertAsync(Arg.Any<OrganizationUser>());
-            await orgUserRepo.Received(2).CreateAsync(Arg.Any<OrganizationUser>());
+            await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+
+            await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+            await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+                .CreateAsync(default);
+            await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+                .CreateAsync(default, default);
+
+            // Upserted existing user
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+                .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1));
+
+            // Created and invited new users
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+                .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .BulkSendOrganizationInviteEmailAsync(org.Name,
+                Arg.Is<IEnumerable<(OrganizationUser, string)>>(messages => messages.Count() == expectedNewUsersCount));
+
+            // Sent events
+            await sutProvider.GetDependency<IEventService>().Received(1)
+                .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Where(e => e.Item2 == EventType.OrganizationUser_Invited).Count() == expectedNewUsersCount));
+            await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+                .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent => 
+                referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id && 
+                referenceEvent.Users == expectedNewUsersCount));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
