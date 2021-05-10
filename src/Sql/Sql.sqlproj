@@ -322,7 +322,7 @@
     <Build Include="dbo\Stored Procedures\ProviderUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderUser_ReadByUnitId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByUserId.sql" />
     <Build Include="dbo\Tables\ProviderOrganization.sql" />
     <Build Include="dbo\Views\ProviderOrganizationView.sql" />

@@ -13,8 +13,8 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[UserId] = U.[Id]
     INNER JOIN
-        [dbo].[ProviderOrganization] UO ON UO.[ProviderId] = OU.[ProviderId] AND UO.[OrganizationId] = OU.[OrganizationId]
+        [dbo].[ProviderOrganization] PU ON PU.[ProviderId] = OU.[ProviderId] AND PU.[OrganizationId] = OU.[OrganizationId]
     WHERE
-        UO.[Id] = @ProviderOrganizationId
+        PU.[Id] = @ProviderOrganizationId
         AND OU.[Status] = 2 -- Confirmed
 END

@@ -9,7 +9,7 @@ BEGIN
     FROM
         [dbo].[OrganizationView] O
     INNER JOIN
-        [dbo].[ProviderOrganization] UO ON O.[Id] = UO.[OrganizationId]
+        [dbo].[ProviderOrganization] PO ON O.[Id] = PO.[OrganizationId]
     WHERE
-        UO.[ProviderId] = @ProviderId
+        PO.[ProviderId] = @ProviderId
 END

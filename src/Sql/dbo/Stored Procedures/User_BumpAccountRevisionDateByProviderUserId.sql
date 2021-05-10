@@ -11,8 +11,8 @@ BEGIN
     FROM
         [dbo].[User] U
     INNER JOIN
-        [dbo].[ProviderUser] OU ON OU.[UserId] = U.[Id]
+        [dbo].[ProviderUser] PU ON PU.[UserId] = U.[Id]
     WHERE
-        OU.[Id] = @ProviderUserId
-        AND OU.[Status] = 2 -- Confirmed
+        PU.[Id] = @ProviderUserId
+        AND PU.[Status] = 2 -- Confirmed
 END
