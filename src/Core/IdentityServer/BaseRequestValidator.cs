@@ -87,7 +87,7 @@ namespace Bit.Core.IdentityServer
                 return;
             }
 
-            var twoFactorRequirement = await RequiresTwoFactorAsync(user);
+            var twoFactorRequirement = await RequiresTwoFactorAsync(user, request.GrantType);
             if (twoFactorRequirement.Item1)
             {
                 // Just defaulting it
@@ -260,8 +260,14 @@ namespace Bit.Core.IdentityServer
 
         protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
-        private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user)
+        private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, string grantType)
         {
+            if (grantType == "client_credentials")
+            {
+                // Do not require MFA for api key logins
+                return new Tuple<bool, Organization>(false, null);
+            }
+
             var individualRequired = _userManager.SupportsUserTwoFactor &&
                 await _userManager.GetTwoFactorEnabledAsync(user) &&
                 (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
@@ -286,9 +292,10 @@ namespace Bit.Core.IdentityServer
 
         private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
         {
-            if (grantType == "authorization_code")
+            if (grantType == "authorization_code" || grantType == "client_credentials")
             {
                 // Already using SSO to authorize, finish successfully
+                // Or login via api key, skip SSO requirement
                 return true;
             }
 
