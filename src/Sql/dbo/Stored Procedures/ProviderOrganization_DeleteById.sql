@@ -4,8 +4,6 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByProviderOrganizationId] @Id
-
     BEGIN TRANSACTION ProviderOrganization_DeleteById
 
     DECLARE @ProviderId UNIQUEIDENTIFIER
@@ -19,14 +17,6 @@ BEGIN
     WHERE
         [Id] = @Id
 
-    DELETE
-    FROM
-        [dbo].[OrganizationUser]
-    WHERE
-        [ProviderId] = @ProviderId
-    AND
-        [OrganizationId] = @OrganizationId
-    
     DELETE
     FROM
         [dbo].[ProviderOrganization]

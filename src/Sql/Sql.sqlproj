@@ -320,6 +320,7 @@
     <Build Include="dbo\Tables\ProviderUser.sql" />
     <Build Include="dbo\Views\ProviderUserView.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderId.sql" />
@@ -330,6 +331,10 @@
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
-    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderOrganizationId.sql" />
+    <Build Include="dbo\Tables\ProviderOrganizationProviderUser.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Update.sql" />
   </ItemGroup>
 </Project>

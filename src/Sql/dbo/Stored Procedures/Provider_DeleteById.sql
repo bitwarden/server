@@ -9,12 +9,6 @@ BEGIN
     BEGIN TRANSACTION Provider_DeleteById
 
     DELETE
-    FROM
-        [dbo].[OrganizationUser]
-    WHERE
-        [ProviderId] = @Id    
-    
-    DELETE
     FROM 
         [dbo].[ProviderUser]
     WHERE 

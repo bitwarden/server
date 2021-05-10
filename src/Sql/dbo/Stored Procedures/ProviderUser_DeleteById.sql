@@ -21,14 +21,6 @@ BEGIN
 
     DELETE
     FROM
-         [dbo].[OrganizationUser]
-    WHERE
-        [ProviderId] = @ProviderId
-    AND
-        [UserId] = @UserId
-
-    DELETE
-    FROM
         [dbo].[ProviderUser]
     WHERE
         [Id] = @Id

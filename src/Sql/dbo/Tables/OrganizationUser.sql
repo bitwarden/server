@@ -1,7 +1,6 @@
 ﻿CREATE TABLE [dbo].[OrganizationUser] (
     [Id]                            UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]                UNIQUEIDENTIFIER    NOT NULL,
-    [ProviderId]                    UNIQUEIDENTIFIER    NULL,
     [UserId]                        UNIQUEIDENTIFIER    NULL,
     [Email]                         NVARCHAR (256)      NULL,
     [Key]                           VARCHAR (MAX)       NULL,
@@ -16,7 +15,6 @@
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_OrganizationUser_Unit] FOREIGN KEY  ([ProviderId]) REFERENCES  [dbo].[Provider] ([Id])
 );
 
 
