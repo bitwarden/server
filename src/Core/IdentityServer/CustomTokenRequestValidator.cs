@@ -87,7 +87,13 @@ namespace Bit.Core.IdentityServer
         }
 
         protected override void SetSsoResult(CustomTokenRequestValidationContext context, 
-            Dictionary<string, object> customResponse) => throw new System.NotImplementedException();
+            Dictionary<string, object> customResponse) 
+        {
+            context.Result.Error = "invalid_grant";
+            context.Result.ErrorDescription = "Single Sign on required.";
+            context.Result.IsError = true;
+            context.Result.CustomResponse = customResponse;
+        }
 
         protected override void SetErrorResult(CustomTokenRequestValidationContext context,
             Dictionary<string, object> customResponse)
