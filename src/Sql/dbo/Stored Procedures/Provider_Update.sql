@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[UnitP_Update]
+﻿CREATE PROCEDURE [dbo].[Provider_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
@@ -20,7 +20,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[UnitP]
+        [dbo].[Provider]
     SET
         [Name] = @Name,
         [BusinessName] = @BusinessName,

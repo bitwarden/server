@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[User_BumpAccountRevisionDateByUnitPId]
-    @UnitPId UNIQUEIDENTIFIER
+﻿CREATE PROCEDURE [dbo].[User_BumpAccountRevisionDateByProviderId]
+    @ProviderId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,8 +11,8 @@ BEGIN
     FROM
         [dbo].[User] U
     INNER JOIN
-        [dbo].[UnitPUser] OU ON OU.[UserId] = U.[Id]
+        [dbo].[ProviderUser] OU ON OU.[UserId] = U.[Id]
     WHERE
-        OU.[UnitPId] = @UnitPId
+        OU.[ProviderId] = @ProviderId
         AND OU.[Status] = 2 -- Confirmed
 END

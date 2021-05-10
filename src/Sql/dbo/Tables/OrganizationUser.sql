@@ -12,11 +12,11 @@
     [CreationDate]                  DATETIME2 (7)       NOT NULL,
     [RevisionDate]                  DATETIME2 (7)       NOT NULL,
     [Permissions]                   NVARCHAR (MAX)      NULL,
-    [UnitPId]                       UNIQUEIDENTIFIER    NULL,
+    [ProviderId]                    UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_OrganizationUser_Unit] FOREIGN KEY  ([UnitPId]) REFERENCES  [dbo].[UnitP] ([Id])
+    CONSTRAINT [FK_OrganizationUser_Unit] FOREIGN KEY  ([ProviderId]) REFERENCES  [dbo].[Provider] ([Id])
 );
 
 

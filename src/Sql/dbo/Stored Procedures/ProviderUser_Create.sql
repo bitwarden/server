@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[UnitPUser_Create]
+﻿CREATE PROCEDURE [dbo].[ProviderUser_Create]
     @Id UNIQUEIDENTIFIER,
-    @UnitPId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @Email NVARCHAR(256),
     @Key VARCHAR(MAX),
@@ -12,10 +12,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[UnitPUser]
+    INSERT INTO [dbo].[ProviderUser]
     (
         [Id],
-        [UnitPId],
+        [ProviderId],
         [UserId],
         [Email],
         [Key],
@@ -27,7 +27,7 @@ BEGIN
     VALUES
     (
         @Id,
-        @UnitPId,
+        @ProviderId,
         @UserId,
         @Email,
         @Key,

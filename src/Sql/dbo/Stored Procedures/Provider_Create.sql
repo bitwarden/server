@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[UnitP_Create]
+﻿CREATE PROCEDURE [dbo].[Provider_Create]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
@@ -19,7 +19,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[UnitP]
+    INSERT INTO [dbo].[Provider]
     (
         [Id],
         [Name],

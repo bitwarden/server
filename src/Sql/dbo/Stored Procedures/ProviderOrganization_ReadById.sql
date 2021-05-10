@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[UnitP_ReadById]
+﻿CREATE PROCEDURE [dbo].[ProviderOrganization_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[UnitPView]
+        [dbo].[ProviderOrganizationView]
     WHERE
         [Id] = @Id
 END

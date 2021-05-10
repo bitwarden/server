@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[UnitPOrganization_Create]
+﻿CREATE PROCEDURE [dbo].[ProviderOrganization_Create]
     @Id UNIQUEIDENTIFIER,
-    @UnitPId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -8,10 +8,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[UnitPOrganization]
+    INSERT INTO [dbo].[ProviderOrganization]
     (
         [Id],
-        [UnitPId],
+        [ProviderId],
         [OrganizationId],
         [CreationDate],
         [RevisionDate]
@@ -19,7 +19,7 @@ BEGIN
     VALUES
     (
         @Id,
-        @UnitPId,
+        @ProviderId,
         @OrganizationId,
         @CreationDate,
         @RevisionDate
