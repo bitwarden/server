@@ -653,7 +653,7 @@
     <comment>'acr' is an explicit OIDC claim type, see https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.2 (acr). It should not be translated.</comment>
   </data>
   <data name="ResetPassword" xml:space="preserve">
-    <value>Password Reset</value>
+    <value>Master Password Reset</value>
   </data>
   <data name="ResetPasswordDescription" xml:space="preserve">
     <value>Allow administrators in the organization to reset master password for users.</value>
