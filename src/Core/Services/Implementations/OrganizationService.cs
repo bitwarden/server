@@ -15,6 +15,7 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
+using IdentityServer4.Extensions;
 
 namespace Bit.Core.Services
 {
@@ -1074,6 +1075,26 @@ namespace Bit.Core.Services
                 });
 
             return orgUsers;
+        }
+
+        public async Task ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<Guid> organizationUsersId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId)
+                .ToList();
+
+            if (filteredUsers.Count == 0)
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+            
+            var org = await GetOrgById(organizationId);
+            foreach (var orgUser in filteredUsers)
+            {
+                await SendInviteAsync(orgUser, org);
+            }
         }
 
         public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
