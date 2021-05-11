@@ -12,6 +12,22 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
+    public class OrganizationCustomization : ICustomization
+    {
+        public bool UseGroups { get; set; }
+
+        public void Customize(IFixture fixture)
+        {
+            var organizationId = Guid.NewGuid();
+
+            fixture.Customize<Organization>(composer => composer
+                .With(o => o.Id, organizationId)
+                .With(o => o.UseGroups, UseGroups));
+
+            fixture.Customize<Group>(composer => composer.With(g => g.OrganizationId, organizationId));
+        }
+    }
+
     internal class PaidOrganization : ICustomization
     {
         public PlanType CheckedPlanType { get; set; }
@@ -97,10 +113,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     internal class OrganizationInviteAutoDataAttribute : CustomAutoDataAttribute
     {
         public OrganizationInviteAutoDataAttribute(int inviteeUserType = 0, int invitorUserType = 0, string permissionsBlob = null) : base(new SutProviderCustomization(),
-            new OrganizationInvite 
-            { 
-                InviteeUserType = (OrganizationUserType)inviteeUserType, 
-                InvitorUserType = (OrganizationUserType)invitorUserType, 
+            new OrganizationInvite
+            {
+                InviteeUserType = (OrganizationUserType)inviteeUserType,
+                InvitorUserType = (OrganizationUserType)invitorUserType,
                 PermissionsBlob = permissionsBlob,
             })
         { }

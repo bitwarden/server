@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
@@ -27,7 +28,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogGroupEventAsync(group, Enums.EventType.Group_Created);
+                .LogGroupEventAsync(group, EventType.Group_Created);
             Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
             Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
@@ -44,7 +45,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group, collections);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogGroupEventAsync(group, Enums.EventType.Group_Created);
+                .LogGroupEventAsync(group, EventType.Group_Created);
             Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
             Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
@@ -59,7 +60,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group, collections);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+                .LogGroupEventAsync(group, EventType.Group_Updated);
             Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
         }
 
@@ -95,7 +96,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IGroupRepository>().Received().DeleteAsync(group);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
+                .LogGroupEventAsync(group, EventType.Group_Deleted);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -112,7 +113,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogOrganizationUserEventAsync(organizationUser, Enums.EventType.OrganizationUser_UpdatedGroups);
+                .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -125,14 +126,14 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
                 .Returns(organizationUser);
 
-            await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
-                .DeleteUserAsync(default, default);
-            await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
-                .LogOrganizationUserEventAsync(default, default);
             // user not in organization
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(group, organizationUser.Id));
             // invalid user
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(group, Guid.NewGuid()));
+            await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
+                .DeleteUserAsync(default, default);
+            await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+                .LogOrganizationUserEventAsync(default, default);
         }
     }
 }
