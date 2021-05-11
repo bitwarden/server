@@ -1,7 +1,7 @@
 <!--
-Please do not submit feature requests or version number updates.
-The [Community Forums][1] has a section for submitting, voting for,
-and discussing product feature requests.
+Please do not submit feature requests. The [Community Forums][1]
+has a section for submitting, voting for, and discussing product
+feature requests.
 [1]: https://community.bitwarden.com
 
 Please remove HTML comments before finalizing your submission.
