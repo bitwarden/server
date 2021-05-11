@@ -5,6 +5,6 @@ namespace Bit.Portal.Models
     public class ResetPasswordDataModel
     {
         [Display(Name = "ResetPasswordAutoEnrollCheckbox")]
-        public bool Enabled { get; set; }
+        public bool AutoEnrollEnabled { get; set; }
     }
 }
