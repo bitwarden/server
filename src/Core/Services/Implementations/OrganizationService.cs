@@ -15,7 +15,6 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
-using IdentityServer4.Extensions;
 
 namespace Bit.Core.Services
 {
@@ -1082,10 +1081,9 @@ namespace Bit.Core.Services
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
             var filteredUsers = orgUsers
-                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId)
-                .ToList();
+                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId);
 
-            if (filteredUsers.Count == 0)
+            if (!filteredUsers.Any())
             {
                 throw new BadRequestException("Users invalid.");
             }
