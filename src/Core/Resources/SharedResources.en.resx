@@ -656,6 +656,21 @@
     <value>Password Reset</value>
   </data>
   <data name="ResetPasswordDescription" xml:space="preserve">
-    <value>Allow administrators to reset organization users' master password.</value>
+    <value>Allow administrators in the organization to reset master password for users.</value>
+  </data>
+  <data name="ResetPasswordWarning" xml:space="preserve">
+    <value>Users in the organization will need to self-enroll or be auto-enrolled before administrators can reset their master password.</value>
+  </data>
+  <data name="ResetPasswordAutoEnroll" xml:space="preserve">
+    <value>Automatic Enrollment</value>
+  </data>
+  <data name="ResetPasswordAutoEnrollDescription" xml:space="preserve">
+    <value>All users will be automatically enrolled in password reset once their invite is accepted.</value>
+  </data>
+  <data name="ResetPasswordAutoEnrollWarning" xml:space="preserve">
+    <value>Users already in the organization will not be retroactively enrolled in password reset. They will need to self-enroll before administrators can reset their master password.</value>
+  </data>
+  <data name="ResetPasswordAutoEnrollCheckbox" xml:space="preserve">
+    <value>Automatically enroll new users</value>
   </data>
 </root>
