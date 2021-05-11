@@ -24,6 +24,7 @@ Please sign the [Contributor Agreement](https://cla-assistant.io/bitwarden/serve
 
 * commit any pull requests against the `master` branch
 * include a link to your Community Forums post
+* please do **not** submit version number updates/bumps
 
 # Setup guide
 
