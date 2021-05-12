@@ -52,10 +52,12 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 .With(o => o.PlanType, PlanType.Free));
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
-            var validPlans = StaticStore.Plans.Where(p => !plansToIgnore.Contains(p.Type) && !p.Disabled).Select(p => p.Type).ToList();
+            var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
+            
             fixture.Customize<OrganizationUpgrade>(composer => composer
-                .With(ou => ou.Plan, validPlans.Last()));
-            fixture.Customize<Models.Table.Organization>(composer => composer
+                .With(ou => ou.Plan, selectedPlan.Type)
+                .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
+            fixture.Customize<Organization>(composer => composer
                 .Without(o => o.GatewaySubscriptionId));
         }
     }

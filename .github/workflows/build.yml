@@ -5,15 +5,12 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
-  release:
-    types:
-      - published
+  workflow_dispatch:
+    inputs: {}
 
 jobs:
-
   cloc:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -26,202 +23,8 @@ jobs:
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
-  ubuntu:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Set up Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: '10.x'
-
-      - name: Set up gulp
-        run: npm i -g gulp
-
-      - name: Print environment
-        run: |
-          whoami
-          dotnet --info
-          node --version
-          npm --version
-          gulp --version
-          docker --version
-          Write-Output "GitHub ref: $env:GITHUB_REF"
-          Write-Output "GitHub event: $env:GITHUB_EVENT"
-        shell: pwsh
-        env:
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_EVENT: ${{ github.event_name }}
-
-      - name: Log into docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
-        run: |
-          mkdir -p ~/.docker/trust/private
-
-          echo "${{ secrets.DOCKER_DELEGATION_KEY }}" > ~/.docker/trust/private/$DOCKER_DELEGATION_KEY_ID.key
-          echo "${{ secrets.DOCKER_REPO_API_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_API_ID.key
-          echo "${{ secrets.DOCKER_REPO_IDENTITY_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_IDENTITY_ID.key
-          echo "${{ secrets.DOCKER_REPO_SERVER_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_SERVER_ID.key
-          echo "${{ secrets.DOCKER_REPO_ATTACHMENTS_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_ATTACHMENTS_ID.key
-          echo "${{ secrets.DOCKER_REPO_ICONS_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_ICONS_ID.key
-          echo "${{ secrets.DOCKER_REPO_NOTIFICATIONS_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_NOTIFICATIONS_ID.key
-          echo "${{ secrets.DOCKER_REPO_EVENTS_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_EVENTS_ID.key
-          echo "${{ secrets.DOCKER_REPO_ADMIN_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_ADMIN_ID.key
-          echo "${{ secrets.DOCKER_REPO_NGINX_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_NGINX_ID.key
-          echo "${{ secrets.DOCKER_REPO_K8SPROXY_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_K8SPROXY_ID.key
-          echo "${{ secrets.DOCKER_REPO_SSO_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_SSO_ID.key
-          echo "${{ secrets.DOCKER_REPO_PORTAL_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_PORTAL_ID.key
-          echo "${{ secrets.DOCKER_REPO_MSSQL_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_MSSQL_ID.key
-          echo "${{ secrets.DOCKER_REPO_SETUP_KEY }}" > ~/.docker/trust/private/$DOCKER_REPO_SETUP_ID.key
-        env:
-          DOCKER_DELEGATION_KEY_ID: "5702b22123e058cbd96a7a43000cb981ae98ef3f2f4aa34138ab3dc1d011e446"
-          DOCKER_REPO_API_ID: "525fa3e70b84669c9fe489c5a3d0974898d14c0807b19447242c60ed8d4ca766"
-          DOCKER_REPO_IDENTITY_ID: "084da6ea47ba1c4f34c2870a78a17739cd5df50359d2c2c7616822632df726d3"
-          DOCKER_REPO_SERVER_ID: "ffbee21a1a71854a1c1310df4f5aded41726dd90d61050a6256168cd9268b1ee"
-          DOCKER_REPO_ATTACHMENTS_ID: "e40fbcb5b273ad601c00ea905ca326ab68b395f17a46a8530e0ddd7d12bd4240"
-          DOCKER_REPO_ICONS_ID: "0d3f5c6854610bd3d9b9c0a6851fe525b057976b46cb0f47de3942cf3b0be394"
-          DOCKER_REPO_NOTIFICATIONS_ID: "1bf8d22352ec65a6c9b9282c454462240e0a1eb78bff03b65b5a4b7887599ab2"
-          DOCKER_REPO_EVENTS_ID: "1020320052e6247f3c5fbfc2a3bfb0efc7e247f8a5a187dc03f60848359ac7c9"
-          DOCKER_REPO_ADMIN_ID: "c5d80db8745fcd7a1510c3fba5c65582cfc2453d2b1eeb292abe79eb1351cf5c"
-          DOCKER_REPO_NGINX_ID: "bf3d3247f5c2be73bbe830cddbae445c29e4fcc9e2fb4b4d39abf86a2740098b"
-          DOCKER_REPO_K8SPROXY_ID: "bdad34c1202b2bbf8a460b66da08b2c1c1eea5864b29508782c00da145eb1fcd"
-          DOCKER_REPO_SSO_ID: "97a5f6d29b255ff709ec63faad27c2f76246f006563bf3ecbb71547325c05815"
-          DOCKER_REPO_PORTAL_ID: "4f358aa0a41c9a6650f5d2f907c2de418df34ddf3ee45e0994be7cc2dcd0b56e"
-          DOCKER_REPO_MSSQL_ID: "30a44d7efbe48d30ed06abef003d2d8990205dad6a034617cddc03548f8c084e"
-          DOCKER_REPO_SETUP_ID: "2932fb9c39b7eacf4418c7c9ee4c823f973c426412ddd64d7f9f0b6f940b8428"
-
-      - name: Checkout repo
-        uses: actions/checkout@v2
-
-      - name: Restore
-        run: dotnet tool restore
-
-      - name: Build
-        run: |
-          chmod +x ./build.sh
-          ./build.sh
-
-      - name: tag rc branch
-        if: github.ref == 'refs/heads/rc'
-        run: ./build.sh tag rc
-
-      - name: Tag dev
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
-        run: ./build.sh tag dev
-
-      - name: Tag beta
-        if: github.event_name == 'release'
-        run: ./build.sh tag beta
-
-      - name: Tag version
-        if: github.event_name == 'release'
-        run: ./build.sh tag $($env:RELEASE_TAG_NAME.TrimStart('v'))
-        shell: pwsh
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-
-      - name: List docker images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
-        run: docker images
-
-      - name: Push rc images
-        if: github.ref == 'refs/heads/rc'
-        run: ./build.sh push rc 
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push dev images
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
-        run: ./build.sh push dev
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push beta images
-        if: github.event_name == 'release'
-        run: ./build.sh push beta
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push latest images
-        if: github.event_name == 'release'
-        run: ./build.sh push latest
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Push version images
-        if: github.event_name == 'release'
-        run: ./build.sh push $($env:RELEASE_TAG_NAME.TrimStart('v'))
-        shell: pwsh
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE }}
-
-      - name: Make docker stub
-        run: |
-          STUB_OUTPUT=$(pwd)/docker-stub
-          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
-          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
-          rm -rf $STUB_OUTPUT/letsencrypt
-          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
-          touch $STUB_OUTPUT/env/uid.env
-          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
-
-      - name: Upload docker stub artifact
-        uses: actions/upload-artifact@v2-preview
-        with:
-          name: docker-stub.zip
-          path: ./docker-stub.zip
-
-      - name: Build swagger
-        run: |
-          cd ./src/Api
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
-            ./obj/Docker/publish/Api/Api.dll public
-          cd ../..
-        shell: pwsh
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
-          swaggerGen: 'True'
-
-      - name: Upload swagger artifact
-        uses: actions/upload-artifact@v2-preview
-        with:
-          name: swagger.json
-          path: ./swagger.json
-
-      - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.ref == 'refs/heads/rc'
-        run: docker logout
-
-      - name: Upload release assets
-        if: github.event_name == 'release'
-        run: |
-          hub release edit `
-            -a ./swagger.json `
-            -a ./docker-stub.zip `
-            -m "Version $($env:RELEASE_TAG_NAME.TrimStart('v'))" `
-            $env:RELEASE_TAG_NAME
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-
-  windows:
+  testing:
     runs-on: windows-latest
-
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@v1
@@ -238,7 +41,7 @@ jobs:
 
       - name: Print environment
         run: |
-          nuget help
+          nuget help | grep "Version"
           msbuild -version
           dotnet --info
           node --version
@@ -264,3 +67,137 @@ jobs:
       - name: Test solution
         run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
         shell: pwsh
+
+  build:
+    runs-on: ubuntu-latest
+    needs: testing
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Set up gulp
+        run: npm i -g gulp
+
+      - name: Print environment
+        run: |
+          whoami
+          dotnet --info
+          node --version
+          npm --version
+          gulp --version
+          docker --version
+          Write-Output "GitHub ref: $env:GITHUB_REF"
+          Write-Output "GitHub event: $env:GITHUB_EVENT"
+        shell: pwsh
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_EVENT: ${{ github.event_name }}
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "docker-password, 
+                    docker-username,
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
+
+      - name: Log into docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
+
+      - name: Setup Docker Trust
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: |
+          mkdir -p ~/.docker/trust/private
+
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Restore
+        run: dotnet tool restore
+
+      - name: Build
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+
+      - name: Tag rc branch
+        if: github.ref == 'refs/heads/rc'
+        run: ./build.sh tag rc
+
+      - name: Tag dev
+        if: github.ref == 'refs/heads/master'
+        run: ./build.sh tag dev
+
+      - name: List docker images
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker images
+
+      - name: Push rc images
+        if: github.ref == 'refs/heads/rc'
+        run: ./build.sh push rc 
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Push dev images
+        if: github.ref == 'refs/heads/master'
+        run: ./build.sh push dev
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Make docker stub
+        run: |
+          STUB_OUTPUT=$(pwd)/docker-stub
+          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
+          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
+          rm -rf $STUB_OUTPUT/letsencrypt
+          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
+          touch $STUB_OUTPUT/env/uid.env
+          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
+
+      - name: Upload docker stub artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-stub.zip
+          path: ./docker-stub.zip
+
+      - name: Build swagger
+        run: |
+          cd ./src/Api
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
+            ./obj/Docker/publish/Api/Api.dll public
+          cd ../..
+        shell: pwsh
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: 'True'
+
+      - name: Upload swagger artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: swagger.json
+          path: ./swagger.json
+
+      - name: Log out of docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker logout

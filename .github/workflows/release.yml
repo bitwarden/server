@@ -1,0 +1,227 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag_name_input:
+        description: "Release Tag Name <X.X.X>"
+        required: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_version: ${{ steps.create_tags.outputs.package_version }}
+      tag_version: ${{ steps.create_tags.outputs.tag_version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Create Release Vars
+        id: create_tags
+        run: |
+          case "${RELEASE_TAG_NAME_INPUT:0:1}" in
+            v)
+              echo "RELEASE_NAME=${RELEASE_TAG_NAME_INPUT:1}" >> $GITHUB_ENV
+              echo "RELEASE_TAG_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "::set-output name=package_version::${RELEASE_TAG_NAME_INPUT:1}"
+              echo "::set-output name=tag_version::$RELEASE_TAG_NAME_INPUT"
+              ;;
+            [0-9])
+              echo "RELEASE_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "RELEASE_TAG_NAME=v$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
+              echo "::set-output name=package_version::$RELEASE_TAG_NAME_INPUT"
+              echo "::set-output name=tag_version::v$RELEASE_TAG_NAME_INPUT"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
+        env:
+          RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
+
+      - name: Create Draft Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: true
+          prerelease: false
+
+  release:
+    runs-on: ubuntu-latest
+    needs: setup
+    env:
+      RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+    steps:
+      - name: Print environment
+        run: |
+          whoami
+          docker --version
+          Write-Output "GitHub ref: $env:GITHUB_REF"
+          Write-Output "GitHub event: $env:GITHUB_EVENT"
+        shell: pwsh
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_EVENT: ${{ github.event_name }}
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "docker-password, 
+                    docker-username,
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
+
+      - name: Log into docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
+
+      - name: Setup Docker Trust
+        run: |
+          mkdir -p ~/.docker/trust/private
+
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+          
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Restore
+        run: dotnet tool restore
+
+      - name: pull docker images
+        run: |
+          docker pull bitwarden/api:rc
+          docker pull bitwarden/identity:rc
+          docker pull bitwarden/server:rc
+          docker pull bitwarden/attachments:rc
+          docker pull bitwarden/icons:rc
+          docker pull bitwarden/notifications:rc
+          docker pull bitwarden/events:rc
+          docker pull bitwarden/admin:rc
+          docker pull bitwarden/nginx:rc
+          docker pull bitwarden/nginx:rc
+          docker pull bitwarden/sso:rc
+          docker pull bitwarden/portal:rc
+          docker pull bitwarden/mssql:rc
+          docker pull bitwarden/setup:rc
+        env:
+          DOCKER_CONTENT_TRUST: 1
+
+
+      - name: re-tag docker images
+        run: |
+          tags=( latest beta ${RELEASE_VERSION} )
+          for TAG in "${tags[@]}"
+          do
+            docker tag bitwarden/api:rc bitwarden/api:$TAG
+            docker tag bitwarden/identity:rc bitwarden/identity:$TAG
+            docker tag bitwarden/server:rc bitwarden/server:$TAG
+            docker tag bitwarden/attachments:rc bitwarden/attachments:$TAG
+            docker tag bitwarden/icons:rc bitwarden/icons:$TAG
+            docker tag bitwarden/notifications:rc bitwarden/notifications:$TAG
+            docker tag bitwarden/events:rc bitwarden/events:$TAG
+            docker tag bitwarden/admin:rc bitwarden/admin:$TAG
+            docker tag bitwarden/nginx:rc bitwarden/nginx:$TAG
+            docker tag bitwarden/nginx:rc bitwarden/k8s-proxy:$TAG
+            docker tag bitwarden/sso:rc bitwarden/sso:$TAG
+            docker tag bitwarden/portal:rc bitwarden/portal:$TAG
+            docker tag bitwarden/mssql:rc bitwarden/mssql:$TAG
+            docker tag bitwarden/setup:rc bitwarden/setup:$TAG
+          done 
+
+      - name: List docker images
+        run: docker images
+
+      - name: Push beta images
+        run: ./build.sh push beta
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Push latest images
+        run: ./build.sh push latest
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Push version images
+        run: ./build.sh push $($env:$RELEASE_VERSION)
+        shell: pwsh
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Make docker stub
+        run: |
+          STUB_OUTPUT=$(pwd)/docker-stub
+          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
+          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
+          rm -rf $STUB_OUTPUT/letsencrypt
+          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
+          touch $STUB_OUTPUT/env/uid.env
+          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
+
+      - name: Upload docker stub artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-stub.zip
+          path: ./docker-stub.zip
+
+      - name: Build swagger
+        run: |
+          cd ./src/Api
+          echo "Restore"
+          dotnet restore "Api.csproj"
+          echo "Clean"
+          dotnet clean "Api.csproj" -c "Release" -o "obj/Docker/publish/Api"
+          echo "Publish"
+          dotnet publish "Api.csproj" -c "Release" -o "obj/Docker/publish/Api"
+
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
+            ./obj/Docker/publish/Api/Api.dll public
+          cd ../..
+        shell: pwsh
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: 'True'
+
+      - name: Upload swagger artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: swagger.json
+          path: ./swagger.json
+
+      - name: Log out of docker
+        run: docker logout
+
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        run: |
+          hub release edit \
+            -a ./swagger.json \
+            -a ./docker-stub.zip \
+            -m "Version $RELEASE_VERSION" \
+            $RELEASE_TAG_NAME
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
