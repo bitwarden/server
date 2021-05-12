@@ -21,42 +21,38 @@ namespace Bit.Portal.Models
                     NameKey = "TwoStepLogin";
                     DescriptionKey = "TwoStepLoginDescription";
                     break;
-
                 case PolicyType.MasterPassword:
                     NameKey = "MasterPassword";
                     DescriptionKey = "MasterPasswordDescription";
                     break;
-
                 case PolicyType.PasswordGenerator:
                     NameKey = "PasswordGenerator";
                     DescriptionKey = "PasswordGeneratorDescription";
                     break;
-
                 case PolicyType.SingleOrg:
                     NameKey = "SingleOrganization";
                     DescriptionKey = "SingleOrganizationDescription";
                     break;
-                
                 case PolicyType.RequireSso:
                     NameKey = "RequireSso";
                     DescriptionKey = "RequireSsoDescription";
                     break;
-                
                 case PolicyType.PersonalOwnership:
                     NameKey = "PersonalOwnership";
                     DescriptionKey = "PersonalOwnershipDescription";
                     break;
-
                 case PolicyType.DisableSend:
                     NameKey = "DisableSend";
                     DescriptionKey = "DisableSendDescription";
                     break;
-
                 case PolicyType.SendOptions:
                     NameKey = "SendOptions";
                     DescriptionKey = "SendOptionsDescription";
                     break;
-
+                case PolicyType.ResetPassword:
+                    NameKey = "ResetPassword";
+                    DescriptionKey = "ResetPasswordDescription";
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
