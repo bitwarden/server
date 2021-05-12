@@ -260,6 +260,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
+        public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByIds]",
+                    new { Ids = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+        
         public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
         {
             using (var connection = new SqlConnection(ConnectionString))

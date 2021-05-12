@@ -1076,6 +1076,25 @@ namespace Bit.Core.Services
             return orgUsers;
         }
 
+        public async Task ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<Guid> organizationUsersId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId);
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+            
+            var org = await GetOrgById(organizationId);
+            foreach (var orgUser in filteredUsers)
+            {
+                await SendInviteAsync(orgUser, org);
+            }
+        }
+
         public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
