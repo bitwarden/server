@@ -96,4 +96,10 @@ namespace Bit.Core.Models.Api
         [Required]
         public IEnumerable<Guid> Ids { get; set; }
     }
+    
+    public class OrganizationUserBulkRemoveRequestModel
+    {
+        [Required]
+        public IEnumerable<Guid> Ids { get; set; }
+    }
 }

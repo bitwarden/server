@@ -1403,6 +1403,41 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId,
+            Guid? deletingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId);
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
+            var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
+            if (!confirmedOwnersIds.Except(organizationUsersId).Any())
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            foreach (var orgUser in filteredUsers)
+            {
+                // TODO: We should replace this call with `DeleteManyAsync`.
+                await _organizationUserRepository.DeleteAsync(orgUser);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+
+                if (orgUser.UserId.HasValue)
+                {
+                    // push
+                    var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                    await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                        organizationId.ToString());
+                    await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+                }
+            }
+        }
+
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
         {
             if (loggedInUserId.HasValue)
