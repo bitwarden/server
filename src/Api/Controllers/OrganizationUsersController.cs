@@ -26,6 +26,7 @@ namespace Bit.Api.Controllers
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
+        private readonly IPolicyRepository _policyRepository;
 
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
@@ -34,7 +35,8 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            IPolicyRepository policyRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -43,6 +45,7 @@ namespace Bit.Api.Controllers
             _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;
+            _policyRepository = policyRepository;
         }
 
         [HttpGet("{id}")]
@@ -107,14 +110,21 @@ namespace Bit.Api.Controllers
             }
 
             // Retrieve data necessary for response (KDF, KDF Iterations, ResetPasswordKey)
-            // TODO Revisit this and create SPROC to reduce DB calls
+            // TODO Reset Password - Revisit this and create SPROC to reduce DB calls
             var user = await _userService.GetUserByIdAsync(organizationUser.UserId.Value);
             if (user == null)
             {
                 throw new NotFoundException();
             }
+            
+            // Retrieve Encrypted Private Key from organization
+            var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+            if (org == null)
+            {
+                throw new NotFoundException();
+            }
 
-            return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user));
+            return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
         }
 
         [HttpPost("invite")]
@@ -233,7 +243,24 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/reset-password")]
         public async Task PutResetPassword(string orgId, string id, [FromBody]OrganizationUserResetPasswordRequestModel model)
         {
+            
             var orgGuidId = new Guid(orgId);
+            
+            // Org must be able to use reset password
+            var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset.");
+            }
+            
+            // Enterprise policy must be enabled 
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(orgGuidId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
             // Calling user must have Manage Reset Password permission
             if (!_currentContext.ManageResetPassword(orgGuidId))
             {
@@ -253,8 +280,7 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-
-
+            
             var result = await _userService.AdminResetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
@@ -268,7 +294,7 @@ namespace Bit.Api.Controllers
 
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
-            }
+        }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]

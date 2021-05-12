@@ -1417,14 +1417,17 @@ namespace Bit.Core.Services
         public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
-            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
-                orgUser.Status != OrganizationUserStatusType.Confirmed ||
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value || 
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
             }
             
-            // TODO - Block certain org types from using this feature?
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset enrollment.");
+            }
 
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
