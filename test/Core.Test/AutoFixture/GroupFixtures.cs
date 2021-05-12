@@ -6,14 +6,14 @@ namespace Bit.Core.Test.AutoFixture
     internal class GroupOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationAutoDataAttribute() : base(
-            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = true })
+            new SutProviderCustomization(), new Organization { UseGroups = true })
         { }
     }
 
     internal class GroupOrganizationNotUseGroupsAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationNotUseGroupsAutoDataAttribute() : base(
-            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = false })
+            new SutProviderCustomization(), new Organization { UseGroups = false })
         { }
     }
 }

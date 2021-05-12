@@ -12,7 +12,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
-    public class OrganizationCustomization : ICustomization
+    public class Organization : ICustomization
     {
         public bool UseGroups { get; set; }
 
@@ -20,7 +20,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         {
             var organizationId = Guid.NewGuid();
 
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.UseGroups, UseGroups));
 
@@ -37,7 +37,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             var lowestActivePaidPlan = validUpgradePlans.First();
             CheckedPlanType = CheckedPlanType.Equals(Enums.PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
             validUpgradePlans.Remove(lowestActivePaidPlan);
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, validUpgradePlans.First()));
@@ -48,14 +48,14 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, PlanType.Free));
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
             var validPlans = StaticStore.Plans.Where(p => !plansToIgnore.Contains(p.Type) && !p.Disabled).Select(p => p.Type).ToList();
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, validPlans.Last()));
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .Without(o => o.GatewaySubscriptionId));
         }
     }
@@ -71,7 +71,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.Seats, (short)100));
             fixture.Customize<OrganizationUser>(composer => composer
