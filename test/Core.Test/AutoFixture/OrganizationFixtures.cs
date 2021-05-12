@@ -57,7 +57,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, selectedPlan.Type)
                 .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .Without(o => o.GatewaySubscriptionId));
         }
     }
