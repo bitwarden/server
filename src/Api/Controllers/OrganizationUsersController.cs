@@ -131,7 +131,7 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPost("reinvite")]
-        public async Task BulkReinvite(string orgId, [FromBody]OrganizationUserBulkReinviteRequestModel model)
+        public async Task BulkReinvite(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageUsers(orgGuidId))
@@ -286,7 +286,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("")]
         [HttpPost("delete")]
-        public async Task BulkDelete(string orgId, [FromBody] OrganizationUserBulkRemoveRequestModel model)
+        public async Task BulkDelete(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageUsers(orgGuidId))
