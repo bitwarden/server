@@ -23,7 +23,21 @@ namespace Bit.Core.Test.Helpers.Factories
 
         static DatabaseOptionsFactory()
         {
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(GlobalSettingsFactory.GlobalSettings.PostgreSql.ConnectionString).Options);
+            var globalSettings = GlobalSettingsFactory.GlobalSettings;
+            if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString))
+            {
+                Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(globalSettings.PostgreSql.ConnectionString).Options);
+            }
+            if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString))
+            {
+                var mySqlConnectionString = globalSettings.MySql.ConnectionString;
+                Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)).Options);
+            }
+            // if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString))
+            // {
+            //     var mySqlConnectionString = GlobalSettingsFactory.GlobalSettings.MySql.ConnectionString;
+            //     Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseSqlite(globalSettings.Sqlite.ConnectionString).Options);
+            // }
         }
     }
 }

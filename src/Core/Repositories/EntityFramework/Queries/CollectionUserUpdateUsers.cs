@@ -23,28 +23,28 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
     public class CollectionUserUpdateUsersInsert : IQuery<EfModel.CollectionUser>
     {
-        private Guid _collectionId { get; set; }
-        private IEnumerable<SelectionReadOnly> _users { get; set; }
+        private Guid CollectionId { get; set; }
+        private IEnumerable<SelectionReadOnly> Users { get; set; }
 
         public CollectionUserUpdateUsersInsert(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
-            _collectionId = collectionId;
-            _users = users;
+            CollectionId = collectionId;
+            Users = users;
         }
 
         public IQueryable<EfModel.CollectionUser> Run(DatabaseContext dbContext)
         {
-            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == _collectionId)?.OrganizationId;
-            var insertQuery =   from source in _users 
+            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == CollectionId)?.OrganizationId;
+            var insertQuery =   from source in Users 
                                 join ou in dbContext.OrganizationUsers
                                     on source.Id equals ou.Id
                                 where 
                                     ou.OrganizationId == orgId &&
                                     !dbContext.CollectionUsers.Any(
-                                            x => x.CollectionId != _collectionId && x.OrganizationUserId == ou.Id)
+                                        x => x.CollectionId != CollectionId && x.OrganizationUserId == ou.Id)
                                 select new { source, ou };
             return insertQuery.Select(x => new EfModel.CollectionUser(){ 
-                CollectionId = _collectionId,
+                CollectionId = CollectionId,
                 OrganizationUserId = x.source.Id,
                 ReadOnly = x.source.ReadOnly,
                 HidePasswords = x.source.HidePasswords
@@ -54,29 +54,28 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
     public class CollectionUserUpdateUsersUpdate: IQuery<EfModel.CollectionUser>
     {
-        private Guid _collectionId { get; set; }
-        private IEnumerable<SelectionReadOnly> _users { get; set; }
+        private Guid CollectionId { get; set; }
+        private IEnumerable<SelectionReadOnly> Users { get; set; }
 
         public CollectionUserUpdateUsersUpdate(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
-            _collectionId = collectionId;
-            _users = users;
+            CollectionId = collectionId;
+            Users = users;
         }
 
         public IQueryable<EfModel.CollectionUser> Run(DatabaseContext dbContext)
         {
-            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == _collectionId)?.OrganizationId;
-            var userIds = _users.Select(u => u.Id).ToArray();
-            var updateQuery =   from target in dbContext
+            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == CollectionId)?.OrganizationId;
+            var userIds = Users.Select(u => u.Id).ToArray();
+            var updateQuery =   (from target in dbContext
                                     .CollectionUsers
-                                    .Where(cu => userIds.Contains(cu.OrganizationUserId) && cu.CollectionId == _collectionId)
-                                    .AsEnumerable()
-                                select new { target };
+                                    .Where(cu => userIds.Contains(cu.OrganizationUserId) && cu.CollectionId == CollectionId)
+                                select new { target }).AsEnumerable();
             updateQuery = updateQuery.Where(cu => 
-                cu.target.ReadOnly == _users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).ReadOnly &&
-                cu.target.HidePasswords == _users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).HidePasswords);
+                cu.target.ReadOnly == Users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).ReadOnly &&
+                cu.target.HidePasswords == Users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).HidePasswords);
             return updateQuery.Select(x => new EfModel.CollectionUser(){ 
-                CollectionId = _collectionId,
+                CollectionId = CollectionId,
                 OrganizationUserId = x.target.OrganizationUserId,
                 ReadOnly = x.target.ReadOnly,
                 HidePasswords = x.target.HidePasswords
@@ -86,21 +85,21 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
     public class CollectionUserUpdateUsersDelete: IQuery<EfModel.CollectionUser>
     {
-        private Guid _collectionId { get; set; }
-        private IEnumerable<SelectionReadOnly> _users { get; set; }
+        private Guid CollectionId { get; set; }
+        private IEnumerable<SelectionReadOnly> Users { get; set; }
 
         public CollectionUserUpdateUsersDelete(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
-            _collectionId = collectionId;
-            _users = users;
+            CollectionId = collectionId;
+            Users = users;
         }
 
         public IQueryable<EfModel.CollectionUser> Run(DatabaseContext dbContext)
         {
-            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == _collectionId)?.OrganizationId;
+            var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == CollectionId)?.OrganizationId;
             var deleteQuery =   from cu in dbContext.CollectionUsers
                                 where !dbContext.Users.Any(
-                                            u => u.Id == cu.OrganizationUserId)
+                                    u => u.Id == cu.OrganizationUserId)
                                 select new { cu };
             return deleteQuery.Select(x => x.cu);
         }

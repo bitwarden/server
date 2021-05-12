@@ -18,14 +18,40 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.U2fs)
         { }
 
-        public Task DeleteManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<U2f>> GetManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.U2fs.Where(u => u.UserId == userId).ToListAsync();
+                return (ICollection<U2f>)results;
+            }
         }
 
-        public Task<ICollection<U2f>> GetManyByUserIdAsync(Guid userId)
+        public async Task DeleteManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var u2fs = dbContext.U2fs.Where(u => u.UserId == userId);
+                dbContext.RemoveRange(u2fs);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+        
+        public override Task ReplaceAsync(U2f obj)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Task UpsertAsync(U2f obj)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Task DeleteAsync(U2f obj)
+        {
+            throw new NotSupportedException();
         }
     }
 }

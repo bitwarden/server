@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
@@ -19,19 +20,39 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies)
         { }
 
-        public Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
+        public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Policies
+                    .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Type == type);
+                return results;
+            }
         }
 
-        public Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Policies
+                    .Where(p => p.OrganizationId == organizationId)
+                    .ToListAsync();
+                return (ICollection<Policy>)results;
+            }
         }
 
-        public Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                var query = new PolicyReadByUserId(userId);
+                var results = await query.Run(dbContext).ToListAsync();
+                return (ICollection<Policy>)results;
+            }
         }
     }
 }

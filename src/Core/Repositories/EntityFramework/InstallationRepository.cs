@@ -16,7 +16,5 @@ namespace Bit.Core.Repositories.EntityFramework
         public InstallationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Installations)
         { }
-
-        
     }
 }

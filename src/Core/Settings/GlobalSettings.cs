@@ -46,6 +46,7 @@ namespace Bit.Core.Settings
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
+        public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
