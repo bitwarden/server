@@ -1,9 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>1.41.2</Version>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Bit.Identity</RootNamespace>
     <UserSecretsId>bitwarden-Identity</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
   </PropertyGroup>
