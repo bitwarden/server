@@ -1416,6 +1416,7 @@ namespace Bit.Core.Services
         
         public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
         {
+            // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
             if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value || 
                 orgUser.OrganizationId != organizationId)
@@ -1423,10 +1424,19 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
             
+            // Make sure the organization has the ability to use password reset
             var org = await _organizationRepository.GetByIdAsync(organizationId);
             if (org == null || !org.UseResetPassword)
             {
                 throw new BadRequestException("Organization does not allow password reset enrollment.");
+            }
+
+            // Make sure the organization has the policy enabled
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
             }
 
             orgUser.ResetPasswordKey = resetPasswordKey;
