@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 
@@ -554,6 +555,63 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        }
+        
+        [HttpGet("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> GetKeys(string id)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
+            // If the keys aren't populated, error out
+            var org = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if (org == null || org.PublicKey == null || org.PrivateKey == null)
+            {
+                throw new BadRequestException("Organization Keys are not available");
+            }
+
+            return new OrganizationKeysResponseModel(org);
+        }
+        
+        [HttpPost("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody]OrganizationKeysRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
+            // Only Owners/Admins/Custom (w/ ManageResetPassword) can create org keys
+            var orgGuidId = new Guid(id);
+            var orgUser = await _organizationUserRepository.GetDetailsByUserAsync(user.Id, orgGuidId);
+            if (orgUser == null || orgUser.Type != OrganizationUserType.Admin && 
+                orgUser.Type != OrganizationUserType.Owner && orgUser.Type != OrganizationUserType.Custom)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (orgUser.Type == OrganizationUserType.Custom)
+            {
+                var permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+                if (permissions == null || !permissions.ManageResetPassword)
+                {
+                    throw new UnauthorizedAccessException();
+                }
+            }
+            
+            // If the keys already exist, error out
+            var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+            if (org == null || org.PublicKey != null && org.PrivateKey != null)
+            {
+                throw new BadRequestException("Organization Keys already exist");
+            }
+
+            await _organizationService.UpdateAsync(model.ToOrganization(org));
+            return new OrganizationKeysResponseModel(org);
         }
     }
 }
