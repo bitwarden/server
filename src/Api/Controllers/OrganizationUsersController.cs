@@ -129,6 +129,19 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.InviteUserAsync(orgGuidId, userId.Value, null, new OrganizationUserInvite(model));
         }
+        
+        [HttpPost("reinvite")]
+        public async Task BulkReinvite(string orgId, [FromBody]OrganizationUserBulkReinviteRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+        }
 
         [HttpPost("{id}/reinvite")]
         public async Task Reinvite(string orgId, string id)

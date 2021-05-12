@@ -12,6 +12,22 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
+    public class Organization : ICustomization
+    {
+        public bool UseGroups { get; set; }
+
+        public void Customize(IFixture fixture)
+        {
+            var organizationId = Guid.NewGuid();
+
+            fixture.Customize<Models.Table.Organization>(composer => composer
+                .With(o => o.Id, organizationId)
+                .With(o => o.UseGroups, UseGroups));
+
+            fixture.Customize<Group>(composer => composer.With(g => g.OrganizationId, organizationId));
+        }
+    }
+
     internal class PaidOrganization : ICustomization
     {
         public PlanType CheckedPlanType { get; set; }
@@ -21,7 +37,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             var lowestActivePaidPlan = validUpgradePlans.First();
             CheckedPlanType = CheckedPlanType.Equals(Enums.PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
             validUpgradePlans.Remove(lowestActivePaidPlan);
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, validUpgradePlans.First()));
@@ -32,7 +48,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, PlanType.Free));
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
@@ -41,7 +57,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, selectedPlan.Type)
                 .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .Without(o => o.GatewaySubscriptionId));
         }
     }
@@ -57,7 +73,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
-            fixture.Customize<Organization>(composer => composer
+            fixture.Customize<Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.Seats, (short)100));
             fixture.Customize<OrganizationUser>(composer => composer
@@ -99,10 +115,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     internal class OrganizationInviteAutoDataAttribute : CustomAutoDataAttribute
     {
         public OrganizationInviteAutoDataAttribute(int inviteeUserType = 0, int invitorUserType = 0, string permissionsBlob = null) : base(new SutProviderCustomization(),
-            new OrganizationInvite 
-            { 
-                InviteeUserType = (OrganizationUserType)inviteeUserType, 
-                InvitorUserType = (OrganizationUserType)invitorUserType, 
+            new OrganizationInvite
+            {
+                InviteeUserType = (OrganizationUserType)inviteeUserType,
+                InvitorUserType = (OrganizationUserType)invitorUserType,
                 PermissionsBlob = permissionsBlob,
             })
         { }
