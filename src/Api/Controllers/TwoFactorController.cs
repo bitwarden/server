@@ -220,48 +220,6 @@ namespace Bit.Api.Controllers
             return response;
         }
 
-        [HttpPost("get-u2f")]
-        public async Task<TwoFactorU2fResponseModel> GetU2f([FromBody]TwoFactorRequestModel model)
-        {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
-            var response = new TwoFactorU2fResponseModel(user);
-            return response;
-        }
-
-        [HttpPost("get-u2f-challenge")]
-        public async Task<TwoFactorU2fResponseModel.ChallengeModel> GetU2fChallenge(
-            [FromBody]TwoFactorRequestModel model)
-        {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
-            var reg = await _userService.StartU2fRegistrationAsync(user);
-            var challenge = new TwoFactorU2fResponseModel.ChallengeModel(user, reg);
-            return challenge;
-        }
-
-        [HttpPut("u2f")]
-        [HttpPost("u2f")]
-        public async Task<TwoFactorU2fResponseModel> PutU2f([FromBody]TwoFactorU2fRequestModel model)
-        {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
-            var success = await _userService.CompleteU2fRegistrationAsync(
-                user, model.Id.Value, model.Name, model.DeviceResponse);
-            if (!success)
-            {
-                throw new BadRequestException("Unable to complete U2F key registration.");
-            }
-            var response = new TwoFactorU2fResponseModel(user);
-            return response;
-        }
-
-        [HttpDelete("u2f")]
-        public async Task<TwoFactorU2fResponseModel> DeleteU2f([FromBody]TwoFactorU2fDeleteRequestModel model)
-        {
-            var user = await CheckAsync(model.MasterPasswordHash, true);
-            await _userService.DeleteU2fKeyAsync(user, model.Id.Value);
-            var response = new TwoFactorU2fResponseModel(user);
-            return response;
-        }
-
         [HttpPost("get-webauthn")]
         public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody]TwoFactorRequestModel model)
         {
