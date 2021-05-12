@@ -19,19 +19,39 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Transactions)
         { }
 
-        public Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
+        public async Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Transactions
+                    .FirstOrDefaultAsync(t => (t.GatewayId == gatewayId && t.Gateway == gatewayType));
+                return results;
+            }
         }
 
-        public Task<ICollection<Transaction>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Transaction>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Transactions
+                    .Where(t => (t.OrganizationId == organizationId && !t.UserId.HasValue))
+                    .ToListAsync();
+                return (ICollection<Transaction>)results;
+            }
         }
 
-        public Task<ICollection<Transaction>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Transaction>> GetManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Transactions
+                    .Where(t => (t.UserId == userId))
+                    .ToListAsync();
+                return (ICollection<Transaction>)results;
+            }
         }
     }
 }

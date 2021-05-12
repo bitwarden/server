@@ -12,12 +12,13 @@ using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
-
-
     public class OrganizationUserRepositoryTests
     {
         [CiSkippedTheory, EfOrganizationUserAutoData]
-        public async void CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
+        public async void CreateAsync_Works_DataMatches(
+            OrganizationUser orgUser, 
+            User user, 
+            Organization org,
             OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
             SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,

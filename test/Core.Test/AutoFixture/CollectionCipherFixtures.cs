@@ -14,6 +14,9 @@ using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Core.Test.AutoFixture.CollectionFixtures;
+using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Test.AutoFixture.UserFixtures;
 
 namespace Bit.Core.Test.AutoFixture.CollectionCipherFixtures
 {
@@ -45,7 +48,13 @@ namespace Bit.Core.Test.AutoFixture.CollectionCipherFixtures
         {
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new CollectionCipherBuilder());
+            fixture.Customizations.Add(new CollectionBuilder());
+            fixture.Customizations.Add(new CipherBuilder());
+            fixture.Customizations.Add(new UserBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionCipherRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<CipherRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
         }
     }
 

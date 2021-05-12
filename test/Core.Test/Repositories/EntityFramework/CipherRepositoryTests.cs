@@ -20,7 +20,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class CipherRepositoryTests
     {
         // TODO: delete this
-        [Theory (Skip = "Run ad-hoc"), EfUserCipherAutoData]
+        [Theory(Skip = "Run ad hoc"), EfUserCipherAutoData]
         public async void RefreshDb(List<EfRepo.CipherRepository> suts)
         {
             foreach (var sut in suts)
@@ -80,7 +80,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
             SqlRepo.CipherRepository sqlCipherRepo, SqlRepo.UserRepository sqlUserRepo)
         {
-            user.AccountRevisionDate = new DateTime(2010, 1, 1);
             var bumpedUsers = new List<User>();
             foreach (var sut in suts)
             {
@@ -102,19 +101,10 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }        
 
         [CiSkippedTheory, EfOrganizationCipherAutoData]
-        public async void CreateAsync_BumpsOrgUserAccountRevisionDates(
-                Cipher cipher,
-                List<User> users,
-                List<OrganizationUser> orgUsers,
-                Collection collection,
-                Organization org,
-                CipherCompare equalityComparer,
-                List<EfRepo.CipherRepository> suts,
-                List<EfRepo.UserRepository> efUserRepos,
-                List<EfRepo.OrganizationRepository> efOrgRepos,
-                List<EfRepo.OrganizationUserRepository> efOrgUserRepos,
-                List<EfRepo.CollectionRepository> efCollectionRepos
-                )
+        public async void CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
+            List<OrganizationUser> orgUsers, Collection collection, Organization org, CipherCompare equalityComparer,
+            List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+            List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
         {
             var savedCiphers = new List<Cipher>();
             foreach (var sut in suts)
@@ -172,5 +162,46 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                         DateTime.UtcNow.ToShortDateString()));
             }
         }        
+
+        [CiSkippedTheory, EfUserCipherAutoData, EfOrganizationCipherAutoData]
+        public async void DeleteAsync_CipherIsDeleted(
+            Cipher cipher,
+            User user,
+            Organization org,
+            List<EfRepo.CipherRepository> suts,
+            List<EfRepo.UserRepository> efUserRepos,
+            List<EfRepo.OrganizationRepository> efOrgRepos
+                )
+        {
+            foreach (var sut in suts)
+            {
+                var i = suts.IndexOf(sut);
+                
+                var postEfOrg = await efOrgRepos[i].CreateAsync(org);
+                efOrgRepos[i].ClearChangeTracking();
+                var postEfUser = await efUserRepos[i].CreateAsync(user);
+                efUserRepos[i].ClearChangeTracking();
+
+                if (cipher.OrganizationId.HasValue)
+                {
+                    cipher.OrganizationId = postEfOrg.Id;
+                }
+                cipher.UserId = postEfUser.Id;
+
+                await sut.CreateAsync(cipher);
+                sut.ClearChangeTracking();
+
+                await sut.DeleteAsync(cipher);
+                sut.ClearChangeTracking();
+
+                var savedCipher = await sut.GetByIdAsync(cipher.Id);
+                Assert.True(savedCipher == null);
+
+                var savedOrg = await efOrgRepos[i].GetByIdAsync(postEfOrg.Id);
+                
+                // TODO: Assert org and user storage is updated appropriatly
+                // TODO: Assert org and user account revision dates are updated appropriatly 
+            }
+        }
     }
 }

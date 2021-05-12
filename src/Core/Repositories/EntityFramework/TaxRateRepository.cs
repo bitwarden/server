@@ -18,24 +18,56 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.TaxRates)
         { }
 
-        public Task ArchiveAsync(TaxRate model)
+        public async Task ArchiveAsync(TaxRate model)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await dbContext.FindAsync<TaxRate>(model);
+                entity.Active = false;
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task<ICollection<TaxRate>> GetAllActiveAsync()
+        public async Task<ICollection<TaxRate>> GetAllActiveAsync()
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.TaxRates
+                    .Where(t => t.Active)
+                    .ToListAsync();
+                return (ICollection<TaxRate>)results;
+            }
         }
 
-        public Task<ICollection<TaxRate>> GetByLocationAsync(TaxRate taxRate)
+        public async Task<ICollection<TaxRate>> GetByLocationAsync(TaxRate taxRate)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.TaxRates
+                    .Where(t => t.Active &&
+                        t.Country == taxRate.Country &&
+                        t.PostalCode == taxRate.PostalCode)
+                    .ToListAsync();
+                return (ICollection<TaxRate>)results;
+            }
         }
 
-        public Task<ICollection<TaxRate>> SearchAsync(int skip, int count)
+        public async Task<ICollection<TaxRate>> SearchAsync(int skip, int count)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.TaxRates
+                    .Skip(skip)
+                    .Take(count)
+                    .Where(t => t.Active)
+                    .OrderBy(t => t.Country).ThenByDescending(t => t.PostalCode)
+                    .ToListAsync();
+                return (ICollection<TaxRate>)results;
+            }
         }
     }
 }

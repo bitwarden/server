@@ -89,11 +89,11 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 var procedure = new CollectionUserUpdateUsers(id, users);
 
-                var update = procedure.Update.Run(dbContext).AsEnumerable();
-                dbContext.UpdateRange(update.ToList());
+                var update = procedure.Update.Run(dbContext);
+                dbContext.UpdateRange(await update.ToListAsync());
 
-                var insert = procedure.Insert.Run(dbContext).AsEnumerable();
-                await dbContext.AddRangeAsync(insert.ToList());
+                var insert = procedure.Insert.Run(dbContext);
+                await dbContext.AddRangeAsync(await insert.ToListAsync());
 
                 dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
             }

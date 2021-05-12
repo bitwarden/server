@@ -60,6 +60,9 @@ namespace Bit.Core.Utilities
                     case "mariadb":
                         provider = SupportedDatabaseProviders.MySql;
                         break;
+                    case "sqllite":
+                        provider = SupportedDatabaseProviders.Sqlite;
+                        break;
                     default:
                         break;
                 }
@@ -78,7 +81,11 @@ namespace Bit.Core.Utilities
                     } 
                     else if (provider == SupportedDatabaseProviders.MySql)
                     {
-                        options.UseMySql(globalSettings.MySql.ConnectionString);
+                        options.UseMySql(globalSettings.MySql.ConnectionString, ServerVersion.AutoDetect(globalSettings.MySql.ConnectionString));
+                    }
+                    else if (provider == SupportedDatabaseProviders.Sqlite)
+                    {
+                        options.UseSqlite(globalSettings.Sqlite.ConnectionString);
                     }
                 });
                 services.AddSingleton<ICipherRepository, EntityFrameworkRepos.CipherRepository>();

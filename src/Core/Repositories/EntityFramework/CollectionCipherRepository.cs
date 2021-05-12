@@ -18,19 +18,6 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper)
         { }
 
-        public async Task<CollectionCipher> CreateAsync(CollectionCipher obj)
-        {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var entity = Mapper.Map<EfModel.CollectionCipher>(obj);
-                dbContext.Add(entity);
-                await dbContext.SaveChangesAsync();
-                // TODO: bump account revision date by collectionid
-                return obj;
-            }
-        }
-
         public Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             throw new NotImplementedException();

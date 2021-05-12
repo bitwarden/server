@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
@@ -57,7 +58,7 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(Cipher))
+            if (type == null || (type != typeof(Cipher) && type != typeof(List<Cipher>)))
             {
                 return new NoSpecimen();
             }
@@ -69,8 +70,6 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
                 fixture.Customize<Cipher>(composer => composer
                         .Without(c => c.OrganizationId));
             }
-            var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
-            var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
 
             // Can't test valid Favorites and Folders without creating those values inide each test, 
             // since we won't have any UserIds until the test is running & creating data
@@ -79,14 +78,35 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
                 .Without(e => e.Folders));
             //
 
-            var obj = fixture.WithAutoNSubstitutions().Create<Cipher>();
             var serializerOptions = new JsonSerializerOptions(){
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            obj.Data = JsonSerializer.Serialize(cipherData, serializerOptions);
-            obj.Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
 
-            return obj;
+            if(type == typeof(Cipher))
+            {
+                var obj = fixture.WithAutoNSubstitutions().Create<Cipher>();
+                var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
+                var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+                obj.Data = JsonSerializer.Serialize(cipherData, serializerOptions);
+                obj.Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+
+                return obj;
+            }
+            if (type == typeof(List<Cipher>)) 
+            {
+                var ciphers = fixture.WithAutoNSubstitutions().CreateMany<Cipher>().ToArray();
+                for (var i = 0; i < ciphers.Count(); i++ )
+                {
+                    var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
+                    var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+                    ciphers[i].Data = JsonSerializer.Serialize(cipherData, serializerOptions);
+                    ciphers[i].Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+                }
+
+                return ciphers;
+            }
+
+            return new NoSpecimen();
         }
     }
 

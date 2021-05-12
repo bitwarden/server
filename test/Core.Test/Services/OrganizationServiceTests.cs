@@ -16,7 +16,6 @@ using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
-
 namespace Bit.Core.Test.Services
 {
     public class OrganizationServiceTests

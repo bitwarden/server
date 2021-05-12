@@ -54,7 +54,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
-                .With(ou => ou.Plan, validUpgradePlans.First()));
+                .With(ou => ou.Plan, validUpgradePlans.First())) ;
         }
     }
 

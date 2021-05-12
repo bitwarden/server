@@ -15,14 +15,20 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class UserRepositoryTests
     {
         [CiSkippedTheory, EfUserAutoData]
-        public async void CreateAsync_Works_DataMatches(User user, UserCompare equalityComparer,
-            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+        public async void CreateAsync_Works_DataMatches(
+            User user, UserCompare equalityComparer,
+            List<EfRepo.UserRepository> suts,
+            SqlRepo.UserRepository sqlUserRepo
+            )
         {
             var savedUsers = new List<User>();
+
             foreach (var sut in suts)
             {
-
                 var postEfUser = await sut.CreateAsync(user);
+
+                sut.ClearChangeTracking();
+
                 var savedUser = await sut.GetByIdAsync(postEfUser.Id);
                 savedUsers.Add(savedUser);
             }

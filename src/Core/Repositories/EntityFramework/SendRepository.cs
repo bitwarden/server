@@ -27,14 +27,24 @@ namespace Bit.Core.Repositories.EntityFramework
            return send;
         }
 
-        public Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+        public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
+                return (ICollection<Send>)results;
+            }
         }
 
-        public Task<ICollection<Send>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Send>> GetManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var results = await dbContext.Sends.Where(s => s.UserId == userId).ToListAsync();
+                return (ICollection<Send>)results;
+            }
         }
     }
 }
