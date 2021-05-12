@@ -656,7 +656,7 @@
     <value>Master Password Reset</value>
   </data>
   <data name="ResetPasswordDescription" xml:space="preserve">
-    <value>Allow administrators in the organization to reset master password for users.</value>
+    <value>Allow administrators in the organization to reset organization users' master password.</value>
   </data>
   <data name="ResetPasswordWarning" xml:space="preserve">
     <value>Users in the organization will need to self-enroll or be auto-enrolled before administrators can reset their master password.</value>
