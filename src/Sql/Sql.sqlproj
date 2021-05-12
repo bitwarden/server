@@ -112,6 +112,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Delete.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByIds.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Grant_ReadByKey.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Read.sql" />
