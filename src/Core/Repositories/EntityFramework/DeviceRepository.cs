@@ -18,9 +18,16 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
         { }
 
-        public Task ClearPushTokenAsync(Guid id)
+        public async Task ClearPushTokenAsync(Guid id)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Devices.Where(d => d.Id == id);
+                dbContext.AttachRange(query);
+                await query.ForEachAsync(x => x.PushToken = null);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public Task<Device> GetByIdAsync(Guid id, Guid userId)

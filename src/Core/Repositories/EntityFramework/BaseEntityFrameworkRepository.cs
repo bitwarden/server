@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿using System.Threading.Tasks;
+using AutoMapper;
+using Bit.Core.Repositories.EntityFramework.Queries;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Repositories.EntityFramework
@@ -25,6 +28,14 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 dbContext.ChangeTracker.Clear();
+            }
+        }
+
+        public async Task<int> GetCountFromQuery<T>(IQuery<T> query)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                return await query.Run(GetDatabaseContext(scope)).CountAsync();
             }
         }
     }

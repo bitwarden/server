@@ -255,14 +255,5 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
         }
-
-        private async Task<int> GetCountFromQuery<T>(IQuery<T> query)
-        {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                return await query.Run(GetDatabaseContext(scope)).CountAsync();
-            }
-        }
-
     }
 }

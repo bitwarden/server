@@ -24,9 +24,24 @@ namespace Bit.Core.Repositories.EntityFramework
             throw new NotImplementedException();
         }
 
-        public Task CreateManyAsync(IList<IEvent> e)
+        public async Task CreateManyAsync(IList<IEvent> entities)
         {
-            throw new NotImplementedException();
+            if (!entities?.Any() ?? true)
+            {
+                return;
+            }
+
+            if (entities.Count == 1)
+            {
+                await CreateAsync(entities.First());
+                return;
+            }
+
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var events = entities.Select(e => e is Event ? e as Event : new Event(e));
+                // TODO: solve Bulk Copy
+            }
         }
 
         public Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
