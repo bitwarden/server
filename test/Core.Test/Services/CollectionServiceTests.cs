@@ -40,7 +40,7 @@ namespace Bit.Core.Test.Services
 
             var id = Guid.NewGuid();
 
-            var collection = new Models.Table.Collection
+            var collection = new Core.Models.Table.Collection
             {
                 Id = id,
             };
@@ -55,7 +55,7 @@ namespace Bit.Core.Test.Services
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization
+            var testOrganization = new Core.Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
@@ -70,7 +70,7 @@ namespace Bit.Core.Test.Services
                 _mailService);
 
             // execute
-            var testCollection = new Models.Table.Collection
+            var testCollection = new Core.Models.Table.Collection
             {
                 OrganizationId = testOrganizationId,
             };
@@ -85,7 +85,7 @@ namespace Bit.Core.Test.Services
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization
+            var testOrganization = new Core.Models.Table.Organization
             {
                 Id = testOrganizationId,
                 MaxCollections = 2,
@@ -102,7 +102,7 @@ namespace Bit.Core.Test.Services
                 _userRepository,
                 _mailService);
 
-            var testCollection = new Models.Table.Collection { OrganizationId = testOrganizationId };
+            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
 
             // verify & expect exception to be thrown
             var ex = await Assert.ThrowsAsync<BadRequestException>(() => collectionService.SaveAsync(testCollection));
@@ -116,12 +116,12 @@ namespace Bit.Core.Test.Services
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization
+            var testOrganization = new Core.Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
             var testUserId = Guid.NewGuid();
-            var organizationUser = new Models.Table.OrganizationUser
+            var organizationUser = new Core.Models.Table.OrganizationUser
             {
                 Id = testUserId,
                 OrganizationId = testOrganizationId,
@@ -137,7 +137,7 @@ namespace Bit.Core.Test.Services
                 _userRepository,
                 _mailService);
 
-            var testCollection = new Models.Table.Collection { OrganizationId = testOrganizationId };
+            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
             await collectionService.DeleteUserAsync(testCollection, organizationUser.Id);
 
             // verify
@@ -149,12 +149,12 @@ namespace Bit.Core.Test.Services
         {
             // prepare the organization
             var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Models.Table.Organization
+            var testOrganization = new Core.Models.Table.Organization
             {
                 Id = testOrganizationId,
             };
             var testUserId = Guid.NewGuid();
-            var nonOrganizationUser = new Models.Table.OrganizationUser
+            var nonOrganizationUser = new Core.Models.Table.OrganizationUser
             {
                 Id = testUserId,
                 OrganizationId = Guid.NewGuid(),
@@ -170,7 +170,7 @@ namespace Bit.Core.Test.Services
                 _userRepository,
                 _mailService);
 
-            var testCollection = new Models.Table.Collection { OrganizationId = testOrganizationId };
+            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
 
             // verify
             // invalid user

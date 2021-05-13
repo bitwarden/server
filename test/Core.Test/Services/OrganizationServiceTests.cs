@@ -73,10 +73,10 @@ namespace Bit.Core.Test.Services
             orgUserRepo.GetManyDetailsByOrganizationAsync(id).Returns(existingUsers);
             orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
 
-            var newUsers = new List<Models.Business.ImportedOrganizationUser>();
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
+            var newUsers = new List<ImportedOrganizationUser>();
+            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
             await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.DidNotReceive().UpsertAsync(Arg.Any<OrganizationUser>());
@@ -137,10 +137,10 @@ namespace Bit.Core.Test.Services
             orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
             orgUserRepo.GetByIdAsync(existingUserAId).Returns(new OrganizationUser { Id = existingUserAId });
 
-            var newUsers = new List<Models.Business.ImportedOrganizationUser>();
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
+            var newUsers = new List<ImportedOrganizationUser>();
+            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
             await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.Received(1).UpsertAsync(Arg.Any<OrganizationUser>());
