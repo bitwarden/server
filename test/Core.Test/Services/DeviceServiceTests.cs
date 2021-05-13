@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
@@ -18,7 +19,7 @@ namespace Bit.Core.Test.Services
 
             var id = Guid.NewGuid();
             var userId = Guid.NewGuid();
-            var device = new Models.Table.Device
+            var device = new Device
             {
                 Id = id,
                 Name = "test device",
