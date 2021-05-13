@@ -28,8 +28,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _logger = logger;
             _clientFactory = clientFactory;
-            _baseTag = $"Env: {hostingEnvironment.EnvironmentName}, " +
-                $"Server: {globalSettings.ProjectName?.Replace(' ', '_')}";
+            _baseTag = $"Env_{hostingEnvironment.EnvironmentName}-" +
+                $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
             _from = $"\"{globalSettings.SiteName}\" <no-reply@{_globalSettings.Mail.PostalDomain}>";
             _reply = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
         }
@@ -69,7 +69,7 @@ namespace Bit.Core.Services
 
             if (!string.IsNullOrWhiteSpace(message.Category))
             {
-                request.tag = string.Concat(request.tag, ", Cat: ", message.Category);
+                request.tag = string.Concat(request.tag, "-Cat_", message.Category);
             }
 
             var reqJson = JsonConvert.SerializeObject(request);
