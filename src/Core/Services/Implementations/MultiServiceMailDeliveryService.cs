@@ -5,7 +5,6 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using System.Net.Http;
 using Bit.Core.Models.Mail;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -25,13 +24,8 @@ namespace Bit.Core.Services
             ILogger<PostalMailDeliveryService> postalLogger)
         {
             _sesService = new AmazonSesMailDeliveryService(globalSettings, hostingEnvironment, sesLogger);
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Mail?.PostalApiKey) &&
-                CoreHelpers.SettingHasValue(globalSettings.Mail?.PostalDomain))
-            {
-                _postalService = new PostalMailDeliveryService(globalSettings, postalLogger, hostingEnvironment,
-                    httpClientFactory);
-            }
+            _postalService = new PostalMailDeliveryService(globalSettings, postalLogger, hostingEnvironment,
+                httpClientFactory);
 
             // 2% by default
             _postalPercentage = (globalSettings.Mail?.PostalPercentage).GetValueOrDefault(2);
@@ -40,7 +34,7 @@ namespace Bit.Core.Services
         public async Task SendEmailAsync(MailMessage message)
         {
             var roll = _random.Next(0, 99);
-            if (_postalService != null && roll < _postalPercentage)
+            if (roll < _postalPercentage)
             {
                 await _postalService.SendEmailAsync(message);
             }
