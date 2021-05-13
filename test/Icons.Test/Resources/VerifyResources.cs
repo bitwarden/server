@@ -9,7 +9,7 @@ namespace Bit.Icons.Test.Resources
         [InlineData("Bit.Icons.Resources.public_suffix_list.dat")]
         public void Resources_FoundAndReadable(string resourceName)
         {
-            var assembly = typeof(Program).GetTypeInfo().Assembly;
+            var assembly = typeof(Program).Assembly;
 
             using (var resource = assembly.GetManifestResourceStream(resourceName))
             {
