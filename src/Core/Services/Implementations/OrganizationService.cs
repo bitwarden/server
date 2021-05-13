@@ -238,7 +238,16 @@ namespace Bit.Core.Services
                 }
             }
             
-            // TODO Reset Password - Throw error if policy enabled and new pland doesn't allow
+            if (!newPlan.HasResetPassword && organization.UseResetPassword)
+            {
+                var resetPasswordPolicy =
+                    await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+                if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+                {
+                    throw new BadRequestException("Your new plan does not allow the Password Reset feature. " + 
+                        "Disable your Password Reset policy.");
+                }
+            }
 
             // TODO: Check storage?
 
@@ -825,8 +834,16 @@ namespace Bit.Core.Services
                 }
             }
             
-            // TODO Reset Password - If the license does not allow reset password, but the organization currently does
-            // TODO Reset Password - Pull Reset Password policy and make sure its disabled.
+            if (!license.UseResetPassword && organization.UseResetPassword)
+            {
+                var resetPasswordPolicy =
+                    await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+                if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+                {
+                    throw new BadRequestException("Your new license does not allow the Password Reset feature. " 
+                        + "Disable your Password Reset policy.");
+                }
+            }
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
@@ -1438,7 +1455,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Organization does not have the password reset policy enabled.");
             }
-
+            
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
             await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ? 
