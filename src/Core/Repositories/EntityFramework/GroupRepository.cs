@@ -19,44 +19,128 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Groups)
         { }
 
-        public Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
         {
-            throw new NotImplementedException();
+            var grp = await base.CreateAsync(obj);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var availibleCollections = await (
+                    from c in dbContext.Collections
+                    where c.OrganizationId == grp.OrganizationId
+                    select c).ToListAsync();
+                var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
+                var collectionGroups = filteredCollections.Select(y => new EfModel.CollectionGroup(){
+                    CollectionId = y.Id,
+                    GroupId = grp.Id,
+                    ReadOnly = y.ReadOnly,
+                    HidePasswords = y.HidePasswords
+                });
+                await dbContext.CollectionGroups.AddRangeAsync(collectionGroups);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task DeleteUserAsync(Guid groupId, Guid organizationUserId)
+        public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from gu in dbContext.GroupUsers
+                            where gu.GroupId == groupId &&
+                                gu.OrganizationUserId == organizationUserId
+                            select gu;
+                dbContext.RemoveRange(await query.ToListAsync());
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task<Tuple<Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
+        public async Task<Tuple<Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
-            throw new NotImplementedException();
+            var grp = await base.GetByIdAsync(id);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = await ( 
+                    from cg in dbContext.CollectionGroups
+                    where cg.GroupId == id
+                    select cg).ToListAsync();
+                var collections = query.Select(c => new SelectionReadOnly(){
+                    Id = c.CollectionId,
+                    ReadOnly = c.ReadOnly,
+                    HidePasswords = c.HidePasswords
+                }); 
+                return new Tuple<Group, ICollection<SelectionReadOnly>>(
+                    grp, (ICollection<SelectionReadOnly>)collections);
+            }
         }
 
-        public Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = await (
+                    from g in dbContext.Groups
+                    where g.OrganizationId == organizationId
+                    select g).ToListAsync();
+                return (ICollection<Group>)query;
+            }
         }
 
-        public Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query =
+                    from gu in dbContext.GroupUsers
+                    join g in dbContext.Groups
+                        on gu.GroupId equals g.Id
+                    where g.OrganizationId == organizationId
+                    select new { gu, g };
+                var groupUsers = await query.Select(x => x.gu).ToListAsync();
+                return (ICollection<GroupUser>)groupUsers;
+            }
         }
 
-        public Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
+        public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query =
+                    from gu in dbContext.GroupUsers
+                    where gu.OrganizationUserId == organizationUserId
+                    select gu;
+                var groupIds = await query.Select(x => x.GroupId).ToListAsync();
+                return (ICollection<Guid>)groupIds;
+            }
         }
 
-        public Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+        public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query =
+                    from gu in dbContext.GroupUsers
+                    where gu.GroupId == id
+                    select gu;
+                var groupIds = await query.Select(x => x.OrganizationUserId).ToListAsync();
+                return (ICollection<Guid>)groupIds;
+            }
         }
 
-        public Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
         {
-            throw new NotImplementedException();
+            await base.ReplaceAsync(obj);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // my brain is broken looking at this proc
+                /* EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
+            }
         }
 
         public Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)

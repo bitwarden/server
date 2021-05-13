@@ -41,6 +41,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     HidePasswords = y.HidePasswords
                 });
                 await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
+                await dbContext.SaveChangesAsync();
             }
         }
 
@@ -234,6 +235,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.AddRangeAsync(await insert.ToListAsync());
 
                 dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
+                await dbContext.SaveChangesAsync();
             }
         }
 
@@ -250,6 +252,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
                 // bumpaccountrevisiondatebyorganizationuserid
+                await dbContext.SaveChangesAsync();
             }
         }
 

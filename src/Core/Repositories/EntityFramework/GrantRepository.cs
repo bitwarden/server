@@ -18,28 +18,67 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper)
         { }
 
-        public Task DeleteByKeyAsync(string key)
+        public async Task DeleteByKeyAsync(string key)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from g in dbContext.Grants
+                            where g.Key == key
+                            select g;
+                dbContext.Remove(query);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
+        public async Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from g in dbContext.Grants
+                            where g.SubjectId == subjectId &&
+                                g.ClientId == clientId && 
+                                g.SessionId == sessionId &&
+                                g.Type == type
+                            select g;
+                dbContext.Remove(query);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task<Grant> GetByKeyAsync(string key)
+        public async Task<Grant> GetByKeyAsync(string key)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from g in dbContext.Grants
+                            where g.Key == key
+                            select g;
+                var grant = await query.FirstOrDefaultAsync();
+                return grant;
+            }
         }
 
-        public Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+        public async Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from g in dbContext.Grants
+                            where g.SubjectId == subjectId &&
+                                g.ClientId == clientId && 
+                                g.SessionId == sessionId &&
+                                g.Type == type
+                            select g;
+                var grants = await query.ToListAsync();
+                return (ICollection<Grant>)grants;
+            }
         }
 
         public Task SaveAsync(Grant obj)
         {
+            // TODO
             throw new NotImplementedException();
         }
     }

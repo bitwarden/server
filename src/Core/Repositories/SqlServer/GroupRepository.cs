@@ -141,10 +141,5 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
             }
         }
-
-        public class GroupWithCollections : Group
-        {
-            public DataTable Collections { get; set; }
-        }
     }
 }
