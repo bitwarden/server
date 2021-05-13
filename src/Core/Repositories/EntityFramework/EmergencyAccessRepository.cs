@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories.EntityFramework.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 
@@ -18,34 +19,94 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.EmergencyAccesses)
         { }
 
-        public Task<int> GetCountByGrantorIdEmailAsync(Guid grantorId, string email, bool onlyRegisteredUsers)
+        public async Task<int> GetCountByGrantorIdEmailAsync(Guid grantorId, string email, bool onlyRegisteredUsers)
         {
-            throw new NotImplementedException();
+            var query = new EmergencyAccessReadCountByGrantorIdEmail(grantorId, email, onlyRegisteredUsers);
+            return await GetCountFromQuery(query);
         }
 
-        public Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+        public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new EmergencyAccessDetailsView();
+                var query = view.Run(dbContext).Where(ea => 
+                    ea.Id == id && 
+                    ea.GrantorId == grantorId
+                );
+                return await query.FirstOrDefaultAsync();
+            }
         }
 
-        public Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
+        public async Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new EmergencyAccessDetailsView();
+                var query = view.Run(dbContext).Where(ea => 
+                        ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                );
+                return await query.ToListAsync();
+            }
         }
 
-        public Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGranteeIdAsync(Guid granteeId)
+        public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGranteeIdAsync(Guid granteeId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new EmergencyAccessDetailsView();
+                var query = view.Run(dbContext).Where(ea => 
+                    ea.GranteeId == granteeId
+                );
+                return await query.ToListAsync();
+            }
         }
 
-        public Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGrantorIdAsync(Guid grantorId)
+        public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGrantorIdAsync(Guid grantorId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new EmergencyAccessDetailsView();
+                var query = view.Run(dbContext).Where(ea => 
+                    ea.GrantorId == grantorId
+                );
+                return await query.ToListAsync();
+            }
         }
 
-        public Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
+        public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new EmergencyAccessDetailsView();
+                var query = view.Run(dbContext).Where(ea => 
+                        ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                );
+                // todo: find a way to not have to manually build these models so much
+                var notifies = await query.Select(ea => new EmergencyAccessNotify() {
+                    Id = ea.Id,
+                    GrantorId = ea.GrantorId,
+                    GranteeId = ea.GranteeId,
+                    Email = ea.Email,
+                    KeyEncrypted = ea.KeyEncrypted,
+                    Type = ea.Type,
+                    Status = ea.Status,
+                    WaitTimeDays = ea.WaitTimeDays,
+                    RecoveryInitiatedDate = ea.RecoveryInitiatedDate,
+                    LastNotificationDate = ea.LastNotificationDate,
+                    CreationDate = ea.CreationDate,
+                    RevisionDate = ea.RevisionDate,
+                    GranteeName = ea.GranteeName,
+                    GranteeEmail = ea.GranteeEmail,
+                    GrantorEmail = ea.GrantorEmail
+                }).ToListAsync(); 
+                return notifies;
+            }
         }
     }
 }
