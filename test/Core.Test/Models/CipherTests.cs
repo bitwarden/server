@@ -1,9 +1,9 @@
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Newtonsoft.Json;
 using Xunit;
 
-namespace Core.Test.Models
+namespace Bit.Core.Test.Models
 {
     public class CipherTests
     {
