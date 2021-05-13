@@ -18,14 +18,28 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Folders)
         { }
 
-        public Task<Folder> GetByIdAsync(Guid id, Guid userId)
+        public async Task<Folder> GetByIdAsync(Guid id, Guid userId)
         {
-            throw new NotImplementedException();
+            var folder = await base.GetByIdAsync(id);
+            if (folder == null || folder.UserId != userId)
+            {
+                return null;
+            }
+
+            return folder;
         }
 
-        public Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from f in dbContext.Folders
+                            where f.UserId == userId
+                            select f;
+                var folders = await query.ToListAsync();
+                return (ICollection<Folder>)folders;
+            }
         }
     }
 }
