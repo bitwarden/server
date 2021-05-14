@@ -1429,7 +1429,7 @@ namespace Bit.Core.Services
         {
             var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
             var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
-            return !confirmedOwnersIds.Except(organizationUsersId).Any();
+            return confirmedOwnersIds.Except(organizationUsersId).Any();
         }
 
         private async Task<bool> UserIsOwnerAsync(Guid organizationId, Guid deletingUserId)
