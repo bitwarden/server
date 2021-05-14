@@ -3,6 +3,7 @@
     @ProviderOrganizationId UNIQUEIDENTIFIER,
     @ProviderUserId UNIQUEIDENTIFIER,
     @Type TINYINT,
+    @Permissions NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -15,6 +16,7 @@ BEGIN
         [ProviderOrganizationId] = @ProviderOrganizationId,
         [ProviderUserId] = @ProviderUserId,
         [Type] = @Type,
+        [Permissions] = @Permissions,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

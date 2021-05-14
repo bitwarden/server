@@ -3,6 +3,7 @@
     [ProviderOrganizationId] UNIQUEIDENTIFIER    NOT NULL,
     [ProviderUserId]         UNIQUEIDENTIFIER    NULL,
     [Type]                   TINYINT             NOT NULL,
+    [Permissions]            NVARCHAR (MAX)      NULL,
     [CreationDate]           DATETIME2 (7)       NOT NULL,
     [RevisionDate]           DATETIME2 (7)       NOT NULL,
     CONSTRAINT [PK_ProviderOrganizationProviderUser] PRIMARY KEY CLUSTERED ([Id] ASC),

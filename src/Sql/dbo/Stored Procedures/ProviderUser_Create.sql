@@ -6,6 +6,7 @@
     @Key VARCHAR(MAX),
     @Status TINYINT,
     @Type TINYINT,
+    @Permissions NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -21,6 +22,7 @@ BEGIN
         [Key],
         [Status],
         [Type],
+        [Permissions],
         [CreationDate],
         [RevisionDate]
     )
@@ -33,6 +35,7 @@ BEGIN
         @Key,
         @Status,
         @Type,
+        @Permissions,
         @CreationDate,
         @RevisionDate
     )
