@@ -1011,15 +1011,16 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
-        private async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<(OrganizationUserInvite, string)> invites)
+        private async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
         {
             var organization = await GetOrgById(organizationId);
-            if (organization == null || invites.Any(i => i.Item1.Emails == null || i.Item2 == null))
+            if (organization == null || invites.Any(i => i.invite.Emails == null || i.externalId == null))
             {
                 throw new NotFoundException();
             }
 
-            var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.Item1.Type.HasValue).Select(i => i.Item1.Type.Value));
+            var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue).Select(i => i.invite.Type.Value));
             if (invitingUserId.HasValue && inviteTypes.Count > 0)
             {
                 foreach(var type in inviteTypes)
@@ -1032,7 +1033,7 @@ namespace Bit.Core.Services
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
-                if (availableSeats < invites.Select(i => i.Item1.Emails.Count()).Sum())
+                if (availableSeats < invites.Select(i => i.invite.Emails.Count()).Sum())
                 {
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
@@ -1044,7 +1045,7 @@ namespace Bit.Core.Services
             var exceptions = new List<Exception>();
             var events = new List<(OrganizationUser, EventType, DateTime?)>();
             var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
-                organizationId, invites.SelectMany(i => i.Item1.Emails), false));
+                organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
             foreach(var (invite, externalId) in invites)
             {
                 foreach(var email in invite.Emails)
