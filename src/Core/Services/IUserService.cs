@@ -34,7 +34,7 @@ namespace Bit.Core.Services
             string token, string key);
         Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
         Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
-        Task<IdentityResult> AdminResetPasswordAsync(User user, string newMasterPassword, string key);
+        Task<IdentityResult> AdminResetPasswordAsync(Guid orgId, Guid id, string newMasterPassword, string key);
         Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
             KdfType kdf, int kdfIterations);
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,

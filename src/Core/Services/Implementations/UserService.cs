@@ -626,8 +626,38 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
         
-        public async Task<IdentityResult> AdminResetPasswordAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> AdminResetPasswordAsync(Guid orgId, Guid id, string newMasterPassword, string key)
         {
+            // Org must be able to use reset password
+            var org = await _organizationRepository.GetByIdAsync(orgId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset.");
+            }
+            
+            // Enterprise policy must be enabled 
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
+            // Org User must be confirmed and have a ResetPasswordKey
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
+                orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
+                !orgUser.UserId.HasValue)
+            {
+                throw new BadRequestException("Organization User not valid");
+            }
+
+            var user = await GetUserByIdAsync(orgUser.UserId.Value);
+            if (user == null)
+            {
+                throw new NotFoundException();
+            }
+            
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {

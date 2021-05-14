@@ -246,42 +246,13 @@ namespace Bit.Api.Controllers
             
             var orgGuidId = new Guid(orgId);
             
-            // Org must be able to use reset password
-            var org = await _organizationRepository.GetByIdAsync(orgGuidId);
-            if (org == null || !org.UseResetPassword)
-            {
-                throw new BadRequestException("Organization does not allow password reset.");
-            }
-            
-            // Enterprise policy must be enabled 
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(orgGuidId, PolicyType.ResetPassword);
-            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
-            {
-                throw new BadRequestException("Organization does not have the password reset policy enabled.");
-            }
-            
             // Calling user must have Manage Reset Password permission
             if (!_currentContext.ManageResetPassword(orgGuidId))
             {
                 throw new NotFoundException();
             }
-            
-            var orgUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-                orgUser.OrganizationId != orgGuidId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
-                !orgUser.UserId.HasValue)
-            {
-                throw new BadRequestException("Organization User not valid");
-            }
 
-            var user = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
-            if (user == null)
-            {
-                throw new NotFoundException();
-            }
-            
-            var result = await _userService.AdminResetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.AdminResetPasswordAsync(orgGuidId, new Guid(id), model.NewMasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
                 return;

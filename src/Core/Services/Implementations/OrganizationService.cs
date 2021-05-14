@@ -15,6 +15,7 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -1707,6 +1708,40 @@ namespace Bit.Core.Services
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UnlinkedSso);
                 }
             }
+        }
+
+        public async Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey)
+        {
+            // Only Owners/Admins/Custom (w/ ManageResetPassword) can create org keys
+            var orgUser = await _organizationUserRepository.GetDetailsByUserAsync(userId, orgId);
+            if (orgUser == null || orgUser.Type != OrganizationUserType.Admin && 
+                orgUser.Type != OrganizationUserType.Owner && orgUser.Type != OrganizationUserType.Custom)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (orgUser.Type == OrganizationUserType.Custom)
+            {
+                var permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+                if (permissions == null || !permissions.ManageResetPassword)
+                {
+                    throw new UnauthorizedAccessException();
+                }
+            }
+            
+            // If the keys already exist, error out
+            var org = await _organizationRepository.GetByIdAsync(orgId);
+            if (org.PublicKey != null && org.PrivateKey != null)
+            {
+                throw new BadRequestException("Organization Keys already exist");
+            }
+            
+            // Update org with generated public/private key
+            org.PublicKey = publicKey;
+            org.PrivateKey = privateKey;
+            await UpdateAsync(org);
+            
+            return org;
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
