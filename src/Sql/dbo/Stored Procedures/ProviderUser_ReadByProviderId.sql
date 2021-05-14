@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[ProviderUser_ReadByUnitId]
+﻿CREATE PROCEDURE [dbo].[ProviderUser_ReadByProviderId]
     @ProviderId UNIQUEIDENTIFIER
 AS
 BEGIN

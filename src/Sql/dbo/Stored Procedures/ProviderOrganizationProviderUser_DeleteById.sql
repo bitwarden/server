@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[ProviderOrgUser_DeleteById]
+﻿CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
