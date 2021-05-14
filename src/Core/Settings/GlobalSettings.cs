@@ -273,7 +273,8 @@ namespace Bit.Core.Settings
         public class MailSettings
         {
             private ConnectionStringSettings _connectionStringSettings;
-            public string ConnectionString {
+            public string ConnectionString
+            {
                 get => _connectionStringSettings?.ConnectionString;
                 set
                 {
