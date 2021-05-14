@@ -237,6 +237,17 @@ namespace Bit.Core.Services
                         $"Disable your SSO configuration.");
                 }
             }
+            
+            if (!newPlan.HasResetPassword && organization.UseResetPassword)
+            {
+                var resetPasswordPolicy =
+                    await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+                if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+                {
+                    throw new BadRequestException("Your new plan does not allow the Password Reset feature. " + 
+                        "Disable your Password Reset policy.");
+                }
+            }
 
             // TODO: Check storage?
 
@@ -275,10 +286,13 @@ namespace Bit.Core.Services
             organization.Use2fa = newPlan.Has2fa;
             organization.UseApi = newPlan.HasApi;
             organization.UseSso = newPlan.HasSso;
+            organization.UseResetPassword = newPlan.HasResetPassword;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
             organization.Plan = newPlan.Name;
             organization.Enabled = success;
+            organization.PublicKey = upgrade.PublicKey;
+            organization.PrivateKey = upgrade.PrivateKey;
             await ReplaceAndUpdateCache(organization);
             if (success)
             {
@@ -564,6 +578,7 @@ namespace Bit.Core.Services
                 UseTotp = plan.HasTotp,
                 Use2fa = plan.Has2fa,
                 UseApi = plan.HasApi,
+                UseResetPassword = plan.HasResetPassword,
                 SelfHost = plan.HasSelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
                 Plan = plan.Name,
@@ -572,6 +587,8 @@ namespace Bit.Core.Services
                 Enabled = true,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
                 ApiKey = CoreHelpers.SecureRandomString(30),
+                PublicKey = signup.PublicKey,
+                PrivateKey = signup.PrivateKey,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
             };
@@ -605,7 +622,8 @@ namespace Bit.Core.Services
         }
 
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
-            OrganizationLicense license, User owner, string ownerKey, string collectionName)
+            OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
+            string privateKey)
         {
             if (license == null || !_licensingService.VerifyLicense(license))
             {
@@ -647,6 +665,7 @@ namespace Bit.Core.Services
                 UseTotp = license.UseTotp,
                 Use2fa = license.Use2fa,
                 UseApi = license.UseApi,
+                UseResetPassword = license.UseResetPassword,
                 Plan = license.Plan,
                 SelfHost = license.SelfHost,
                 UsersGetPremium = license.UsersGetPremium,
@@ -658,6 +677,8 @@ namespace Bit.Core.Services
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
                 ApiKey = CoreHelpers.SecureRandomString(30),
+                PublicKey = publicKey,
+                PrivateKey = privateKey,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow
             };
@@ -812,6 +833,17 @@ namespace Bit.Core.Services
                         $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
                 }
             }
+            
+            if (!license.UseResetPassword && organization.UseResetPassword)
+            {
+                var resetPasswordPolicy =
+                    await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+                if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+                {
+                    throw new BadRequestException("Your new license does not allow the Password Reset feature. " 
+                        + "Disable your Password Reset policy.");
+                }
+            }
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
@@ -832,6 +864,7 @@ namespace Bit.Core.Services
             organization.UseApi = license.UseApi;
             organization.UsePolicies = license.UsePolicies;
             organization.UseSso = license.UseSso;
+            organization.UseResetPassword = license.UseResetPassword;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
             organization.Plan = license.Plan;
@@ -1058,6 +1091,25 @@ namespace Bit.Core.Services
                 });
 
             return orgUsers;
+        }
+
+        public async Task ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<Guid> organizationUsersId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId);
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+            
+            var org = await GetOrgById(organizationId);
+            foreach (var orgUser in filteredUsers)
+            {
+                await SendInviteAsync(orgUser, org);
+            }
         }
 
         public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
@@ -1389,7 +1441,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("User not valid.");
             }
             
-            // TODO - Block certain org types from using this feature?
+            // TODO Reset Password - Block certain org types from using this feature?
 
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);

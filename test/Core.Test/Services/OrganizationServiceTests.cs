@@ -6,7 +6,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
@@ -16,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
+using Organization = Bit.Core.Models.Table.Organization;
 
 namespace Bit.Core.Test.Services
 {
@@ -73,10 +73,10 @@ namespace Bit.Core.Test.Services
             orgUserRepo.GetManyDetailsByOrganizationAsync(id).Returns(existingUsers);
             orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
 
-            var newUsers = new List<Models.Business.ImportedOrganizationUser>();
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
+            var newUsers = new List<ImportedOrganizationUser>();
+            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
             await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.DidNotReceive().UpsertAsync(Arg.Any<OrganizationUser>());
@@ -137,10 +137,10 @@ namespace Bit.Core.Test.Services
             orgUserRepo.GetCountByOrganizationIdAsync(id).Returns(1);
             orgUserRepo.GetByIdAsync(existingUserAId).Returns(new OrganizationUser { Id = existingUserAId });
 
-            var newUsers = new List<Models.Business.ImportedOrganizationUser>();
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
-            newUsers.Add(new Models.Business.ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
+            var newUsers = new List<ImportedOrganizationUser>();
+            newUsers.Add(new ImportedOrganizationUser { Email = "a@test.com", ExternalId = "a" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "b@test.com", ExternalId = "b" });
+            newUsers.Add(new ImportedOrganizationUser { Email = "c@test.com", ExternalId = "c" });
             await orgService.ImportAsync(id, userId, null, newUsers, null, false);
 
             await orgUserRepo.Received(1).UpsertAsync(Arg.Any<OrganizationUser>());
@@ -187,7 +187,7 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
             Assert.Contains("can only upgrade", exception.Message);
         }
-         
+
         [Theory]
         [FreeOrganizationUpgradeAutoData]
         public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
@@ -209,12 +209,12 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Owner, 
+            inviteeUserType: (int)OrganizationUserType.Owner,
             invitorUserType: (int)OrganizationUserType.Admin
         )]
-        public async Task InviteUser_NonOwnerConfiguringOwner_Throws(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_NonOwnerConfiguringOwner_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -228,12 +228,12 @@ namespace Bit.Core.Test.Services
             Assert.Contains("only an owner", exception.Message.ToLowerInvariant());
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Custom, 
+            inviteeUserType: (int)OrganizationUserType.Custom,
             invitorUserType: (int)OrganizationUserType.Admin
         )]
-        public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -247,15 +247,15 @@ namespace Bit.Core.Test.Services
             Assert.Contains("only owners and admins", exception.Message.ToLowerInvariant());
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Manager, 
+            inviteeUserType: (int)OrganizationUserType.Manager,
             invitorUserType: (int)OrganizationUserType.Custom
         )]
-        public async Task InviteUser_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = false }, 
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = false },
                 new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -272,15 +272,15 @@ namespace Bit.Core.Test.Services
             Assert.Contains("account does not have permission", exception.Message.ToLowerInvariant());
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Admin, 
+            inviteeUserType: (int)OrganizationUserType.Admin,
             invitorUserType: (int)OrganizationUserType.Custom
         )]
-        public async Task InviteUser_CustomUserConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_CustomUserConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true }, 
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
                 new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -297,12 +297,12 @@ namespace Bit.Core.Test.Services
             Assert.Contains("can not manage admins", exception.Message.ToLowerInvariant());
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.User, 
+            inviteeUserType: (int)OrganizationUserType.User,
             invitorUserType: (int)OrganizationUserType.Owner
         )]
-        public async Task InviteUser_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             invite.Permissions = null;
@@ -316,15 +316,15 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
         }
 
-        [Theory] 
+        [Theory]
         [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.User, 
+            inviteeUserType: (int)OrganizationUserType.User,
             invitorUserType: (int)OrganizationUserType.Custom
         )]
-        public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite, 
+        public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true }, 
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
                 new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -366,7 +366,7 @@ namespace Bit.Core.Test.Services
             IEnumerable<SelectionReadOnly> collections, OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-            
+
             newUserData.Id = oldUserData.Id;
             newUserData.UserId = oldUserData.UserId;
             newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId;

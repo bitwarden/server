@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Data;
+﻿using System;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -88,5 +89,11 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserResetPasswordEnrollmentRequestModel
     {
         public string ResetPasswordKey { get; set; }
+    }
+
+    public class OrganizationUserBulkReinviteRequestModel
+    {
+        [Required]
+        public IEnumerable<Guid> Ids { get; set; }
     }
 }

@@ -143,7 +143,13 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             }
 
-            if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
+            if (!globalSettings.SelfHosted && awsConfigured &&
+                CoreHelpers.SettingHasValue(globalSettings.Mail?.PostalApiKey))
+            {
+                services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
+            }
+            else if (awsConfigured)
             {
                 services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
             }
@@ -505,7 +511,7 @@ namespace Bit.Core.Utilities
         {
             mvc.Services.AddTransient<IViewLocalizer, I18nViewLocalizer>();
             return mvc.AddViewLocalization(options => options.ResourcesPath = "Resources")
-                .AddDataAnnotationsLocalization(options => 
+                .AddDataAnnotationsLocalization(options =>
                     options.DataAnnotationLocalizerProvider = (type, factory) =>
                     {
                         var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);

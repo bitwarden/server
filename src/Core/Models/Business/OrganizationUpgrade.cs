@@ -10,5 +10,7 @@ namespace Bit.Core.Models.Business
         public short AdditionalStorageGb { get; set; }
         public bool PremiumAccessAddon { get; set; }
         public TaxInfo TaxInfo { get; set; }
+        public string PublicKey { get; set; }
+        public string PrivateKey { get; set; }
     }
 }
