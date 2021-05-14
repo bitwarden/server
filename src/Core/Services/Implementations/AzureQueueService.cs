@@ -11,13 +11,19 @@ namespace Bit.Core.Services
 {
     public abstract class AzureQueueService<T>
     {
-        protected abstract QueueClient QueueClient { get; }
-        protected abstract JsonSerializerSettings JsonSettings { get; }
+        protected QueueClient _queueClient;
+        protected JsonSerializerSettings _jsonSettings;
+
+        protected AzureQueueService(QueueClient queueClient, JsonSerializerSettings jsonSettings)
+        {
+            _queueClient = queueClient;
+            _jsonSettings = jsonSettings;
+        }
 
         public async Task CreateAsync(T message)
         {
-            var json = JsonConvert.SerializeObject(message, JsonSettings);
-            await QueueClient.SendMessageAsync(json);
+            var json = JsonConvert.SerializeObject(message, _jsonSettings);
+            await _queueClient.SendMessageAsync(json);
         }
 
         public async Task CreateManyAsync(IEnumerable<T> messages)
@@ -33,9 +39,9 @@ namespace Bit.Core.Services
                 return;
             }
 
-            foreach (var json in SerializeMany(messages, JsonSettings))
+            foreach (var json in SerializeMany(messages, _jsonSettings))
             {
-                await QueueClient.SendMessageAsync(json);
+                await _queueClient.SendMessageAsync(json);
             }
         }
 
@@ -49,7 +55,7 @@ namespace Bit.Core.Services
             {
 
                 var messageLength = jsonEvent.Length + 1; // To account for json array comma
-                if (ListMessageLength + messageLength > QueueClient.MessageMaxBytes)
+                if (ListMessageLength + messageLength > _queueClient.MessageMaxBytes)
                 {
                     messagesLists.Add(new List<T> { message });
                     ListMessageLength = 2 + messageLength;

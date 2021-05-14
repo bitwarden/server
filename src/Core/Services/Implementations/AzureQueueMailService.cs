@@ -11,17 +11,10 @@ namespace Bit.Core.Services
 {
     public class AzureQueueMailService : AzureQueueService<IMailQueueMessage>, IMailEnqueuingService
     {
-        protected override QueueClient QueueClient { get; }
-        protected override JsonSerializerSettings JsonSettings { get; } = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore
-        };
-
         public AzureQueueMailService(
-            GlobalSettings globalSettings)
-        {
-            QueueClient = new QueueClient(globalSettings.Mail.ConnectionString, "mail");
-        }
+            GlobalSettings globalSettings) : base(new QueueClient(globalSettings.Mail.ConnectionString, "mail"),
+            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })
+        { }
 
         public Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback) =>
             CreateAsync(message);
