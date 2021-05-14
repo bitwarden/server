@@ -16,4 +16,4 @@
     [CreationDate]      DATETIME2 (7)    NOT NULL,
     [RevisionDate]      DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_Provider] PRIMARY KEY CLUSTERED ([Id] ASC)
-)
+);
