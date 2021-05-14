@@ -373,7 +373,7 @@ namespace Bit.Core.Test.Services
             newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId;
             savingUser.Type = OrganizationUserType.Owner;
             organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-            organizationUserRepository.GetManyByOrganizationAsync(newUserData.OrganizationId, OrganizationUserType.Owner)
+            organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new List<OrganizationUser> { savingUser });
             organizationUserRepository.GetManyByUserAsync(savingUser.UserId.Value).Returns(new List<OrganizationUser> { savingUser });
 

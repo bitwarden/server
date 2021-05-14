@@ -286,7 +286,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("")]
         [HttpPost("delete")]
-        public async Task BulkDelete(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        public async Task BulkDelete(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageUsers(orgGuidId))
