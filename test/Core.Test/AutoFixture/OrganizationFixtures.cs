@@ -15,6 +15,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     public class Organization : ICustomization
     {
         public bool UseGroups { get; set; }
+        public Guid CollectionId { get; set; }
 
         public void Customize(IFixture fixture)
         {
@@ -23,6 +24,11 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.UseGroups, UseGroups));
+
+            fixture.Customize<Core.Models.Table.Collection>(composer =>
+                composer
+                    .With(c => c.Id, CollectionId)
+                    .With(c => c.OrganizationId, organizationId));
 
             fixture.Customize<Group>(composer => composer.With(g => g.OrganizationId, organizationId));
         }
@@ -53,7 +59,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
             var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
-            
+
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, selectedPlan.Type)
                 .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
