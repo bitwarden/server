@@ -426,6 +426,11 @@ namespace Bit.Core.IdentityServer
                     }
                     else if (type == TwoFactorProviderType.WebAuthn)
                     {
+                        if (token == null)
+                        {
+                            return null;
+                        }
+
                         return JsonSerializer.Deserialize<Dictionary<string, object>>(token);
                     }
                     else if (type == TwoFactorProviderType.Email)
