@@ -192,6 +192,15 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
             }
 
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
+            {
+                services.AddSingleton<IMailEnqueuingService, AzureQueueMailService>();
+            }
+            else
+            {
+                services.AddSingleton<IMailEnqueuingService, BlockingMailEnqueuingService>();
+            }
+
             if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
             {
                 services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();

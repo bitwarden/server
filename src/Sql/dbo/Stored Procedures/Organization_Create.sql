@@ -11,7 +11,7 @@
     @BillingEmail NVARCHAR(256),
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
-    @Seats SMALLINT,
+    @Seats INT,
     @MaxCollections SMALLINT,
     @UsePolicies BIT,
     @UseSso BIT,

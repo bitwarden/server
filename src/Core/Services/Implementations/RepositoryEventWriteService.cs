@@ -20,7 +20,7 @@ namespace Bit.Core.Services
             await _eventRepository.CreateAsync(e);
         }
 
-        public async Task CreateManyAsync(IList<IEvent> e)
+        public async Task CreateManyAsync(IEnumerable<IEvent> e)
         {
             await _eventRepository.CreateManyAsync(e);
         }

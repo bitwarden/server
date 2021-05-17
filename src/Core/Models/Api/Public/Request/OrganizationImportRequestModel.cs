@@ -20,6 +20,10 @@ namespace Bit.Core.Models.Api.Public
         /// </summary>
         [Required]
         public bool? OverwriteExisting { get; set; }
+        /// <summary>
+        /// Indicates an import of over 2000 users and/or groups is expected
+        /// </summary>
+        public bool LargeImport { get; set; } = false;
 
         public class OrganizationImportGroupRequestModel
         {

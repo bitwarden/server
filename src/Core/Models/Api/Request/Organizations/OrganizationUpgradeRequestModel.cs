@@ -9,8 +9,8 @@ namespace Bit.Core.Models.Api
         [StringLength(50)]
         public string BusinessName { get; set; }
         public PlanType PlanType { get; set; }
-        [Range(0, double.MaxValue)]
-        public short AdditionalSeats { get; set; }
+        [Range(0, int.MaxValue)]
+        public int AdditionalSeats { get; set; }
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
         public bool PremiumAccessAddon { get; set; }

@@ -44,6 +44,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null)
         {
             return Task.FromResult(0);

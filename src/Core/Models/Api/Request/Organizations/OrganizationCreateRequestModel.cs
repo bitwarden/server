@@ -24,8 +24,8 @@ namespace Bit.Core.Models.Api
         public OrganizationKeysRequestModel Keys { get; set; }
         public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
-        [Range(0, double.MaxValue)]
-        public short AdditionalSeats { get; set; }
+        [Range(0, int.MaxValue)]
+        public int AdditionalSeats { get; set; }
         [Range(0, 99)]
         public short? AdditionalStorageGb { get; set; }
         public bool PremiumAccessAddon { get; set; }

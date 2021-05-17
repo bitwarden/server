@@ -9,10 +9,10 @@ namespace Bit.Core.Services
     {
         Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
         Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb, short additionalSeats,
+            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb, int additionalSeats,
             bool premiumAccessAddon, TaxInfo taxInfo);
         Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
-           short additionalStorageGb, short additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
+           short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb, TaxInfo taxInfo);
         Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);

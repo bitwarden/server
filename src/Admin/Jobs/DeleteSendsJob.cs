@@ -6,7 +6,6 @@ using Bit.Core.Context;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
