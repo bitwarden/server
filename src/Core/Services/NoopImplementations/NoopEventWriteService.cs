@@ -11,7 +11,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task CreateManyAsync(IList<IEvent> e)
+        public Task CreateManyAsync(IEnumerable<IEvent> e)
         {
             return Task.FromResult(0);
         }

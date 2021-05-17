@@ -76,6 +76,20 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+            bool onlyRegisteredUsers)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var result = await connection.QueryAsync<string>(
+                    "[dbo].[OrganizationUser_SelectKnownEmails]",
+                    new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
+                    commandType: CommandType.StoredProcedure);
+
+                return result;
+            }
+        }
+
         public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -283,6 +297,72 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
+            }
+        }
+
+        public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync("[dbo].[OrganizationUser_DeleteByIds]",
+                    new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            var createUsers = new List<OrganizationUser>();
+            var replaceUsers = new List<OrganizationUser>();
+            foreach (var organizationUser in organizationUsers)
+            {
+                if (organizationUser.Id.Equals(default))
+                {
+                    createUsers.Add(organizationUser);
+                }
+                else
+                {
+                    replaceUsers.Add(organizationUser);
+                }
+            }
+
+            await CreateManyAsync(createUsers);
+            await ReplaceManyAsync(replaceUsers);
+        }
+
+        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            foreach(var organizationUser in organizationUsers)
+            {
+                organizationUser.SetNewId();
+            }
+
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_CreateMany]",
+                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_UpdateMany]",
+                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

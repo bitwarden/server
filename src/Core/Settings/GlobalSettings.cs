@@ -272,6 +272,19 @@ namespace Bit.Core.Settings
 
         public class MailSettings
         {
+            private ConnectionStringSettings _connectionStringSettings;
+            public string ConnectionString
+            {
+                get => _connectionStringSettings?.ConnectionString;
+                set
+                {
+                    if (_connectionStringSettings == null)
+                    {
+                        _connectionStringSettings = new ConnectionStringSettings();
+                    }
+                    _connectionStringSettings.ConnectionString = value;
+                }
+            }
             public string ReplyToEmail { get; set; }
             public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
