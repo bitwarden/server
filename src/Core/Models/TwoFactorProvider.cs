@@ -131,6 +131,7 @@ namespace Bit.Core.Models
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
                 case TwoFactorProviderType.U2f:
+                case TwoFactorProviderType.WebAuthn:
                     return true;
                 default:
                     return false;
