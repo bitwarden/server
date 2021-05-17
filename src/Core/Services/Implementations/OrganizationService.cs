@@ -1419,7 +1419,7 @@ namespace Bit.Core.Services
             }
 
             var owners = filteredUsers.Where(u => u.Type == OrganizationUserType.Owner);
-            if (!owners.Any() && deletingUserId.HasValue && !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
+            if (owners.Any() && deletingUserId.HasValue && !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
             {
                 throw new BadRequestException("Only owners can delete other owners.");
             }

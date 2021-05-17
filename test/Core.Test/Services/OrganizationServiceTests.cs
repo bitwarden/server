@@ -490,6 +490,7 @@ namespace Bit.Core.Test.Services
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
             deletingUser.Type = OrganizationUserType.Admin;
+            orgUser1.Type = OrganizationUserType.Owner;
             orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
             var organizationUsers = new[] { orgUser1, orgUser2 };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
