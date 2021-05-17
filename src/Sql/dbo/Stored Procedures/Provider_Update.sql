@@ -11,7 +11,6 @@
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
     @Status TINYINT,
-    @Seats SMALLINT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -33,7 +32,6 @@ BEGIN
         [Plan] = @Plan,
         [PlanType] = @PlanType,
         [Status] = @Status,
-        [Seats] = @Seats,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

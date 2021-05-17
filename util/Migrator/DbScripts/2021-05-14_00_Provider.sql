@@ -89,7 +89,6 @@ BEGIN
         [Plan]              NVARCHAR (50)    NOT NULL,
         [PlanType]          TINYINT          NOT NULL,
         [Status]            TINYINT          NOT NULL,
-        [Seats]             SMALLINT         NULL,
         [Enabled]           BIT              NOT NULL,
         [CreationDate]      DATETIME2 (7)    NOT NULL,
         [RevisionDate]      DATETIME2 (7)    NOT NULL,
@@ -131,7 +130,6 @@ CREATE PROCEDURE [dbo].[Provider_Create]
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
     @Status TINYINT,
-    @Seats SMALLINT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -153,7 +151,6 @@ BEGIN
         [Plan],
         [PlanType],
         [Status],
-        [Seats],
         [Enabled],
         [CreationDate],
         [RevisionDate]
@@ -172,7 +169,6 @@ BEGIN
         @Plan,
         @PlanType,
         @Status,
-        @Seats,
         @Enabled,
         @CreationDate,
         @RevisionDate
@@ -199,7 +195,6 @@ CREATE PROCEDURE [dbo].[Provider_Update]
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
     @Status TINYINT,
-    @Seats SMALLINT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -221,7 +216,6 @@ BEGIN
         [Plan] = @Plan,
         [PlanType] = @PlanType,
         [Status] = @Status,
-        [Seats] = @Seats,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
@@ -514,6 +508,7 @@ BEGIN
         [ProviderId]     UNIQUEIDENTIFIER    NOT NULL,
         [OrganizationId] UNIQUEIDENTIFIER    NULL,
         [Key]            VARCHAR (MAX)       NULL,
+        [Settings]       NVARCHAR(MAX)       NULL,
         [CreationDate]   DATETIME2 (7)       NOT NULL,
         [RevisionDate]   DATETIME2 (7)       NOT NULL,
         CONSTRAINT [PK_ProviderOrganization] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -537,7 +532,6 @@ FROM
     [dbo].[ProviderOrganization]
 GO
 
-
 IF OBJECT_ID('[dbo].[ProviderOrganization_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[ProviderOrganization_Create]
@@ -549,6 +543,7 @@ CREATE PROCEDURE [dbo].[ProviderOrganization_Create]
     @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),
+    @Settings NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -561,6 +556,7 @@ BEGIN
         [ProviderId],
         [OrganizationId],
         [Key],
+        [Settings],
         [CreationDate],
         [RevisionDate]
     )
@@ -570,9 +566,42 @@ BEGIN
         @ProviderId,
         @OrganizationId,
         @Key,
+        @Settings,
         @CreationDate,
         @RevisionDate
     )
+END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_Update]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_Update]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganization_Update]
+    @Id UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Key VARCHAR(MAX),
+    @Settings NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[ProviderOrganization]
+    SET
+        [ProviderId] = @ProviderId,
+        [OrganizationId] = @OrganizationId,
+        [Key] = @Key,
+        [Settings] = @Settings,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate
+    WHERE
+        [Id] = @Id
 END
 GO
 

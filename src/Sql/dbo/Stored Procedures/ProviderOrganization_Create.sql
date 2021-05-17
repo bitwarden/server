@@ -3,6 +3,7 @@
     @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),
+    @Settings NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -15,6 +16,7 @@ BEGIN
         [ProviderId],
         [OrganizationId],
         [Key],
+        [Settings],
         [CreationDate],
         [RevisionDate]
     )
@@ -24,6 +26,7 @@ BEGIN
         @ProviderId,
         @OrganizationId,
         @Key,
+        @Settings,
         @CreationDate,
         @RevisionDate
     )

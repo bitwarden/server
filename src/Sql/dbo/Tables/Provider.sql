@@ -11,7 +11,6 @@
     [Plan]              NVARCHAR (50)    NOT NULL,
     [PlanType]          TINYINT          NOT NULL,
     [Status]            TINYINT          NOT NULL,
-    [Seats]             SMALLINT         NULL,
     [Enabled]           BIT              NOT NULL,
     [CreationDate]      DATETIME2 (7)    NOT NULL,
     [RevisionDate]      DATETIME2 (7)    NOT NULL,
