@@ -30,7 +30,7 @@ BEGIN
     -- Delete CollectionUsers
     WHILE @BatchSize > 0
     BEGIN
-        BEGIN TRANSACTION CollectionUser_DeleteMany_CollectionUsers
+        BEGIN TRANSACTION CollectionUser_DeleteMany_CUs
 
         DELETE TOP(@BatchSize) CU
         FROM
@@ -40,7 +40,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION CollectionUser_DeleteMany_CollectionUsers
+        COMMIT TRANSACTION CollectionUser_DeleteMany_CUs
     END
 
     SET @BatchSize = 100;
@@ -67,7 +67,7 @@ BEGIN
     -- Delete OrganizationUsers
     WHILE @BatchSize > 0
         BEGIN
-        BEGIN TRANSACTION OrganizationUser_DeleteMany_OrganizationUsers
+        BEGIN TRANSACTION OrganizationUser_DeleteMany_OUs
 
         DELETE TOP(@BatchSize) OU
         FROM
@@ -77,7 +77,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION OrganizationUser_DeleteMany_OrganizationUsers
+        COMMIT TRANSACTION OrganizationUser_DeleteMany_OUs
     END
 END
 GO
