@@ -8,8 +8,6 @@
     [BusinessCountry]   VARCHAR (2)      NULL,
     [BusinessTaxNumber] NVARCHAR (30)    NULL,
     [BillingEmail]      NVARCHAR (256)   NOT NULL,
-    [Plan]              NVARCHAR (50)    NOT NULL,
-    [PlanType]          TINYINT          NOT NULL,
     [Status]            TINYINT          NOT NULL,
     [Enabled]           BIT              NOT NULL,
     [CreationDate]      DATETIME2 (7)    NOT NULL,
