@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using AutoFixture.Xunit2;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Dapper;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
@@ -53,6 +48,26 @@ namespace Bit.Core.Test.Utilities
             }
 
             Assert.Equal(batches.Last().Count(), remainder == 0 ? batchSize : remainder);
+        }
+
+        [Fact]
+        public void ToGuidIdArrayTVP_Success()
+        {
+            // Arrange
+            var item0 = Guid.NewGuid();
+            var item1 = Guid.NewGuid();
+
+            var ids = new[] { item0, item1 };
+
+            // Act
+            var dt = ids.ToGuidIdArrayTVP();
+
+            // Assert
+            Assert.Single(dt.Columns);
+            Assert.Equal("GuidId", dt.Columns[0].ColumnName);
+            Assert.Equal(2, dt.Rows.Count);
+            Assert.Equal(item0, dt.Rows[0][0]);
+            Assert.Equal(item1, dt.Rows[1][0]);
         }
 
         // TODO: Test the other ToArrayTVP Methods

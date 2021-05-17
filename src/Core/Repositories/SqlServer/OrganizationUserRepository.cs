@@ -345,7 +345,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_CreateMany]",
-                    new { OrganizationUsersInput = TvpHelpers.ToTVP("[dbo].[OrganizationUserType]", organizationUsers) },
+                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -361,7 +361,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateMany]",
-                    new { OrganizationUsersInput = TvpHelpers.ToTVP("[dbo].[OrganizationUserType]", organizationUsers) },
+                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
                     commandType: CommandType.StoredProcedure);
             }
         }
