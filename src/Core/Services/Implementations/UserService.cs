@@ -689,6 +689,7 @@ namespace Bit.Core.Services
             user.Key = key;
 
             await _userRepository.ReplaceAsync(user);
+            // TODO Reset Password - Send email alerting user of changed password
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
