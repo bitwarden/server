@@ -91,7 +91,7 @@ namespace Bit.Core.Models.Api
         public string ResetPasswordKey { get; set; }
     }
 
-    public class OrganizationUserBulkReinviteRequestModel
+    public class OrganizationUserBulkRequestModel
     {
         [Required]
         public IEnumerable<Guid> Ids { get; set; }
