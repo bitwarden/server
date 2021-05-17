@@ -18,7 +18,7 @@ jobs:
       tag_version: ${{ steps.create_tags.outputs.tag_version }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
       - name: Create Deploy version vars
         id: create_tags
@@ -87,14 +87,14 @@ jobs:
       TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
         with:
           ref: ${{ env.TAG_VERSION }}
 
       - name: Set up Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
         with:
-          node-version: '10.x'
+          node-version: '14'
 
       - name: Print Environment
         run: |
@@ -140,7 +140,7 @@ jobs:
           GULP: ${{ matrix.gulp }}
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: ${{ env.SERVICE_NAME }}.zip
           path: ${{ env.BASE_PATH }}/src/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}.zip
@@ -160,7 +160,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Identity.zip
 
@@ -178,7 +178,7 @@ jobs:
                     appservices-identity-webapp-publish-profile"
 
       - name: Deploy Identity
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
           slot-name: "staging"
@@ -191,7 +191,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Api.zip
 
@@ -209,7 +209,7 @@ jobs:
                     appservices-api-webapp-publish-profile"
 
       - name: Deploy Api
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
           slot-name: "staging"
@@ -222,7 +222,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Billing.zip
 
@@ -240,7 +240,7 @@ jobs:
                     appservices-billing-webapp-publish-profile"
 
       - name: Deploy Billing
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
           slot-name: "staging"
@@ -253,7 +253,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Events.zip
 
@@ -271,7 +271,7 @@ jobs:
                     appservices-events-webapp-publish-profile"
 
       - name: Deploy Events
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
           slot-name: "staging"
@@ -284,7 +284,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Sso.zip
 
@@ -302,7 +302,7 @@ jobs:
                     appservices-sso-webapp-publish-profile"
 
       - name: Deploy SSO
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
           slot-name: "staging"
@@ -315,7 +315,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Portal.zip
 
@@ -333,7 +333,7 @@ jobs:
                     appservices-portal-webapp-publish-profile"
 
       - name: Deploy Portal
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
           slot-name: "staging"
@@ -346,7 +346,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Admin.zip
 
@@ -364,7 +364,7 @@ jobs:
                     appservices-admin-webapp-publish-profile"
 
       - name: Deploy Admin
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
           slot-name: "staging"
