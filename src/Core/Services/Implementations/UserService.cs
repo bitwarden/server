@@ -626,7 +626,7 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
         
-        public async Task<IdentityResult> AdminResetPasswordAsync(Guid orgId, Guid id, string newMasterPassword, string key)
+        public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
         {
             // Org must be able to use reset password
             var org = await _organizationRepository.GetByIdAsync(orgId);
@@ -650,6 +650,27 @@ namespace Bit.Core.Services
                 !orgUser.UserId.HasValue)
             {
                 throw new BadRequestException("Organization User not valid");
+            }
+            
+            // Calling User must be of higher/equal user type to reset user's password
+            var canAdjustPassword = false;
+            switch (callingUserType)
+            {
+                case OrganizationUserType.Owner:
+                    canAdjustPassword = true;
+                    break;
+                case OrganizationUserType.Admin:
+                    canAdjustPassword = orgUser.Type != OrganizationUserType.Owner;
+                    break;
+                case OrganizationUserType.Custom:
+                    canAdjustPassword = orgUser.Type != OrganizationUserType.Owner &&
+                        orgUser.Type != OrganizationUserType.Admin;
+                    break;
+            }
+
+            if (!canAdjustPassword)
+            {
+                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
             }
 
             var user = await GetUserByIdAsync(orgUser.UserId.Value);
