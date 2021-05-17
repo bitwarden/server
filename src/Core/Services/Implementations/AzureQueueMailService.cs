@@ -11,8 +11,8 @@ namespace Bit.Core.Services
 {
     public class AzureQueueMailService : AzureQueueService<IMailQueueMessage>, IMailEnqueuingService
     {
-        public AzureQueueMailService(
-            GlobalSettings globalSettings) : base(new QueueClient(globalSettings.Mail.ConnectionString, "mail"),
+        public AzureQueueMailService(GlobalSettings globalSettings) : base(
+            new QueueClient(globalSettings.Mail.ConnectionString, "mail"),
             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })
         { }
 
