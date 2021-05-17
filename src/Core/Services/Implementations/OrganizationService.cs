@@ -1308,10 +1308,7 @@ namespace Bit.Core.Services
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
             await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
 
-            // push
-            var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-            await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
-            await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
 
             return orgUser;
         }
@@ -1334,9 +1331,8 @@ namespace Bit.Core.Services
                 await ValidateOrganizationUserUpdatePermissions(savingUserId.Value, user.OrganizationId, user.Type, originalUser.Type);
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
             if (user.Type != OrganizationUserType.Owner &&
-                confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, Enumerable.Empty<Guid>()))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1363,19 +1359,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot remove yourself.");
             }
 
-            if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue)
+            if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
+                !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
             {
-                var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId.Value);
-                var anyOwners = deletingUserOrgs.Any(
-                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
-                if (!anyOwners)
-                {
-                    throw new BadRequestException("Only owners can delete other owners.");
-                }
+                throw new BadRequestException("Only owners can delete other owners.");
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
-            if (confirmedOwners.Count == 1 && confirmedOwners[0].Id == organizationUserId)
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {organizationUserId}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1385,11 +1375,7 @@ namespace Bit.Core.Services
 
             if (orgUser.UserId.HasValue)
             {
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
-                    organizationId.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
             }
         }
 
@@ -1401,8 +1387,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
-            if (confirmedOwners.Count == 1 && confirmedOwners[0].Id == orgUser.Id)
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {orgUser.Id}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1412,12 +1397,62 @@ namespace Bit.Core.Services
 
             if (orgUser.UserId.HasValue)
             {
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
-                    organizationId.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
             }
+        }
+
+        public async Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId,
+            Guid? deletingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+            
+            if (deletingUserId.HasValue && filteredUsers.Exists(u => u.UserId == deletingUserId.Value))
+            {
+                throw new BadRequestException("You cannot remove yourself.");
+            }
+
+            var owners = filteredUsers.Where(u => u.Type == OrganizationUserType.Owner);
+            if (!owners.Any() && deletingUserId.HasValue && !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
+            {
+                throw new BadRequestException("Only owners can delete other owners.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            foreach (var orgUser in filteredUsers)
+            {
+                // TODO: We should replace this call with `DeleteManyAsync`.
+                await _organizationUserRepository.DeleteAsync(orgUser);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+
+                if (orgUser.UserId.HasValue)
+                {
+                    await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+                }
+            }
+        }
+
+        private async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId)
+        {
+            var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
+            var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
+            return confirmedOwnersIds.Except(organizationUsersId).Any();
+        }
+
+        private async Task<bool> UserIsOwnerAsync(Guid organizationId, Guid deletingUserId)
+        {
+            var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId);
+            return deletingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
         }
 
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
@@ -1715,6 +1750,15 @@ namespace Bit.Core.Services
                 OrganizationUserType.Owner);
             return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
         }
+
+        private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+        {
+            var deviceIds = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
+
 
         private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
         {
