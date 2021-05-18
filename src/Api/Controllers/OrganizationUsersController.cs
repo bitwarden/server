@@ -26,7 +26,6 @@ namespace Bit.Api.Controllers
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
-        private readonly IPolicyRepository _policyRepository;
 
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
@@ -35,8 +34,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
-            ICurrentContext currentContext,
-            IPolicyRepository policyRepository)
+            ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -45,7 +43,6 @@ namespace Bit.Api.Controllers
             _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;
-            _policyRepository = policyRepository;
         }
 
         [HttpGet("{id}")]
