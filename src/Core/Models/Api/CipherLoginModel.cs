@@ -24,6 +24,7 @@ namespace Bit.Core.Models.Api
             Password = data.Password;
             PasswordRevisionDate = data.PasswordRevisionDate;
             Totp = data.Totp;
+            AutofillOnPageLoad = data.AutofillOnPageLoad;
         }
 
         [EncryptedString]
@@ -57,6 +58,7 @@ namespace Bit.Core.Models.Api
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string Totp { get; set; }
+        public bool? AutofillOnPageLoad { get; set; }
 
         public class CipherLoginUriModel
         {
