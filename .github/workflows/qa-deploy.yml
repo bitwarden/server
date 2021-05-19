@@ -157,7 +157,7 @@ jobs:
         with:
           repository: joseph-flinn/get-keyvault-secrets
           ref: refs/heads/add-dynamic-secret-support
-          path: ./github/actions/get-keyvault-secrets
+          path: ./.github/actions/get-keyvault-secrets
 
       - name: Download aritifacts
         uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
