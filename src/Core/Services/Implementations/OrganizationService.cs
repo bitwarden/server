@@ -15,6 +15,7 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -1588,16 +1589,29 @@ namespace Bit.Core.Services
 
         public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
         {
+            // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
-            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
-                orgUser.Status != OrganizationUserStatusType.Confirmed ||
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value || 
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
             }
             
-            // TODO Reset Password - Block certain org types from using this feature?
+            // Make sure the organization has the ability to use password reset
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset enrollment.");
+            }
 
+            // Make sure the organization has the policy enabled
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
             await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
@@ -1847,6 +1861,40 @@ namespace Bit.Core.Services
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UnlinkedSso);
                 }
             }
+        }
+
+        public async Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey)
+        {
+            // Only Owners/Admins/Custom (w/ ManageResetPassword) can create org keys
+            var orgUser = await _organizationUserRepository.GetDetailsByUserAsync(userId, orgId);
+            if (orgUser == null || orgUser.Type != OrganizationUserType.Admin && 
+                orgUser.Type != OrganizationUserType.Owner && orgUser.Type != OrganizationUserType.Custom)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (orgUser.Type == OrganizationUserType.Custom)
+            {
+                var permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+                if (permissions == null || !permissions.ManageResetPassword)
+                {
+                    throw new UnauthorizedAccessException();
+                }
+            }
+            
+            // If the keys already exist, error out
+            var org = await _organizationRepository.GetByIdAsync(orgId);
+            if (org.PublicKey != null && org.PrivateKey != null)
+            {
+                throw new BadRequestException("Organization Keys already exist");
+            }
+            
+            // Update org with generated public/private key
+            org.PublicKey = publicKey;
+            org.PrivateKey = privateKey;
+            await UpdateAsync(org);
+            
+            return org;
         }
 
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,

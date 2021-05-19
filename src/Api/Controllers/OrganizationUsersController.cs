@@ -107,14 +107,21 @@ namespace Bit.Api.Controllers
             }
 
             // Retrieve data necessary for response (KDF, KDF Iterations, ResetPasswordKey)
-            // TODO Revisit this and create SPROC to reduce DB calls
+            // TODO Reset Password - Revisit this and create SPROC to reduce DB calls
             var user = await _userService.GetUserByIdAsync(organizationUser.UserId.Value);
             if (user == null)
             {
                 throw new NotFoundException();
             }
+            
+            // Retrieve Encrypted Private Key from organization
+            var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+            if (org == null)
+            {
+                throw new NotFoundException();
+            }
 
-            return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user));
+            return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
         }
 
         [HttpPost("invite")]
@@ -233,29 +240,23 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/reset-password")]
         public async Task PutResetPassword(string orgId, string id, [FromBody]OrganizationUserResetPasswordRequestModel model)
         {
+            
             var orgGuidId = new Guid(orgId);
+            
             // Calling user must have Manage Reset Password permission
             if (!_currentContext.ManageResetPassword(orgGuidId))
             {
                 throw new NotFoundException();
             }
             
-            var orgUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-                orgUser.OrganizationId != orgGuidId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
-                !orgUser.UserId.HasValue)
-            {
-                throw new BadRequestException("Organization User not valid");
-            }
-
-            var user = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
-            if (user == null)
+            // Get the calling user's Type for this organization and pass it along
+            var orgType = _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgGuidId)?.Type;
+            if (orgType == null)
             {
                 throw new NotFoundException();
             }
 
-
-            var result = await _userService.AdminResetPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.AdminResetPasswordAsync(orgType.Value, orgGuidId, new Guid(id), model.NewMasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
                 return;
@@ -268,7 +269,7 @@ namespace Bit.Api.Controllers
 
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
-            }
+        }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]

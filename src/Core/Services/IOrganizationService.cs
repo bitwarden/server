@@ -4,6 +4,7 @@ using Bit.Core.Models.Table;
 using System;
 using System.Collections.Generic;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
@@ -54,5 +55,6 @@ namespace Bit.Core.Services
             bool overwriteExisting);
         Task RotateApiKeyAsync(Organization organization);
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
+        Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey);
     }
 }

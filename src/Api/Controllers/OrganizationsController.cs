@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 
@@ -554,6 +555,31 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        }
+        
+        [HttpGet("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> GetKeys(string id)
+        {
+            var org = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if (org == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationKeysResponseModel(org);
+        }
+        
+        [HttpPost("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody]OrganizationKeysRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var org = await _organizationService.UpdateOrganizationKeysAsync(user.Id, new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
+            return new OrganizationKeysResponseModel(org);
         }
     }
 }
