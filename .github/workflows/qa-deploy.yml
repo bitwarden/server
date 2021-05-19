@@ -130,10 +130,10 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    strategy:
     needs: 
       - reset-db
       - update-db
+    strategy:
       fail-fast: false
       matrix:
         include:
