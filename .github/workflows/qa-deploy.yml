@@ -155,7 +155,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -171,7 +171,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
           reset: true
         env:
@@ -205,7 +205,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -221,7 +221,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
           reset: true
         env:
@@ -255,7 +255,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -271,7 +271,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
           reset: true
         env:
@@ -305,7 +305,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -321,7 +321,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
           reset: true
         env:
@@ -355,7 +355,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -371,7 +371,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
           reset: true
         env:
@@ -405,7 +405,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -421,7 +421,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
           reset: true
         env:
@@ -455,7 +455,7 @@ jobs:
         id: get-pp
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
@@ -471,7 +471,7 @@ jobs:
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
-          resrouceGroupName: "bitwarden-qa"
+          resourceGroupName: "bitwarden-qa"
           appName: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
           reset: true
         env:
