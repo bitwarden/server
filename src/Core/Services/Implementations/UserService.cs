@@ -299,8 +299,8 @@ namespace Bit.Core.Services
             var result = await base.CreateAsync(user, masterPassword);
             if (result == IdentityResult.Success)
             {
-                await _mailService.SendWelcomeEmailAsync(user);
-                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+                // await _mailService.SendWelcomeEmailAsync(user);
+                // await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
             }
 
             return result;
