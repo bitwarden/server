@@ -1402,23 +1402,17 @@ namespace Bit.Core.Services
                 }
             }
 
-            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
-            var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if (usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
-            {
-                throw new BadRequestException("User does not have two-step login enabled.");
-            }
+            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
 
+            var userOrgs = new List<OrganizationUser>();
             var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
             if (usingSingleOrgPolicy)
             {
-                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
-                {
-                    throw new BadRequestException("User is a member of another organization.");
-                }
+                userOrgs.AddRange(await _organizationUserRepository.GetManyByUserAsync(user.Id));
             }
+
+            await CheckPolicies(policies, organizationId, user, userOrgs, userService);
 
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser.Key = key;
@@ -1430,6 +1424,80 @@ namespace Bit.Core.Services
             await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
 
             return orgUser;
+        }
+        
+        public async Task<List<Tuple<Guid, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+            Guid confirmingUserId, IUserService userService)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+            var filteredUsers = orgUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+                .ToList();
+
+            var org = await GetOrgById(organizationId);
+            if (org.PlanType == PlanType.Free)
+            {
+                throw new BadRequestException("Bulk APIs are not available for free organization.");
+            }
+
+            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
+            var filteredUserIds = filteredUsers.Select(u => u.UserId.Value).ToList();
+            var keyedFilteredUsers = filteredUsers.ToDictionary(u => u.UserId.Value, u => u);
+            var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(filteredUserIds);
+            var users = await _userRepository.GetManyAsync(filteredUserIds);
+            var keyedUsers = users.ToDictionary(u => u.Id, u => Tuple.Create(u, new List<OrganizationUser>()));
+            foreach (var organizationUser in usersOrgs)
+            {
+                keyedUsers[organizationUser.UserId.Value].Item2.Add(organizationUser);
+            }
+
+            var succeededUsers = new List<OrganizationUser>();
+            var result = new List<Tuple<Guid, string>>();
+
+            foreach (var (userId, (user, organizationUsers)) in keyedUsers)
+            {
+                var orgUser = keyedFilteredUsers[userId];
+                try
+                {
+                    await CheckPolicies(policies, organizationId, user, organizationUsers, userService);
+                    orgUser.Status = OrganizationUserStatusType.Confirmed;
+                    orgUser.Key = keys[orgUser.Id];
+                    orgUser.Email = null;
+                
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+                    await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+                    await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                    succeededUsers.Add(orgUser);
+                    result.Add(Tuple.Create(orgUser.Id, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(orgUser.Id, e.Message));
+                }
+            }
+
+            await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+
+            return result;
+        }
+
+        private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
+            ICollection<OrganizationUser> userOrgs, IUserService userService)
+        {
+            var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
+            if (usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
+            {
+                throw new BadRequestException("User does not have two-step login enabled.");
+            }
+
+            var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
+            if (usingSingleOrgPolicy)
+            {
+                if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
+                {
+                    throw new BadRequestException("User is a member of another organization.");
+                }
+            }
         }
 
         public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,

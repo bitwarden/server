@@ -137,6 +137,7 @@
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Delete.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
+    <Build Include="dbo\Stored Procedures\User_ReadPublicKeysByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Move.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_UpdatePartial.sql" />
     <Build Include="dbo\Stored Procedures\Device_ClearPushTokenById.sql" />
@@ -159,6 +160,7 @@
     <Build Include="dbo\Stored Procedures\Cipher_ReadCanEditByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Create.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Cipher_DeleteDeleted.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Update.sql" />
     <Build Include="dbo\Stored Procedures\Device_Create.sql" />
@@ -173,6 +175,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadByEmail.sql" />
     <Build Include="dbo\Stored Procedures\Collection_UpdateWithGroups.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\User_ReadByIds.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\User_Update.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_ReadByCollectionId.sql" />

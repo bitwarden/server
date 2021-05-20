@@ -182,6 +182,38 @@ namespace Bit.Api.Controllers
                 _userService);
         }
 
+        [HttpPost("confirm")]
+        public async Task<ListResponseModel<OrganizationUserBulkConfirmResponseModel>> BulkConfirm(string orgId,
+            [FromBody]OrganizationUserBulkConfirmRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
+                _userService);
+
+            return new ListResponseModel<OrganizationUserBulkConfirmResponseModel>(results.Select(r =>
+                new OrganizationUserBulkConfirmResponseModel(r.Item1, r.Item2)));
+        }
+
+        [HttpPost("public-keys")]
+        public async Task<ListResponseModel<OrganizationUserPublicKeyResponseModel>> UserPublicKeys(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var result = await _organizationUserRepository.GetManyPublicKeysByOrganizationUserAsync(orgGuidId, model.Ids);
+            var responses = result.Select(r => new OrganizationUserPublicKeyResponseModel(r.Id, r.PublicKey)).ToList();
+            return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
+        }
+
         [HttpPut("{id}")]
         [HttpPost("{id}")]
         public async Task Put(string orgId, string id, [FromBody]OrganizationUserUpdateRequestModel model)

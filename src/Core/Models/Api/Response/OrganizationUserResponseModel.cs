@@ -106,4 +106,29 @@ namespace Bit.Core.Models.Api
         public int KdfIterations { get; set; }
         public string ResetPasswordKey { get; set; }
     }
+
+    public class OrganizationUserPublicKeyResponseModel : ResponseModel
+    {
+        public OrganizationUserPublicKeyResponseModel(Guid id, string key,
+            string obj = "organizationUserPublicKeyResponseModel") : base(obj)
+        {
+            Id = id;
+            Key = key;
+        }
+
+        public Guid Id { get; set; }
+        public string Key { get; set; }
+    }
+
+    public class OrganizationUserBulkConfirmResponseModel : ResponseModel
+    {
+        public OrganizationUserBulkConfirmResponseModel(Guid id, string error,
+            string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+        {
+            Id = id;
+            Error = error;
+        }
+        public Guid Id { get; set; }
+        public string Error { get; set; }
+    }
 }

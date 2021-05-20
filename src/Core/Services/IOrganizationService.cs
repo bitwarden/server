@@ -40,6 +40,8 @@ namespace Bit.Core.Services
         Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
         Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
             Guid confirmingUserId, IUserService userService);
+        Task<List<Tuple<Guid, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+            Guid confirmingUserId, IUserService userService);
         Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
         Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);

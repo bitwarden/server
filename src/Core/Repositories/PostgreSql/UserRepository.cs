@@ -161,5 +161,10 @@ namespace Bit.Core.Repositories.PostgreSql
         {
             throw new NotImplementedException();
         }
+        
+        public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
