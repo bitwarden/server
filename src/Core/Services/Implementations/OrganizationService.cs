@@ -1402,52 +1402,58 @@ namespace Bit.Core.Services
         public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
             Guid confirmingUserId, IUserService userService)
         {
-            var orgUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
-            var filteredUsers = orgUsers
+            var organizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+            var validOrganizationUsers = organizationUsers
                 .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
                 .ToList();
 
-            var org = await GetOrgById(organizationId);
-            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
-            var filteredUserIds = filteredUsers.Select(u => u.UserId.Value).ToList();
-            var keyedFilteredUsers = filteredUsers.ToDictionary(u => u.UserId.Value, u => u);
-            var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(filteredUserIds);
-            var users = await _userRepository.GetManyAsync(filteredUserIds);
-            var keyedUsers = users.ToDictionary(u => u.Id, u => Tuple.Create(u, new List<OrganizationUser>()));
-            foreach (var organizationUser in usersOrgs)
+            if (!validOrganizationUsers.Any())
             {
-                if (keyedUsers.ContainsKey(organizationUser.UserId.Value))
-                {
-                    keyedUsers[organizationUser.UserId.Value].Item2.Add(organizationUser);
-                }
+                return new List<Tuple<OrganizationUser, string>>();
             }
+
+            var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
+            
+            var organization = await GetOrgById(organizationId);
+            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
+            var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
+            var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
+
+            var keyedFilteredUsers = validOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
+            var keyedOrganizationUsers = usersOrgs.GroupBy(u => u.UserId.Value)
+                .ToDictionary(u => u.Key, u => u.ToList());
 
             var succeededUsers = new List<OrganizationUser>();
             var result = new List<Tuple<OrganizationUser, string>>();
 
-            foreach (var (userId, (user, organizationUsers)) in keyedUsers)
+            foreach (var user in users)
             {
-                var orgUser = keyedFilteredUsers[userId];
+                if (!keyedFilteredUsers.ContainsKey(user.Id))
+                {
+                    continue;
+                }
+                var orgUser = keyedFilteredUsers[user.Id];
+                var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
                 try
                 {
-                    if (org.PlanType == PlanType.Free && orgUser.Type == OrganizationUserType.Admin
+                    if (organization.PlanType == PlanType.Free && orgUser.Type == OrganizationUserType.Admin
                         || orgUser.Type == OrganizationUserType.Owner)
                     {
                         // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
-                        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value);
+                        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
                         if (adminCount > 0)
                         {
                             throw new BadRequestException("User can only be an admin of one free organization.");
                         }
                     }
 
-                    await CheckPolicies(policies, organizationId, user, organizationUsers, userService);
+                    await CheckPolicies(policies, organizationId, user, orgUsers, userService);
                     orgUser.Status = OrganizationUserStatusType.Confirmed;
                     orgUser.Key = keys[orgUser.Id];
                     orgUser.Email = null;
                 
                     await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                    await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+                    await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
                     await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                     succeededUsers.Add(orgUser);
                     result.Add(Tuple.Create(orgUser, ""));

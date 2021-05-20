@@ -129,7 +129,7 @@ namespace Bit.Core.Repositories.EntityFramework
             throw new NotImplementedException();
         }
 
-        public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
+        public Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
         {
             throw new NotImplementedException();
         }
