@@ -66,7 +66,7 @@ namespace Bit.Core.Repositories.EntityFramework
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
             eCollectionGroup.HasNoKey();
 
-            eGrant.HasNoKey();
+            eGrant.HasKey(x => x.Key);
 
             eGroupUser.HasNoKey();
 

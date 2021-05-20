@@ -168,7 +168,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = from ou in dbContext.OrganizationUsers
                             where userIds.Contains(ou.Id)
                             select ou;
-                return (ICollection<OrganizationUser>)await query.ToListAsync();
+                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
@@ -181,7 +181,7 @@ namespace Bit.Core.Repositories.EntityFramework
                             where ou.OrganizationId == organizationId &&
                                 (type == null || ou.Type == type)
                             select ou;
-                return (ICollection<OrganizationUser>)await query.ToListAsync();
+                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
@@ -193,7 +193,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = from ou in dbContext.OrganizationUsers
                             where ou.UserId == userId
                             select ou;
-                return (ICollection<OrganizationUser>)await query.ToListAsync();
+                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
@@ -206,7 +206,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = from ou in view.Run(dbContext)
                             where ou.OrganizationId == organizationId
                             select ou;
-                return (ICollection<OrganizationUserUserDetails>)await query.ToListAsync();
+                return await query.ToListAsync();
             }
         }
 
@@ -221,7 +221,7 @@ namespace Bit.Core.Repositories.EntityFramework
                             where ou.UserId == userId &&
                             (status == null || ou.Status == status)
                             select ou;
-                return (ICollection<OrganizationUserOrganizationDetails>)await query.ToListAsync();
+                return await query.ToListAsync();
             }
         }
 

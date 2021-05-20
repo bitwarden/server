@@ -38,7 +38,7 @@ namespace Bit.Core.Repositories.EntityFramework
                             where f.UserId == userId
                             select f;
                 var folders = await query.ToListAsync();
-                return (ICollection<Folder>)folders;
+                return Mapper.Map<List<TableModel.Folder>>(folders);
             }
         }
     }

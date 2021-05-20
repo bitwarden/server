@@ -76,10 +76,24 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task SaveAsync(Grant obj)
+        public async Task SaveAsync(Grant obj)
         {
-            // TODO
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var existingGrant = await (from g in dbContext.Grants
+                                    where g.Key == obj.Key
+                                    select g).FirstOrDefaultAsync();
+                if (existingGrant != null)
+                {
+                    dbContext.Entry(existingGrant).CurrentValues.SetValues(obj);
+                }
+                else
+                {
+                    var entity = Mapper.Map<EfModel.Grant>(obj);
+                    await dbContext.AddAsync(entity);
+                }
+            }
         }
     }
 }
