@@ -7,7 +7,7 @@ namespace Bit.Core.Test.AutoFixture
 {
     internal class CollectionDefaultIdAutoDataAttribute : CustomAutoDataAttribute
     {
-        public CollectionDefaultIdAutoDataAttribute() : base(new SutProviderCustomization(), new Organization { CollectionId = default(Guid)})
+        public CollectionDefaultIdAutoDataAttribute() : base(new SutProviderCustomization(), new Organization { CollectionId = default(Guid) })
         { }
     }
 

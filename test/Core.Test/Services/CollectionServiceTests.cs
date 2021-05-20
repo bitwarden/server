@@ -61,7 +61,6 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<ICollectionRepository>().Received().ReplaceAsync(collection);
             await sutProvider.GetDependency<IEventService>().Received()
                 .LogCollectionEventAsync(collection, EventType.Collection_Updated);
-            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
             Assert.Equal(collection.CreationDate, creationDate);
             Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
