@@ -197,7 +197,7 @@ namespace Bit.Api.Controllers
                 _userService);
 
             return new ListResponseModel<OrganizationUserBulkConfirmResponseModel>(results.Select(r =>
-                new OrganizationUserBulkConfirmResponseModel(r.Item1, r.Item2)));
+                new OrganizationUserBulkConfirmResponseModel(r.Item1.Id, r.Item2)));
         }
 
         [HttpPost("public-keys")]

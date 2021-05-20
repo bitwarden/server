@@ -1383,50 +1383,23 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
             Guid confirmingUserId, IUserService userService)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Accepted ||
-                orgUser.OrganizationId != organizationId)
+            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() {{organizationUserId, key}},
+                confirmingUserId, userService);
+
+            if (!result.Any())
             {
                 throw new BadRequestException("User not valid.");
             }
 
-            var org = await GetOrgById(organizationId);
-            if (org.PlanType == PlanType.Free &&
-                (orgUser.Type == OrganizationUserType.Admin || orgUser.Type == OrganizationUserType.Owner))
+            var (orgUser, error) = result[0];
+            if (error != "")
             {
-                var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
-                    orgUser.UserId.Value);
-                if (adminCount > 0)
-                {
-                    throw new BadRequestException("User can only be an admin of one free organization.");
-                }
+                throw new BadRequestException(error);
             }
-
-            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
-            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-
-            var userOrgs = new List<OrganizationUser>();
-            var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
-            if (usingSingleOrgPolicy)
-            {
-                userOrgs.AddRange(await _organizationUserRepository.GetManyByUserAsync(user.Id));
-            }
-
-            await CheckPolicies(policies, organizationId, user, userOrgs, userService);
-
-            orgUser.Status = OrganizationUserStatusType.Confirmed;
-            orgUser.Key = key;
-            orgUser.Email = null;
-            await _organizationUserRepository.ReplaceAsync(orgUser);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-            await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
-
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-
             return orgUser;
         }
         
-        public async Task<List<Tuple<Guid, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+        public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
             Guid confirmingUserId, IUserService userService)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
@@ -1435,11 +1408,6 @@ namespace Bit.Core.Services
                 .ToList();
 
             var org = await GetOrgById(organizationId);
-            if (org.PlanType == PlanType.Free)
-            {
-                throw new BadRequestException("Bulk APIs are not available for free organization.");
-            }
-
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
             var filteredUserIds = filteredUsers.Select(u => u.UserId.Value).ToList();
             var keyedFilteredUsers = filteredUsers.ToDictionary(u => u.UserId.Value, u => u);
@@ -1448,17 +1416,31 @@ namespace Bit.Core.Services
             var keyedUsers = users.ToDictionary(u => u.Id, u => Tuple.Create(u, new List<OrganizationUser>()));
             foreach (var organizationUser in usersOrgs)
             {
-                keyedUsers[organizationUser.UserId.Value].Item2.Add(organizationUser);
+                if (keyedUsers.ContainsKey(organizationUser.UserId.Value))
+                {
+                    keyedUsers[organizationUser.UserId.Value].Item2.Add(organizationUser);
+                }
             }
 
             var succeededUsers = new List<OrganizationUser>();
-            var result = new List<Tuple<Guid, string>>();
+            var result = new List<Tuple<OrganizationUser, string>>();
 
             foreach (var (userId, (user, organizationUsers)) in keyedUsers)
             {
                 var orgUser = keyedFilteredUsers[userId];
                 try
                 {
+                    if (org.PlanType == PlanType.Free && orgUser.Type == OrganizationUserType.Admin
+                        || orgUser.Type == OrganizationUserType.Owner)
+                    {
+                        // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+                        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value);
+                        if (adminCount > 0)
+                        {
+                            throw new BadRequestException("User can only be an admin of one free organization.");
+                        }
+                    }
+
                     await CheckPolicies(policies, organizationId, user, organizationUsers, userService);
                     orgUser.Status = OrganizationUserStatusType.Confirmed;
                     orgUser.Key = keys[orgUser.Id];
@@ -1468,11 +1450,11 @@ namespace Bit.Core.Services
                     await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
                     await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                     succeededUsers.Add(orgUser);
-                    result.Add(Tuple.Create(orgUser.Id, ""));
+                    result.Add(Tuple.Create(orgUser, ""));
                 }
                 catch (BadRequestException e)
                 {
-                    result.Add(Tuple.Create(orgUser.Id, e.Message));
+                    result.Add(Tuple.Create(orgUser, e.Message));
                 }
             }
 
