@@ -174,16 +174,25 @@ jobs:
         uses: ./.github/actions/get-keyvault-secrets
         with:
           keyvault: "bitwarden-qa-kv"
-          secrets: "appservices-${{ matrix.name_lower }}-webapp-name:webapp-name"
+          secrets: "subscription-id,
+                    appservices-${{ matrix.name_lower }}-webapp-name:webapp-name"
 
       - name: Get Publish Profile
-        id: get-pp
-        uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
-        with:
-          resourceGroupName: "bitwarden-qa"
-          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+        run: |
+          echo 'WEBAPP_PUBLISHING_PROFILE=$(az webapp deployment list-publishing-profiles --name ${{ steps.retrieve-secrets.output.webapp-name }} --slot staging --resource-group "bitwarden-qa" --subscription ${{ steps.retrieve-secrets.output.webapp-name }})' >> $GITHUB_ENV
+
+          echo "::add-mask::$WEBAPP_PUBLISHING_PROFILE"
+          echo "::set-output name=publish-profile::$WEBAPP_PUBLISHING_PROFILE"
+
+
+      #- name: Get Publish Profile
+      #  id: get-pp
+      #  uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
+      #  with:
+      #    resourceGroupName: "bitwarden-qa"
+      #    appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
+      #  env:
+      #    AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
@@ -193,11 +202,11 @@ jobs:
           publish-profile: ${{ steps.get-pp.outputs.profile}} 
           package: ./${{ matrix.name }}.zip
 
-      - name: Reset Publish Profile
-        uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
-        with:
-          resourceGroupName: "bitwarden-qa"
-          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
-          reset: true
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+      #- name: Reset Publish Profile
+      #  uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
+      #  with:
+      #    resourceGroupName: "bitwarden-qa"
+      #    appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
+      #    reset: true
+      #  env:
+      #    AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
