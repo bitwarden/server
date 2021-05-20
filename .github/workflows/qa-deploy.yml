@@ -177,12 +177,12 @@ jobs:
           secrets: "subscription-id,
                     appservices-${{ matrix.name_lower }}-webapp-name:webapp-name"
 
-      - name: Get Publish Profile
-        run: |
-          echo 'WEBAPP_PUBLISHING_PROFILE=$(az webapp deployment list-publishing-profiles --name ${{ steps.retrieve-secrets.output.webapp-name }} --slot staging --resource-group "bitwarden-qa" --subscription ${{ steps.retrieve-secrets.output.webapp-name }})' >> $GITHUB_ENV
+      #- name: Get Publish Profile
+      #  run: |
+      #    echo 'WEBAPP_PUBLISHING_PROFILE=$(az webapp deployment list-publishing-profiles --name ${{ steps.retrieve-secrets.output.webapp-name }} --slot staging --resource-group "bitwarden-qa" --subscription ${{ steps.retrieve-secrets.output.webapp-name }})' >> $GITHUB_ENV
 
-          echo "::add-mask::$WEBAPP_PUBLISHING_PROFILE"
-          echo "::set-output name=publish-profile::$WEBAPP_PUBLISHING_PROFILE"
+      #    echo "::add-mask::$WEBAPP_PUBLISHING_PROFILE"
+      #    echo "::set-output name=publish-profile::$WEBAPP_PUBLISHING_PROFILE"
 
 
       #- name: Get Publish Profile
@@ -199,7 +199,7 @@ jobs:
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
           slot-name: "staging"
-          publish-profile: ${{ steps.get-pp.outputs.profile}} 
+          #publish-profile: ${{ steps.get-pp.outputs.profile}} 
           package: ./${{ matrix.name }}.zip
 
       #- name: Reset Publish Profile
