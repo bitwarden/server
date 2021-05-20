@@ -43,7 +43,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveAsync_NewItem_UpdatesCreationAndRevisionDate(SutProvider<SsoConfigService> sutProvider)
         {
-
             var utcNow = DateTime.UtcNow;
 
             var ssoConfig = new SsoConfig
