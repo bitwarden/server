@@ -80,13 +80,13 @@ namespace Bit.Core.Repositories.EntityFramework
                 eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
                 //
 
-                var jsonColumnType = "json";
-                eCipher.Property(e => e.Data).HasColumnType(jsonColumnType);
-                eCipher.Property(e => e.Favorites).HasColumnType(jsonColumnType);
-                eCipher.Property(e => e.Attachments).HasColumnType(jsonColumnType);
-                eCipher.Property(e => e.Folders).HasColumnType(jsonColumnType);
-                eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
-                eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType);
+                /* var jsonColumnType = "text"; */
+                /* eCipher.Property(e => e.Data).HasColumnType(jsonColumnType); */
+                /* eCipher.Property(e => e.Favorites).HasColumnType(jsonColumnType); */
+                /* eCipher.Property(e => e.Attachments).HasColumnType(jsonColumnType); */
+                /* eCipher.Property(e => e.Folders).HasColumnType(jsonColumnType); */
+                /* eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType); */
+                /* eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType); */
             }
 
             eCipher.ToTable(nameof(Cipher));

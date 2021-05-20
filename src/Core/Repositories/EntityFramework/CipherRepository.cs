@@ -333,31 +333,34 @@ namespace Bit.Core.Repositories.EntityFramework
             /* } */
         }
 
-        public Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
+        public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
         {
-            throw new NotImplementedException();
-            /* string sprocName = null; */
-            /* if (withOrganizations) */
-            /* { */
-            /*     sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]"; */
-            /* } */
-            /* else */
-            /* { */
-            /*     sprocName = $"[{Schema}].[CipherDetails_ReadWithoutOrganizationsByUserId]"; */
-            /* } */
-
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.QueryAsync<CipherDetails>( */
-            /*         sprocName, */
-            /*         new { UserId = userId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-
-            /*     return results */
-            /*         .GroupBy(c => c.Id) */
-            /*         .Select(g => g.OrderByDescending(og => og.Edit).First()) */
-            /*         .ToList(); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                IQueryable<CipherDetails> cipherDetailsView = new CipherDetailsQuery(userId).Run(dbContext);
+                if (!withOrganizations)
+                {
+                    cipherDetailsView = from c in cipherDetailsView
+                                        select new CipherDetails() {
+                                            Id = c.Id,
+                                            UserId = c.UserId,
+                                            OrganizationId = c.OrganizationId,
+                                            Type= c.Type,
+                                            Data = c.Data,
+                                            Attachments = c.Attachments,
+                                            CreationDate = DateTime.UtcNow,
+                                            RevisionDate = DateTime.UtcNow,
+                                            DeletedDate = c.DeletedDate,
+                                            Favorite = c.Favorite,
+                                            FolderId = c.FolderId,
+                                            Edit = true,
+                                            ViewPassword = true,
+                                            OrganizationUseTotp = false
+                                        };
+                }
+                return await cipherDetailsView.ToListAsync();
+            }
         }
 
         public Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
@@ -386,19 +389,37 @@ namespace Bit.Core.Repositories.EntityFramework
             /* } */
         }
 
-        public Task ReplaceAsync(CipherDetails cipher)
+        public async Task ReplaceAsync(CipherDetails cipher)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[CipherDetails_Update]", */
-            /*         obj, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            cipher.UserId = cipher.OrganizationId.HasValue ?
+                null :
+                cipher.UserId;
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await dbContext.Ciphers.FindAsync(cipher.Id);
+                if (entity != null)
+                {
+                    // TODO: Folders, Favorites
+                    var mappedEntity = Mapper.Map<EfModel.Cipher>((TableModel.Cipher)cipher);
+                    dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                    if (entity.OrganizationId.HasValue)
+                    {
+                        // TODO: User_BumpAccountRevisionDateByCipherId
+                    }
+                    else if (entity.UserId.HasValue)
+                    {
+                        // User_BumpAccountRevisionDate
+                        var q = new UserBumpAccountRevisionDateByCipherId(cipher).Run(dbContext);
+                        await q.ForEachAsync(u => u.RevisionDate = DateTime.UtcNow);
+                    }
+                    //
+                    await dbContext.SaveChangesAsync();
+                }
+            }
         }
 
-        public Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
+        public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
             throw new NotImplementedException();
             /* var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>( */
