@@ -174,8 +174,7 @@ jobs:
         uses: ./.github/actions/get-keyvault-secrets
         with:
           keyvault: "bitwarden-qa-kv"
-          secrets: "subscription-id,
-                    appservices-${{ matrix.name_lower }}-webapp-name:webapp-name"
+          secrets: "appservices-${{ matrix.name_lower }}-webapp-name:webapp-name"
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
