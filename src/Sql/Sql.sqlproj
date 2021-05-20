@@ -106,6 +106,7 @@
     <Build Include="dbo\Functions\CipherDetails.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Update.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_CreateMany.sql" />
@@ -320,5 +321,32 @@
     <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId.sql" />
+    <Build Include="dbo\Tables\Provider.sql" />
+    <Build Include="dbo\Views\ProviderView.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_Update.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_ReadById.sql" />
+    <Build Include="dbo\Tables\ProviderUser.sql" />
+    <Build Include="dbo\Views\ProviderUserView.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_Update.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadByUserId.sql" />
+    <Build Include="dbo\Tables\ProviderOrganization.sql" />
+    <Build Include="dbo\Views\ProviderOrganizationView.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_Update.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
+    <Build Include="dbo\Tables\ProviderOrganizationProviderUser.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Update.sql" />
   </ItemGroup>
 </Project>
