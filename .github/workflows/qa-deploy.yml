@@ -181,7 +181,7 @@ jobs:
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
           resourceGroupName: "bitwarden-qa"
-          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
+          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
@@ -197,7 +197,7 @@ jobs:
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
         with:
           resourceGroupName: "bitwarden-qa"
-          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
+          appName: ${{ steps.retrieve-secrets.outputs.webapp-name }}/staging
           reset: true
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
