@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
-                return (ICollection<Send>)results;
+                return Mapper.Map<List<TableModel.Send>>(results);
             }
         }
 
@@ -43,7 +43,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Sends.Where(s => s.UserId == userId).ToListAsync();
-                return (ICollection<Send>)results;
+                return Mapper.Map<List<TableModel.Send>>(results);
             }
         }
     }
