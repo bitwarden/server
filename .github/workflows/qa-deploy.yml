@@ -162,7 +162,7 @@ jobs:
       - name: Download aritifacts
         uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
-          name: Identity.zip
+          name: ${{ matrix.name }}.zip
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
@@ -185,13 +185,13 @@ jobs:
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Deploy Identity
+      - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
           slot-name: "staging"
           publish-profile: ${{ steps.get-pp.outputs.profile}} 
-          package: ./Identity.zip
+          package: ./${{ matrix.name }}.zip
 
       - name: Reset Publish Profile
         uses: aliencube/publish-profile-actions@0689f99a0d742938bbe312db9e366e8716cb0855
