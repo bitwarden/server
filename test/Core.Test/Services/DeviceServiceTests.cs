@@ -1,38 +1,69 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture;
 using NSubstitute;
 using Xunit;
+using Device = Bit.Core.Models.Table.Device;
 
 namespace Bit.Core.Test.Services
 {
     public class DeviceServiceTests
     {
-        [Fact]
-        public async Task DeviceSaveShouldUpdateRevisionDateAndPushRegistration()
+        [Theory, DeviceAutoData]
+        public async Task SaveAsync_DefaultId_CreateInRepository(Device device, SutProvider<DeviceService> sutProvider)
         {
-            var deviceRepo = Substitute.For<IDeviceRepository>();
-            var pushRepo = Substitute.For<IPushRegistrationService>();
-            var deviceService = new DeviceService(deviceRepo, pushRepo);
+            device.Id = default(Guid);
+            var utcNow = DateTime.UtcNow;
 
-            var id = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-            var device = new Device
-            {
-                Id = id,
-                Name = "test device",
-                Type = Enums.DeviceType.Android,
-                UserId = userId,
-                PushToken = "testtoken",
-                Identifier = "testid"
-            };
-            await deviceService.SaveAsync(device);
+            await sutProvider.Sut.SaveAsync(device);
 
-            Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-            await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-                userId.ToString(), "testid", Enums.DeviceType.Android);
+            await sutProvider.GetDependency<IDeviceRepository>().Received().CreateAsync(device);
+            await sutProvider
+                .GetDependency<IPushRegistrationService>().Received()
+                .CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+                    device.UserId.ToString(), device.Identifier, device.Type);
+            Assert.True(device.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(device.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        }
+
+        [Theory, DeviceAutoData]
+        public async Task SaveAsync_NonDefaultId_ReplaceInRepository(Device device, SutProvider<DeviceService> sutProvider)
+        {
+            var creationDate = device.CreationDate;
+            var utcNow = DateTime.UtcNow;
+
+            await sutProvider.Sut.SaveAsync(device);
+
+            await sutProvider.GetDependency<IDeviceRepository>().Received().ReplaceAsync(device);
+            await sutProvider
+                .GetDependency<IPushRegistrationService>().Received()
+                .CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+                    device.UserId.ToString(), device.Identifier, device.Type);
+            Assert.Equal(device.CreationDate, creationDate);
+            Assert.True(device.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        }
+
+        [Theory, DeviceAutoData]
+        public async Task ClearTokenAsync_ClearDeviceAndDeleteRegistration(Device device, SutProvider<DeviceService> sutProvider)
+        {
+            await sutProvider.Sut.ClearTokenAsync(device);
+
+            await sutProvider.GetDependency<IDeviceRepository>().Received().ClearPushTokenAsync(device.Id);
+            await sutProvider.GetDependency<IPushRegistrationService>().Received()
+                .DeleteRegistrationAsync(device.Id.ToString());
+        }
+
+        [Theory, DeviceAutoData]
+        public async Task DeleteAsync_DeleteDeviceAndRegistrationInRepository(Device device, SutProvider<DeviceService> sutProvider)
+        {
+            await sutProvider.Sut.DeleteAsync(device);
+
+            await sutProvider.GetDependency<IDeviceRepository>().Received().DeleteAsync(device);
+            await sutProvider.GetDependency<IPushRegistrationService>().Received()
+                .DeleteRegistrationAsync(device.Id.ToString());
         }
     }
 }
