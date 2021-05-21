@@ -126,17 +126,137 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, PolicyAutoData]
-        public async Task SaveAsync_ExistingPolicy_Updated(Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor(Policy policy, SutProvider<PolicyService> sutProvider)
         {
-            policy.Type = Enums.PolicyType.MasterPassword;
+            // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
+            policy.Type = Enums.PolicyType.TwoFactorAuthentication;
 
-            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            var org = new Organization
             {
                 Id = policy.OrganizationId,
                 UsePolicies = true,
-            });
+                Name = "TEST",
+            };
 
+            SetupOrg(sutProvider, policy.OrganizationId, org);
 
+            sutProvider.GetDependency<IPolicyRepository>()
+                .GetByIdAsync(policy.Id)
+                .Returns(new Policy
+                { 
+                    Id = policy.Id,
+                    Type = Enums.PolicyType.TwoFactorAuthentication,
+                    Enabled = false,
+                });
+
+            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            {
+                Id = Guid.NewGuid(),
+                Status = Enums.OrganizationUserStatusType.Accepted,
+                Type = Enums.OrganizationUserType.User,
+                // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+                Email = "test@bitwarden.com",
+                Name = "TEST",
+                UserId = Guid.NewGuid(),
+            };
+
+            sutProvider.GetDependency<IOrganizationUserRepository>()
+                .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
+                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                {
+                    orgUserDetail,
+                });
+
+            var userService = Substitute.For<IUserService>();
+            var organizationService = Substitute.For<IOrganizationService>();
+
+            userService.TwoFactorIsEnabledAsync(orgUserDetail)
+                .Returns(false);
+
+            var utcNow = DateTime.UtcNow;
+
+            var savingUserId = Guid.NewGuid();
+
+            await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+
+            await organizationService.Received()
+                .DeleteUserAsync(policy.OrganizationId, orgUserDetail.Id, savingUserId);
+
+            await sutProvider.GetDependency<IMailService>().Received()
+                .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.Name, orgUserDetail.Email);
+
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+
+            await sutProvider.GetDependency<IPolicyRepository>().Received()
+                .UpsertAsync(policy);
+
+            Assert.True(policy.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        }
+
+        [Theory, PolicyAutoData]
+        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg(Policy policy, SutProvider<PolicyService> sutProvider)
+        {
+            // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
+            policy.Type = Enums.PolicyType.TwoFactorAuthentication;
+
+            var org = new Organization
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true,
+                Name = "TEST",
+            };
+
+            SetupOrg(sutProvider, policy.OrganizationId, org);
+
+            sutProvider.GetDependency<IPolicyRepository>()
+                .GetByIdAsync(policy.Id)
+                .Returns(new Policy
+                {
+                    Id = policy.Id,
+                    Type = Enums.PolicyType.SingleOrg,
+                    Enabled = false,
+                });
+
+            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            {
+                Id = Guid.NewGuid(),
+                Status = Enums.OrganizationUserStatusType.Accepted,
+                Type = Enums.OrganizationUserType.User,
+                // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+                Email = "test@bitwarden.com",
+                Name = "TEST",
+                UserId = Guid.NewGuid(),
+            };
+
+            sutProvider.GetDependency<IOrganizationUserRepository>()
+                .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
+                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                {
+                    orgUserDetail,
+                });
+
+            var userService = Substitute.For<IUserService>();
+            var organizationService = Substitute.For<IOrganizationService>();
+
+            userService.TwoFactorIsEnabledAsync(orgUserDetail)
+                .Returns(false);
+
+            var utcNow = DateTime.UtcNow;
+
+            var savingUserId = Guid.NewGuid();
+
+            await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+
+            await sutProvider.GetDependency<IPolicyRepository>().Received()
+                .UpsertAsync(policy);
+
+            Assert.True(policy.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
         private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
