@@ -1204,23 +1204,26 @@ namespace Bit.Core.Services
             return orgUsers;
         }
 
-        public async Task ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
+        public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<Guid> organizationUsersId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-            var filteredUsers = orgUsers
-                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId);
-
-            if (!filteredUsers.Any())
-            {
-                throw new BadRequestException("Users invalid.");
-            }
-            
             var org = await GetOrgById(organizationId);
-            foreach (var orgUser in filteredUsers)
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+            foreach (var orgUser in orgUsers)
             {
+                if (orgUser.Status != OrganizationUserStatusType.Invited || orgUser.OrganizationId != organizationId)
+                {
+                    result.Add(Tuple.Create(orgUser, "User invalid."));
+                    continue;
+                }
+
                 await SendInviteAsync(orgUser, org);
+                result.Add(Tuple.Create(orgUser, ""));
             }
+
+            return result;
         }
 
         public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
@@ -1577,7 +1580,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId,
+        public async Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUsersId,
             Guid? deletingUserId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
@@ -1588,34 +1592,60 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Users invalid.");
             }
-            
-            if (deletingUserId.HasValue && filteredUsers.Exists(u => u.UserId == deletingUserId.Value))
-            {
-                throw new BadRequestException("You cannot remove yourself.");
-            }
 
             var owners = filteredUsers.Where(u => u.Type == OrganizationUserType.Owner);
-            if (owners.Any() && deletingUserId.HasValue && !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
+            var deletingUserIsOwner = false;
+            if (deletingUserId.HasValue)
             {
-                throw new BadRequestException("Only owners can delete other owners.");
+                deletingUserIsOwner = await UserIsOwnerAsync(organizationId, deletingUserId.Value);
             }
 
-            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
-            {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
-            }
-
+            var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
+            var remainingOwnerIds = confirmedOwners.Select(u => u.Id).ToList();
+            
+            var result = new List<Tuple<OrganizationUser, string>>();
+            var deletedUserIds = new List<Guid>();
             foreach (var orgUser in filteredUsers)
             {
-                // TODO: We should replace this call with `DeleteManyAsync`.
-                await _organizationUserRepository.DeleteAsync(orgUser);
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
-                if (orgUser.UserId.HasValue)
+                try
                 {
-                    await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+                    if (deletingUserId.HasValue && orgUser.UserId == deletingUserId)
+                    {
+                        throw new BadRequestException("You cannot remove yourself.");
+                    }
+
+                    if (owners.Any() && deletingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can delete other owners.");
+                    }
+
+                    if (orgUser.Type == OrganizationUserType.Owner)
+                    {
+                        remainingOwnerIds.Remove(orgUser.Id);
+                        if (!remainingOwnerIds.Any())
+                        {
+                            throw new BadRequestException("Organization must have at least one confirmed owner.");
+                        }
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+                    }
+                    result.Add(Tuple.Create(orgUser, ""));
+                    deletedUserIds.Add(orgUser.Id);
                 }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(orgUser, e.Message));
+                }
+
+                await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
             }
+
+            return result;
         }
 
         private async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId)

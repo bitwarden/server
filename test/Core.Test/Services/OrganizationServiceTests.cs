@@ -449,9 +449,8 @@ namespace Bit.Core.Test.Services
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
-            Assert.Contains("You cannot remove yourself.", exception.Message);
+            var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+            Assert.Contains("You cannot remove yourself.", result[0].Item2);
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -467,9 +466,8 @@ namespace Bit.Core.Test.Services
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
-            Assert.Contains("Only owners can delete other owners.", exception.Message);
+            var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+            Assert.Contains("Only owners can delete other owners.", result[0].Item2);
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -484,9 +482,8 @@ namespace Bit.Core.Test.Services
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
             organizationUserRepository.GetManyByOrganizationAsync(orgUser.OrganizationId, OrganizationUserType.Owner).Returns(organizationUsers);
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
-            Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+            var result = await sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null);
+            Assert.Contains("Organization must have at least one confirmed owner.", result[0].Item2);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]

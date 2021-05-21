@@ -120,9 +120,9 @@ namespace Bit.Core.Models.Api
         public string Key { get; set; }
     }
 
-    public class OrganizationUserBulkConfirmResponseModel : ResponseModel
+    public class OrganizationUserBulkResponseModel : ResponseModel
     {
-        public OrganizationUserBulkConfirmResponseModel(Guid id, string error,
+        public OrganizationUserBulkResponseModel(Guid id, string error,
             string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
         {
             Id = id;
