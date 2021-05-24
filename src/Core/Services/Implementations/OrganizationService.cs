@@ -1593,6 +1593,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Users invalid.");
             }
 
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
             var owners = filteredUsers.Where(u => u.Type == OrganizationUserType.Owner);
             var deletingUserIsOwner = false;
             if (deletingUserId.HasValue)
@@ -1600,9 +1605,6 @@ namespace Bit.Core.Services
                 deletingUserIsOwner = await UserIsOwnerAsync(organizationId, deletingUserId.Value);
             }
 
-            var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
-            var remainingOwnerIds = confirmedOwners.Select(u => u.Id).ToList();
-            
             var result = new List<Tuple<OrganizationUser, string>>();
             var deletedUserIds = new List<Guid>();
             foreach (var orgUser in filteredUsers)
@@ -1617,15 +1619,6 @@ namespace Bit.Core.Services
                     if (owners.Any() && deletingUserId.HasValue && !deletingUserIsOwner)
                     {
                         throw new BadRequestException("Only owners can delete other owners.");
-                    }
-
-                    if (orgUser.Type == OrganizationUserType.Owner)
-                    {
-                        remainingOwnerIds.Remove(orgUser.Id);
-                        if (!remainingOwnerIds.Any())
-                        {
-                            throw new BadRequestException("Organization must have at least one confirmed owner.");
-                        }
                     }
 
                     await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);

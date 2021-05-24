@@ -442,12 +442,16 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsers_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
+        public async Task DeleteUsers_RemoveYourself(OrganizationUser deletingUser, OrganizationUser orgUser,
+            SutProvider<OrganizationService> sutProvider)
         {
+            orgUser.Type = OrganizationUserType.Owner;
+            orgUser.Status = OrganizationUserStatusType.Confirmed;
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationUsers = new[] { deletingUser };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
+            organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] {orgUser});
 
             var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
             Assert.Contains("You cannot remove yourself.", result[0].Item2);
@@ -462,9 +466,11 @@ namespace Bit.Core.Test.Services
             deletingUser.Type = OrganizationUserType.Admin;
             orgUser1.Type = OrganizationUserType.Owner;
             orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
-            var organizationUsers = new[] { orgUser1, orgUser2 };
+            orgUser2.Status = OrganizationUserStatusType.Confirmed;
+            var organizationUsers = new[] { orgUser1 };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
+            organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] {orgUser2});
 
             var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
             Assert.Contains("Only owners can delete other owners.", result[0].Item2);
@@ -482,8 +488,9 @@ namespace Bit.Core.Test.Services
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
             organizationUserRepository.GetManyByOrganizationAsync(orgUser.OrganizationId, OrganizationUserType.Owner).Returns(organizationUsers);
 
-            var result = await sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null);
-            Assert.Contains("Organization must have at least one confirmed owner.", result[0].Item2);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
+            Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
