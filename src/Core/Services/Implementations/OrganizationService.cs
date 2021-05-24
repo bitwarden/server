@@ -1476,7 +1476,7 @@ namespace Bit.Core.Services
             ICollection<OrganizationUser> userOrgs, IUserService userService)
         {
             var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if (usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
+            if (usingTwoFactorPolicy && !await userService.TwoFactorIsEnabledAsync(user))
             {
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
