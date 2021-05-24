@@ -26,7 +26,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Transactions
                     .FirstOrDefaultAsync(t => (t.GatewayId == gatewayId && t.Gateway == gatewayType));
-                return results;
+                return Mapper.Map<TableModel.Transaction>(results);
             }
         }
 
@@ -38,7 +38,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var results = await dbContext.Transactions
                     .Where(t => (t.OrganizationId == organizationId && !t.UserId.HasValue))
                     .ToListAsync();
-                return (ICollection<Transaction>)results;
+                return Mapper.Map<List<TableModel.Transaction>>(results);
             }
         }
 
@@ -50,7 +50,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var results = await dbContext.Transactions
                     .Where(t => (t.UserId == userId))
                     .ToListAsync();
-                return (ICollection<Transaction>)results;
+                return Mapper.Map<List<TableModel.Transaction>>(results);
             }
         }
     }

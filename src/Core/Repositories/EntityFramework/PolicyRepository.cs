@@ -27,7 +27,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Policies
                     .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Type == type);
-                return results;
+                return Mapper.Map<TableModel.Policy>(results);
             }
         }
 
@@ -39,7 +39,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var results = await dbContext.Policies
                     .Where(p => p.OrganizationId == organizationId)
                     .ToListAsync();
-                return (ICollection<Policy>)results;
+                return Mapper.Map<List<TableModel.Policy>>(results);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 var query = new PolicyReadByUserId(userId);
                 var results = await query.Run(dbContext).ToListAsync();
-                return (ICollection<Policy>)results;
+                return Mapper.Map<List<TableModel.Policy>>(results);
             }
         }
     }

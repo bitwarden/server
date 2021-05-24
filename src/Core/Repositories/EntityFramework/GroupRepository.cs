@@ -69,9 +69,9 @@ namespace Bit.Core.Repositories.EntityFramework
                     Id = c.CollectionId,
                     ReadOnly = c.ReadOnly,
                     HidePasswords = c.HidePasswords
-                }); 
+                }).ToList(); 
                 return new Tuple<Group, ICollection<SelectionReadOnly>>(
-                    grp, (ICollection<SelectionReadOnly>)collections);
+                    grp, collections);
             }
         }
 
@@ -80,11 +80,11 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = await (
+                var data = await (
                     from g in dbContext.Groups
                     where g.OrganizationId == organizationId
                     select g).ToListAsync();
-                return (ICollection<Group>)query;
+                return Mapper.Map<List<TableModel.Group>>(data);
             }
         }
 
@@ -100,7 +100,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     where g.OrganizationId == organizationId
                     select new { gu, g };
                 var groupUsers = await query.Select(x => x.gu).ToListAsync();
-                return (ICollection<GroupUser>)groupUsers;
+                return Mapper.Map<List<TableModel.GroupUser>>(groupUsers);
             }
         }
 
@@ -114,7 +114,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     where gu.OrganizationUserId == organizationUserId
                     select gu;
                 var groupIds = await query.Select(x => x.GroupId).ToListAsync();
-                return (ICollection<Guid>)groupIds;
+                return groupIds;
             }
         }
 
@@ -128,7 +128,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     where gu.GroupId == id
                     select gu;
                 var groupIds = await query.Select(x => x.OrganizationUserId).ToListAsync();
-                return (ICollection<Guid>)groupIds;
+                return groupIds;
             }
         }
 

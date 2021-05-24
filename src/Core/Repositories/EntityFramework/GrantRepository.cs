@@ -92,6 +92,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     var entity = Mapper.Map<EfModel.Grant>(obj);
                     await dbContext.AddAsync(entity);
+                    await dbContext.SaveChangesAsync();
                 }
             }
         }

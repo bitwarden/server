@@ -215,7 +215,8 @@ namespace Bit.Core.Repositories.EntityFramework
                             where ou.UserId == userId &&
                             (status == null || ou.Status == status)
                             select ou;
-                return await query.ToListAsync();
+                var organizationUsers = await query.ToListAsync();
+                return organizationUsers;
             }
         }
 
