@@ -1453,7 +1453,7 @@ namespace Bit.Core.Services
             }
 
             if (user.Type != OrganizationUserType.Owner &&
-                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, Enumerable.Empty<Guid>()))
+                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] {user.Id}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
