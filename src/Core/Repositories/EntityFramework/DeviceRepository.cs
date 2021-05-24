@@ -37,7 +37,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 return null;
             }
 
-            return device;
+            return Mapper.Map<TableModel.Device>(device);
         }
 
         public async Task<Device> GetByIdentifierAsync(string identifier)
@@ -46,7 +46,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.Devices.Where(d => d.Identifier == identifier);
-                return await query.FirstOrDefaultAsync();
+                var device = await query.FirstOrDefaultAsync();
+                return Mapper.Map<TableModel.Device>(device);
             }
         }
 
@@ -56,7 +57,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.Devices.Where(d => d.Identifier == identifier && d.UserId == userId);
-                return await query.FirstOrDefaultAsync();
+                var device = await query.FirstOrDefaultAsync();
+                return Mapper.Map<TableModel.Device>(device);
             }
         }
 
@@ -66,7 +68,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.Devices.Where(d => d.UserId == userId);
-                return (ICollection<Device>)await query.ToListAsync();
+                var devices = await query.ToListAsync();
+                return Mapper.Map<List<TableModel.Device>>(devices);
             }
         }
     }

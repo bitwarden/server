@@ -71,6 +71,11 @@ namespace Bit.Core.Repositories.EntityFramework
         public Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
         {
             // TODO: UserCollectionDetails function
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserCollectionDetailsQuery(userId);
+            }
             throw new NotImplementedException();
         }
 
@@ -118,10 +123,15 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
         {
-            // TODO: UserCollectionDetails function
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserCollectionDetailsQuery(userId).Run(dbContext);
+                var data = await query.ToListAsync();
+                return data.GroupBy(c => c.Id).Select(c => c.First()).ToList();
+            }
         }
 
         public async Task<ICollection<SelectionReadOnly>> GetManyUsersByIdAsync(Guid id)

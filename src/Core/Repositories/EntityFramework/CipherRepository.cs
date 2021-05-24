@@ -319,18 +319,15 @@ namespace Bit.Core.Repositories.EntityFramework
             /* } */
         }
 
-        public Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.QueryAsync<Cipher>( */
-            /*         $"[{Schema}].[Cipher_ReadByOrganizationId]", */
-            /*         new { OrganizationId = organizationId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-
-            /*     return results.ToList(); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Ciphers.Where(x => !x.UserId.HasValue && x.OrganizationId == organizationId);
+                var data = await query.ToListAsync();
+                return Mapper.Map<List<TableModel.Cipher>>(data);
+            }
         }
 
         public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
@@ -338,10 +335,13 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                IQueryable<CipherDetails> cipherDetailsView = new CipherDetailsQuery(userId).Run(dbContext);
+                IQueryable<CipherDetails> cipherDetailsView = withOrganizations ? 
+                    new UserCipherDetailsQuery(userId).Run(dbContext) :
+                    new CipherDetailsQuery(userId).Run(dbContext);
                 if (!withOrganizations)
                 {
                     cipherDetailsView = from c in cipherDetailsView
+                                        where c.UserId == userId
                                         select new CipherDetails() {
                                             Id = c.Id,
                                             UserId = c.UserId,
@@ -359,7 +359,8 @@ namespace Bit.Core.Repositories.EntityFramework
                                             OrganizationUseTotp = false
                                         };
                 }
-                return await cipherDetailsView.ToListAsync();
+                var ciphers = await cipherDetailsView.ToListAsync();
+                return ciphers;
             }
         }
 

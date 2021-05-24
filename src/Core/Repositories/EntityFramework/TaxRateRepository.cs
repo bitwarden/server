@@ -37,7 +37,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var results = await dbContext.TaxRates
                     .Where(t => t.Active)
                     .ToListAsync();
-                return (ICollection<TaxRate>)results;
+                return Mapper.Map<List<TableModel.TaxRate>>(results);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         t.Country == taxRate.Country &&
                         t.PostalCode == taxRate.PostalCode)
                     .ToListAsync();
-                return (ICollection<TaxRate>)results;
+                return Mapper.Map<List<TableModel.TaxRate>>(results);
             }
         }
 
@@ -66,7 +66,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     .Where(t => t.Active)
                     .OrderBy(t => t.Country).ThenByDescending(t => t.PostalCode)
                     .ToListAsync();
-                return (ICollection<TaxRate>)results;
+                return Mapper.Map<List<TableModel.TaxRate>>(results);
             }
         }
     }
