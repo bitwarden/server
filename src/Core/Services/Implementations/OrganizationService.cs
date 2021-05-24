@@ -1598,7 +1598,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            var owners = filteredUsers.Where(u => u.Type == OrganizationUserType.Owner);
             var deletingUserIsOwner = false;
             if (deletingUserId.HasValue)
             {
@@ -1616,7 +1615,7 @@ namespace Bit.Core.Services
                         throw new BadRequestException("You cannot remove yourself.");
                     }
 
-                    if (owners.Any() && deletingUserId.HasValue && !deletingUserIsOwner)
+                    if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
                     {
                         throw new BadRequestException("Only owners can delete other owners.");
                     }
