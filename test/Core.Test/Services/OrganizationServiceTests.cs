@@ -15,7 +15,10 @@ using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Organization = Bit.Core.Models.Table.Organization;
+using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
+using Policy = Bit.Core.Models.Table.Policy;
 
 namespace Bit.Core.Test.Services
 {
@@ -27,6 +30,7 @@ namespace Bit.Core.Test.Services
             Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
         {
             org.UseDirectory = true;
+            org.Seats = 10;
             newUsers.Add(new ImportedOrganizationUser
             {
                 Email = existingUsers.First().Email,
@@ -334,15 +338,18 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveUser_Passes(OrganizationUser oldUserData, OrganizationUser newUserData,
-            IEnumerable<SelectionReadOnly> collections, OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
+        public async Task SaveUser_Passes(
+            OrganizationUser oldUserData,
+            OrganizationUser newUserData,
+            IEnumerable<SelectionReadOnly> collections,
+            [OrganizationUser(type: OrganizationUserType.Owner)]OrganizationUser savingUser,
+            SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
             newUserData.Id = oldUserData.Id;
             newUserData.UserId = oldUserData.UserId;
             newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId;
-            savingUser.Type = OrganizationUserType.Owner;
             organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
             organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new List<OrganizationUser> { savingUser });
@@ -377,13 +384,14 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUser_NonOwnerRemoveOwner(OrganizationUser organizationUser, OrganizationUser deletingUser,
+        public async Task DeleteUser_NonOwnerRemoveOwner(
+            [OrganizationUser(type: OrganizationUserType.Owner)]OrganizationUser organizationUser,
+            [OrganizationUser(type: OrganizationUserType.Admin)]OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             
             organizationUser.OrganizationId = deletingUser.OrganizationId;
-            organizationUser.Type = OrganizationUserType.Owner;
             organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
             organizationUserRepository.GetManyByUserAsync(deletingUser.UserId.Value).Returns(new[] { deletingUser });
 
@@ -393,13 +401,14 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUser_LastOwner(OrganizationUser organizationUser, OrganizationUser deletingUser,
+        public async Task DeleteUser_LastOwner(
+            [OrganizationUser(type: OrganizationUserType.Owner)]OrganizationUser organizationUser,
+            OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             
             organizationUser.OrganizationId = deletingUser.OrganizationId;
-            organizationUser.Type = OrganizationUserType.Owner;
             organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
             organizationUserRepository.GetManyByOrganizationAsync(deletingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new[] { organizationUser });
@@ -410,13 +419,13 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUser_Success(OrganizationUser organizationUser, OrganizationUser deletingUser,
+        public async Task DeleteUser_Success(
+            OrganizationUser organizationUser,
+            [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             
-            deletingUser.Type = OrganizationUserType.Owner;
-            deletingUser.Status = OrganizationUserStatusType.Confirmed;
             organizationUser.OrganizationId = deletingUser.OrganizationId;
             organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
             organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
@@ -442,11 +451,11 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsers_RemoveYourself(OrganizationUser deletingUser, OrganizationUser orgUser,
+        public async Task DeleteUsers_RemoveYourself(
+            [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser orgUser,
+            OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
-            orgUser.Type = OrganizationUserType.Owner;
-            orgUser.Status = OrganizationUserStatusType.Confirmed;
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationUsers = new[] { deletingUser };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
@@ -458,15 +467,15 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsers_NonOwnerRemoveOwner(OrganizationUser deletingUser, OrganizationUser orgUser1, OrganizationUser orgUser2,
+        public async Task DeleteUsers_NonOwnerRemoveOwner(
+            [OrganizationUser(type: OrganizationUserType.Admin)]OrganizationUser deletingUser,
+            [OrganizationUser(type: OrganizationUserType.Owner)]OrganizationUser orgUser1,
+            [OrganizationUser(OrganizationUserStatusType.Confirmed)]OrganizationUser orgUser2,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-            deletingUser.Type = OrganizationUserType.Admin;
-            orgUser1.Type = OrganizationUserType.Owner;
+            
             orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
-            orgUser2.Status = OrganizationUserStatusType.Confirmed;
             var organizationUsers = new[] { orgUser1 };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
@@ -477,12 +486,12 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsers_LastOwner(OrganizationUser orgUser, SutProvider<OrganizationService> sutProvider)
+        public async Task DeleteUsers_LastOwner(
+            [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser orgUser,
+            SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
-            orgUser.Type = OrganizationUserType.Owner;
-            orgUser.Status = OrganizationUserStatusType.Confirmed;
             var organizationUsers = new[] { orgUser };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
@@ -494,15 +503,14 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsers_Success(OrganizationUser deletingUser, OrganizationUser orgUser1, OrganizationUser orgUser2,
+        public async Task DeleteUsers_Success(
+            [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser deletingUser,
+            [OrganizationUser(type: OrganizationUserType.Owner)]OrganizationUser orgUser1, OrganizationUser orgUser2,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             
-            deletingUser.Type = OrganizationUserType.Owner;
-            deletingUser.Status = OrganizationUserStatusType.Confirmed;
             orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
-            orgUser1.Type = OrganizationUserType.Owner;
             var organizationUsers = new[] { orgUser1, orgUser2 };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
@@ -515,13 +523,13 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_InvalidStatus(OrganizationUser confirmingUser, OrganizationUser orgUser, string key,
+        public async Task ConfirmUser_InvalidStatus(OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Invited)]OrganizationUser orgUser, string key,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var userService = Substitute.For<IUserService>();
 
-            orgUser.Status = OrganizationUserStatusType.Invited;
             organizationUserRepository.GetByIdAsync(orgUser.Id).Returns(orgUser);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -530,13 +538,13 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_WrongOrganization(OrganizationUser confirmingUser, OrganizationUser orgUser, string key,
+        public async Task ConfirmUser_WrongOrganization(OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser, string key,
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var userService = Substitute.For<IUserService>();
 
-            orgUser.Status = OrganizationUserStatusType.Accepted;
             organizationUserRepository.GetByIdAsync(orgUser.Id).Returns(orgUser);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -545,8 +553,9 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_AlreadyAdmin(Organization org, OrganizationUser confirmingUser, OrganizationUser orgUser,
-            User user, string key, SutProvider<OrganizationService> sutProvider)
+        public async Task ConfirmUser_AlreadyAdmin(Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Admin)]OrganizationUser orgUser, User user,
+            string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -554,7 +563,6 @@ namespace Bit.Core.Test.Services
             var userRepository = sutProvider.GetDependency<IUserRepository>();
 
             org.PlanType = PlanType.Free;
-            orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = user.Id;
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
@@ -568,8 +576,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_SingleOrgPolicy(Organization org, OrganizationUser confirmingUser, OrganizationUser orgUser,
-            User user, OrganizationUser orgUserAnotherOrg, Policy policy, string key, SutProvider<OrganizationService> sutProvider)
+        public async Task ConfirmUser_SingleOrgPolicy(Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser, User user,
+            OrganizationUser orgUserAnotherOrg, [Policy(PolicyType.SingleOrg)]Policy singleOrgPolicy,
+            string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -581,13 +591,11 @@ namespace Bit.Core.Test.Services
             orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
-            policy.Type = PolicyType.SingleOrg;
-            policy.Enabled = true;
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
             organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] {orgUserAnotherOrg});
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
             userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user});
-            policyRepository.GetManyByOrganizationIdAsync(org.Id).Returns(new[] {policy});
+            policyRepository.GetManyByOrganizationIdAsync(org.Id).Returns(new[] {singleOrgPolicy});
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
@@ -595,8 +603,10 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_TwoFactorPolicy(Organization org, OrganizationUser confirmingUser, OrganizationUser orgUser,
-            User user, OrganizationUser orgUserAnotherOrg, Policy policy, string key, SutProvider<OrganizationService> sutProvider)
+        public async Task ConfirmUser_TwoFactorPolicy(Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser, User user,
+            OrganizationUser orgUserAnotherOrg, [Policy(PolicyType.TwoFactorAuthentication)]Policy twoFactorPolicy,
+            string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -605,16 +615,13 @@ namespace Bit.Core.Test.Services
             var userService = Substitute.For<IUserService>();
 
             org.PlanType = PlanType.EnterpriseAnnually;
-            orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
-            policy.Type = PolicyType.TwoFactorAuthentication;
-            policy.Enabled = true;
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
             organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] {orgUserAnotherOrg});
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
             userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user});
-            policyRepository.GetManyByOrganizationIdAsync(org.Id).Returns(new[] {policy});
+            policyRepository.GetManyByOrganizationIdAsync(org.Id).Returns(new[] {twoFactorPolicy});
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
@@ -622,8 +629,10 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_Success(Organization org, OrganizationUser confirmingUser, OrganizationUser orgUser,
-            User user, Policy twoFactorPolicy, Policy singleOrgPolicy, string key, SutProvider<OrganizationService> sutProvider)
+        public async Task ConfirmUser_Success(Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser, User user,
+            [Policy(PolicyType.TwoFactorAuthentication)]Policy twoFactorPolicy,
+            [Policy(PolicyType.SingleOrg)]Policy singleOrgPolicy, string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -632,13 +641,8 @@ namespace Bit.Core.Test.Services
             var userService = Substitute.For<IUserService>();
 
             org.PlanType = PlanType.EnterpriseAnnually;
-            orgUser.Status = OrganizationUserStatusType.Accepted;
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = user.Id;
-            twoFactorPolicy.Type = PolicyType.TwoFactorAuthentication;
-            twoFactorPolicy.Enabled = true;
-            singleOrgPolicy.Type = PolicyType.SingleOrg;
-            singleOrgPolicy.Enabled = true;
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
             userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user});
@@ -649,9 +653,14 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUsers_Success(Organization org, OrganizationUser confirmingUser, OrganizationUser orgUser1,
-            OrganizationUser orgUser2, OrganizationUser orgUser3, OrganizationUser anotherOrgUser, User user1, User user2,
-            User user3, Policy twoFactorPolicy, Policy singleOrgPolicy, string key, SutProvider<OrganizationService> sutProvider)
+        public async Task ConfirmUsers_Success(Organization org,
+            OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser1,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser2,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)]OrganizationUser orgUser3,
+            OrganizationUser anotherOrgUser, User user1, User user2, User user3,
+            [Policy(PolicyType.TwoFactorAuthentication)]Policy twoFactorPolicy,
+            [Policy(PolicyType.SingleOrg)]Policy singleOrgPolicy, string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -660,16 +669,11 @@ namespace Bit.Core.Test.Services
             var userService = Substitute.For<IUserService>();
 
             org.PlanType = PlanType.EnterpriseAnnually;
-            orgUser1.Status = orgUser2.Status = orgUser3.Status = OrganizationUserStatusType.Accepted;
             orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser1.UserId = user1.Id;
             orgUser2.UserId = user2.Id;
             orgUser3.UserId = user3.Id;
             anotherOrgUser.UserId = user3.Id;
-            twoFactorPolicy.Type = PolicyType.TwoFactorAuthentication;
-            twoFactorPolicy.Enabled = true;
-            singleOrgPolicy.Type = PolicyType.SingleOrg;
-            singleOrgPolicy.Enabled = true;
             var orgUsers = new[] {orgUser1, orgUser2, orgUser3};
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
