@@ -36,5 +36,6 @@ namespace Bit.Core.Repositories
         Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
         Task DeleteManyAsync(IEnumerable<Guid> userIds);
         Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email);
+        Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     }
 }
