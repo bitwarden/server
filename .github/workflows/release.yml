@@ -117,7 +117,7 @@ jobs:
           docker pull bitwarden/events:rc
           docker pull bitwarden/admin:rc
           docker pull bitwarden/nginx:rc
-          docker pull bitwarden/nginx:rc
+          docker pull bitwarden/k8s-proxy:rc
           docker pull bitwarden/sso:rc
           docker pull bitwarden/portal:rc
           docker pull bitwarden/mssql:rc
@@ -140,7 +140,7 @@ jobs:
             docker tag bitwarden/events:rc bitwarden/events:$TAG
             docker tag bitwarden/admin:rc bitwarden/admin:$TAG
             docker tag bitwarden/nginx:rc bitwarden/nginx:$TAG
-            docker tag bitwarden/nginx:rc bitwarden/k8s-proxy:$TAG
+            docker tag bitwarden/k8s-proxy:rc bitwarden/k8s-proxy:$TAG
             docker tag bitwarden/sso:rc bitwarden/sso:$TAG
             docker tag bitwarden/portal:rc bitwarden/portal:$TAG
             docker tag bitwarden/mssql:rc bitwarden/mssql:$TAG
