@@ -138,7 +138,7 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPost("reinvite")]
-        public async Task BulkReinvite(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageUsers(orgGuidId))
@@ -147,7 +147,9 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+            var result = await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(
+                result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
         }
 
         [HttpPost("{id}/reinvite")]
@@ -187,6 +189,38 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value,
                 _userService);
+        }
+
+        [HttpPost("confirm")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkConfirm(string orgId,
+            [FromBody]OrganizationUserBulkConfirmRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
+                _userService);
+
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        }
+
+        [HttpPost("public-keys")]
+        public async Task<ListResponseModel<OrganizationUserPublicKeyResponseModel>> UserPublicKeys(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!_currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var result = await _organizationUserRepository.GetManyPublicKeysByOrganizationUserAsync(orgGuidId, model.Ids);
+            var responses = result.Select(r => new OrganizationUserPublicKeyResponseModel(r.Id, r.PublicKey)).ToList();
+            return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
         }
 
         [HttpPut("{id}")]
@@ -287,7 +321,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("")]
         [HttpPost("delete")]
-        public async Task BulkDelete(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!_currentContext.ManageUsers(orgGuidId))
@@ -296,7 +330,9 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+            var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
     }
 }

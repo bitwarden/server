@@ -17,5 +17,6 @@ namespace Bit.Core.Repositories
         Task<DateTime> GetAccountRevisionDateAsync(Guid id);
         Task UpdateStorageAsync(Guid id);
         Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate);
+        Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
     }
 }

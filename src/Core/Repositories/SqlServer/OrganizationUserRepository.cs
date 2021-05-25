@@ -365,5 +365,19 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        public async Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(
+            Guid organizationId, IEnumerable<Guid> Ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserPublicKey>(
+                    "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
+                    new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }
