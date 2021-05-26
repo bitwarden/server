@@ -361,6 +361,19 @@ namespace Bit.Core.Services
             await AddMessageContentAsync(message, queueMessage.TemplateName, queueMessage.Model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+        {
+            var message = CreateDefaultMessage("Master Password Has Been Changed", email);
+            var model = new AdminResetPasswordViewModel()
+            {
+                UserName = CoreHelpers.SanitizeForEmail(userName),
+                OrgName = CoreHelpers.SanitizeForEmail(orgName),
+            };
+            await AddMessageContentAsync(message, "AdminResetPassword", model);
+            message.Category = "AdminResetPassword";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
 
         private Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
             _mailEnqueuingService.EnqueueAsync(queueMessage, SendEnqueuedMailMessageAsync);

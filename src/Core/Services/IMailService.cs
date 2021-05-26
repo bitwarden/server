@@ -40,5 +40,6 @@ namespace Bit.Core.Services
         Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
         Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
         Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
+        Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
     }
 }

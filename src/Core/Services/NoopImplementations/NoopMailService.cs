@@ -158,5 +158,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+        
+        public Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
