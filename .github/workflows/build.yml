@@ -213,7 +213,7 @@ jobs:
             docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
           fi
 
-      - name: Tag rc branch
+      - name: Tag rc
         if: github.ref == 'refs/heads/rc'
         run: |
           SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
