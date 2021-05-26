@@ -60,22 +60,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service_name: [
-          admin,
-          api,
-          attachments,
-          events,
-          icons,
-          identity,
-          k8s-proxy,
-          mssql,
-          nginx,
-          notifications,
-          portal,
-          server,
-          setup,
-          sso
-        ]
+        service_name:
+          - admin
+          - api
+          - attachments
+          - events
+          - icons
+          - identity
+          - k8s-proxy
+          - mssql
+          - nginx
+          - notifications
+          - portal
+          - server
+          - setup
+          - sso
     env:
       RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
       TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
