@@ -16,7 +16,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
         public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
         {
-            var query = from cd in new CipherDetailsQuery(UserId).Run(dbContext)
+            var query = from cd in new CipherDetailsQuery(UserId, true).Run(dbContext)
                         join ou in dbContext.OrganizationUsers
                             on cd.OrganizationId equals ou.OrganizationId
                         where ou.UserId == UserId &&
@@ -46,7 +46,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                         ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null
                         select new {cd, ou, o, cc, cu, gu, g, cg}.cd;
 
-            var query2 = from cd in new CipherDetailsQuery(UserId).Run(dbContext)
+            var query2 = from cd in new CipherDetailsQuery(UserId, true).Run(dbContext)
                      where cd.UserId == UserId
                      select cd;
 

@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Repositories.EntityFramework.Queries;
+using LinqToDB.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +9,11 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public abstract class BaseEntityFrameworkRepository
     {
+        protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions() {
+                    KeepIdentity = true,
+                    BulkCopyType = BulkCopyType.ProviderSpecific,
+        };
+
         public BaseEntityFrameworkRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         {
             ServiceScopeFactory = serviceScopeFactory;
