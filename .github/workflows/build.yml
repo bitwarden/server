@@ -256,6 +256,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
       - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
