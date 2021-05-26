@@ -205,7 +205,7 @@ jobs:
         run: |
           SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
           if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
-            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/Nginx
           else
             docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
           fi
