@@ -121,9 +121,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
-      - name: Restore
-        run: dotnet tool restore
-
       - name: Pull Docker images
         run: |
           docker pull bitwarden/${{ matrix.service_name }}:rc
@@ -157,6 +154,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Restore
+        run: dotnet tool restore
+
       - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
