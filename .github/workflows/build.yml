@@ -76,26 +76,47 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
+            dotnet: true
             gulp: true
           - service_name: Api
             base_path: ./src
+            dotnet: true
+          - service_name: Attachments
+            base_path: ./util
           - service_name: Billing
             base_path: ./src
+            dotnet: true
           - service_name: Events
             base_path: ./src
+            dotnet: true
+          - service_name: Icons
+            base_path: ./src
+            dotnet: true
           - service_name: Identity
             base_path: ./src
+            dotnet: true
+          - service_name: K8S-Proxy
+            base_path: ./util
+          - service_name: MsSql
+            base_path: ./util
+          - service_name: Nginx
+            base_path: ./util
           - service_name: Notifications
             base_path: ./src
+            dotnet: true
           - service_name: Portal
-            base_path: ./bitwarden_license
+            base_path: ./bitwarden_license/src
+            dotnet: true
             gulp: true
           - service_name: Server
             base_path: ./util
+            dotnet: true
           - service_name: Setup
             base_path: ./util
+            dotnet: true
           - service_name: Sso
-            base_path: ./bitwarden_license
+            base_path: ./bitwarden_license/src
+            dotnet: true
             gulp: true
     steps:
       - name: Checkout repo
@@ -149,7 +170,13 @@ jobs:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
-      - name: Build Service
+      - name: Set up Gulp
+        if: ${{ matrix.gulp }}
+        run: |
+          npm install -g gulp
+
+      - name: Restore/Clean service
+        if: ${{ matrix.dotnet }}
         run: |
           cd ${{ matrix.base_path }}/${{ matrix.service_name }}
           echo "Restore"
@@ -157,18 +184,31 @@ jobs:
           echo "Clean"
           dotnet clean ${{ matrix.service_name }}.csproj -c "Release" -o obj/Azure/publish
 
-          if [ "${{ matrix.gulp }}" == "true" ]; then
-            npm install
-            npm install gulp
-            gulp --gulpfile gulpfile.js build
-          fi
+      - name: Execute Gulp
+        if: ${{ matrix.gulp }}
+        run: |
+          npm install
+          gulp --gulpfile gulpfile.js build
 
+      - name: Publish service
+        if: ${{ matrix.dotnet }}
+        run: |
           echo "Publish"
           dotnet publish ${{ matrix.service_name }}.csproj -c "Release" -o obj/Azure/publish
 
           cd obj/Azure/publish
           zip -r ${{ matrix.service_name }}.zip .
           mv ${{ matrix.service_name }}.zip ../../../
+
+      - name: Build Docker images
+        if: github.ref == 'refs/heads/master github.ref == 'refs/heads/rc'
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
+          else
+            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
+          fi
 
       - name: Tag rc branch
         if: github.ref == 'refs/heads/rc'
