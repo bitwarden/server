@@ -244,6 +244,15 @@ jobs:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
+      - name: Log out of Docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker logout
+
+  upload:
+    name: Upload
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
       - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
@@ -277,7 +286,3 @@ jobs:
         with:
           name: swagger.json
           path: ./swagger.json
-
-      - name: Log out of Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        run: docker logout

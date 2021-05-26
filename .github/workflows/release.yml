@@ -110,6 +110,7 @@ jobs:
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           mkdir -p ~/.docker/trust/private
 
@@ -139,6 +140,7 @@ jobs:
         run: docker images
 
       - name: Push Docker images
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           docker push bitwarden/${{ matrix.service_name }}:latest
           docker push bitwarden/${{ matrix.service_name }}:$RELEASE_VERSION
@@ -146,6 +148,16 @@ jobs:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
+      - name: Log out of Docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker logout
+
+
+  upload:
+    name: Upload
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
       - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
@@ -186,9 +198,6 @@ jobs:
           name: swagger.json
           path: ./swagger.json
 
-      - name: Log out of Docker
-        run: docker logout
-
       - name: Upload release assets
         if: github.event_name == 'release'
         run: |
@@ -199,4 +208,3 @@ jobs:
             $RELEASE_TAG_NAME
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
