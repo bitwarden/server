@@ -201,7 +201,7 @@ jobs:
           mv ${{ matrix.service_name }}.zip ../../../
 
       - name: Build Docker images
-        if: github.ref == 'refs/heads/master github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master || github.ref == 'refs/heads/rc'
         run: |
           SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
           if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
