@@ -690,7 +690,7 @@ namespace Bit.Core.Services
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
