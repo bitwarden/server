@@ -172,13 +172,14 @@ jobs:
 
       - name: Set up Gulp
         if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           npm install -g gulp
 
       - name: Restore/Clean service
         if: ${{ matrix.dotnet }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
-          cd ${{ matrix.base_path }}/${{ matrix.service_name }}
           echo "Restore"
           dotnet restore
           echo "Clean"
@@ -186,12 +187,14 @@ jobs:
 
       - name: Execute Gulp
         if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           npm install
           gulp --gulpfile gulpfile.js build
 
       - name: Publish service
         if: ${{ matrix.dotnet }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           echo "Publish"
           dotnet publish -c "Release" -o obj/Azure/publish
