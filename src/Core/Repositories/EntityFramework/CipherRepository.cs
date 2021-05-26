@@ -12,6 +12,10 @@ using DataModel = Bit.Core.Models.Data;
 using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
+using LinqToDB.EntityFrameworkCore;
+using LinqToDB.Data;
+using System.Text.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -24,26 +28,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public override async Task<Cipher> CreateAsync(Cipher cipher)
         {
             cipher = await base.CreateAsync(cipher);
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                if (cipher.OrganizationId.HasValue)
-                {
-                    var query = new UserBumpAccountRevisionDateByCipherId(cipher);
-                    var users = query.Run(dbContext);
-
-                    await users.ForEachAsync(e => {
-                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
-                    });
-                    await dbContext.SaveChangesAsync();
-                }
-                else
-                {
-                    var user = await dbContext.Users.FindAsync(cipher.UserId);
-                    user.AccountRevisionDate = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync();
-                }
-            }
+            await UpdateAccountRevisionDate(cipher);
             return cipher;
         }
 
@@ -85,7 +70,6 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                cipher.SetNewId();
                 var userIdKey = $"\"{cipher.UserId}\"";
                 cipher.UserId = cipher.OrganizationId.HasValue ? 
                     null : 
@@ -100,6 +84,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.AddAsync(entity);
                 await dbContext.SaveChangesAsync();
             }
+            await UpdateAccountRevisionDate(cipher);
             return cipher;
         }
 
@@ -109,53 +94,23 @@ namespace Bit.Core.Repositories.EntityFramework
             await UpdateCollections(cipher, collectionIds);
         }
 
-        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            throw new NotImplementedException();
-            /* if (!ciphers.Any()) */
-            /* { */
-            /*     return; */
-            /* } */
+            if (!ciphers.Any())
+            {
+                return;
+            }
 
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     connection.Open(); */
-
-            /*     using (var transaction = connection.BeginTransaction()) */
-            /*     { */
-            /*         try */
-            /*         { */
-            /*             if (folders.Any()) */
-            /*             { */
-            /*                 using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*                 { */
-            /*                     bulkCopy.DestinationTableName = "[dbo].[Folder]"; */
-            /*                     var dataTable = BuildFoldersTable(bulkCopy, folders); */
-            /*                     bulkCopy.WriteToServer(dataTable); */
-            /*                 } */
-            /*             } */
-
-            /*             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*             { */
-            /*                 bulkCopy.DestinationTableName = "[dbo].[Cipher]"; */
-            /*                 var dataTable = BuildCiphersTable(bulkCopy, ciphers); */
-            /*                 bulkCopy.WriteToServer(dataTable); */
-            /*             } */
-
-            /*             await connection.ExecuteAsync( */
-            /*                     $"[{Schema}].[User_BumpAccountRevisionDate]", */
-            /*                     new { Id = ciphers.First().UserId }, */
-            /*                     commandType: CommandType.StoredProcedure, transaction: transaction); */
-
-            /*             transaction.Commit(); */
-            /*         } */
-            /*         catch */
-            /*         { */
-            /*             transaction.Rollback(); */
-            /*             throw; */
-            /*         } */
-            /*     } */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var folderEntities = Mapper.Map<List<EfModel.Folder>>(folders);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
+                var cipherEntities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
+                // User_BumpAccountRevisionDate
+            }
+        
         }
 
         public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<CollectionCipher> collectionCiphers)
@@ -293,14 +248,14 @@ namespace Bit.Core.Repositories.EntityFramework
             /* } */
         }
 
-        // TODO: id param isnt used here?
         public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var userCipherDetails = new UserCipherDetailsQuery(userId);
-                return await userCipherDetails.Run(dbContext).FirstOrDefaultAsync();
+                var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
+                return data;
             }
         }
 
@@ -348,8 +303,8 @@ namespace Bit.Core.Repositories.EntityFramework
                                             Type= c.Type,
                                             Data = c.Data,
                                             Attachments = c.Attachments,
-                                            CreationDate = DateTime.UtcNow,
-                                            RevisionDate = DateTime.UtcNow,
+                                            CreationDate = c.CreationDate,
+                                            RevisionDate = c.RevisionDate,
                                             DeletedDate = c.DeletedDate,
                                             Favorite = c.Favorite,
                                             FolderId = c.FolderId,
@@ -400,20 +355,55 @@ namespace Bit.Core.Repositories.EntityFramework
                 var entity = await dbContext.Ciphers.FindAsync(cipher.Id);
                 if (entity != null)
                 {
-                    // TODO: Folders, Favorites
+                    // TODO: All this could probably get a cleanup
+                    var userIdKey = $"\"{cipher.UserId}\"";
+                    if (cipher.Favorite)
+                    {
+                        if (cipher.Favorites == null)
+                        {
+                            cipher.Favorites = $"{{{userIdKey}:true}}";
+                        }
+                        else
+                        {
+                            var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
+                            favorites.Add(cipher.UserId.Value, true);
+                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                        }
+                    }
+                    else
+                    {
+                        if (cipher.Favorites != null && cipher.Favorites.Contains(cipher.UserId.Value.ToString()))
+                        {
+                            var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
+                            favorites.Remove(cipher.UserId.Value);
+                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                        }
+                    }
+                    if (cipher.FolderId.HasValue)
+                    {
+                        if (cipher.Folders == null)
+                        {
+                            cipher.Folders = $"{{{userIdKey}:\"{cipher.FolderId}\"}}";
+                        }
+                        else
+                        {
+                            var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
+                            folders.Add(cipher.UserId.Value, cipher.FolderId.Value);
+                            cipher.Folders = JsonSerializer.Serialize(folders);
+                        }
+                    }
+                    else
+                    {
+                        if (cipher.Folders != null && cipher.Folders.Contains(cipher.UserId.Value.ToString()))
+                        {
+                            var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
+                            folders.Remove(cipher.UserId.Value);
+                            cipher.Favorites = JsonSerializer.Serialize(folders);
+                        }
+                    }
                     var mappedEntity = Mapper.Map<EfModel.Cipher>((TableModel.Cipher)cipher);
                     dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                    if (entity.OrganizationId.HasValue)
-                    {
-                        // TODO: User_BumpAccountRevisionDateByCipherId
-                    }
-                    else if (entity.UserId.HasValue)
-                    {
-                        // User_BumpAccountRevisionDate
-                        var q = new UserBumpAccountRevisionDateByCipherId(cipher).Run(dbContext);
-                        await q.ForEachAsync(u => u.RevisionDate = DateTime.UtcNow);
-                    }
-                    //
+                    await UpdateAccountRevisionDate(cipher);
                     await dbContext.SaveChangesAsync();
                 }
             }
@@ -479,86 +469,22 @@ namespace Bit.Core.Repositories.EntityFramework
             /* } */
         }
 
-        public Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
+        public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
         {
-            throw new NotImplementedException();
-            /* if (!ciphers.Any()) */
-            /* { */
-            /*     return; */
-            /* } */
-
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     connection.Open(); */
-
-            /*     using (var transaction = connection.BeginTransaction()) */
-            /*     { */
-            /*         try */
-            /*         { */
-            /*             // 1. Create temp tables to bulk copy into. */
-
-            /*             var sqlCreateTemp = @" */
-            /*                 SELECT TOP 0 * */
-            /*                 INTO #TempCipher */
-            /*                 FROM [dbo].[Cipher]"; */
-
-            /*             using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction)) */
-            /*             { */
-            /*                 cmd.ExecuteNonQuery(); */
-            /*             } */
-
-            /*             // 2. Bulk copy into temp tables. */
-            /*             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*             { */
-            /*                 bulkCopy.DestinationTableName = "#TempCipher"; */
-            /*                 var dataTable = BuildCiphersTable(bulkCopy, ciphers); */
-            /*                 bulkCopy.WriteToServer(dataTable); */
-            /*             } */
-
-            /*             // 3. Insert into real tables from temp tables and clean up. */
-
-            /*             // Intentionally not including Favorites, Folders, and CreationDate */
-            /*             // since those are not meant to be bulk updated at this time */
-            /*             var sql = @" */
-            /*                 UPDATE */
-            /*                     [dbo].[Cipher] */
-            /*                 SET */
-            /*                     [UserId] = TC.[UserId], */
-            /*                     [OrganizationId] = TC.[OrganizationId], */
-            /*                     [Type] = TC.[Type], */
-            /*                     [Data] = TC.[Data], */
-            /*                     [Attachments] = TC.[Attachments], */
-            /*                     [RevisionDate] = TC.[RevisionDate], */
-            /*                     [DeletedDate] = TC.[DeletedDate] */
-            /*                 FROM */
-            /*                     [dbo].[Cipher] C */
-            /*                 INNER JOIN */
-            /*                     #TempCipher TC ON C.Id = TC.Id */
-            /*                 WHERE */
-            /*                     C.[UserId] = @UserId */
-
-            /*                 DROP TABLE #TempCipher"; */
-
-            /*             using (var cmd = new SqlCommand(sql, connection, transaction)) */
-            /*             { */
-            /*                 cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId; */
-            /*                 cmd.ExecuteNonQuery(); */
-            /*             } */
-
-            /*             await connection.ExecuteAsync( */
-            /*                 $"[{Schema}].[User_BumpAccountRevisionDate]", */
-            /*                 new { Id = userId }, */
-            /*                 commandType: CommandType.StoredProcedure, transaction: transaction); */
-
-            /*             transaction.Commit(); */
-            /*         } */
-            /*         catch */
-            /*         { */
-            /*             transaction.Rollback(); */
-            /*             throw; */
-            /*         } */
-            /*     } */
-            /* } */
+            
+            if (!ciphers.Any()) 
+            {
+                return; 
+            }
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // Intentionally not including Favorites, Folders, and CreationDate */
+                // since those are not meant to be bulk updated at this time */
+                var entities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, entities);
+                // $"[{Schema}].[User_BumpAccountRevisionDate]",
+            }
         }
 
         public Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
@@ -714,9 +640,28 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task DeleteDeletedAsync(DateTime deletedDateBefore)
+        private async Task UpdateAccountRevisionDate(Cipher cipher)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                if (cipher.OrganizationId.HasValue)
+                {
+                    var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                    var users = query.Run(dbContext);
+
+                    await users.ForEachAsync(e => {
+                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
+                    });
+                    await dbContext.SaveChangesAsync();
+                }
+                else
+                {
+                    var user = await dbContext.Users.FindAsync(cipher.UserId);
+                    user.AccountRevisionDate = DateTime.UtcNow;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
         }
     }
 }
