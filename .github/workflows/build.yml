@@ -180,9 +180,9 @@ jobs:
         run: |
           cd ${{ matrix.base_path }}/${{ matrix.service_name }}
           echo "Restore"
-          dotnet restore ${{ matrix.service_name }}.csproj
+          dotnet restore
           echo "Clean"
-          dotnet clean ${{ matrix.service_name }}.csproj -c "Release" -o obj/Azure/publish
+          dotnet clean -c "Release" -o obj/Azure/publish
 
       - name: Execute Gulp
         if: ${{ matrix.gulp }}
@@ -194,7 +194,7 @@ jobs:
         if: ${{ matrix.dotnet }}
         run: |
           echo "Publish"
-          dotnet publish ${{ matrix.service_name }}.csproj -c "Release" -o obj/Azure/publish
+          dotnet publish -c "Release" -o obj/Azure/publish
 
           cd obj/Azure/publish
           zip -r ${{ matrix.service_name }}.zip .
