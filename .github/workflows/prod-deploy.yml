@@ -120,7 +120,7 @@ jobs:
           echo "Restore"
           dotnet restore $SERVICE_NAME.csproj
           echo "Clean"
-          dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+          dotnet clean $SERVICE_NAME.csproj -c "Release" -o obj/Docker/publish
 
           if [ "$GULP" == "true" ]; then
             npm install
@@ -129,9 +129,9 @@ jobs:
           fi
 
           echo "Publish"
-          dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Azure/publish
+          dotnet publish $SERVICE_NAME.csproj -c "Release" -o obj/Docker/publish
 
-          cd obj/Azure/publish
+          cd obj/Docker/publish
           zip -r $SERVICE_NAME.zip .
           mv $SERVICE_NAME.zip ../../../
         env:
