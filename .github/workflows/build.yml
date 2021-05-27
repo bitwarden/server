@@ -83,9 +83,6 @@ jobs:
             dotnet: true
           - service_name: Attachments
             base_path: ./util
-          - service_name: Billing
-            base_path: ./src
-            dotnet: true
           - service_name: Events
             base_path: ./src
             dotnet: true
@@ -183,7 +180,7 @@ jobs:
           echo "Restore"
           dotnet restore
           echo "Clean"
-          dotnet clean -c "Release" -o obj/Azure/publish
+          dotnet clean -c "Release" -o obj/build-output/publish
 
       - name: Execute Gulp
         if: ${{ matrix.gulp }}
@@ -197,9 +194,9 @@ jobs:
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           echo "Publish"
-          dotnet publish -c "Release" -o obj/Azure/publish
+          dotnet publish -c "Release" -o obj/build-output/publish
 
-          cd obj/Azure/publish
+          cd obj/build-output/publish
           zip -r ${{ matrix.service_name }}.zip .
           mv ${{ matrix.service_name }}.zip ../../../
 
@@ -285,12 +282,12 @@ jobs:
           echo "Restore"
           dotnet restore
           echo "Clean"
-          dotnet clean -c "Release" -o obj/Azure/publish
+          dotnet clean -c "Release" -o obj/build-output/publish
           echo "Publish"
-          dotnet publish -c "Release" -o obj/Azure/publish
+          dotnet publish -c "Release" -o obj/build-output/publish
 
           dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
-            ./obj/Azure/publish/Api.dll public
+            ./obj/build-output/publish/Api.dll public
           cd ../..
         env:
           ASPNETCORE_ENVIRONMENT: Production

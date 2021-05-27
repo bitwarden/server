@@ -183,12 +183,12 @@ jobs:
           echo "Restore"
           dotnet restore
           echo "Clean"
-          dotnet clean -c "Release" -o obj/Azure/publish
+          dotnet clean -c "Release" -o obj/build-output/publish
           echo "Publish"
-          dotnet publish -c "Release" -o obj/Azure/publish
+          dotnet publish -c "Release" -o obj/build-output/publish
 
           dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
-            ./obj/Azure/publish/Api.dll public
+            ./obj/build-output/publish/Api.dll public
           cd ../..
         env:
           ASPNETCORE_ENVIRONMENT: Production
