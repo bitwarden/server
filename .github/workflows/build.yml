@@ -210,7 +210,7 @@ jobs:
           if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
             docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/Nginx
           else
-            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/$SERVICE_NAME
+            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
       - name: Tag rc
