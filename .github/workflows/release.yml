@@ -181,14 +181,14 @@ jobs:
         run: |
           cd ./src/Api
           echo "Restore"
-          dotnet restore "Api.csproj"
+          dotnet restore
           echo "Clean"
-          dotnet clean "Api.csproj" -c "Release" -o "obj/Azure/publish/Api"
+          dotnet clean -c "Release" -o obj/Azure/publish
           echo "Publish"
-          dotnet publish "Api.csproj" -c "Release" -o "obj/Azure/publish/Api"
+          dotnet publish -c "Release" -o obj/Azure/publish
 
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
-            ./obj/Azure/publish/Api/Api.dll public
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
+            ./obj/Azure/publish/Api.dll public
           cd ../..
         env:
           ASPNETCORE_ENVIRONMENT: Production
