@@ -283,7 +283,7 @@ jobs:
         run: |
           cd ./src/Api
           dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
-            ./obj/Docker/publish/Api/Api.dll public
+            ./obj/Azure/publish/Api/Api.dll public
           cd ../..
         shell: pwsh
         env:
