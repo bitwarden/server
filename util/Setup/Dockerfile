@@ -9,7 +9,7 @@ RUN apt-get update \
 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY obj/Docker/publish .
+COPY obj/build-output/publish .
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
