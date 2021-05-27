@@ -282,6 +282,13 @@ jobs:
       - name: Build Swagger
         run: |
           cd ./src/Api
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/Azure/publish
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/Azure/publish
+
           dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
             ./obj/Azure/publish/Api.dll public
           cd ../..
