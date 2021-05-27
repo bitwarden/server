@@ -9,6 +9,8 @@ using System.Net;
 using Bit.Core.Utilities;
 using System.Linq;
 using System.Reflection;
+using Bit.Core.Models.Mail.Provider;
+using Bit.Core.Models.Table.Provider;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services
@@ -646,5 +648,23 @@ namespace Bit.Core.Services
             message.Category = "EmergencyAccessRecoveryTimedOut";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
+        {
+            var message = CreateDefaultMessage($"Create a Provider", email);
+            var model = new ProviderSetupInviteViewModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                ProviderId = provider.Id.ToString(),
+                Email = email,
+                Token = token,
+            };
+            await AddMessageContentAsync(message, "Provider/ProviderSetupInvite", model);
+            message.Category = "ProviderSetupInvite";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+        
+        public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token) => throw new NotImplementedException();
     }
 }

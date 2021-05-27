@@ -8,7 +8,7 @@ namespace Bit.Core.Models.Table.Provider
     {
         public Guid Id { get; set; }
         public Guid ProviderId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid? UserId { get; set; }
         public string Email { get; set; }
         public string Key { get; set; }
         public ProviderUserStatusType Status { get; set; }

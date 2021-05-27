@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Table;
+using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Core.Services
 {
@@ -158,8 +159,18 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
-        
+
         public Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token)
         {
             return Task.FromResult(0);
         }

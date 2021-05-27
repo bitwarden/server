@@ -53,5 +53,7 @@
         // Organization_ClientExportedVault = 1602,
 
         Policy_Updated = 1700,
+        
+        ProviderUser_Invited = 1800,
     }
 }

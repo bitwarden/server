@@ -4,13 +4,13 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class ProvideRepository : Repository<Provider, Guid>, IProviderRepository
+    public class ProviderRepository : Repository<Provider, Guid>, IProviderRepository
     {
-        public ProvideRepository(GlobalSettings globalSettings)
+        public ProviderRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public ProvideRepository(string connectionString, string readOnlyConnectionString)
+        public ProviderRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
     }

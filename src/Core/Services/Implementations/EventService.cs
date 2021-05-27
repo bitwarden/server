@@ -7,6 +7,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core.Context;
+using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Services
@@ -221,6 +222,10 @@ namespace Bit.Core.Services
             };
             await _eventWriteService.CreateAsync(e);
         }
+
+        public Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null) => throw new NotImplementedException();
+
+        public Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events) => throw new NotImplementedException();
 
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
