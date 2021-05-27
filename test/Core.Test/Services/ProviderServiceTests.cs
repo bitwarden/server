@@ -191,5 +191,130 @@ namespace Bit.Core.Test.Services
             var result = await sutProvider.Sut.ResendInvitesAsync(provider.Id, default, providerUsers.Select(pu => pu.Id));
             Assert.True(result.All(r => r.Item2 == ""));
         }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AcceptUserAsync_UserIsInvalid_Throws(ProviderUser providerUser, User user,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AcceptUserAsync(default, default, default));
+            Assert.Equal("User invalid.", exception.Message);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AcceptUserAsync_AlreadyAccepted_Throws(
+            [ProviderUser(ProviderUserStatusType.Accepted)]ProviderUser providerUser, User user,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByIdAsync(providerUser.Id).Returns(providerUser);
+            
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, default));
+            Assert.Equal("Already accepted.", exception.Message);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AcceptUserAsync_TokenIsInvalid_Throws(
+            [ProviderUser(ProviderUserStatusType.Invited)]ProviderUser providerUser, User user,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByIdAsync(providerUser.Id).Returns(providerUser);
+            
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, default));
+            Assert.Equal("Invalid token.", exception.Message);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AcceptUserAsync_WrongEmail_Throws(
+            [ProviderUser(ProviderUserStatusType.Invited)]ProviderUser providerUser, User user,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByIdAsync(providerUser.Id).Returns(providerUser);
+            
+            var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+            var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+            sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+                .Returns(protector);
+            sutProvider.Create();
+            
+            var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token));
+            Assert.Equal("User email does not match invite.", exception.Message);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AcceptUserAsync_Success(
+            [ProviderUser(ProviderUserStatusType.Invited)]ProviderUser providerUser, User user,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByIdAsync(providerUser.Id).Returns(providerUser);
+            
+            var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+            var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+            sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+                .Returns(protector);
+            sutProvider.Create();
+
+            providerUser.Email = user.Email;
+            var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+            var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
+            Assert.Null(pu.Email);
+            Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
+            Assert.Equal(user.Id, pu.UserId);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task ConfirmUsersAsync_NoValid(
+            [ProviderUser(ProviderUserStatusType.Invited)]ProviderUser pu1,
+            [ProviderUser(ProviderUserStatusType.Accepted)]ProviderUser pu2,
+            [ProviderUser(ProviderUserStatusType.Confirmed)]ProviderUser pu3,
+            SutProvider<ProviderService> sutProvider)
+        {
+            pu1.ProviderId = pu3.ProviderId;
+            var providerUsers = new[] {pu1, pu2, pu3};
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
+
+            var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+            var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, default);
+            
+            Assert.Empty(result);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task ConfirmUsersAsync_Success(
+            [ProviderUser(ProviderUserStatusType.Invited)]ProviderUser pu1, User u1,
+            [ProviderUser(ProviderUserStatusType.Accepted)]ProviderUser pu2, User u2,
+            [ProviderUser(ProviderUserStatusType.Confirmed)]ProviderUser pu3, User u3,
+            Provider provider, User user, SutProvider<ProviderService> sutProvider)
+        {
+            pu1.ProviderId = pu2.ProviderId = pu3.ProviderId = provider.Id;
+            pu1.UserId = u1.Id;
+            pu2.UserId = u2.Id;
+            pu3.UserId = u3.Id;
+            var providerUsers = new[] {pu1, pu2, pu3};
+
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
+            var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+            providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+            var userRepository = sutProvider.GetDependency<IUserRepository>();
+            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {u1, u2, u3});
+
+            var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+            var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, user.Id);
+            
+            Assert.Equal("Invalid user.", result[0].Item2);
+            Assert.Equal("", result[1].Item2);
+            Assert.Equal("Invalid user.", result[2].Item2);
+        }
     }
 }

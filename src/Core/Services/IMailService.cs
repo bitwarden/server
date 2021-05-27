@@ -44,5 +44,6 @@ namespace Bit.Core.Services
         Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
         Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
         Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token);
+        Task SendProviderConfirmedEmailAsync(string providerName, string email);
     }
 }

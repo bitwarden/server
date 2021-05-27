@@ -55,5 +55,6 @@
         Policy_Updated = 1700,
         
         ProviderUser_Invited = 1800,
+        ProviderUser_Confirmed = 1801,
     }
 }

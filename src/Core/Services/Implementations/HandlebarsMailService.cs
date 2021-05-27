@@ -666,5 +666,6 @@ namespace Bit.Core.Services
         }
         
         public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token) => throw new NotImplementedException();
+        public Task SendProviderConfirmedEmailAsync(string providerName, string email) => throw new NotImplementedException();
     }
 }

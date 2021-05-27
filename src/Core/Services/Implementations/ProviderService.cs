@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -23,14 +24,16 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-            IUserService userService, IMailService mailService, IDataProtectionProvider dataProtectionProvider,
-            IEventService eventService, GlobalSettings globalSettings)
+            IUserRepository userRepository, IUserService userService, IMailService mailService,
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
+            _userRepository = userRepository;
             _userService = userService;
             _mailService = mailService;
             _eventService = eventService;
@@ -169,9 +172,95 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public Task<ProviderUser> AcceptUserAsync(string orgIdentifier, Guid acceptingUserId, string token) => throw new NotImplementedException();
+        public async Task<ProviderUser> AcceptUserAsync(Guid providerUserId, User user, string token)
+        {
+            var providerUser = await _providerUserRepository.GetByIdAsync(providerUserId);
+            if (providerUser == null)
+            {
+                throw new BadRequestException("User invalid.");
+            }
+            
+            if (providerUser.Status != ProviderUserStatusType.Invited)
+            {
+                throw new BadRequestException("Already accepted.");
+            }
 
-        public Task<ProviderUser> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys, Guid confirmingUserId) => throw new NotImplementedException();
+            if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id, _globalSettings))
+            {
+                throw new BadRequestException("Invalid token.");
+            }
+
+            if (string.IsNullOrWhiteSpace(providerUser.Email) ||
+                !providerUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new BadRequestException("User email does not match invite.");
+            }
+            
+            providerUser.Status = ProviderUserStatusType.Accepted;
+            providerUser.UserId = user.Id;
+            providerUser.Email = null;
+
+            await _providerUserRepository.ReplaceAsync(providerUser);
+
+            return providerUser;
+        }
+
+        public async Task<List<Tuple<ProviderUser, string>>> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys,
+            Guid confirmingUserId)
+        {
+            var providerUsers = await _providerUserRepository.GetManyAsync(keys.Keys);
+            var validProviderUsers = providerUsers
+                .Where(u => u.UserId != null)
+                .ToList();
+
+            if (!validProviderUsers.Any())
+            {
+                return new List<Tuple<ProviderUser, string>>();
+            }
+
+            var validOrganizationUserIds = validProviderUsers.Select(u => u.UserId.Value).ToList();
+            
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+            var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
+
+            var keyedFilteredUsers = validProviderUsers.ToDictionary(u => u.UserId.Value, u => u);
+
+            var result = new List<Tuple<ProviderUser, string>>();
+            var events = new List<(ProviderUser, EventType, DateTime?)>();
+
+            foreach (var user in users)
+            {
+                if (!keyedFilteredUsers.ContainsKey(user.Id))
+                {
+                    continue;
+                }
+                var providerUser = keyedFilteredUsers[user.Id];
+                try
+                {
+                    if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
+                    {
+                        throw new BadRequestException("Invalid user.");
+                    }
+                    
+                    providerUser.Status = ProviderUserStatusType.Confirmed;
+                    providerUser.Key = keys[providerUser.Id];
+                    providerUser.Email = null;
+
+                    await _providerUserRepository.ReplaceAsync(providerUser);
+                    events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
+                    await _mailService.SendOrganizationConfirmedEmailAsync(provider.Name, user.Email);
+                    result.Add(Tuple.Create(providerUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(providerUser, e.Message));
+                }
+            }
+
+            await _eventService.LogProviderUsersEventAsync(events);
+
+            return result;
+        }
 
         public Task SaveUserAsync(ProviderUser user, Guid savingUserId) => throw new NotImplementedException();
 

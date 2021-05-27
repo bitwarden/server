@@ -16,8 +16,8 @@ namespace Bit.Core.Services
         Task<List<ProviderUser>> InviteUserAsync(Guid providerId, Guid invitingUserId, ProviderUserInvite providerUserInvite);
         Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, Guid invitingUserId,
             IEnumerable<Guid> providerUsersId);
-        Task<ProviderUser> AcceptUserAsync(string orgIdentifier, Guid acceptingUserId, string token);
-        Task<ProviderUser> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys, Guid confirmingUserId);
+        Task<ProviderUser> AcceptUserAsync(Guid providerUserId, User user, string token);
+        Task<List<Tuple<ProviderUser, string>>> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys, Guid confirmingUserId);
 
         Task SaveUserAsync(ProviderUser user, Guid savingUserId);
         Task UpdateUserAsync(ProviderUser user, Guid savingUserId);

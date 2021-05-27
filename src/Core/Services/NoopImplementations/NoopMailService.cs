@@ -174,5 +174,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendProviderConfirmedEmailAsync(string providerName, string email)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
