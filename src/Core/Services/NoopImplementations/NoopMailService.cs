@@ -170,7 +170,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token)
+        public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
         {
             return Task.FromResult(0);
         }

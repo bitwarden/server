@@ -664,8 +664,37 @@ namespace Bit.Core.Services
             message.Category = "ProviderSetupInvite";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
-        public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token) => throw new NotImplementedException();
-        public Task SendProviderConfirmedEmailAsync(string providerName, string email) => throw new NotImplementedException();
+
+        public async Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
+        {
+            var message = CreateDefaultMessage($"Join {providerName}", email);
+            var model = new ProviderUserInvitedViewModel
+            {
+                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                Email = WebUtility.UrlDecode(providerUser.Email),
+                ProviderId = providerUser.ProviderId.ToString(),
+                ProviderUserId = providerUser.Id.ToString(),
+                ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+            };
+            await AddMessageContentAsync(message, "Provider/ProviderUserInvited", model);
+            message.Category = "ProviderSetupInvite";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendProviderConfirmedEmailAsync(string providerName, string email)
+        {
+            var message = CreateDefaultMessage($"You Have Been Confirmed To {providerName}", email);
+            var model = new ProviderUserConfirmedViewModel
+            {
+                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "Provider/ProviderUserConfirmed", model);
+            message.Category = "ProviderUserConfirmed";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }

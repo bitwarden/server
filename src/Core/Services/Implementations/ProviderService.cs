@@ -329,7 +329,7 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-            await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token);
+            await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
         }
         
         private async Task ValidateProviderUserUpdatePermissionsAsync(Guid loggedInUserId, Guid providerId,
