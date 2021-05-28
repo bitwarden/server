@@ -19,6 +19,7 @@ namespace Bit.Core.IdentityServer
     {
         private UserManager<User> _userManager;
         private readonly IUserService _userService;
+        private readonly ICurrentContext _currentContext;
 
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
@@ -41,6 +42,7 @@ namespace Bit.Core.IdentityServer
         {
             _userManager = userManager;
             _userService = userService;
+            _currentContext = currentContext;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -54,6 +56,13 @@ namespace Bit.Core.IdentityServer
             {
                 return (null, false);
             }
+
+            // Uncomment whenever we want to require the `auth-email` header
+            //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email") ||
+            //    _currentContext.HttpContext.Request.Headers["Auth-Email"] != context.UserName)
+            //{
+            //    return (null, false);
+            //}
 
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
             if (user == null || !await _userService.CheckPasswordAsync(user, context.Password))
