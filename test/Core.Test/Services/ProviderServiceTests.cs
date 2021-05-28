@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
-using Bit.Core.Repositories.SqlServer;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -313,6 +313,54 @@ namespace Bit.Core.Test.Services
             var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, user.Id);
             
             Assert.Equal("Invalid user.", result[0].Item2);
+            Assert.Equal("", result[1].Item2);
+            Assert.Equal("Invalid user.", result[2].Item2);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveUserAsync_UserIdIsInvalid_Throws(ProviderUser providerUser,
+            SutProvider<ProviderService> sutProvider)
+        {
+            providerUser.Id = default;
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveUserAsync(providerUser, default));
+            Assert.Equal("Invite the user first.", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveUserAsync_Success(
+            [ProviderUser(type: ProviderUserType.Administrator)]ProviderUser providerUser, User savingUser,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByIdAsync(providerUser.Id).Returns(providerUser);
+
+            await sutProvider.Sut.SaveUserAsync(providerUser, savingUser.Id);
+            await providerUserRepository.Received().ReplaceAsync(providerUser);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogProviderUserEventAsync(providerUser, EventType.ProviderUser_Updated, null);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task DeleteUsersAsync_Success(Provider provider, User deletingUser,
+            ICollection<ProviderUser> providerUsers, SutProvider<ProviderService> sutProvider)
+        {
+            var userIds = providerUsers.Select(pu => pu.Id);
+
+            providerUsers.First().UserId = deletingUser.Id;
+            foreach (var providerUser in providerUsers)
+            {
+                providerUser.ProviderId = provider.Id;
+            }
+            providerUsers.Last().ProviderId = default;
+            
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
+            
+            var result = await sutProvider.Sut.DeleteUsersAsync(provider.Id, userIds, deletingUser.Id);
+            
+            Assert.NotEmpty(result);
+            Assert.Equal("You cannot remove yourself.", result[0].Item2);
             Assert.Equal("", result[1].Item2);
             Assert.Equal("Invalid user.", result[2].Item2);
         }

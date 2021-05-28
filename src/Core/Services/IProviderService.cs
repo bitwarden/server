@@ -20,8 +20,8 @@ namespace Bit.Core.Services
         Task<List<Tuple<ProviderUser, string>>> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys, Guid confirmingUserId);
 
         Task SaveUserAsync(ProviderUser user, Guid savingUserId);
-        Task UpdateUserAsync(ProviderUser user, Guid savingUserId);
-        Task DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid? deletingUserId);
+        Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds,
+            Guid deletingUserId);
 
         Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
         Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId);

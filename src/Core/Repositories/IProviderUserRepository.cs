@@ -9,5 +9,6 @@ namespace Bit.Core.Repositories
     {
         Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers);
         Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> Ids);
+        Task DeleteManyAsync(IEnumerable<Guid> userIds);
     }
 }

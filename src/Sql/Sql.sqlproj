@@ -136,6 +136,7 @@
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserIds.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserIds.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_Delete.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeyById.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadPublicKeysByOrganizationUserIds.sql" />
@@ -335,6 +336,7 @@
     <Build Include="dbo\Stored Procedures\ProviderUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_DeleteByIds.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByIds.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderId.sql" />

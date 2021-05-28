@@ -262,11 +262,63 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public Task SaveUserAsync(ProviderUser user, Guid savingUserId) => throw new NotImplementedException();
+        public async Task SaveUserAsync(ProviderUser user, Guid savingUserId)
+        {
+            if (user.Id.Equals(default))
+            {
+                throw new BadRequestException("Invite the user first.");
+            }
 
-        public Task UpdateUserAsync(ProviderUser user, Guid savingUserId) => throw new NotImplementedException();
+            var originalUser = await _providerUserRepository.GetByIdAsync(user.Id);
+            await ValidateProviderUserUpdatePermissionsAsync(savingUserId, user.ProviderId, user.Type, originalUser.Type);
 
-        public Task DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid? deletingUserId) => throw new NotImplementedException();
+            // TODO: Ensure we have at least one owner?
+
+            await _providerUserRepository.ReplaceAsync(user);
+            await _eventService.LogProviderUserEventAsync(user, EventType.ProviderUser_Updated);
+        }
+
+        public async Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId,
+            IEnumerable<Guid> providerUserIds, Guid deletingUserId)
+        {
+            var providerUsers = await _providerUserRepository.GetManyAsync(providerUserIds);
+
+            // TODO: Ensure we have at least one owner?
+
+            var result = new List<Tuple<ProviderUser, string>>();
+            var deletedUserIds = new List<Guid>();
+            var events = new List<(ProviderUser, EventType, DateTime?)>();
+
+            foreach (var providerUser in providerUsers)
+            {
+                try
+                {
+                    if (providerUser.ProviderId != providerId)
+                    {
+                        throw new BadRequestException("Invalid user.");
+                    }
+                    if (providerUser.UserId == deletingUserId)
+                    {
+                        throw new BadRequestException("You cannot remove yourself.");
+                    }
+
+                    events.Add((providerUser, EventType.ProviderUser_Removed, null));
+
+                    result.Add(Tuple.Create(providerUser, ""));
+                    deletedUserIds.Add(providerUser.Id);
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(providerUser, e.Message));
+                }
+
+                await _providerUserRepository.DeleteManyAsync(deletedUserIds);
+            }
+
+            await _eventService.LogProviderUsersEventAsync(events);
+
+            return result;
+        }
 
         public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
 
