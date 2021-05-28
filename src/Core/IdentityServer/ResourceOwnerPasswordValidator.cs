@@ -58,6 +58,7 @@ namespace Bit.Core.IdentityServer
             }
 
             // Uncomment whenever we want to require the `auth-email` header
+            //
             //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email") ||
             //    _currentContext.HttpContext.Request.Headers["Auth-Email"] != context.UserName)
             //{
