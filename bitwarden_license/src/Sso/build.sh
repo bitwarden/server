@@ -11,14 +11,14 @@ echo ".NET Core version $(dotnet --version)"
 echo "Restore"
 dotnet restore "$DIR/Sso.csproj"
 echo "Clean"
-dotnet clean "$DIR/Sso.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
+dotnet clean "$DIR/Sso.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 echo "Node Build"
 cd "$DIR"
 npm install
 cd "$CUR_DIR"
 gulp --gulpfile "$DIR/gulpfile.js" build
 echo "Publish"
-dotnet publish "$DIR/Sso.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
+dotnet publish "$DIR/Sso.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 
 echo -e "\nBuilding docker image"
 docker --version

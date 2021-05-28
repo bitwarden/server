@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System;
+using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services
 {
@@ -16,6 +17,7 @@ namespace Bit.Core.Services
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
         Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token);
+        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites);
         Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
             IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
@@ -37,5 +39,7 @@ namespace Bit.Core.Services
         Task SendEmergencyAccessRecoveryRejected(EmergencyAccess emergencyAccess, string rejectingName, string email);
         Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
         Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
+        Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
+        Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
     }
 }
