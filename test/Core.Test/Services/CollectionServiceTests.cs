@@ -16,9 +16,10 @@ namespace Bit.Core.Test.Services
 {
     public class CollectionServiceTest
     {
-        [Theory, CollectionDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_DefaultId_CreatesCollectionInTheRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
         {
+            collection.Id = default;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             var utcNow = DateTime.UtcNow;
 
@@ -31,11 +32,12 @@ namespace Bit.Core.Test.Services
             Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CollectionDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_DefaultIdWithGroups_CreateCollectionWithGroupsInRepository(Collection collection,
             IEnumerable<SelectionReadOnly> groups, Organization organization, OrganizationUser organizationUser,
             SutProvider<CollectionService> sutProvider)
         {
+            collection.Id = default;
             organization.UseGroups = true;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             var utcNow = DateTime.UtcNow;
@@ -49,7 +51,7 @@ namespace Bit.Core.Test.Services
             Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CollectionNonDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
         {
             var creationDate = collection.CreationDate;
@@ -65,10 +67,11 @@ namespace Bit.Core.Test.Services
             Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CollectionDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<SelectionReadOnly> groups,
             Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
+            collection.Id = default;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             var utcNow = DateTime.UtcNow;
 
@@ -81,10 +84,11 @@ namespace Bit.Core.Test.Services
             Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CollectionDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_DefaultIdWithUserId_UpdateUserInCollectionRepository(Collection collection,
             Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
+            collection.Id = default;
             organizationUser.Status = OrganizationUserStatusType.Confirmed;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, organizationUser.Id)
@@ -109,24 +113,28 @@ namespace Bit.Core.Test.Services
             var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection));
             Assert.Contains("Organization not found", ex.Message);
             await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
             await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
         }
 
-        [Theory, CollectionDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Collection collection1, Collection collection2, Organization organization, SutProvider<CollectionService> sutProvider)
         {
-            organization.MaxCollections = 2;
+            collection.Id = default;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             sutProvider.GetDependency<ICollectionRepository>().GetCountByOrganizationIdAsync(organization.Id)
-                .Returns(2);
+                .Returns(organization.MaxCollections.Value);
 
             var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection));
-            Assert.Equal("You have reached the maximum number of collections (2) for this organization.", ex.Message);
+            Assert.Equal($@"You have reached the maximum number of collections ({organization.MaxCollections.Value}) for this organization.", ex.Message);
             await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
             await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
         }
 
-        [Theory, CollectionNonDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task DeleteUserAsync_DeletesValidUserWhoBelongsToCollection(Collection collection,
             Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
@@ -143,7 +151,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEventService>().Received().LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
         }
 
-        [Theory, CollectionNonDefaultIdAutoData]
+        [Theory, CollectionAutoData]
         public async Task DeleteUserAsync_InvalidUser_ThrowsNotFound(Collection collection, Organization organization,
             OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
