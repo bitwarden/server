@@ -47,6 +47,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
+        public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUser>(
+                    "[dbo].[ProviderUser_ReadByProviderId]",
+                    new { ProviderId = providerId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+        
         public async Task DeleteManyAsync(IEnumerable<Guid> providerUserIds)
         {
             using (var connection = new SqlConnection(ConnectionString))

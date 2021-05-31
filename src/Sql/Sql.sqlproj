@@ -331,6 +331,7 @@
     <Build Include="dbo\Stored Procedures\Provider_Update.sql" />
     <Build Include="dbo\Stored Procedures\Provider_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Provider_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_Search.sql" />
     <Build Include="dbo\Tables\ProviderUser.sql" />
     <Build Include="dbo\Views\ProviderUserView.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_Create.sql" />
