@@ -4,34 +4,16 @@ using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using System.Linq;
+using System.Text;
 
 namespace Bit.Core.Services
 {
-    public class AzureQueueEventWriteService : IEventWriteService
+    public class AzureQueueEventWriteService : AzureQueueService<IEvent>, IEventWriteService
     {
-        private readonly QueueClient _queueClient;
-
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore
-        };
-
-        public AzureQueueEventWriteService(
-            GlobalSettings globalSettings)
-        {
-            _queueClient = new QueueClient(globalSettings.Events.ConnectionString, "event");
-        }
-
-        public async Task CreateAsync(IEvent e)
-        {
-            var json = JsonConvert.SerializeObject(e, _jsonSettings);
-            await _queueClient.SendMessageAsync(json);
-        }
-
-        public async Task CreateManyAsync(IList<IEvent> e)
-        {
-            var json = JsonConvert.SerializeObject(e, _jsonSettings);
-            await _queueClient.SendMessageAsync(json);
-        }
+        public AzureQueueEventWriteService(GlobalSettings globalSettings) : base(
+            new QueueClient(globalSettings.Events.ConnectionString, "event"),
+            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }) 
+        { }
     }
 }

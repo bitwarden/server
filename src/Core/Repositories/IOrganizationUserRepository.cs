@@ -15,6 +15,7 @@ namespace Bit.Core.Repositories
         Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
         Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
         Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers);
+        Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
         Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId);
         Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id);
         Task<OrganizationUserUserDetails> GetDetailsByIdAsync(Guid id);
@@ -26,10 +27,15 @@ namespace Bit.Core.Repositories
         Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId,
             OrganizationUserStatusType? status = null);
         Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
+        Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
         Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
+        Task CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers);
         Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
+        Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers);
         Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
         Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
+        Task DeleteManyAsync(IEnumerable<Guid> userIds);
         Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email);
+        Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     }
 }

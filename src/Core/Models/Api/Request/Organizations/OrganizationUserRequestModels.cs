@@ -60,6 +60,25 @@ namespace Bit.Core.Models.Api
         public string Key { get; set; }
     }
 
+    public class OrganizationUserBulkConfirmRequestModelEntry
+    {
+        [Required]
+        public Guid Id { get; set; }
+        [Required]
+        public string Key { get; set; }
+    }
+
+    public class OrganizationUserBulkConfirmRequestModel
+    {
+        [Required]
+        public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
+
+        public Dictionary<Guid, string> ToDictionary()
+        {
+            return Keys.ToDictionary(e => e.Id, e => e.Key);
+        }
+    }
+
     public class OrganizationUserUpdateRequestModel
     {
         [Required]
@@ -91,7 +110,7 @@ namespace Bit.Core.Models.Api
         public string ResetPasswordKey { get; set; }
     }
 
-    public class OrganizationUserBulkReinviteRequestModel
+    public class OrganizationUserBulkRequestModel
     {
         [Required]
         public IEnumerable<Guid> Ids { get; set; }

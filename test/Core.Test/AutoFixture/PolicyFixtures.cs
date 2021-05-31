@@ -1,29 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Reflection;
 using AutoFixture;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using AutoFixture.Xunit2;
+using Bit.Core.Enums;
 
-namespace Bit.Core.Test.AutoFixture
+namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 {
-    internal class PolicyCustomization : ICustomization
+    internal class Policy : ICustomization
     {
+        public PolicyType Type { get; set; }
+
+        public Policy(PolicyType type)
+        {
+            Type = type;
+        }
+        
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.Policy>(composer => composer
-                .With(p => p.Id, Guid.NewGuid())
-                .With(p => p.OrganizationId, Guid.NewGuid())
-                .With(p => p.Type, Enums.PolicyType.DisableSend)
-                .With(p => p.Data, "")
-                .With(p => p.Enabled, true));
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, true));
         }
     }
 
-    internal class PolicyAutoDataAttribute : CustomAutoDataAttribute
+    public class PolicyAttribute : CustomizeAttribute
     {
-        public PolicyAutoDataAttribute() : base(
-            new SutProviderCustomization(), new PolicyCustomization(), new Organization())
-        { }
+        private readonly PolicyType _type;
+
+        public PolicyAttribute(PolicyType type)
+        {
+            _type = type;
+        }
+
+        public override ICustomization GetCustomization(ParameterInfo parameter)
+        {
+            return new Policy(_type);
+        }
     }
 }

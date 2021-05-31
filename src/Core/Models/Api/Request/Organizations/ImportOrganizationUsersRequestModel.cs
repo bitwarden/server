@@ -11,6 +11,7 @@ namespace Bit.Core.Models.Api
         public Group[] Groups { get; set; }
         public User[] Users { get; set; }
         public bool OverwriteExisting { get; set; }
+        public bool LargeImport { get; set; }
 
         public class Group
         {

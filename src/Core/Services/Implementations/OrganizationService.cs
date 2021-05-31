@@ -15,6 +15,7 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -443,9 +444,9 @@ namespace Bit.Core.Services
                 var taxRate = taxRates.FirstOrDefault();
                 if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
                 {
-                    subUpdateOptions.DefaultTaxRates = new List<string>(1) 
-                    { 
-                        taxRate.Id 
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1)
+                    {
+                        taxRate.Id
                     };
                 }
             }
@@ -1011,6 +1012,117 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
+        private async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+        {
+            var organization = await GetOrgById(organizationId);
+            if (organization == null || invites.Any(i => i.invite.Emails == null || i.externalId == null))
+            {
+                throw new NotFoundException();
+            }
+
+            var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
+                .Select(i => i.invite.Type.Value));
+            if (invitingUserId.HasValue && inviteTypes.Count > 0)
+            {
+                foreach (var type in inviteTypes)
+                {
+                    await ValidateOrganizationUserUpdatePermissionsAsync(invitingUserId.Value, organizationId, type, null);
+                }
+            }
+
+            if (organization.Seats.HasValue)
+            {
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+                var availableSeats = organization.Seats.Value - userCount;
+                if (availableSeats < invites.Select(i => i.invite.Emails.Count()).Sum())
+                {
+                    throw new BadRequestException("You have reached the maximum number of users " +
+                        $"({organization.Seats.Value}) for this organization.");
+                }
+            }
+
+            var orgUsers = new List<OrganizationUser>();
+            var orgUserInvitedCount = 0;
+            var exceptions = new List<Exception>();
+            var events = new List<(OrganizationUser, EventType, DateTime?)>();
+            var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
+                organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
+            foreach (var (invite, externalId) in invites)
+            {
+                foreach (var email in invite.Emails)
+                {
+                    try
+                    {
+                        // Make sure user is not already invited
+                        if (existingEmails.Contains(email))
+                        {
+                            continue;
+                        }
+
+                        var orgUser = new OrganizationUser
+                        {
+                            OrganizationId = organizationId,
+                            UserId = null,
+                            Email = email.ToLowerInvariant(),
+                            Key = null,
+                            Type = invite.Type.Value,
+                            Status = OrganizationUserStatusType.Invited,
+                            AccessAll = invite.AccessAll,
+                            ExternalId = externalId,
+                            CreationDate = DateTime.UtcNow,
+                            RevisionDate = DateTime.UtcNow,
+                        };
+
+                        if (invite.Permissions != null)
+                        {
+                            orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                            });
+                        }
+
+                        if (!orgUser.AccessAll && invite.Collections.Any())
+                        {
+                            throw new Exception("Bulk invite does not support limited collection invites");
+                        }
+
+                        events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
+                        orgUsers.Add(orgUser);
+                        orgUserInvitedCount++;
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                }
+            }
+
+            try
+            {
+                await _organizationUserRepository.CreateManyAsync(orgUsers);
+                await SendInvitesAsync(orgUsers, organization);
+                await _eventService.LogOrganizationUserEventsAsync(events);
+
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
+                    {
+                        Users = orgUserInvitedCount
+                    });
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+
+            if (exceptions.Any())
+            {
+                throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
+            }
+
+            return orgUsers;
+        }
+
         public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
             string externalId, OrganizationUserInvite invite)
         {
@@ -1022,7 +1134,7 @@ namespace Bit.Core.Services
 
             if (invitingUserId.HasValue && invite.Type.HasValue)
             {
-                await ValidateOrganizationUserUpdatePermissions(invitingUserId.Value, organizationId, invite.Type.Value, null);
+                await ValidateOrganizationUserUpdatePermissionsAsync(invitingUserId.Value, organizationId, invite.Type.Value, null);
             }
 
             if (organization.Seats.HasValue)
@@ -1093,23 +1205,26 @@ namespace Bit.Core.Services
             return orgUsers;
         }
 
-        public async Task ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
+        public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<Guid> organizationUsersId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-            var filteredUsers = orgUsers
-                .Where(u => u.Status == OrganizationUserStatusType.Invited && u.OrganizationId == organizationId);
-
-            if (!filteredUsers.Any())
-            {
-                throw new BadRequestException("Users invalid.");
-            }
-            
             var org = await GetOrgById(organizationId);
-            foreach (var orgUser in filteredUsers)
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+            foreach (var orgUser in orgUsers)
             {
+                if (orgUser.Status != OrganizationUserStatusType.Invited || orgUser.OrganizationId != organizationId)
+                {
+                    result.Add(Tuple.Create(orgUser, "User invalid."));
+                    continue;
+                }
+
                 await SendInviteAsync(orgUser, org);
+                result.Add(Tuple.Create(orgUser, ""));
             }
+
+            return result;
         }
 
         public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
@@ -1123,6 +1238,14 @@ namespace Bit.Core.Services
 
             var org = await GetOrgById(orgUser.OrganizationId);
             await SendInviteAsync(orgUser, org);
+        }
+
+        private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
+        {
+            string MakeToken(OrganizationUser orgUser) =>
+                _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
+                orgUsers.Select(o => (o, MakeToken(o))));
         }
 
         private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
@@ -1185,7 +1308,7 @@ namespace Bit.Core.Services
             return await AcceptUserAsync(orgUser, user, userService);
         }
 
-        private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user, 
+        private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user,
             IUserService userService)
         {
             if (orgUser.Status != OrganizationUserStatusType.Invited)
@@ -1264,29 +1387,97 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
             Guid confirmingUserId, IUserService userService)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Accepted ||
-                orgUser.OrganizationId != organizationId)
+            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() {{organizationUserId, key}},
+                confirmingUserId, userService);
+
+            if (!result.Any())
             {
                 throw new BadRequestException("User not valid.");
             }
 
-            var org = await GetOrgById(organizationId);
-            if (org.PlanType == PlanType.Free &&
-                (orgUser.Type == OrganizationUserType.Admin || orgUser.Type == OrganizationUserType.Owner))
+            var (orgUser, error) = result[0];
+            if (error != "")
             {
-                var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
-                    orgUser.UserId.Value);
-                if (adminCount > 0)
+                throw new BadRequestException(error);
+            }
+            return orgUser;
+        }
+        
+        public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+            Guid confirmingUserId, IUserService userService)
+        {
+            var organizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+            var validOrganizationUsers = organizationUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+                .ToList();
+
+            if (!validOrganizationUsers.Any())
+            {
+                return new List<Tuple<OrganizationUser, string>>();
+            }
+
+            var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
+            
+            var organization = await GetOrgById(organizationId);
+            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
+            var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
+            var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
+
+            var keyedFilteredUsers = validOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
+            var keyedOrganizationUsers = usersOrgs.GroupBy(u => u.UserId.Value)
+                .ToDictionary(u => u.Key, u => u.ToList());
+
+            var succeededUsers = new List<OrganizationUser>();
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var user in users)
+            {
+                if (!keyedFilteredUsers.ContainsKey(user.Id))
                 {
-                    throw new BadRequestException("User can only be an admin of one free organization.");
+                    continue;
+                }
+                var orgUser = keyedFilteredUsers[user.Id];
+                var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
+                try
+                {
+                    if (organization.PlanType == PlanType.Free && orgUser.Type == OrganizationUserType.Admin
+                        || orgUser.Type == OrganizationUserType.Owner)
+                    {
+                        // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+                        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+                        if (adminCount > 0)
+                        {
+                            throw new BadRequestException("User can only be an admin of one free organization.");
+                        }
+                    }
+
+                    await CheckPolicies(policies, organizationId, user, orgUsers, userService);
+                    orgUser.Status = OrganizationUserStatusType.Confirmed;
+                    orgUser.Key = keys[orgUser.Id];
+                    orgUser.Email = null;
+                
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+                    await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                    await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                    succeededUsers.Add(orgUser);
+                    result.Add(Tuple.Create(orgUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(orgUser, e.Message));
                 }
             }
 
-            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
+            await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+
+            return result;
+        }
+
+        private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
+            ICollection<OrganizationUser> userOrgs, IUserService userService)
+        {
             var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if (usingTwoFactorPolicy && !(await userService.TwoFactorIsEnabledAsync(user)))
+            if (usingTwoFactorPolicy && !await userService.TwoFactorIsEnabledAsync(user))
             {
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
@@ -1294,26 +1485,11 @@ namespace Bit.Core.Services
             var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
             if (usingSingleOrgPolicy)
             {
-                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
                 if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
                 {
                     throw new BadRequestException("User is a member of another organization.");
                 }
             }
-
-            orgUser.Status = OrganizationUserStatusType.Confirmed;
-            orgUser.Key = key;
-            orgUser.Email = null;
-            await _organizationUserRepository.ReplaceAsync(orgUser);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-            await _mailService.SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
-
-            // push
-            var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-            await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
-            await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
-
-            return orgUser;
         }
 
         public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
@@ -1325,18 +1501,18 @@ namespace Bit.Core.Services
             }
 
             var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-            if (user.Equals(originalUser)) {
+            if (user.Equals(originalUser))
+            {
                 throw new BadRequestException("Please make changes before saving.");
             }
 
             if (savingUserId.HasValue)
             {
-                await ValidateOrganizationUserUpdatePermissions(savingUserId.Value, user.OrganizationId, user.Type, originalUser.Type);
+                await ValidateOrganizationUserUpdatePermissionsAsync(savingUserId.Value, user.OrganizationId, user.Type, originalUser.Type);
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(user.OrganizationId)).ToList();
             if (user.Type != OrganizationUserType.Owner &&
-                confirmedOwners.Count == 1 && confirmedOwners[0].Id == user.Id)
+                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] {user.Id}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1363,19 +1539,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot remove yourself.");
             }
 
-            if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue)
+            if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
+                !await UserIsOwnerAsync(organizationId, deletingUserId.Value))
             {
-                var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId.Value);
-                var anyOwners = deletingUserOrgs.Any(
-                    u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
-                if (!anyOwners)
-                {
-                    throw new BadRequestException("Only owners can delete other owners.");
-                }
+                throw new BadRequestException("Only owners can delete other owners.");
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
-            if (confirmedOwners.Count == 1 && confirmedOwners[0].Id == organizationUserId)
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {organizationUserId}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1385,11 +1555,7 @@ namespace Bit.Core.Services
 
             if (orgUser.UserId.HasValue)
             {
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
-                    organizationId.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
             }
         }
 
@@ -1401,8 +1567,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            var confirmedOwners = (await GetConfirmedOwnersAsync(organizationId)).ToList();
-            if (confirmedOwners.Count == 1 && confirmedOwners[0].Id == orgUser.Id)
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {orgUser.Id}))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1412,40 +1577,122 @@ namespace Bit.Core.Services
 
             if (orgUser.UserId.HasValue)
             {
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
-                    organizationId.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(orgUser.UserId.Value);
+                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
             }
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUsersId,
+            Guid? deletingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (deletingUserId.HasValue)
+            {
+                deletingUserIsOwner = await UserIsOwnerAsync(organizationId, deletingUserId.Value);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+            var deletedUserIds = new List<Guid>();
+            foreach (var orgUser in filteredUsers)
+            {
+                try
+                {
+                    if (deletingUserId.HasValue && orgUser.UserId == deletingUserId)
+                    {
+                        throw new BadRequestException("You cannot remove yourself.");
+                    }
+
+                    if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can delete other owners.");
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+                    }
+                    result.Add(Tuple.Create(orgUser, ""));
+                    deletedUserIds.Add(orgUser.Id);
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(orgUser, e.Message));
+                }
+
+                await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
+            }
+
+            return result;
+        }
+
+        private async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId)
+        {
+            var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
+            var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
+            return confirmedOwnersIds.Except(organizationUsersId).Any();
+        }
+
+        private async Task<bool> UserIsOwnerAsync(Guid organizationId, Guid deletingUserId)
+        {
+            var deletingUserOrgs = await _organizationUserRepository.GetManyByUserAsync(deletingUserId);
+            return deletingUserOrgs.Any(u => u.OrganizationId == organizationId && u.Type == OrganizationUserType.Owner);
         }
 
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
         {
             if (loggedInUserId.HasValue)
             {
-                await ValidateOrganizationUserUpdatePermissions(loggedInUserId.Value, organizationUser.OrganizationId, organizationUser.Type, null);
+                await ValidateOrganizationUserUpdatePermissionsAsync(loggedInUserId.Value, organizationUser.OrganizationId, organizationUser.Type, null);
             }
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
                 EventType.OrganizationUser_UpdatedGroups);
         }
-        
+
         public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
         {
+            // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
-            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
-                orgUser.Status != OrganizationUserStatusType.Confirmed ||
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value || 
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
             }
             
-            // TODO Reset Password - Block certain org types from using this feature?
+            // Make sure the organization has the ability to use password reset
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset enrollment.");
+            }
 
+            // Make sure the organization has the policy enabled
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ? 
+            await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
                 EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
         }
 
@@ -1523,32 +1770,23 @@ namespace Bit.Core.Services
                 var removeUsersSet = new HashSet<string>(removeUserExternalIds);
                 var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
 
-                var usersToRemove = removeUsersSet
+                await _organizationUserRepository.DeleteManyAsync(removeUsersSet
                     .Except(newUsersSet)
-                    .Where(ru => existingUsersDict.ContainsKey(ru))
-                    .Select(ru => existingUsersDict[ru]);
-
-                foreach (var user in usersToRemove)
-                {
-                    if (user.Type != OrganizationUserType.Owner)
-                    {
-                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
-                        existingExternalUsersIdDict.Remove(user.ExternalId);
-                    }
-                }
+                    .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+                    .Select(u => existingUsersDict[u].Id));
             }
 
             if (overwriteExisting)
             {
                 // Remove existing external users that are not in new user set
-                foreach (var user in existingExternalUsers)
+                var usersToDelete = existingExternalUsers.Where(u =>
+                    u.Type != OrganizationUserType.Owner &&
+                    !newUsersSet.Contains(u.ExternalId) &&
+                    existingExternalUsersIdDict.ContainsKey(u.ExternalId));
+                await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+                foreach (var deletedUser in usersToDelete)
                 {
-                    if (user.Type != OrganizationUserType.Owner && !newUsersSet.Contains(user.ExternalId) &&
-                        existingExternalUsersIdDict.ContainsKey(user.ExternalId))
-                    {
-                        await _organizationUserRepository.DeleteAsync(new OrganizationUser { Id = user.Id });
-                        existingExternalUsersIdDict.Remove(user.ExternalId);
-                    }
+                    existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
                 }
             }
 
@@ -1560,6 +1798,7 @@ namespace Bit.Core.Services
                     .ToDictionary(u => u.Email);
                 var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
                 var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
+                var usersToUpsert = new List<OrganizationUser>();
                 foreach (var user in usersToAttach)
                 {
                     var orgUserDetails = existingUsersEmailsDict[user];
@@ -1567,10 +1806,11 @@ namespace Bit.Core.Services
                     if (orgUser != null)
                     {
                         orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
-                        await _organizationUserRepository.UpsertAsync(orgUser);
+                        usersToUpsert.Add(orgUser);
                         existingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
                     }
                 }
+                await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
 
                 // Add new users
                 var existingUsersSet = new HashSet<string>(existingExternalUsersIdDict.Keys);
@@ -1585,11 +1825,12 @@ namespace Bit.Core.Services
                     enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
                 }
 
-                if (!enoughSeatsAvailable) 
+                if (!enoughSeatsAvailable)
                 {
                     throw new BadRequestException($"Organization does not have enough seats available. Need {usersToAdd.Count} but {seatsAvailable} available.");
                 }
 
+                var userInvites = new List<(OrganizationUserInvite, string)>();
                 foreach (var user in newUsers)
                 {
                     if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
@@ -1606,9 +1847,7 @@ namespace Bit.Core.Services
                             AccessAll = false,
                             Collections = new List<SelectionReadOnly>(),
                         };
-                        var newUser = await InviteUserAsync(organizationId, importingUserId, user.Email, 
-                                OrganizationUserType.User, false, user.ExternalId, new List<SelectionReadOnly>());
-                        existingExternalUsersIdDict.Add(newUser.ExternalId, newUser.Id);
+                        userInvites.Add((invite, user.ExternalId));
                     }
                     catch (BadRequestException)
                     {
@@ -1616,10 +1855,16 @@ namespace Bit.Core.Services
                         continue;
                     }
                 }
+
+                var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, userInvites);
+                foreach (var invitedUser in invitedUsers)
+                {
+                    existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
+                }
             }
 
-            // Groups
 
+            // Groups
             if (groups?.Any() ?? false)
             {
                 if (!organization.UseGroups)
@@ -1696,6 +1941,40 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey)
+        {
+            // Only Owners/Admins/Custom (w/ ManageResetPassword) can create org keys
+            var orgUser = await _organizationUserRepository.GetDetailsByUserAsync(userId, orgId);
+            if (orgUser == null || orgUser.Type != OrganizationUserType.Admin && 
+                orgUser.Type != OrganizationUserType.Owner && orgUser.Type != OrganizationUserType.Custom)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (orgUser.Type == OrganizationUserType.Custom)
+            {
+                var permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+                if (permissions == null || !permissions.ManageResetPassword)
+                {
+                    throw new UnauthorizedAccessException();
+                }
+            }
+            
+            // If the keys already exist, error out
+            var org = await _organizationRepository.GetByIdAsync(orgId);
+            if (org.PublicKey != null && org.PrivateKey != null)
+            {
+                throw new BadRequestException("Organization Keys already exist");
+            }
+            
+            // Update org with generated public/private key
+            org.PublicKey = publicKey;
+            org.PrivateKey = privateKey;
+            await UpdateAsync(org);
+            
+            return org;
+        }
+
         private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
             Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
         {
@@ -1715,6 +1994,15 @@ namespace Bit.Core.Services
                 OrganizationUserType.Owner);
             return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
         }
+
+        private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+        {
+            var deviceIds = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
+
 
         private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
         {
@@ -1778,7 +2066,8 @@ namespace Bit.Core.Services
             }
         }
 
-        private async Task ValidateOrganizationUserUpdatePermissions(Guid loggedInUserId, Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType) 
+        private async Task ValidateOrganizationUserUpdatePermissionsAsync(Guid loggedInUserId, Guid organizationId,
+            OrganizationUserType newType, OrganizationUserType? oldType)
         {
             var loggedInUserOrgs = await _organizationUserRepository.GetManyByUserAsync(loggedInUserId);
             var loggedInAsOrgOwner = loggedInUserOrgs

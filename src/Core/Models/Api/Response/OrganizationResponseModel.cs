@@ -58,7 +58,7 @@ namespace Bit.Core.Models.Api
         public string BillingEmail { get; set; }
         public PlanResponseModel Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool UsePolicies { get; set; }
