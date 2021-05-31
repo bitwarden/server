@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Business
 
         public PlanType? PlanType { get; set; }
 
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
 
         public short? Storage { get; set; }
 

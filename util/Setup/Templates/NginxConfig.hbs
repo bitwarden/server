@@ -84,6 +84,16 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
+  location = /.well-known/assetlinks.json {
+    proxy_pass http://web:5000/assetlinks.json;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;    
+    proxy_hide_header Content-Type;
+    add_header Content-Type application/json;
+  }
+
   location = /duo-connector.html {
     proxy_pass http://web:5000/duo-connector.html;
   }

@@ -10,9 +10,9 @@ echo ".NET Core version $(dotnet --version)"
 echo "Restore"
 dotnet restore "$DIR/Setup.csproj"
 echo "Clean"
-dotnet clean "$DIR/Setup.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
+dotnet clean "$DIR/Setup.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 echo "Publish"
-dotnet publish "$DIR/Setup.csproj" -c "Release" -o "$DIR/obj/Docker/publish"
+dotnet publish "$DIR/Setup.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 
 echo -e "\nBuilding docker image"
 docker --version
