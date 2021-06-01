@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -47,13 +48,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
-        public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId)
+        public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<ProviderUser>(
                     "[dbo].[ProviderUser_ReadByProviderId]",
-                    new { ProviderId = providerId },
+                    new { ProviderId = providerId, Type = type },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

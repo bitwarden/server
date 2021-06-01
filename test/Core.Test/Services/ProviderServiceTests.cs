@@ -342,7 +342,7 @@ namespace Bit.Core.Test.Services
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task DeleteUsersAsync_Success(Provider provider, User deletingUser,
+        public async Task DeleteUsersAsync_NoRemainingOwner_Throws(Provider provider, User deletingUser,
             ICollection<ProviderUser> providerUsers, SutProvider<ProviderService> sutProvider)
         {
             var userIds = providerUsers.Select(pu => pu.Id);
@@ -356,6 +356,30 @@ namespace Bit.Core.Test.Services
             
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
+            providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new ProviderUser[] {});
+            
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.DeleteUsersAsync(provider.Id, userIds, deletingUser.Id));
+            Assert.Equal("Provider must have at least one confirmed ProviderAdmin.", exception.Message);
+        }
+        
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task DeleteUsersAsync_Success(Provider provider, User deletingUser,            ICollection<ProviderUser> providerUsers,
+            [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)]ProviderUser remainingOwner,
+            SutProvider<ProviderService> sutProvider)
+        {
+            var userIds = providerUsers.Select(pu => pu.Id);
+
+            providerUsers.First().UserId = deletingUser.Id;
+            foreach (var providerUser in providerUsers)
+            {
+                providerUser.ProviderId = provider.Id;
+            }
+            providerUsers.Last().ProviderId = default;
+            
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
+            providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new[] {remainingOwner});
             
             var result = await sutProvider.Sut.DeleteUsersAsync(provider.Id, userIds, deletingUser.Id);
             

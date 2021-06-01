@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[ProviderUser_ReadByProviderId]
-    @ProviderId UNIQUEIDENTIFIER
+    @ProviderId UNIQUEIDENTIFIER,
+    @Type TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -10,4 +11,5 @@ BEGIN
         [dbo].[ProviderUserView]
     WHERE
         [ProviderId] = @ProviderId
+    AND (@Type IS NULL OR [Type] = @Type)
 END

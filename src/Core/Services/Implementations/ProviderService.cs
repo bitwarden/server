@@ -273,6 +273,11 @@ namespace Bit.Core.Services
             await ValidateProviderUserUpdatePermissionsAsync(savingUserId, user.ProviderId, user.Type, originalUser.Type);
 
             // TODO: Ensure we have at least one owner?
+            if (user.Type != ProviderUserType.ProviderAdmin &&
+                !await HasConfirmedProviderAdminExceptAsync(user.ProviderId, new[] {user.Id}))
+            {
+                throw new BadRequestException("Provider must have at least one confirmed ProviderAdmin.");
+            }
 
             await _providerUserRepository.ReplaceAsync(user);
             await _eventService.LogProviderUserEventAsync(user, EventType.ProviderUser_Updated);
@@ -283,7 +288,10 @@ namespace Bit.Core.Services
         {
             var providerUsers = await _providerUserRepository.GetManyAsync(providerUserIds);
 
-            // TODO: Ensure we have at least one owner?
+            if (!await HasConfirmedProviderAdminExceptAsync(providerId, providerUserIds))
+            {
+                throw new BadRequestException("Provider must have at least one confirmed ProviderAdmin.");
+            }
 
             var result = new List<Tuple<ProviderUser, string>>();
             var deletedUserIds = new List<Guid>();
@@ -336,6 +344,15 @@ namespace Bit.Core.Services
             ProviderUserType newType, ProviderUserType? oldType)
         {
             return;
+        }
+        
+        private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)
+        {
+            var providerAdmins = await _providerUserRepository.GetManyByProviderAsync(providerId,
+                ProviderUserType.ProviderAdmin);
+            var confirmedOwners = providerAdmins.Where(o => o.Status == ProviderUserStatusType.Confirmed);
+            var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
+            return confirmedOwnersIds.Except(providerUserIds).Any();
         }
     }
 }
