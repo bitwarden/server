@@ -1,184 +1,173 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Xunit;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.AutoFixture.Attributes;
 using NSubstitute;
-using Bit.Core.Exceptions;
+using Xunit;
 
 namespace Bit.Core.Test.Services
 {
     public class CollectionServiceTest
     {
-        private readonly IEventService _eventService;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ICollectionRepository _collectionRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IMailService _mailService;
-
-        public CollectionServiceTest()
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_DefaultId_CreatesCollectionInTheRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
         {
-            _eventService = Substitute.For<IEventService>();
-            _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _collectionRepository = Substitute.For<ICollectionRepository>();
-            _userRepository = Substitute.For<IUserRepository>();
-            _mailService = Substitute.For<IMailService>();
+            collection.Id = default;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var utcNow = DateTime.UtcNow;
+
+            await sutProvider.Sut.SaveAsync(collection);
+
+            await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogCollectionEventAsync(collection, EventType.Collection_Created);
+            Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Fact]
-        public async Task SaveAsync_CollectionNotFound()
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_DefaultIdWithGroups_CreateCollectionWithGroupsInRepository(Collection collection,
+            IEnumerable<SelectionReadOnly> groups, Organization organization, OrganizationUser organizationUser,
+            SutProvider<CollectionService> sutProvider)
         {
-            var collectionService = new CollectionService(
-                _eventService,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionRepository,
-                _userRepository,
-                _mailService);
+            collection.Id = default;
+            organization.UseGroups = true;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var utcNow = DateTime.UtcNow;
 
-            var id = Guid.NewGuid();
+            await sutProvider.Sut.SaveAsync(collection, groups);
 
-            var collection = new Core.Models.Table.Collection
-            {
-                Id = id,
-            };
-
-            var ex = await Assert.ThrowsAsync<BadRequestException>(() => collectionService.SaveAsync(collection));
-
-            Assert.Equal("Organization not found", ex.Message);
+            await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection, groups);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogCollectionEventAsync(collection, EventType.Collection_Created);
+            Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Fact]
-        public async Task SaveAsync_DefaultCollectionId_CreatesCollectionInTheRepository()
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
         {
-            // prepare the organization
-            var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Core.Models.Table.Organization
-            {
-                Id = testOrganizationId,
-            };
-            _organizationRepository.GetByIdAsync(testOrganizationId).Returns(testOrganization);
+            var creationDate = collection.CreationDate;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var utcNow = DateTime.UtcNow;
 
-            var collectionService = new CollectionService(
-                _eventService,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionRepository,
-                _userRepository,
-                _mailService);
+            await sutProvider.Sut.SaveAsync(collection);
 
-            // execute
-            var testCollection = new Core.Models.Table.Collection
-            {
-                OrganizationId = testOrganizationId,
-            };
-            await collectionService.SaveAsync(testCollection);
-
-            // verify
-            await _collectionRepository.Received().CreateAsync(testCollection);
+            await sutProvider.GetDependency<ICollectionRepository>().Received().ReplaceAsync(collection);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogCollectionEventAsync(collection, EventType.Collection_Updated);
+            Assert.Equal(collection.CreationDate, creationDate);
+            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Fact]
-        public async Task SaveAsync_RespectsMaxNumberOfCollectionsPerOrganization()
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<SelectionReadOnly> groups,
+            Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
-            // prepare the organization
-            var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Core.Models.Table.Organization
-            {
-                Id = testOrganizationId,
-                MaxCollections = 2,
-            };
-            _organizationRepository.GetByIdAsync(testOrganizationId).Returns(testOrganization);
-            _collectionRepository.GetCountByOrganizationIdAsync(testOrganizationId).Returns(2);
+            collection.Id = default;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var utcNow = DateTime.UtcNow;
 
-            // execute
-            var collectionService = new CollectionService(
-                _eventService,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionRepository,
-                _userRepository,
-                _mailService);
+            await sutProvider.Sut.SaveAsync(collection, groups);
 
-            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
-
-            // verify & expect exception to be thrown
-            var ex = await Assert.ThrowsAsync<BadRequestException>(() => collectionService.SaveAsync(testCollection));
-
-            Assert.Equal("You have reached the maximum number of collections (2) for this organization.",
-                ex.Message);
+            await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogCollectionEventAsync(collection, EventType.Collection_Created);
+            Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Fact]
-        public async Task DeleteUserAsync_DeletesValidUserWhoBelongsToCollection()
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_DefaultIdWithUserId_UpdateUserInCollectionRepository(Collection collection,
+            Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
         {
-            // prepare the organization
-            var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Core.Models.Table.Organization
-            {
-                Id = testOrganizationId,
-            };
-            var testUserId = Guid.NewGuid();
-            var organizationUser = new Core.Models.Table.OrganizationUser
-            {
-                Id = testUserId,
-                OrganizationId = testOrganizationId,
-            };
-            _organizationUserRepository.GetByIdAsync(testUserId).Returns(organizationUser);
+            collection.Id = default;
+            organizationUser.Status = OrganizationUserStatusType.Confirmed;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, organizationUser.Id)
+                .Returns(organizationUser);
+            var utcNow = DateTime.UtcNow;
 
-            // execute
-            var collectionService = new CollectionService(
-                _eventService,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionRepository,
-                _userRepository,
-                _mailService);
+            await sutProvider.Sut.SaveAsync(collection, null, organizationUser.Id);
 
-            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
-            await collectionService.DeleteUserAsync(testCollection, organizationUser.Id);
-
-            // verify
-            await _collectionRepository.Received().DeleteUserAsync(testCollection.Id, organizationUser.Id);
+            await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection);
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received()
+                .GetByOrganizationAsync(organization.Id, organizationUser.Id);
+            await sutProvider.GetDependency<ICollectionRepository>().Received().UpdateUsersAsync(collection.Id, Arg.Any<List<SelectionReadOnly>>());
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogCollectionEventAsync(collection, EventType.Collection_Created);
+            Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Fact]
-        public async Task DeleteUserAsync_ThrowsIfUserIsInvalid()
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Collection collection, SutProvider<CollectionService> sutProvider)
         {
-            // prepare the organization
-            var testOrganizationId = Guid.NewGuid();
-            var testOrganization = new Core.Models.Table.Organization
-            {
-                Id = testOrganizationId,
-            };
-            var testUserId = Guid.NewGuid();
-            var nonOrganizationUser = new Core.Models.Table.OrganizationUser
-            {
-                Id = testUserId,
-                OrganizationId = Guid.NewGuid(),
-            };
-            _organizationUserRepository.GetByIdAsync(testUserId).Returns(nonOrganizationUser);
+            var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection));
+            Assert.Contains("Organization not found", ex.Message);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+            await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
+        }
 
-            // execute
-            var collectionService = new CollectionService(
-                _eventService,
-                _organizationRepository,
-                _organizationUserRepository,
-                _collectionRepository,
-                _userRepository,
-                _mailService);
+        [Theory, CollectionAutoData]
+        public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Collection collection1, Collection collection2, Organization organization, SutProvider<CollectionService> sutProvider)
+        {
+            collection.Id = default;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<ICollectionRepository>().GetCountByOrganizationIdAsync(organization.Id)
+                .Returns(organization.MaxCollections.Value);
 
-            var testCollection = new Core.Models.Table.Collection { OrganizationId = testOrganizationId };
+            var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection));
+            Assert.Equal($@"You have reached the maximum number of collections ({organization.MaxCollections.Value}) for this organization.", ex.Message);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+            await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
+        }
 
-            // verify
+        [Theory, CollectionAutoData]
+        public async Task DeleteUserAsync_DeletesValidUserWhoBelongsToCollection(Collection collection,
+            Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
+        {
+            collection.OrganizationId = organization.Id;
+            organizationUser.OrganizationId = organization.Id;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+                .Returns(organizationUser);
+
+            await sutProvider.Sut.DeleteUserAsync(collection, organizationUser.Id);
+
+            await sutProvider.GetDependency<ICollectionRepository>().Received()
+                .DeleteUserAsync(collection.Id, organizationUser.Id);
+            await sutProvider.GetDependency<IEventService>().Received().LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
+        }
+
+        [Theory, CollectionAutoData]
+        public async Task DeleteUserAsync_InvalidUser_ThrowsNotFound(Collection collection, Organization organization,
+            OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
+        {
+            collection.OrganizationId = organization.Id;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+                .Returns(organizationUser);
+
+            // user not in organization
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                sutProvider.Sut.DeleteUserAsync(collection, organizationUser.Id));
             // invalid user
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                collectionService.DeleteUserAsync(testCollection, Guid.NewGuid()));
-            // user from other organization
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                collectionService.DeleteUserAsync(testCollection, testUserId));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(collection, Guid.NewGuid()));
+            await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+            await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+                .LogOrganizationUserEventAsync(default, default);
         }
     }
 }

@@ -19,10 +19,16 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         public void Customize(IFixture fixture)
         {
             var organizationId = Guid.NewGuid();
+            var maxConnections = (short)new Random().Next(10, short.MaxValue);
 
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
+                .With(o => o.MaxCollections, maxConnections)
                 .With(o => o.UseGroups, UseGroups));
+
+            fixture.Customize<Core.Models.Table.Collection>(composer =>
+                composer
+                    .With(c => c.OrganizationId, organizationId));
 
             fixture.Customize<Group>(composer => composer.With(g => g.OrganizationId, organizationId));
         }
@@ -53,7 +59,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
             var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
-            
+
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, selectedPlan.Type)
                 .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
