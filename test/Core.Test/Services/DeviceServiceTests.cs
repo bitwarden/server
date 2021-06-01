@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
@@ -21,6 +20,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveAsync(device);
 
             await sutProvider.GetDependency<IDeviceRepository>().Received().CreateAsync(device);
+            await sutProvider.GetDependency<IDeviceRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
             await sutProvider
                 .GetDependency<IPushRegistrationService>().Received()
                 .CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
@@ -38,6 +38,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveAsync(device);
 
             await sutProvider.GetDependency<IDeviceRepository>().Received().ReplaceAsync(device);
+            await sutProvider.GetDependency<IDeviceRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
             await sutProvider
                 .GetDependency<IPushRegistrationService>().Received()
                 .CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
