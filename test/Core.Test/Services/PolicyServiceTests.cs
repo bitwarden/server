@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
@@ -9,7 +8,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Braintree.Test;
 using NSubstitute;
 using Xunit;
 
