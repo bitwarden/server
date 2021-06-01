@@ -1,9 +1,6 @@
 name: QA Deploy
 
 on:
-  push:
-    branches:
-      - 'rc'
   workflow_dispatch:
     inputs: 
       migrateDb:
