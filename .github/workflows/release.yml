@@ -152,7 +152,12 @@ jobs:
   upload:
     name: Upload
     runs-on: ubuntu-latest
-    needs: release
+    needs: 
+      - setup
+      - release
+    env:
+      RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -207,6 +212,6 @@ jobs:
             -a ./swagger.json \
             -a ./docker-stub.zip \
             -m "Version $RELEASE_VERSION" \
-            $RELEASE_TAG_NAME
+            $TAG_VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
