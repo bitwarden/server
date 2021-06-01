@@ -54,6 +54,7 @@ namespace Bit.Core.Utilities
 
                 switch (encType)
                 {
+                    case Enums.EncryptionType.AesGcm256_B64:
                     case Enums.EncryptionType.AesCbc256_B64:
                     case Enums.EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64:
                     case Enums.EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64:
@@ -82,6 +83,7 @@ namespace Bit.Core.Utilities
 
                 switch (encType)
                 {
+                    case Enums.EncryptionType.AesGcm256_B64:
                     case Enums.EncryptionType.AesCbc256_B64:
                     case Enums.EncryptionType.AesCbc128_HmacSha256_B64:
                     case Enums.EncryptionType.AesCbc256_HmacSha256_B64:
