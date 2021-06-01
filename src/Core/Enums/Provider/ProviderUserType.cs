@@ -2,7 +2,7 @@
 {
     public enum ProviderUserType : byte
     {
-        Administrator = 0,
-        ServiceAdmin = 1,
+        ProviderAdmin = 0,
+        ServiceUser = 1,
     }
 }

@@ -31,7 +31,7 @@ namespace Bit.Core.Test.AutoFixture.ProviderUserFixtures
 
         public ProviderUserAttribute(
             ProviderUserStatusType status = ProviderUserStatusType.Confirmed,
-            ProviderUserType type = ProviderUserType.Administrator)
+            ProviderUserType type = ProviderUserType.ProviderAdmin)
         {
             _status = status;
             _type = type;

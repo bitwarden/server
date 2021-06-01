@@ -329,7 +329,7 @@ namespace Bit.Core.Test.Services
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveUserAsync_Success(
-            [ProviderUser(type: ProviderUserType.Administrator)]ProviderUser providerUser, User savingUser,
+            [ProviderUser(type: ProviderUserType.ProviderAdmin)]ProviderUser providerUser, User savingUser,
             SutProvider<ProviderService> sutProvider)
         {
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();

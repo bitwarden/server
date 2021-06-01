@@ -14,7 +14,7 @@ namespace Bit.Admin.Models
 
             Administrators = string.Join(", ",
                 providerUsers
-                    .Where(u => u.Type == ProviderUserType.Administrator && u.Status == ProviderUserStatusType.Confirmed)
+                    .Where(u => u.Type == ProviderUserType.ProviderAdmin && u.Status == ProviderUserStatusType.Confirmed)
                     .Select(u => u.Email));
         }
 

@@ -81,7 +81,7 @@ namespace Bit.Core.Services
                 UserId = owner.Id,
                 Key = key,
                 Status = ProviderUserStatusType.Confirmed,
-                Type = ProviderUserType.Administrator,
+                Type = ProviderUserType.ProviderAdmin,
             };
 
             await _providerUserRepository.CreateAsync(providerUser);
