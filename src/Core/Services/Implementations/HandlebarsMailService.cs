@@ -660,7 +660,7 @@ namespace Bit.Core.Services
                 Email = email,
                 Token = token,
             };
-            await AddMessageContentAsync(message, "Provider/ProviderSetupInvite", model);
+            await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
             message.Category = "ProviderSetupInvite";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -678,7 +678,7 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
             };
-            await AddMessageContentAsync(message, "Provider/ProviderUserInvited", model);
+            await AddMessageContentAsync(message, "Provider.ProviderUserInvited", model);
             message.Category = "ProviderSetupInvite";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -692,7 +692,7 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
-            await AddMessageContentAsync(message, "Provider/ProviderUserConfirmed", model);
+            await AddMessageContentAsync(message, "Provider.ProviderUserConfirmed", model);
             message.Category = "ProviderUserConfirmed";
             await _mailDeliveryService.SendEmailAsync(message);
         }
