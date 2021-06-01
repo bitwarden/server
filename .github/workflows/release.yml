@@ -220,7 +220,7 @@ jobs:
           hub release edit \
             -a ./swagger.json \
             -a ./docker-stub.zip \
-            -m "Version $RELEASE_VERSION" \
+            -m "" \
             $TAG_VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
