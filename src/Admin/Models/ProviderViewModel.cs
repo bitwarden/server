@@ -12,7 +12,7 @@ namespace Bit.Admin.Models
             Provider = provider;
             UserCount = providerUsers.Count();
 
-            Administrators = string.Join(", ",
+            ProviderAdmins = string.Join(", ",
                 providerUsers
                     .Where(u => u.Type == ProviderUserType.ProviderAdmin && u.Status == ProviderUserStatusType.Confirmed)
                     .Select(u => u.Email));
@@ -22,6 +22,6 @@ namespace Bit.Admin.Models
 
         public Provider Provider { get; set; }
         
-        public string Administrators { get; set; }
+        public string ProviderAdmins { get; set; }
     }
 }

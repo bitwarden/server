@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Admin.Controllers
 {
     [Authorize]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public class ProvidersController : Controller
     {
         private readonly IProviderRepository _providerRepository;

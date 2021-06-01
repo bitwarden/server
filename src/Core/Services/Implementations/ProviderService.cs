@@ -106,8 +106,6 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            await ValidateProviderUserUpdatePermissionsAsync(invitingUserId, providerId, invite.Type, null);
-
             var providerUsers = new List<ProviderUser>();
             foreach (var email in invite.Emails)
             {
@@ -269,10 +267,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invite the user first.");
             }
 
-            var originalUser = await _providerUserRepository.GetByIdAsync(user.Id);
-            await ValidateProviderUserUpdatePermissionsAsync(savingUserId, user.ProviderId, user.Type, originalUser.Type);
-
-            // TODO: Ensure we have at least one owner?
             if (user.Type != ProviderUserType.ProviderAdmin &&
                 !await HasConfirmedProviderAdminExceptAsync(user.ProviderId, new[] {user.Id}))
             {
@@ -339,13 +333,7 @@ namespace Bit.Core.Services
                 $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
             await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
         }
-        
-        private async Task ValidateProviderUserUpdatePermissionsAsync(Guid loggedInUserId, Guid providerId,
-            ProviderUserType newType, ProviderUserType? oldType)
-        {
-            return;
-        }
-        
+
         private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)
         {
             var providerAdmins = await _providerUserRepository.GetManyByProviderAsync(providerId,
