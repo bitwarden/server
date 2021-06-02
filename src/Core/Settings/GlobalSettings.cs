@@ -10,8 +10,8 @@ namespace Bit.Core.Settings
         public GlobalSettings()
         {
             BaseServiceUri = new BaseServiceUriSettings(this);
-            Attachment = new FileStorageSettings(this, "attchments", "attchments");
-            Send = new FileStorageSettings(this, "attchments/send", "attchments/send");
+            Attachment = new FileStorageSettings(this, "attachments", "attachments");
+            Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
             DataProtection = new DataProtectionSettings(this);
         }
 
