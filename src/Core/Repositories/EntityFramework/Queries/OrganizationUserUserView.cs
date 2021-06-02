@@ -13,9 +13,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         {
             var query = from ou in dbContext.OrganizationUsers
                 join u in dbContext.Users on ou.UserId equals u.Id into u_g
-                from u in u_g
+                from u in u_g.DefaultIfEmpty()
                 join su in dbContext.SsoUsers on u.Id equals su.UserId into su_g
-                from su in su_g
+                from su in su_g.DefaultIfEmpty()
                 select new { ou, u, su };
             return query.Select(x => new OrganizationUserUserDetails() {
                 Id = x.ou.Id,
