@@ -54,7 +54,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = new CipherUpdateCollections(cipher, collectionIds);
+                var cipherEntity = await dbContext.Ciphers.FindAsync(cipher.Id);
+                var query = new CipherUpdateCollections(cipherEntity, collectionIds).Run(dbContext);
                 await dbContext.AddRangeAsync(query);
                 await dbContext.SaveChangesAsync();
             }
@@ -319,18 +320,33 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
+        public async Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.QueryAsync<CipherDetails>( */
-            /*         $"[{Schema}].[CipherOrganizationDetails_ReadById]", */
-            /*         new { Id = id }, */
-            /*         commandType: CommandType.StoredProcedure); */
-
-            /*     return results.FirstOrDefault(); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from c in dbContext.Ciphers
+                            join o in dbContext.Organizations
+                                on c.OrganizationId equals o.Id into o_g
+                            from o in o_g.DefaultIfEmpty()
+                            where c.Id == id
+                            select new CipherOrganizationDetails() {  
+                                Id = c.Id,
+                                UserId = c.UserId,
+                                OrganizationId = c.OrganizationId,
+                                Type = c.Type,
+                                Data = c.Data,
+                                Favorites = c.Favorites,
+                                Folders = c.Folders,
+                                Attachments = c.Attachments,
+                                CreationDate = c.CreationDate,
+                                RevisionDate = c.RevisionDate,
+                                DeletedDate = c.DeletedDate, 
+                                OrganizationUseTotp = o.UseTotp
+                            };
+                var data = await query.FirstOrDefaultAsync();
+                return data;
+            }
         }
 
         public Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)

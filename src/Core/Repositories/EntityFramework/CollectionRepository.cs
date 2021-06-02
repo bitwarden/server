@@ -41,12 +41,13 @@ namespace Bit.Core.Repositories.EntityFramework
                                       select g.Id).ToListAsync();
                 var collectionGroups = groups
                     .Where(g => availibleGroups.Contains(g.Id))
-                    .Select(g => new CollectionGroup(){
+                    .Select(g => new EfModel.CollectionGroup(){
                         CollectionId = obj.Id,
                         GroupId = g.Id,
                         ReadOnly = g.ReadOnly,
                         HidePasswords = g.HidePasswords
                     });
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(collectionGroups, new System.Text.Json.JsonSerializerOptions(){WriteIndented = true}));
                 await dbContext.AddRangeAsync(collectionGroups);
                 // TODO: User_BumpAccountRevisionDateByOrganizationId
                 await dbContext.SaveChangesAsync();
@@ -151,13 +152,66 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public async Task ReplaceAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
+        public async Task ReplaceAsync(Collection collection, IEnumerable<SelectionReadOnly> groups)
         {
-            await base.ReplaceAsync(obj);
+            await base.ReplaceAsync(collection);
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: Collection_UpdateWithGroups
+                var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
+                var modifiedGroupEntities = dbContext.Groups.Where(x => groups.Select(x => x.Id).Contains(x.Id));
+                var target =    (from cg in dbContext.CollectionGroups
+                                join g in modifiedGroupEntities 
+                                    on cg.CollectionId equals collection.Id into s_g
+                                from g in s_g.DefaultIfEmpty()
+                                where g == null || cg.GroupId == g.Id
+                                select new {cg, g}).AsNoTracking();
+                var source =    (from g in modifiedGroupEntities
+                                from cg in dbContext.CollectionGroups
+                                    .Where(cg => cg.CollectionId == collection.Id && cg.GroupId == g.Id).DefaultIfEmpty()
+                                select new {cg, g}).AsNoTracking();
+                var union = await target
+                    .Union(source)
+                    .Where(x => 
+                        x.cg == null ||
+                        ((x.g == null || x.g.Id == x.cg.GroupId) && 
+                        (x.cg.CollectionId == collection.Id)))
+                    .AsNoTracking()
+                    .ToListAsync();
+                var insert = union.Where(x => x.cg == null && groupsInOrg.Any(c => x.g.Id == c.Id))
+                    .Select(x => new EfModel.CollectionGroup() {
+                        CollectionId = collection.Id,
+                        GroupId = x.g.Id,
+                        ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
+                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords
+                    }).ToList();
+                var update = union
+                    .Where(
+                        x => x.g != null && 
+                        x.cg != null && 
+                        (x.cg.ReadOnly != groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly || 
+                        x.cg.HidePasswords != groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords)
+                    )
+                    .Select(x => new EfModel.CollectionGroup() {
+                        CollectionId = collection.Id, 
+                        GroupId = x.g.Id,
+                        ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
+                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords
+                    });
+                var delete = union
+                    .Where(
+                        x => x.g == null && 
+                        x.cg.CollectionId == collection.Id
+                    )
+                    .Select(x => new EfModel.CollectionGroup() { 
+                        CollectionId = collection.Id, GroupId = x.cg.GroupId
+                    })
+                    .ToList();
+                
+                await dbContext.AddRangeAsync(insert);
+                dbContext.UpdateRange(update);
+                dbContext.RemoveRange(delete);
+                await dbContext.SaveChangesAsync();
                 // TODO: User_BumpAccountRevisionDateByCollectionId
             }
         }

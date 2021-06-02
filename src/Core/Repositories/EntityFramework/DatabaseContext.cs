@@ -62,9 +62,9 @@ namespace Bit.Core.Repositories.EntityFramework
             var eU2f = builder.Entity<U2f>();
             var eUser = builder.Entity<User>();
 
-            eCollectionCipher.HasNoKey();
+            eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
-            eCollectionGroup.HasNoKey();
+            eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
 
             eGrant.HasKey(x => x.Key);
 
@@ -79,14 +79,6 @@ namespace Bit.Core.Repositories.EntityFramework
                 eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
                 eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
                 //
-
-                /* var jsonColumnType = "text"; */
-                /* eCipher.Property(e => e.Data).HasColumnType(jsonColumnType); */
-                /* eCipher.Property(e => e.Favorites).HasColumnType(jsonColumnType); */
-                /* eCipher.Property(e => e.Attachments).HasColumnType(jsonColumnType); */
-                /* eCipher.Property(e => e.Folders).HasColumnType(jsonColumnType); */
-                /* eOrganization.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType); */
-                /* eUser.Property(e => e.TwoFactorProviders).HasColumnType(jsonColumnType); */
             }
 
             eCipher.ToTable(nameof(Cipher));

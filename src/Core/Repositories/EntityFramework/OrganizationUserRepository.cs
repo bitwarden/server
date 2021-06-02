@@ -64,7 +64,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     HidePasswords = c.cu.HidePasswords
                 }); 
                 return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(
-                    organizationUser, (ICollection<SelectionReadOnly>)collections);
+                    organizationUser, collections.ToList());
             }
         }
 
