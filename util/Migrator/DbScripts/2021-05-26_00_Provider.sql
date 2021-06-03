@@ -855,7 +855,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[providerUserView]
+        [dbo].[ProviderUserView]
     WHERE
             [Id] IN (SELECT [Id] FROM @Ids)
 END

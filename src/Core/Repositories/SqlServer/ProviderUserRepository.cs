@@ -35,13 +35,13 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
-        public async Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        public async Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> ids)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<ProviderUser>(
                     "[dbo].[ProviderUser_ReadByIds]",
-                    new { Ids = Ids.ToGuidIdArrayTVP() },
+                    new { Ids = ids.ToGuidIdArrayTVP() },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

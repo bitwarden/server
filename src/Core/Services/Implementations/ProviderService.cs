@@ -322,8 +322,10 @@ namespace Bit.Core.Services
             return result;
         }
 
+        // TODO: Implement this
         public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
 
+        // TODO: Implement this
         public Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
         
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)

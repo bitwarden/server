@@ -9,7 +9,7 @@ namespace Bit.Core.Repositories
     public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
     {
         Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers);
-        Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> Ids);
+        Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> ids);
         Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type = null);
         Task DeleteManyAsync(IEnumerable<Guid> userIds);
     }

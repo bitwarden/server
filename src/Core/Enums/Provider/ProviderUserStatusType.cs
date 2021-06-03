@@ -4,6 +4,6 @@
     {
         Invited = 0,
         Accepted = 1,
-        Confirmed = 2
+        Confirmed = 2,
     }
 }
