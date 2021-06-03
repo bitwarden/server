@@ -472,7 +472,7 @@ BEGIN
         [dbo].[ProviderUserView]
     WHERE
         [ProviderId] = @ProviderId
-    AND (@Type IS NULL OR [Type] = @Type)
+        AND [Type] = COALESCE(@Type, [Type])
 END
 GO
 
@@ -829,7 +829,7 @@ BEGIN
     WHERE
             OU.[ProviderId] = @ProviderId
       AND (
-            (@OnlyUsers = 0 AND (OU.[Email] = @Email OR U.[Email] = @Email))
+            (@OnlyUsers = 0 AND @Email IN (OU.[Email], U.[Email]))
             OR (@OnlyUsers = 1 AND U.[Email] = @Email)
         )
 END
@@ -857,7 +857,7 @@ BEGIN
     FROM
         [dbo].[ProviderUserView]
     WHERE
-            [Id] IN (SELECT [Id] FROM @Ids)
+        [Id] IN (SELECT [Id] FROM @Ids)
 END
 GO
 
@@ -965,7 +965,7 @@ BEGIN
                 [dbo].[User] U ON U.[Id] = OU.[UserId]
             WHERE
                 (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
-              AND (@UserEmail IS NULL OR U.[Email] = @UserEmail)
+              AND U.[Email] = COALESCE(@UserEmail, U.[Email])
             ORDER BY O.[CreationDate] DESC
             OFFSET @Skip ROWS
                 FETCH NEXT @Take ROWS ONLY

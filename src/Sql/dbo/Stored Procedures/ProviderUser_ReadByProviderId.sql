@@ -11,5 +11,5 @@ BEGIN
         [dbo].[ProviderUserView]
     WHERE
         [ProviderId] = @ProviderId
-    AND (@Type IS NULL OR [Type] = @Type)
+        AND [Type] = COALESCE(@Type, [Type])
 END

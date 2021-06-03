@@ -21,7 +21,7 @@ BEGIN
             [dbo].[User] U ON U.[Id] = OU.[UserId]
         WHERE
             (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
-            AND (@UserEmail IS NULL OR U.[Email] = @UserEmail)
+            AND U.[Email] = COALESCE(@UserEmail, U.[Email])
         ORDER BY O.[CreationDate] DESC
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY

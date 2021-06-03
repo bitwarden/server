@@ -15,7 +15,7 @@ BEGIN
     WHERE
         OU.[ProviderId] = @ProviderId
         AND (
-            (@OnlyUsers = 0 AND (OU.[Email] = @Email OR U.[Email] = @Email))
+            (@OnlyUsers = 0 AND @Email IN (OU.[Email], U.[Email]))
             OR (@OnlyUsers = 1 AND U.[Email] = @Email)
         )
 END
