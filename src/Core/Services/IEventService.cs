@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
+using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Core.Services
 {
@@ -17,5 +18,8 @@ namespace Bit.Core.Services
         Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
         Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events);
         Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
+        Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
+        Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);
+
     }
 }

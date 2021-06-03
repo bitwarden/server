@@ -1,0 +1,17 @@
+﻿@model CreateProviderModel
+@{
+    ViewData["Title"] = "Create Provider";
+}
+
+<h1>Create Provider</h1>
+
+<form method="post">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    
+    <div class="form-group">
+        <label asp-for="OwnerEmail"></label>
+        <input type="text" class="form-control" asp-for="OwnerEmail">
+    </div>
+    
+    <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
+</form>

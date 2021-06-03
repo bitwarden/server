@@ -1,0 +1,51 @@
+﻿@model ProviderEditModel
+@{
+    ViewData["Title"] = "Provider: " + Model.Provider.Name;
+}
+
+<h1>Provider <small>@Model.Provider.Name</small></h1>
+
+<h2>Provider Information</h2>
+@await Html.PartialAsync("_ViewInformation", Model)
+<form method="post" id="edit-form">
+    <h2>General</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="Name"></label>
+                <input type="text" class="form-control" asp-for="Name" required>
+            </div>
+        </div>
+    </div>
+    <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" asp-for="Enabled">
+        <label class="form-check-label" asp-for="Enabled"></label>
+    </div>
+    <h2>Business Information</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="BusinessName"></label>
+                <input type="text" class="form-control" asp-for="BusinessName">
+            </div>
+        </div>
+    </div>
+    <h2>Billing</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="BillingEmail"></label>
+                <input type="email" class="form-control" asp-for="BillingEmail">
+            </div>
+        </div>
+    </div>
+</form>
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+    <div class="ml-auto d-flex">
+        <form asp-action="Delete" asp-route-id="@Model.Provider.Id"
+              onsubmit="return confirm('Are you sure you want to delete this provider (@Model.Provider.Name)?')">
+            <button class="btn btn-danger" type="submit">Delete</button>
+        </form>
+    </div>
+</div>

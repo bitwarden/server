@@ -85,6 +85,10 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
                 services.AddSingleton<ITaxRateRepository, SqlServerRepos.TaxRateRepository>();
                 services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
+                services.AddSingleton<IProviderRepository, SqlServerRepos.ProviderRepository>();
+                services.AddSingleton<IProviderUserRepository, SqlServerRepos.ProviderUserRepository>();
+                services.AddSingleton<IProviderOrganizationRepository, SqlServerRepos.ProviderOrganizationRepository>();
+                services.AddSingleton<IProviderOrganizationProviderUserRepository, SqlServerRepos.ProviderOrganizationProviderUserRepository>();
             }
 
             if (globalSettings.SelfHosted)
@@ -116,12 +120,13 @@ namespace Bit.Core.Utilities
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
-            services.AddScoped<Services.IEventService, EventService>();
+            services.AddScoped<IEventService, EventService>();
             services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddSingleton<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
+            services.AddScoped<IProviderService, ProviderService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
