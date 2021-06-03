@@ -56,11 +56,11 @@ namespace Bit.Admin.Controllers
             });
         }
         
-        public IActionResult Create(Guid? userId = null)
+        public IActionResult Create(string ownerEmail = null)
         {
             return View(new CreateProviderModel
             {
-                UserId = userId
+                OwnerEmail = ownerEmail
             });
         }
         
@@ -72,7 +72,7 @@ namespace Bit.Admin.Controllers
                 return View(model);
             }
 
-            await _providerService.CreateAsync(model.UserId.Value);
+            await _providerService.CreateAsync(model.OwnerEmail);
 
             return RedirectToAction("Index");
         }

@@ -41,9 +41,9 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         }
 
-        public async Task CreateAsync(Guid ownerUserId)
+        public async Task CreateAsync(string ownerEmail)
         {
-            var owner = await _userService.GetUserByIdAsync(ownerUserId);
+            var owner = await _userRepository.GetByEmailAsync(ownerEmail);
             if (owner == null)
             {
                 throw new BadRequestException("Invalid owner.");

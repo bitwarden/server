@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Admin.Models
 {
@@ -7,7 +6,8 @@ namespace Bit.Admin.Models
     {
         public CreateProviderModel() { }
         
-        [Display(Name = "User Id")]
-        public Guid? UserId { get; set; }
+        [Display(Name = "Owner Email")]
+        [Required]
+        public string OwnerEmail { get; set; }
     }
 }

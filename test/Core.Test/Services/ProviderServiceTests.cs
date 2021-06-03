@@ -34,10 +34,10 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task CreateAsync_Success(User user, SutProvider<ProviderService> sutProvider)
         {
-            var userService = sutProvider.GetDependency<IUserService>();
-            userService.GetUserByIdAsync(user.Id).Returns(user); 
+            var userRepository = sutProvider.GetDependency<IUserRepository>();
+            userRepository.GetByEmailAsync(user.Email).Returns(user); 
             
-            await sutProvider.Sut.CreateAsync(user.Id);
+            await sutProvider.Sut.CreateAsync(user.Email);
             
             await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
             await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
