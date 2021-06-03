@@ -7,9 +7,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
 using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using System.Text;
 using AngleSharp.Html.Parser;
+using System.Threading;
 
 namespace Bit.Icons.Services
 {
@@ -34,9 +34,21 @@ namespace Bit.Icons.Services
         private readonly byte[] _jpegHeader = new byte[] { 255, 216, 255 };
 
         private readonly HashSet<string> _allowedMediaTypes;
-        private readonly HttpClient _httpClient;
+        private readonly static HttpClient _httpClient;
         private readonly ILogger<IIconFetchingService> _logger;
 
+        static IconFetchingService()
+        {
+            // Prevent any chance of non-static instantiation (possible autofac bug)
+            _httpClient = new HttpClient(new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            })
+            {
+                Timeout = TimeSpan.FromSeconds(20),
+            };
+        }
         public IconFetchingService(ILogger<IIconFetchingService> logger)
         {
             _logger = logger;
@@ -47,13 +59,6 @@ namespace Bit.Icons.Services
                 _icoAltMediaType,
                 _jpegMediaType
             };
-
-            _httpClient = new HttpClient(new HttpClientHandler
-            {
-                AllowAutoRedirect = false,
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            });
-            _httpClient.Timeout = TimeSpan.FromSeconds(20);
         }
 
         public async Task<IconResult> GetIconAsync(string domain)
@@ -227,39 +232,37 @@ namespace Bit.Icons.Services
 
         private async Task<IconResult> GetIconAsync(Uri uri)
         {
-            using (var response = await GetAndFollowAsync(uri, 2))
+            using var response = await GetAndFollowAsync(uri, 2);
+            if (response?.Content?.Headers == null || !response.IsSuccessStatusCode)
             {
-                if (response?.Content?.Headers == null || !response.IsSuccessStatusCode)
+                Cleanup(response);
+                return null;
+            }
+
+            var format = response.Content.Headers?.ContentType?.MediaType;
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            Cleanup(response);
+            if (format == null || !_allowedMediaTypes.Contains(format))
+            {
+                if (HeaderMatch(bytes, _icoHeader))
                 {
-                    response?.Content?.Dispose();
+                    format = _icoMediaType;
+                }
+                else if (HeaderMatch(bytes, _pngHeader) || HeaderMatch(bytes, _webpHeader))
+                {
+                    format = _pngMediaType;
+                }
+                else if (HeaderMatch(bytes, _jpegHeader))
+                {
+                    format = _jpegMediaType;
+                }
+                else
+                {
                     return null;
                 }
-
-                var format = response.Content.Headers?.ContentType?.MediaType;
-                var bytes = await response.Content.ReadAsByteArrayAsync();
-                response.Content.Dispose();
-                if (format == null || !_allowedMediaTypes.Contains(format))
-                {
-                    if (HeaderMatch(bytes, _icoHeader))
-                    {
-                        format = _icoMediaType;
-                    }
-                    else if (HeaderMatch(bytes, _pngHeader) || HeaderMatch(bytes, _webpHeader))
-                    {
-                        format = _pngMediaType;
-                    }
-                    else if (HeaderMatch(bytes, _jpegHeader))
-                    {
-                        format = _jpegMediaType;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-
-                return new IconResult(uri, bytes, format);
             }
+
+            return new IconResult(uri, bytes, format);
         }
 
         private async Task<HttpResponseMessage> GetAndFollowAsync(Uri uri, int maxRedirectCount)
@@ -305,29 +308,30 @@ namespace Bit.Icons.Services
                 return null;
             }
 
-            using (var message = new HttpRequestMessage())
+            using var source = new CancellationTokenSource();
+            using var message = new HttpRequestMessage
             {
-                message.RequestUri = uri;
-                message.Method = HttpMethod.Get;
+                RequestUri = uri,
+                Method = HttpMethod.Get,
+            };
 
-                // Let's add some headers to look like we're coming from a web browser request. Some websites
-                // will block our request without these.
-                message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299");
-                message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
-                message.Headers.Add("Cache-Control", "no-cache");
-                message.Headers.Add("Pragma", "no-cache");
-                message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
-                    "q=0.9,image/webp,image/apng,*/*;q=0.8");
+            // Let's add some headers to look like we're coming from a web browser request. Some websites
+            // will block our request without these.
+            message.Headers.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Brave Chrome/91.0.4472.77 Safari/537.36");
+            message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
+            message.Headers.Add("Cache-Control", "no-cache");
+            message.Headers.Add("Pragma", "no-cache");
+            message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
+                "q=0.9,image/webp,image/apng,*/*;q=0.8");
 
-                try
-                {
-                    return await _httpClient.SendAsync(message);
-                }
-                catch
-                {
-                    return null;
-                }
+            try
+            {
+                return await _httpClient.SendAsync(message, source.Token);
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -409,10 +413,11 @@ namespace Bit.Icons.Services
             return new Uri(url);
         }
 
-        private void Cleanup(IDisposable obj)
+        private void Cleanup(HttpResponseMessage response)
         {
-            obj?.Dispose();
-            obj = null;
+            response?.Content?.Dispose();
+            response?.Dispose();
+            response = null;
         }
 
         private string GetScheme(Uri uri)
