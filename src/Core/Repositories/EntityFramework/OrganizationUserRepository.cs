@@ -255,9 +255,12 @@ namespace Bit.Core.Repositories.EntityFramework
                 var procedure = new GroupUserUpdateGroups(orgUserId, groupIds);
 
                 var insert = procedure.Insert.Run(dbContext);
-                await dbContext.AddRangeAsync(await insert.ToListAsync());
+                var data = await insert.ToListAsync();
+                await dbContext.AddRangeAsync(data);
 
-                dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
+                var delete = procedure.Delete.Run(dbContext);
+                var deleteData = await delete.ToListAsync();
+                dbContext.RemoveRange(deleteData); 
                 // bumpaccountrevisiondatebyorganizationuserid
                 await dbContext.SaveChangesAsync();
             }
