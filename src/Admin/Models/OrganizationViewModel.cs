@@ -16,6 +16,7 @@ namespace Bit.Admin.Models
             IEnumerable<Policy> policies)
         {
             Organization = org;
+            HasPublicPrivateKeys = org.PublicKey != null && org.PrivateKey != null;
             UserCount = orgUsers.Count();
             CipherCount = ciphers.Count();
             CollectionCount = collections.Count();
@@ -39,5 +40,6 @@ namespace Bit.Admin.Models
         public int CollectionCount { get; set; }
         public int GroupCount { get; set; }
         public int PolicyCount { get; set; }
+        public bool HasPublicPrivateKeys { get; set; }
     }
 }
