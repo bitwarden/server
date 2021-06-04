@@ -144,6 +144,12 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
                         e.OrganizationId == organizationId && e.ExternalId == externalId);
+                
+                if (ssoUser == null)
+                {
+                    return null;
+                }
+
                 var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
                 return Mapper.Map<TableModel.User>(entity);
             }

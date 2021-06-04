@@ -25,15 +25,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         {
             foreach (var sut in suts)
             {
-                try 
-                {
-                    await sut.RefreshDb();
-                }
-                catch 
-                {
-                    // Your container probably isn't running
-                    continue;
-                }
+                await sut.RefreshDb();
             }
         }
 

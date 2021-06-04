@@ -64,7 +64,8 @@ namespace Bit.Core.Repositories.EntityFramework
 
             eGrant.HasKey(x => x.Key);
 
-            eGroupUser.HasNoKey();
+            eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+
 
             if (Database.IsNpgsql()) 
             {

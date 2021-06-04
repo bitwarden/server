@@ -33,19 +33,21 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
         public IQueryable<EfModel.GroupUser> Run(DatabaseContext dbContext)
         {
-            var orgId = (from ou in dbContext.OrganizationUsers
+            var orgUser = from ou in dbContext.OrganizationUsers
                         where ou.Id == OrganizationUserId
-                        select ou.OrganizationId).FirstOrDefault();
-
-            var query = (from g in dbContext.Groups
-                        where GroupIds.Contains(g.Id) &&
-                            g.OrganizationId == orgId &&
-                            !dbContext.GroupUsers.Any(gu => GroupIds.Contains(gu.GroupId) && gu.OrganizationUserId == OrganizationUserId)
-                        select g).AsEnumerable();
+                        select ou;
+            var groupIdEntities = dbContext.Groups.Where(x => GroupIds.Contains(x.Id));
+            var query = from g in dbContext.Groups
+                        join ou in orgUser
+                            on g.OrganizationId equals ou.OrganizationId
+                        join gie in groupIdEntities
+                            on g.Id equals gie.Id
+                        where !dbContext.GroupUsers.Any(gu => GroupIds.Contains(gu.GroupId) && gu.OrganizationUserId == OrganizationUserId)
+                        select g;
             return query.Select(x => new EfModel.GroupUser() {
                 GroupId = x.Id,
                 OrganizationUserId = OrganizationUserId
-            }).AsQueryable();
+            });
         }
     }
 

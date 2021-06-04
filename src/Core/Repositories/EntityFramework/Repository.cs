@@ -64,7 +64,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if (obj.Id.Equals(default(T)))
+            if (obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
