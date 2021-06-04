@@ -62,27 +62,33 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default));
             Assert.Contains("Invalid token.", exception.Message);
         }
-        
+
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task CompleteSetupAsync_Success(User user, Provider provider,
+        public async Task CompleteSetupAsync_Success(User user, Provider provider, string key,
+            [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)]ProviderUser providerUser,
             SutProvider<ProviderService> sutProvider)
         {
+            providerUser.ProviderId = provider.Id;
+            providerUser.UserId = user.Id;
             var userService = sutProvider.GetDependency<IUserService>();
             userService.GetUserByIdAsync(user.Id).Returns(user);
+
+            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
 
             var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
             var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
             sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
                 .Returns(protector);
             sutProvider.Create();
-
-            var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             
-            await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, default);
+            var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+            await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key);
 
             await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(provider);
             await sutProvider.GetDependency<IProviderUserRepository>().Received()
-                .CreateAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id));
+                .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
