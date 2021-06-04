@@ -984,3 +984,69 @@ BEGIN
         END
 END
 GO
+
+IF OBJECT_ID('[dbo].[ProviderUser_ReadByProviderIdUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserView]
+    WHERE
+            [ProviderId] = @ProviderId
+      AND [UserId] = @UserId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserUserDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserUserDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserUserDetailsView]
+AS
+SELECT
+    PU.[Id],
+    PU.[UserId],
+    PU.[ProviderId],
+    U.[Name],
+    ISNULL(U.[Email], PU.[Email]) Email,
+    PU.[Status],
+    PU.[Type],
+    PU.[Permissions]
+FROM
+    [dbo].[ProviderUser] PU
+LEFT JOIN
+    [dbo].[User] U ON U.[Id] = PU.[UserId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserUserDetails_ReadByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+@ProviderId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserUserDetailsView]
+    WHERE
+        [ProviderId] = @ProviderId
+END

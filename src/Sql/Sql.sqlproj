@@ -343,6 +343,9 @@
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUser_ReadCountByProviderIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadByProviderIdUserId.sql" />
+    <Build Include="dbo\Views\ProviderUserUserDetailsView.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUserUserDetails_ReadByProviderId.sql" />
     <Build Include="dbo\Tables\ProviderOrganization.sql" />
     <Build Include="dbo\Views\ProviderOrganizationView.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_Create.sql" />

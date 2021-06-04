@@ -55,12 +55,21 @@ namespace Bit.Core.Services
                 Enabled = true,
             };
             await _providerRepository.CreateAsync(provider);
-            
+
+            var providerUser = new ProviderUser
+            {
+                ProviderId = provider.Id,
+                UserId = owner.Id,
+                Type = ProviderUserType.ProviderAdmin,
+                Status = ProviderUserStatusType.Confirmed,
+            };
+            await _providerUserRepository.CreateAsync(providerUser);
+
             var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {owner.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             await _mailService.SendProviderSetupInviteEmailAsync(provider, token, owner.Email);
         }
 
-        public async Task CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
+        public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
         {
             var owner = await _userService.GetUserByIdAsync(ownerUserId);
             if (owner == null)
@@ -68,23 +77,29 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid owner.");
             }
 
+            if (provider.Status != ProviderStatusType.Pending)
+            {
+                throw new BadRequestException("Provider is already setup.");
+            }
+
             if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
             }
-            
-            await _providerRepository.UpsertAsync(provider);
-            
-            var providerUser = new ProviderUser
-            {
-                ProviderId = provider.Id,
-                UserId = owner.Id,
-                Key = key,
-                Status = ProviderUserStatusType.Confirmed,
-                Type = ProviderUserType.ProviderAdmin,
-            };
 
-            await _providerUserRepository.CreateAsync(providerUser);
+            var providerUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, ownerUserId);
+            if (providerUser == null || providerUser.Type != ProviderUserType.ProviderAdmin)
+            {
+                throw new BadRequestException("Invalid owner.");
+            }
+
+            provider.Status = ProviderStatusType.Created;
+            await _providerRepository.UpsertAsync(provider);
+
+            providerUser.Key = key;
+            await _providerUserRepository.ReplaceAsync(providerUser);
+
+            return provider;
         }
 
         public async Task UpdateAsync(Provider provider, bool updateBilling = false)

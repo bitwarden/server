@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Core.Repositories
@@ -10,7 +11,10 @@ namespace Bit.Core.Repositories
     {
         Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers);
         Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> ids);
+        Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId);
+        Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId);
         Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type = null);
+        Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid id);
         Task DeleteManyAsync(IEnumerable<Guid> userIds);
     }
 }
