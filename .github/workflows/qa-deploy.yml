@@ -213,14 +213,16 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          while true
+          count=0
+          while count -ne 150
           do
-            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/oepnid-configuration/jwks | head -1 )
+            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               break
             fi
             echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
+            count=$count+1
           done
 
       - name: Swap Identity
@@ -273,7 +275,8 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          while true
+          count=0
+          while count -ne 150
           do
             STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
@@ -281,6 +284,7 @@ jobs:
             fi
             echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
+            count=$count+1
           done
 
       - name: Swap slots
