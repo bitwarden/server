@@ -185,8 +185,7 @@ jobs:
 
   swap-identity:
     runs-on: ubuntu-latest
-    needs: 
-      - deploy
+    needs: deploy
     steps:
       - name: Checkout custom AZ KV action
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -226,8 +225,7 @@ jobs:
 
   swap-slots:
     runs-on: ubuntu-latest
-    needs: 
-      - swap-identity
+    needs: swap-identity
     strategy:
       fail-fast: false
       matrix:
@@ -284,7 +282,7 @@ jobs:
 
   swap-admin:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: swap-slots
     steps:
       - name: Checkout custom AZ KV action
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
