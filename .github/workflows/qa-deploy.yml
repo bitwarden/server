@@ -233,12 +233,10 @@ jobs:
       matrix:
         include:
           - name: Api
-          - name: Admin
           - name: Billing
           - name: Events
           - name: Sso
           - name: Portal
-          - name: Identity
     steps:
       - name: Setup
         id: setup
