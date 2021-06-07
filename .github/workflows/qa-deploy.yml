@@ -213,8 +213,13 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          while [ "$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/oepnid-configuration/jwks | head -1 )" =! *"200 OK"* ]
+          while true
           do
+            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/oepnid-configuration/jwks | head -1 )
+            if [[ "$STATUS" == *"200 OK"* ]]; then
+              break
+            fi
+            echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
           done
 
@@ -268,8 +273,13 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          while [ "$( curl -is https://$WEBAPP_NAME.azurewebsites.net/.well-known/oepnid-configuration/jwks | head -1 )" =! *"200 OK"* ]
+          while true
           do
+            STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
+            if [[ "$STATUS" == *"200 OK"* ]]; then
+              break
+            fi
+            echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
           done
 
@@ -308,10 +318,16 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          while [ "$( curl -is https://$ADMIN_WEBAPP_NAME.azurewebsites.net/.well-known/oepnid-configuration/jwks | head -1 )" =! *"200 OK"* ]
-          do
-            sleep 2;
-          done
+          sleep 60  # I don't think the admin portal has an alive endpoint
+          #while true
+          #do
+          #  STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
+          #  if [[ "$STATUS" == *"200 OK"* ]]; then
+          #    break
+          #  fi
+          #  echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
+          #  sleep 2;
+          #done
 
       - name: Swap Admin
         run: az webapp deployment slot swap -g bitwarden-qa -n $ADMIN_WEBAPP_NAME --slot staging --target-slot production
