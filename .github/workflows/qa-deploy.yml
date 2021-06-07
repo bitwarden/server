@@ -213,8 +213,7 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          count=0
-          while count -ne 150
+          while read OUTPUT
           do
             STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
@@ -222,8 +221,7 @@ jobs:
             fi
             echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
-            count=$count+1
-          done
+          done < <(seq 150)
 
       - name: Swap Identity
         run: az webapp deployment slot swap -g bitwarden-qa -n $IDENTITY_WEBAPP_NAME --slot staging --target-slot production
@@ -275,8 +273,7 @@ jobs:
 
       - name: Make sure it endpoint is alive
         run: |
-          count=0
-          while count -ne 150
+          while read OUTPUT
           do
             STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
@@ -284,8 +281,7 @@ jobs:
             fi
             echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
             sleep 2;
-            count=$count+1
-          done
+          done < <(seq 150)
 
       - name: Swap slots
         run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
