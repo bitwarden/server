@@ -45,11 +45,4 @@ namespace Bit.Core.Models.Table
             };
         }
     }
-
-    public class TestObject
-    {
-        public string ThisGetsPickedUp { get; set; }
-        [MaxLength(100)]public string ThisPropertyIsSkipped { get; set; }
-        public string ThisAlsoGetsPickedUp { get; set; }
-    }
 }

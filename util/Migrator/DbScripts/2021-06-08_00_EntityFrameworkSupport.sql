@@ -1,3 +1,4 @@
+-- Tech debt: creates a few views and procedures that we implement as base repository methods but that would throw exceptions on use for not existing in the DB
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'SsoUserView')
 BEGIN
     DROP VIEW [dbo].[SsoUserView];
@@ -12,6 +13,106 @@ FROM
     [dbo].[SsoUser]
 GO
 
+IF OBJECT_ID('[dbo].[SsoConfig_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoConfig_ReadById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoConfig_ReadById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[SsoConfigView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[SsoUser_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoUser_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[SsoUser_DeleteById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[SsoConfig_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[SsoConfig_DeleteById]
+END
+GO
+CREATE PROCEDURE [dbo].[SsoConfig_DeleteById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE
+    FROM
+        [dbo].[SsoConfig]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Event_ReadById]
+END
+GO
+CREATE PROCEDURE [dbo].[Event_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[Event]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[U2f_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[U2f_ReadById]
+END
+GO
+CREATE PROCEDURE [dbo].[U2f_ReadById]
+    @Id BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[U2f]
+    WHERE
+        [Id] = @Id
+END
+GO
+-- Refactor: Set all the base Create procs to output the ID for testing
 IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Organization_Create]
@@ -31,7 +132,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @BillingEmail NVARCHAR(256),
     @Plan NVARCHAR(50),
     @PlanType TINYINT,
-    @Seats SMALLINT,
+    @Seats INT,
     @MaxCollections SMALLINT,
     @UsePolicies BIT,
     @UseSso BIT,
@@ -41,6 +142,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseTotp BIT,
     @Use2fa BIT,
     @UseApi BIT,
+    @UseResetPassword BIT,
     @SelfHost BIT,
     @UsersGetPremium BIT,
     @Storage BIGINT,
@@ -52,6 +154,8 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
     @ApiKey VARCHAR(30),
+    @PublicKey VARCHAR(MAX),
+    @PrivateKey VARCHAR(MAX),
     @TwoFactorProviders NVARCHAR(MAX),
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
@@ -84,6 +188,7 @@ BEGIN
         [UseTotp],
         [Use2fa],
         [UseApi],
+        [UseResetPassword],
         [SelfHost],
         [UsersGetPremium],
         [Storage],
@@ -95,6 +200,8 @@ BEGIN
         [Enabled],
         [LicenseKey],
         [ApiKey],
+        [PublicKey],
+        [PrivateKey],
         [TwoFactorProviders],
         [ExpirationDate],
         [CreationDate],
@@ -124,6 +231,7 @@ BEGIN
         @UseTotp,
         @Use2fa,
         @UseApi,
+        @UseResetPassword,
         @SelfHost,
         @UsersGetPremium,
         @Storage,
@@ -135,13 +243,14 @@ BEGIN
         @Enabled,
         @LicenseKey,
         @ApiKey,
+        @PublicKey,
+        @PrivateKey,
         @TwoFactorProviders,
         @ExpirationDate,
         @CreationDate,
         @RevisionDate
     )
 END
-GO
 
 IF OBJECT_ID('[dbo].[User_Create]') IS NOT NULL
 BEGIN
@@ -253,65 +362,6 @@ BEGIN
         @RevisionDate,
         @ApiKey
     )
-END
-GO
-
-IF OBJECT_ID('[dbo].[SsoConfig_ReadById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[SsoConfig_ReadById]
-END
-GO
-CREATE PROCEDURE [dbo].[SsoConfig_ReadById]
-    @Id BIGINT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[SsoConfigView]
-    WHERE
-        [Id] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[SsoUser_DeleteById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[SsoUser_DeleteById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[SsoUser_DeleteById]
-    @Id BIGINT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DELETE
-    FROM
-        [dbo].[SsoUser]
-    WHERE
-        [Id] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[SsoConfig_DeleteById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[SsoConfig_DeleteById]
-END
-GO
-CREATE PROCEDURE [dbo].[SsoConfig_DeleteById]
-    @Id BIGINT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DELETE
-    FROM
-        [dbo].[SsoConfig]
-    WHERE
-        [Id] = @Id
 END
 GO
 
@@ -631,25 +681,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Event_ReadById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Event_ReadById]
-END
-GO
-CREATE PROCEDURE [dbo].[Event_ReadById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[Event]
-    WHERE
-        [Id] = @Id
-END
-GO
 IF OBJECT_ID('[dbo].[Folder_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Folder_Create]
@@ -1008,25 +1039,5 @@ BEGIN
     )
 
     SET @Id = (SELECT scope_identity())
-END
-GO
-
-IF OBJECT_ID('[dbo].[U2f_ReadById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[U2f_ReadById]
-END
-GO
-CREATE PROCEDURE [dbo].[U2f_ReadById]
-    @Id BIGINT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[U2f]
-    WHERE
-        [Id] = @Id
 END
 GO
