@@ -16,6 +16,20 @@ using Bit.Core.Test.AutoFixture.Relays;
 
 namespace Bit.Core.Test.AutoFixture.GroupFixtures
 {
+    internal class GroupOrganizationAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public GroupOrganizationAutoDataAttribute() : base(
+            new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization { UseGroups = true })
+        { }
+    }
+
+    internal class GroupOrganizationNotUseGroupsAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public GroupOrganizationNotUseGroupsAutoDataAttribute() : base(
+            new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization { UseGroups = false })
+        { }
+    }
+
     internal class GroupBuilder: ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)

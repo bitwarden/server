@@ -36,17 +36,6 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: User_BumpAccountRevisionDateByCollectionId
-            }
-            return obj;
-        }
-
-        public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
-        {
-            await base.CreateAsync(obj);
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
                 var availibleGroups = await (from g in dbContext.Groups
                                       where g.OrganizationId == obj.OrganizationId
                                       select g.Id).ToListAsync();

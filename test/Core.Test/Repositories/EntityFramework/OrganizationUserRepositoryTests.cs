@@ -3,7 +3,7 @@ using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
 using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Models.Table;
+using TableModel = Bit.Core.Models.Table;
 using Xunit;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
@@ -15,13 +15,13 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     public class OrganizationUserRepositoryTests
     {
         [CiSkippedTheory, EfOrganizationUserAutoData]
-        public async void CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
+        public async void CreateAsync_Works_DataMatches(TableModel.OrganizationUser orgUser, TableModel.User user, TableModel.Organization org,
             OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
             SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
             SqlRepo.OrganizationRepository sqlOrgRepo)
         {
-            var savedOrgUsers = new List<OrganizationUser>();
+            var savedOrgUsers = new List<TableModel.OrganizationUser>();
             foreach (var sut in suts)
             {
                 var i = suts.IndexOf(sut);
@@ -54,10 +54,10 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [CiSkippedTheory, EfOrganizationUserAutoData]
         public async void ReplaceAsync_Works_DataMatches(
-            OrganizationUser postOrgUser,
-            OrganizationUser replaceOrgUser,
-            User user,
-            Organization org,
+            TableModel.OrganizationUser postOrgUser,
+            TableModel.OrganizationUser replaceOrgUser,
+            TableModel.User user,
+            TableModel.Organization org,
             OrganizationUserCompare equalityComparer,
             List<EfRepo.OrganizationUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos,
@@ -67,7 +67,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             SqlRepo.OrganizationRepository sqlOrgRepo
             )
         {
-            var savedOrgUsers = new List<OrganizationUser>();
+            var savedOrgUsers = new List<TableModel.OrganizationUser>();
             foreach (var sut in suts)
             {
                 var i = suts.IndexOf(sut);
@@ -105,7 +105,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationUserAutoData]
-        public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
+        public async void DeleteAsync_Works_DataMatches(TableModel.OrganizationUser orgUser, TableModel.User user, TableModel.Organization org,
             OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,

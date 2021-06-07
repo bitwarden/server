@@ -27,15 +27,6 @@ namespace Bit.Core.Repositories.EntityFramework
            return send;
         }
 
-        public Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
-        {
-           send = await base.CreateAsync(send);
-
-           // User_UpdateStorage
-           // User_BumpAccountRevisionDate
-           return send;
-        }
-
         public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

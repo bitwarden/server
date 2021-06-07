@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

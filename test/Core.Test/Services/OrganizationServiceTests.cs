@@ -19,6 +19,7 @@ using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
+using Bit.Core.Test.AutoFixture.PolicyFixtures;
 
 namespace Bit.Core.Test.Services
 {

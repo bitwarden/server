@@ -64,14 +64,14 @@ namespace Bit.Core.Repositories.SqlServer
                 }, startDate, endDate, pageOptions);
         }
 
-        public async Task<IEvent> CreateAsync(IEvent e)
+        public async Task CreateAsync(IEvent e)
         {
             if (!(e is Event ev))
             {
                 ev = new Event(e);
             }
 
-            return await base.CreateAsync(ev);
+            await base.CreateAsync(ev);
         }
 
         public async Task CreateManyAsync(IEnumerable<IEvent> entities)

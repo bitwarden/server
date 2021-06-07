@@ -52,7 +52,7 @@ namespace Bit.Core.Repositories.TableStorage
             return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
         }
 
-        public async Task<IEvent> CreateAsync(IEvent e)
+        public async Task CreateAsync(IEvent e)
         {
             if (!(e is EventTableEntity entity))
             {
@@ -60,7 +60,6 @@ namespace Bit.Core.Repositories.TableStorage
             }
 
             await CreateEntityAsync(entity);
-            return e;
         }
 
         public async Task CreateManyAsync(IEnumerable<IEvent> e)

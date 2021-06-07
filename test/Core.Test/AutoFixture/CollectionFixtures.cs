@@ -63,4 +63,10 @@ namespace Bit.Core.Test.AutoFixture.CollectionFixtures
             typeof(EfCollection) }, values)
         { }
     }
+
+    internal class CollectionAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public CollectionAutoDataAttribute() : base(new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization())
+        { }
+    }
 }

@@ -15,6 +15,8 @@ using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Models.Data;
 using System.Text.Json;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using AutoFixture.Xunit2;
+using System.Reflection;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 {
@@ -55,6 +57,25 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             return new NoSpecimen();
         }
     }
+    
+    internal class OrganizationUser : ICustomization
+    {
+        public OrganizationUserStatusType Status { get; set; }
+        public OrganizationUserType Type { get; set; }
+
+        public OrganizationUser(OrganizationUserStatusType status, OrganizationUserType type)
+        {
+            Status = status;
+            Type = type;
+        }
+        
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Core.Models.Table.OrganizationUser>(composer => composer
+                .With(o => o.Type, Type)
+                .With(o => o.Status, Status));
+        }
+    }
 
     public class OrganizationUserAttribute : CustomizeAttribute
     {
@@ -72,19 +93,6 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
         public override ICustomization GetCustomization(ParameterInfo parameter)
         {
             return new OrganizationUser(_status, _type);
-        }
-            if (type == null || type != typeof(TableModel.OrganizationUser))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            var orgUser = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationUser>();
-            var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
-            orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
-            return orgUser;
         }
     }
 

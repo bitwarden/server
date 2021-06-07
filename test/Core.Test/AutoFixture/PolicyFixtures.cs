@@ -12,9 +12,43 @@ using System;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using System.Reflection;
+using AutoFixture.Xunit2;
 
 namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 {
+    internal class Policy : ICustomization
+    {
+        public PolicyType Type { get; set; }
+
+        public Policy(PolicyType type)
+        {
+            Type = type;
+        }
+        
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Core.Models.Table.Policy>(composer => composer
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, true));
+        }
+    }
+
+    public class PolicyAttribute : CustomizeAttribute
+    {
+        private readonly PolicyType _type;
+
+        public PolicyAttribute(PolicyType type)
+        {
+            _type = type;
+        }
+
+        public override ICustomization GetCustomization(ParameterInfo parameter)
+        {
+            return new Policy(_type);
+        }
+    }
+    
     internal class PolicyBuilder: ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)

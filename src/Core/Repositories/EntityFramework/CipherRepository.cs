@@ -82,13 +82,6 @@ namespace Bit.Core.Repositories.EntityFramework
             return cipher;
         }
 
-        public Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-        {
-            cipher = await base.CreateAsync(cipher);
-            await UpdateAccountRevisionDate(cipher);
-            return cipher;
-        }
-
         public IQueryable<User> GetBumpedAccountsByCipherId(Cipher cipher)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -296,19 +289,6 @@ namespace Bit.Core.Repositories.EntityFramework
         public Task DeleteDeletedAsync(DateTime deletedDateBefore)
         {
             throw new NotImplementedException();
-        }
-
-        public Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
-        {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_DeleteDeleted]", */
-            /*         new { DeletedDateBefore = deletedDateBefore }, */
-            /*         commandType: CommandType.StoredProcedure, */
-            /*         commandTimeout: 43200); */
-            /* } */
         }
 
         public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)

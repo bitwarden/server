@@ -45,6 +45,16 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        public Task CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteManyAsync(IEnumerable<Guid> userIds)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
             var organizationUser = await base.GetByIdAsync(id);
@@ -160,6 +170,11 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        public Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -226,6 +241,11 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        public Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             await base.ReplaceAsync(obj);
@@ -246,6 +266,16 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        public Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -264,6 +294,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 // bumpaccountrevisiondatebyorganizationuserid
                 await dbContext.SaveChangesAsync();
             }
+        }
+
+        public Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            throw new NotImplementedException();
         }
     }
 }
