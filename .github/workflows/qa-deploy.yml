@@ -217,16 +217,23 @@ jobs:
 
       - name: Make sure staging endpoint is alive
         run: |
+          SUCCESS="no"
           while read OUTPUT
           do
             STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME-staging.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               echo "It is live!"
+              SUCCESS="yes"
               break
             fi
             echo -e "STAUS=$STATUS\nRetrying: $OUTPUT"
             sleep 4;
           done < <(seq 15)
+
+          if [[ "$SUCCESS" == "no" ]]; then
+            exit 1
+          fi
+            
 
       - name: Swap Identity
         run: az webapp deployment slot swap -g bitwarden-qa -n $IDENTITY_WEBAPP_NAME --slot staging --target-slot production
@@ -279,16 +286,22 @@ jobs:
 
       - name: Make sure staging endpoint is alive
         run: |
+          SUCCESS="no"
           while read OUTPUT
           do
             STATUS=$( curl -is https://$WEBAPP_NAME-staging.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               echo "It is live!"
+              SUCCESS="yes"
               break
             fi
             echo -e "STAUS=$STATUS\nRetrying: $OUTPUT"
             sleep 4;
           done < <(seq 15)
+
+          if [[ "$SUCCESS" == "no" ]]; then
+            exit 1
+          fi
 
       - name: Swap slots
         run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
