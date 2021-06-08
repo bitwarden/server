@@ -17,6 +17,8 @@ using LinqToDB.EntityFrameworkCore;
 using LinqToDB.Data;
 using System.Text.Json;
 using Bit.Core.Utilities;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -161,134 +163,161 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
                 // User_BumpAccountRevisionDate
             }
-        
         }
 
-        public Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<CollectionCipher> collectionCiphers)
+        public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<CollectionCipher> collectionCiphers)
         {
-            throw new NotImplementedException();
-            /* if (!ciphers.Any()) */
-            /* { */
-            /*     return; */
-            /* } */
+            if (!ciphers.Any()) 
+            {
+                return; 
+            }
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // Intentionally not including Favorites, Folders, and CreationDate */
+                // since those are not meant to be bulk updated at this time */
+                var cipherEntities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
+                if (collections.Any())
+                {
+                    var collectionEntities = Mapper.Map<List<EfModel.Collection>>(collections);
+                    await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionEntities);
 
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     connection.Open(); */
-
-            /*     using (var transaction = connection.BeginTransaction()) */
-            /*     { */
-            /*         try */
-            /*         { */
-            /*             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*             { */
-            /*                 bulkCopy.DestinationTableName = "[dbo].[Cipher]"; */
-            /*                 var dataTable = BuildCiphersTable(bulkCopy, ciphers); */
-            /*                 bulkCopy.WriteToServer(dataTable); */
-            /*             } */
-
-            /*             if (collections.Any()) */
-            /*             { */
-            /*                 using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*                 { */
-            /*                     bulkCopy.DestinationTableName = "[dbo].[Collection]"; */
-            /*                     var dataTable = BuildCollectionsTable(bulkCopy, collections); */
-            /*                     bulkCopy.WriteToServer(dataTable); */
-            /*                 } */
-
-            /*                 if (collectionCiphers.Any()) */
-            /*                 { */
-            /*                     using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*                     { */
-            /*                         bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]"; */
-            /*                         var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers); */
-            /*                         bulkCopy.WriteToServer(dataTable); */
-            /*                     } */
-            /*                 } */
-            /*             } */
-
-            /*             await connection.ExecuteAsync( */
-            /*                     $"[{Schema}].[User_BumpAccountRevisionDateByOrganizationId]", */
-            /*                     new { OrganizationId = ciphers.First().OrganizationId }, */
-            /*                     commandType: CommandType.StoredProcedure, transaction: transaction); */
-
-            /*             transaction.Commit(); */
-            /*         } */
-            /*         catch */
-            /*         { */
-            /*             transaction.Rollback(); */
-            /*             throw; */
-            /*         } */
-            /*     } */
-            /* } */
+                    if (collectionCiphers.Any())
+                    {
+                        var collectionCipherEntities = Mapper.Map<List<EfModel.CollectionCipher>>(collectionCiphers);
+                        await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
+                    }
+                }
+                // User_BumpAccountRevisionDateByOrganizationId
+            }
         }
 
-        public Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_Delete]", */
-            /*         new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var idEntities = from c in dbContext.Ciphers where ids.Contains(c.Id) select c;
+                var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
+                var temp = from ucd in userCipherDetails 
+                           join ie in idEntities 
+                                on ucd.Id equals ie.Id 
+                           where ucd.Edit
+                           select ucd;
+                dbContext.RemoveRange(temp.Select(ucd => ucd.Id));
+                var orgs = temp
+                    .Where(x => x.OrganizationId.HasValue)
+                    .GroupBy(x => x.OrganizationId).Select(x => x.Key);
+                foreach (var org in orgs)
+                {
+                    // dbo.Organization_UpdateStorage
+                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                }
+                var userCiphersWithStorageCount = await temp.Where(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)).CountAsync();
+                if (userCiphersWithStorageCount > 0)
+                {
+                    // dbo.User_UpdateStorage
+                }
+                // dbo.User_BumpAccountRevisionDate
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
+        public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_DeleteAttachment]", */
-            /*         new { Id = cipherId, AttachmentId = attachmentId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cipher = await dbContext.Ciphers.FindAsync(cipherId);
+                var attachmentsJson = JObject.Parse(cipher.Attachments);
+                attachmentsJson.Remove(attachmentId);
+                cipher.Attachments = JsonConvert.SerializeObject(attachmentsJson);
+
+                if (cipher.OrganizationId.HasValue)
+                {
+                    /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
+                    /* EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId */
+                }
+                else if (cipher.UserId.HasValue)
+                {
+                    /* EXEC [dbo].[User_UpdateStorage] @UserId */
+                    /* EXEC [dbo].[User_BumpAccountRevisionDate] @UserId */
+                }
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
+        public async Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_DeleteByIdsOrganizationId]", */
-            /*         new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var ciphers = from c in dbContext.Ciphers
+                              where c.OrganizationId == organizationId &&
+                                    ids.Contains(c.Id)
+                              select c;
+                dbContext.RemoveRange(ciphers);
+                await dbContext.SaveChangesAsync();
+            }
+            /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
+            /* EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
         }
 
-        public Task DeleteByOrganizationIdAsync(Guid organizationId)
+        public async Task DeleteByOrganizationIdAsync(Guid organizationId)
         {
-            throw new NotImplementedException();
-            /* public async Task DeleteByOrganizationIdAsync(Guid organizationId) */
-            /* { */
-            /*     using (var connection = new SqlConnection(ConnectionString)) */
-            /*     { */
-            /*         var results = await connection.ExecuteAsync( */
-            /*             $"[{Schema}].[Cipher_DeleteByOrganizationId]", */
-            /*             new { OrganizationId = organizationId }, */
-            /*             commandType: CommandType.StoredProcedure); */
-            /*     } */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                var collectionCiphers = from cc in dbContext.CollectionCiphers
+                                        join c in dbContext.Collections
+                                            on cc.CollectionId equals c.Id
+                                        where c.OrganizationId == organizationId
+                                        select new { cc, c };
+                dbContext.RemoveRange(collectionCiphers.Select(x => x.cc));
+
+                var ciphers = from c in dbContext.Ciphers
+                              where c.OrganizationId == organizationId
+                              select c;
+                dbContext.RemoveRange(ciphers);
+
+                await dbContext.SaveChangesAsync();
+            }
+            /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
+            /* EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
         }
 
-        public Task DeleteByUserIdAsync(Guid userId)
+        public async Task DeleteByUserIdAsync(Guid userId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_DeleteByUserId]", */
-            /*         new { UserId = userId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var ciphers = from c in dbContext.Ciphers
+                              where c.UserId == userId
+                              select c;
+                dbContext.RemoveRange(ciphers);
+                var folders = from f in dbContext.Folders
+                              where f.UserId == userId
+                              select f;
+                dbContext.RemoveRange(folders);
+                await dbContext.SaveChangesAsync();
+                // user_updatestorage
+                // user_bumpaccountrevisiondate
+            }
+
         }
 
-        public Task DeleteDeletedAsync(DateTime deletedDateBefore)
+        public async Task DeleteDeletedAsync(DateTime deletedDateBefore)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // TODO: this is batched in the proc. How does batching work in EF?
+                var query = dbContext.Ciphers.Where(c => c.DeletedDate < deletedDateBefore);
+                dbContext.RemoveRange(query);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
@@ -302,18 +331,48 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
+        public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var result = await connection.QueryFirstOrDefaultAsync<bool>( */
-            /*         $"[{Schema}].[Cipher_ReadCanEditByIdUserId]", */
-            /*         new { UserId = userId, Id = cipherId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-
-            /*     return result; */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cte = from c in dbContext.Ciphers
+                          join o in dbContext.Organizations
+                            on c.OrganizationId equals o.Id into o_g
+                          from o in o_g.DefaultIfEmpty()
+                          where !c.UserId.HasValue
+                          join ou in dbContext.OrganizationUsers
+                            on o.Id equals ou.OrganizationId into ou_g
+                          from ou in ou_g.DefaultIfEmpty()
+                          where ou.UserId == userId
+                          join cc in dbContext.CollectionCiphers
+                            on c.Id equals cc.CipherId into cc_g
+                          from cc in cc_g.DefaultIfEmpty()
+                          where !c.UserId.HasValue && !ou.AccessAll
+                          join cu in dbContext.CollectionUsers
+                            on cc.CollectionId equals cu.CollectionId into cu_g
+                          from cu in cu_g.DefaultIfEmpty()
+                          where ou.Id == cu.OrganizationUserId
+                          join gu in dbContext.GroupUsers
+                            on ou.Id equals gu.OrganizationUserId into gu_g
+                          from gu in gu_g.DefaultIfEmpty()
+                          where !c.UserId.HasValue  && cu.CollectionId == null && !ou.AccessAll
+                          join g in dbContext.Groups
+                            on gu.GroupId equals g.Id into g_g
+                          from g in g_g.DefaultIfEmpty()
+                          join cg in dbContext.CollectionGroups
+                            on gu.GroupId equals cg.GroupId into cg_g
+                          from cg in cg_g.DefaultIfEmpty()
+                          where !g.AccessAll && cg.CollectionId == cc.CollectionId &&
+                          (c.Id == cipherId && 
+                          (c.UserId == userId || 
+                          (!c.UserId.HasValue && ou.Status == OrganizationUserStatusType.Confirmed && o.Enabled &&
+                          (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null))))
+                          select new { c, o, ou, cc, cu, gu, g, cg };
+                          
+                var canEdit = await cte.AnyAsync(x => x.c.UserId.HasValue || x.ou.AccessAll || !x.cu.ReadOnly || x.g.AccessAll || !x.cg.ReadOnly);
+                return canEdit;
+            }
         }
 
         public async Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
@@ -390,16 +449,28 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
+        public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_Move]", */
-            /*         new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
+                var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
+                var idsToMove = from ucd in userCipherDetails
+                                join c in cipherEntities
+                                    on ucd.Id equals c.Id
+                                where ucd.Edit
+                                select new { ucd, c };
+                // TODO: is this enough to save?
+                // TODO: using System.Text like ReplaceAsync?
+                await idsToMove.Select(x => x.c).ForEachAsync(cipher => {
+                    var foldersJson = JObject.Parse(cipher.Folders);
+                    foldersJson.Remove(userId.ToString());
+                    cipher.Folders = JsonConvert.SerializeObject(foldersJson);
+                });          
+                // user_bumpaccountrevisiondate
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task ReplaceAsync(CipherDetails cipher)
@@ -425,7 +496,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         {
                             var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
                             favorites.Add(cipher.UserId.Value, true);
-                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                            cipher.Favorites = System.Text.Json.JsonSerializer.Serialize(favorites);
                         }
                     }
                     else
@@ -434,7 +505,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         {
                             var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
                             favorites.Remove(cipher.UserId.Value);
-                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                            cipher.Favorites = System.Text.Json.JsonSerializer.Serialize(favorites);
                         }
                     }
                     if (cipher.FolderId.HasValue)
@@ -447,7 +518,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         {
                             var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
                             folders.Add(cipher.UserId.Value, cipher.FolderId.Value);
-                            cipher.Folders = JsonSerializer.Serialize(folders);
+                            cipher.Folders = System.Text.Json.JsonSerializer.Serialize(folders);
                         }
                     }
                     else
@@ -456,7 +527,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         {
                             var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
                             folders.Remove(cipher.UserId.Value);
-                            cipher.Favorites = JsonSerializer.Serialize(folders);
+                            cipher.Favorites = System.Text.Json.JsonSerializer.Serialize(folders);
                         }
                     }
                     var mappedEntity = Mapper.Map<EfModel.Cipher>((TableModel.Cipher)cipher);
@@ -469,67 +540,156 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
-            throw new NotImplementedException();
-            /* var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>( */
-            /*     JsonConvert.SerializeObject(obj)); */
-            /* objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP(); */
+            await UpdateCollections(obj, collectionIds);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cipher = await dbContext.Ciphers.FindAsync(obj.Id);
+                cipher.UserId = null;
+                cipher.OrganizationId = obj.OrganizationId;
+                cipher.Data = obj.Data;
+                cipher.Attachments = obj.Attachments;
+                cipher.RevisionDate = obj.RevisionDate;
+                cipher.DeletedDate = obj.DeletedDate;
+                await dbContext.SaveChangesAsync();
 
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var result = await connection.ExecuteScalarAsync<int>( */
-            /*         $"[{Schema}].[Cipher_UpdateWithCollections]", */
-            /*         objWithCollections, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /*     return result >= 0; */
-            /* } */
+                if (!string.IsNullOrWhiteSpace(cipher.Attachments))
+                {
+                    // organization_updatestorage
+                    // user_updatestorage
+                }
+
+                // bumpaccountrevisiondatebycipherid
+                return true;
+            }
         }
 
-        public Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
+        public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteScalarAsync<DateTime>( */
-            /*         $"[{Schema}].[Cipher_Restore]", */
-            /*         new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId }, */
-            /*         commandType: CommandType.StoredProcedure); */
 
-            /*     return results; */
-            /* } */
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
+                var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
+                var temp = from ucd in userCipherDetailsQuery.Run(dbContext)
+                           join c in cipherEntities
+                            on ucd.Id equals c.Id
+                           where ucd.Edit && ucd.DeletedDate != null
+                           select new { ucd, c };
+                // TODO: Is this enough to save?
+                var utcNow = DateTime.UtcNow;
+                await temp.Select(x => x.c).ForEachAsync(cipher => {
+                    cipher.DeletedDate = null;
+                    cipher.RevisionDate = utcNow;
+                });
+
+                var orgs = temp
+                    .Where(x => x.c.OrganizationId.HasValue)
+                    .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
+
+                // TODO: this is reused code with DeleteAsync, might be worth abstracting
+                foreach (var org in orgs)
+                {
+                    // dbo.Organization_UpdateStorage
+                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                }
+                var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
+                if (userCiphersWithStorageCount > 0)
+                {
+                    // dbo.User_UpdateStorage
+                }
+                // dbo.User_BumpAccountRevisionDate
+                await dbContext.SaveChangesAsync();
+                return utcNow;
+            }
         }
 
-        public Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        // this and the above method are almost identical
+        public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
+                var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
+                var temp = from ucd in userCipherDetailsQuery.Run(dbContext)
+                           join c in cipherEntities
+                            on ucd.Id equals c.Id
+                           where ucd.Edit && ucd.DeletedDate == null
+                           select new { ucd, c };
+
+                var utcNow = DateTime.UtcNow;
+                await temp.Select(x => x.c).ForEachAsync(cipher => {
+                    cipher.DeletedDate = utcNow;
+                    cipher.RevisionDate = utcNow;
+                });
+
+                var orgs = temp
+                    .Where(x => x.c.OrganizationId.HasValue)
+                    .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
+
+                // TODO: this is reused code with DeleteAsync, might be worth abstracting
+                foreach (var org in orgs)
+                {
+                    // dbo.Organization_UpdateStorage
+                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                }
+                var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
+                if (userCiphersWithStorageCount > 0)
+                {
+                    // dbo.User_UpdateStorage
+                }
+                // dbo.User_BumpAccountRevisionDate
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        public Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
+        public async Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_SoftDeleteByIdsOrganizationId]", */
-            /*         new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var utcNow = DateTime.UtcNow;
+                var ciphers = dbContext.Ciphers.Where(c => ids.Contains(c.Id) && c.OrganizationId == organizationId);
+                // TODO: is this enough to save?
+                await ciphers.ForEachAsync(cipher => {
+                    cipher.DeletedDate = utcNow;
+                    cipher.RevisionDate = utcNow;
+                }); 
+                await dbContext.SaveChangesAsync();
+                // ourganization_updatestorage
+                // use_bumpaccountrevisiondatebyorganizationid
+            }
         }
 
-        public Task UpdateAttachmentAsync(CipherAttachment attachment)
+        public async Task UpdateAttachmentAsync(CipherAttachment attachment)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_UpdateAttachment]", */
-            /*         attachment, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cipher = await dbContext.Ciphers.FindAsync(attachment.Id);
+                // TODO: does this throw a null ref if attachments = null in db?
+                JObject attachmentsJson = JObject.Parse(cipher.Attachments);
+                attachmentsJson.Add(attachment.AttachmentId, attachment.AttachmentData);
+                cipher.Attachments = JsonConvert.SerializeObject(attachmentsJson);
+                await dbContext.SaveChangesAsync();
+
+                if (attachment.OrganizationId.HasValue)
+                {
+                    // organization_updatestroage
+                    // user_bumpaccountrevisiondatebycipherid
+                }
+                else if (attachment.UserId.HasValue)
+                {
+                    // user_updatestroage
+                    // user_bumpaccountrevisiondate
+                }
+            }
         }
 
         public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
         {
-            
             if (!ciphers.Any()) 
             {
                 return; 
@@ -537,153 +697,62 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // Intentionally not including Favorites, Folders, and CreationDate */
-                // since those are not meant to be bulk updated at this time */
+                // Intentionally not including Favorites, Folders, and CreationDate
+                // since those are not meant to be bulk updated at this time
                 var entities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, entities);
                 // $"[{Schema}].[User_BumpAccountRevisionDate]",
             }
         }
 
-        public Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
+        public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     var results = await connection.ExecuteAsync( */
-            /*         $"[{Schema}].[Cipher_UpdatePartial]", */
-            /*         new { Id = id, UserId = userId, FolderId = folderId, Favorite = favorite }, */
-            /*         commandType: CommandType.StoredProcedure); */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var cipher = await dbContext.Ciphers.FindAsync(id);
+
+                JObject foldersJson = JObject.Parse(cipher.Folders);
+                if (foldersJson == null && folderId.HasValue)
+                {
+                    foldersJson.Add(userId.ToString(), folderId.Value);
+                }
+                else if (foldersJson != null && folderId.HasValue)
+                {
+                    foldersJson[userId] = folderId.Value;
+                }
+                else 
+                {
+                    foldersJson.Remove(userId.ToString());
+                }
+
+                JObject favoritesJson = JObject.Parse(cipher.Favorites);
+                if (favorite)
+                {
+                    favoritesJson.Add(userId.ToString(), favorite);
+                }
+                else 
+                {
+                    favoritesJson.Remove(userId.ToString());
+                }
+
+                await dbContext.SaveChangesAsync();
+                //user_bumpaccountrevisiondate
+            }
         }
 
-        public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
         {
-            throw new NotImplementedException();
-            /* using (var connection = new SqlConnection(ConnectionString)) */
-            /* { */
-            /*     connection.Open(); */
-
-            /*     using (var transaction = connection.BeginTransaction()) */
-            /*     { */
-            /*         try */
-            /*         { */
-            /*             // 1. Update user. */
-
-            /*             using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction)) */
-            /*             { */
-            /*                 cmd.CommandType = CommandType.StoredProcedure; */
-            /*                 cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id; */
-            /*                 cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp; */
-            /*                 cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key; */
-
-            /*                 if (string.IsNullOrWhiteSpace(user.PrivateKey)) */
-            /*                 { */
-            /*                     cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value; */
-            /*                 } */
-            /*                 else */
-            /*                 { */
-            /*                     cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey; */
-            /*                 } */
-
-            /*                 cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate; */
-            /*                 cmd.ExecuteNonQuery(); */
-            /*             } */
-
-            /*             // 2. Create temp tables to bulk copy into. */
-
-            /*             var sqlCreateTemp = @" */
-            /*                 SELECT TOP 0 * */
-            /*                 INTO #TempCipher */
-            /*                 FROM [dbo].[Cipher] */
-
-            /*                 SELECT TOP 0 * */
-            /*                 INTO #TempFolder */
-            /*                 FROM [dbo].[Folder]"; */
-
-            /*             using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction)) */
-            /*             { */
-            /*                 cmd.ExecuteNonQuery(); */
-            /*             } */
-
-            /*             // 3. Bulk copy into temp tables. */
-
-            /*             if (ciphers.Any()) */
-            /*             { */
-            /*                 using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*                 { */
-            /*                     bulkCopy.DestinationTableName = "#TempCipher"; */
-            /*                     var dataTable = BuildCiphersTable(bulkCopy, ciphers); */
-            /*                     bulkCopy.WriteToServer(dataTable); */
-            /*                 } */
-            /*             } */
-
-            /*             if (folders.Any()) */
-            /*             { */
-            /*                 using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction)) */
-            /*                 { */
-            /*                     bulkCopy.DestinationTableName = "#TempFolder"; */
-            /*                     var dataTable = BuildFoldersTable(bulkCopy, folders); */
-            /*                     bulkCopy.WriteToServer(dataTable); */
-            /*                 } */
-            /*             } */
-
-            /*             // 4. Insert into real tables from temp tables and clean up. */
-
-            /*             var sql = string.Empty; */
-
-            /*             if (ciphers.Any()) */
-            /*             { */
-            /*                 sql += @" */
-            /*                     UPDATE */
-            /*                         [dbo].[Cipher] */
-            /*                     SET */
-            /*                         [Data] = TC.[Data], */
-            /*                         [Attachments] = TC.[Attachments], */
-            /*                         [RevisionDate] = TC.[RevisionDate] */
-            /*                     FROM */
-            /*                         [dbo].[Cipher] C */
-            /*                     INNER JOIN */
-            /*                         #TempCipher TC ON C.Id = TC.Id */
-            /*                     WHERE */
-            /*                         C.[UserId] = @UserId"; */
-            /*             } */
-
-            /*             if (folders.Any()) */
-            /*             { */
-            /*                 sql += @" */
-            /*                     UPDATE */
-            /*                         [dbo].[Folder] */
-            /*                     SET */
-            /*                         [Name] = TF.[Name], */
-            /*                         [RevisionDate] = TF.[RevisionDate] */
-            /*                     FROM */
-            /*                         [dbo].[Folder] F */
-            /*                     INNER JOIN */
-            /*                         #TempFolder TF ON F.Id = TF.Id */
-            /*                     WHERE */
-            /*                         F.[UserId] = @UserId"; */
-            /*             } */
-
-            /*             sql += @" */
-            /*                 DROP TABLE #TempCipher */
-            /*                 DROP TABLE #TempFolder"; */
-
-            /*             using (var cmd = new SqlCommand(sql, connection, transaction)) */
-            /*             { */
-            /*                 cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = user.Id; */
-            /*                 cmd.ExecuteNonQuery(); */
-            /*             } */
-
-            /*             transaction.Commit(); */
-            /*         } */
-            /*         catch */
-            /*         { */
-            /*             transaction.Rollback(); */
-            /*             throw; */
-            /*         } */
-            /*     } */
-            /* } */
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                // dbo.User_UpdateKeys
+                var cipherEntities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
+                var folderEntities = Mapper.Map<List<EfModel.Folder>>(folders);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task UpsertAsync(CipherDetails cipher)

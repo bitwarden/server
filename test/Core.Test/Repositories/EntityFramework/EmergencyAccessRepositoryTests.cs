@@ -62,13 +62,5 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             var distinctItems = savedEmergencyAccesss.Distinct(equalityComparer);
             Assert.True(!distinctItems.Skip(1).Any());
         }
-
-        [Fact]
-        public void TestStringLengths()
-        {
-            var fixture = new Fixture();
-            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.Create<TestObject>();
-        }
     }
 }
