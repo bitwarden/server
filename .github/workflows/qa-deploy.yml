@@ -235,7 +235,7 @@ jobs:
     needs: swap-identity
     strategy:
       max-parallel: 1
-      fail-fast: false
+      #fail-fast: false
       matrix:
         include:
           - name: Api
@@ -285,9 +285,7 @@ jobs:
           done < <(seq 150)
 
       - name: Swap slots
-        run: |
-          sleep ${{ matrix.sleep_time }}
-          az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
+        run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
 
       - name: Stop staging slot
         run: az webapp stop --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
