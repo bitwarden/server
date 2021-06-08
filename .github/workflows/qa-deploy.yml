@@ -15,6 +15,7 @@ on:
 
 jobs:
   build:
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -108,6 +109,7 @@ jobs:
 
 
   reset-db:
+    if: false
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -118,7 +120,8 @@ jobs:
           echo "placeholder for loading test dataset"
 
   update-db:
-    if: ${{ github.events.inputs.migrateDb }} == "true"
+    if: false
+    #if: ${{ github.events.inputs.migrateDb }} == "true"
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -129,6 +132,7 @@ jobs:
 
 
   deploy:
+    if: false
     runs-on: ubuntu-latest
     needs: 
       - reset-db
@@ -187,7 +191,7 @@ jobs:
 
   swap-identity:
     runs-on: ubuntu-latest
-    needs: deploy
+    #needs: deploy
     steps:
       - name: Checkout custom AZ KV action
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
