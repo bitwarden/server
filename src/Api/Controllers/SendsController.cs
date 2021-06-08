@@ -11,6 +11,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Enums;
+using Bit.Core.Context;
 using Microsoft.Azure.EventGrid.Models;
 using Bit.Api.Utilities;
 using System.Collections.Generic;
@@ -31,6 +32,7 @@ namespace Bit.Api.Controllers
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly ILogger<SendsController> _logger;
         private readonly GlobalSettings _globalSettings;
+        private readonly ICurrentContext _currentContext;
 
         public SendsController(
             ISendRepository sendRepository,
@@ -38,7 +40,8 @@ namespace Bit.Api.Controllers
             ISendService sendService,
             ISendFileStorageService sendFileStorageService,
             ILogger<SendsController> logger,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userService = userService;
@@ -46,12 +49,20 @@ namespace Bit.Api.Controllers
             _sendFileStorageService = sendFileStorageService;
             _logger = logger;
             _globalSettings = globalSettings;
+            _currentContext = currentContext;
         }
 
         [AllowAnonymous]
         [HttpPost("access/{id}")]
         public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
         {
+            // Uncomment whenever we want to require the `send-id` header
+            //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
+            //    _currentContext.HttpContext.Request.Headers["Send-Id"] != id)
+            //{
+            //    throw new BadRequestException("Invalid Send-Id header.");
+            //}
+
             var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
             var (send, passwordRequired, passwordInvalid) =
                 await _sendService.AccessAsync(guid, model.Password);
@@ -83,6 +94,13 @@ namespace Bit.Api.Controllers
         public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
             string fileId, [FromBody] SendAccessRequestModel model)
         {
+            // Uncomment whenever we want to require the `send-id` header
+            //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
+            //    _currentContext.HttpContext.Request.Headers["Send-Id"] != encodedSendId)
+            //{
+            //    throw new BadRequestException("Invalid Send-Id header.");
+            //}
+
             var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
             var send = await _sendRepository.GetByIdAsync(sendId);
 
