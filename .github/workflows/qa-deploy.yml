@@ -279,7 +279,7 @@ jobs:
         uses: ./.github/actions/get-keyvault-secrets
         with:
           keyvault: "bitwarden-qa-kv"
-          secrets: "appservices-identity-webapp-name:WEBAPP_NAME"
+          secrets: "appservices-${{ steps.setup.outputs.name_lower }}-webapp-name:WEBAPP_NAME"
 
       - name: Start staging slot
         run: az webapp start --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
@@ -331,7 +331,7 @@ jobs:
         uses: ./.github/actions/get-keyvault-secrets
         with:
           keyvault: "bitwarden-qa-kv"
-          secrets: "appservices-identity-webapp-name:ADMIN_WEBAPP_NAME"
+          secrets: "appservices-admin-webapp-name:ADMIN_WEBAPP_NAME"
 
       - name: Start staging slot
         run: az webapp start --name $ADMIN_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
