@@ -238,10 +238,15 @@ jobs:
       matrix:
         include:
           - name: Api
+            sleep_time: 0
           - name: Billing
+            sleep_time: 30
           - name: Events
+            sleep_time: 60
           - name: Sso
+            sleep_time: 90
           - name: Portal
+            sleep_time: 120
     steps:
       - name: Setup
         id: setup
@@ -284,7 +289,9 @@ jobs:
           done < <(seq 150)
 
       - name: Swap slots
-        run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
+        run: |
+          sleep ${{ matrix.sleep_time }}
+          az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
 
       - name: Stop staging slot
         run: az webapp stop --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
