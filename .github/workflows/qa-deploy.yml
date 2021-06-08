@@ -219,7 +219,7 @@ jobs:
         run: |
           while read OUTPUT
           do
-            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME-staging.azurewebsites.net/alive | head -1 )
+            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME-staging.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               echo "It is live!"
               break
