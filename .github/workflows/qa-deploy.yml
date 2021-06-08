@@ -215,17 +215,18 @@ jobs:
       - name: Start staging slot
         run: az webapp start --name $IDENTITY_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
 
-      - name: Make sure it endpoint is alive
+      - name: Make sure staging endpoint is alive
         run: |
           while read OUTPUT
           do
-            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
+            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME-staging.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
+              echo "It is live!"
               break
             fi
-            echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
-            sleep 2;
-          done < <(seq 150)
+            echo -e "STAUS=$STATUS\nRetrying: $OUTPUT"
+            sleep 4;
+          done < <(seq 15)
 
       - name: Swap Identity
         run: az webapp deployment slot swap -g bitwarden-qa -n $IDENTITY_WEBAPP_NAME --slot staging --target-slot production
@@ -276,17 +277,18 @@ jobs:
       - name: Start staging slot
         run: az webapp start --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
 
-      - name: Make sure it endpoint is alive
+      - name: Make sure staging endpoint is alive
         run: |
           while read OUTPUT
           do
-            STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
+            STATUS=$( curl -is https://$WEBAPP_NAME-staging.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
+              echo "It is live!"
               break
             fi
-            echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
-            sleep 2;
-          done < <(seq 150)
+            echo -e "STAUS=$STATUS\nRetrying: $OUTPUT"
+            sleep 4;
+          done < <(seq 15)
 
       - name: Swap slots
         run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
@@ -321,7 +323,7 @@ jobs:
       - name: Start staging slot
         run: az webapp start --name $ADMIN_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
 
-      - name: Make sure it endpoint is alive
+      - name: Make sure staging endpoint is alive
         run: |
           sleep 60  # I don't think the admin portal has an alive endpoint
           #while true
