@@ -234,7 +234,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: swap-identity
     strategy:
-      max-parallel: 1
+      #max-parallel: 1
       #fail-fast: false
       matrix:
         include:
