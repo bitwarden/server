@@ -226,6 +226,9 @@ namespace Bit.Icons.Services
                     }
                 }
 
+                document.Close();
+                htmlStream.Close();
+
                 return icons.Where(i => i.Icon != null).OrderBy(i => i.Priority).First();
             }
         }
