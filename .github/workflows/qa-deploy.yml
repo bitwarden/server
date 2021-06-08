@@ -15,7 +15,6 @@ on:
 
 jobs:
   build:
-    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -109,7 +108,6 @@ jobs:
 
 
   reset-db:
-    if: false
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -120,8 +118,7 @@ jobs:
           echo "placeholder for loading test dataset"
 
   update-db:
-    if: false
-    #if: ${{ github.events.inputs.migrateDb }} == "true"
+    if: ${{ github.events.inputs.migrateDb }} == "true"
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -132,7 +129,6 @@ jobs:
 
 
   deploy:
-    if: false
     runs-on: ubuntu-latest
     needs: 
       - reset-db
@@ -191,7 +187,7 @@ jobs:
 
   swap-identity:
     runs-on: ubuntu-latest
-    #needs: deploy
+    needs: deploy
     steps:
       - name: Checkout custom AZ KV action
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -246,8 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: swap-identity
     strategy:
-      #max-parallel: 1
-      #fail-fast: false
+      fail-fast: false
       matrix:
         include:
           - name: Api
@@ -339,15 +334,6 @@ jobs:
       - name: Make sure staging endpoint is alive
         run: |
           sleep 60  # I don't think the admin portal has an alive endpoint
-          #while true
-          #do
-          #  STATUS=$( curl -is https://$WEBAPP_NAME.azurewebsites.net/alive | head -1 )
-          #  if [[ "$STATUS" == *"200 OK"* ]]; then
-          #    break
-          #  fi
-          #  echo -e "STAUS=$STATUS\nsleeping for 2 seconds"
-          #  sleep 2;
-          #done
 
       - name: Swap Admin
         run: az webapp deployment slot swap -g bitwarden-qa -n $ADMIN_WEBAPP_NAME --slot staging --target-slot production
