@@ -234,19 +234,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: swap-identity
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         include:
           - name: Api
-            sleep_time: 0
           - name: Billing
-            sleep_time: 30
           - name: Events
-            sleep_time: 60
           - name: Sso
-            sleep_time: 90
           - name: Portal
-            sleep_time: 120
     steps:
       - name: Setup
         id: setup
