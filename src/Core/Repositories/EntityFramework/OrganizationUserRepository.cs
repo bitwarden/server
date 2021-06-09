@@ -45,14 +45,35 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers)
+        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
-            throw new NotImplementedException();
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            foreach(var organizationUser in organizationUsers)
+            {
+                organizationUser.SetNewId();
+            }
+
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entities = Mapper.Map<List<EfModel.OrganizationUser>>(organizationUsers);
+                await dbContext.AddRangeAsync(entities);
+            }
         }
 
-        public Task DeleteManyAsync(IEnumerable<Guid> userIds)
+        public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entities = dbContext.FindAsync<EfModel.OrganizationUser>(organizationUserIds);
+                dbContext.RemoveRange(entities);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
@@ -170,9 +191,17 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from ou in dbContext.OrganizationUsers
+                            where Ids.Contains(ou.Id)
+                            select ou;
+                var data = await query.ToArrayAsync();
+                return data;
+            }
         }
 
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
@@ -241,9 +270,25 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids)
+        public async Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from ou in dbContext.OrganizationUsers
+                            where Ids.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.OrganizationId == organizationId
+                            select new { ou, u };
+                var data = await query
+                    .Select(x => new OrganizationUserPublicKey() 
+                    {
+                       Id = x.ou.Id,
+                       PublicKey = x.u.PublicKey
+                    }).ToListAsync();
+                return data;
+            }
         }
 
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
@@ -266,14 +311,38 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                dbContext.UpdateRange(organizationUsers);
+                await dbContext.SaveChangesAsync();
+                // bumpmanyaccountrevisiondates
+            }
         }
 
-        public Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
+        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var usersQuery = from ou in dbContext.OrganizationUsers
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id into u_g
+                        from u in u_g
+                        where ou.OrganizationId == organizationId
+                        select new { ou, u };
+                var ouu = await usersQuery.ToListAsync();
+                var ouEmails = ouu.Select(x => x.ou.Email);
+                var uEmails = ouu.Select(x => x.u.Email);
+                var knownEmails =   from e in emails
+                                    where (ouEmails.Contains(e) || uEmails.Contains(e)) &&
+                                    (!onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e))) ||
+                                    (onlyRegisteredUsers && uEmails.Contains(e))
+                                    select e;
+                return knownEmails;
+            }
         }
 
         public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
@@ -296,9 +365,24 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        public async Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
-            throw new NotImplementedException();
+            var createUsers = new List<OrganizationUser>();
+            var replaceUsers = new List<OrganizationUser>();
+            foreach (var organizationUser in organizationUsers)
+            {
+                if (organizationUser.Id.Equals(default))
+                {
+                    createUsers.Add(organizationUser);
+                }
+                else
+                {
+                    replaceUsers.Add(organizationUser);
+                }
+            }
+
+            await CreateManyAsync(createUsers);
+            await ReplaceManyAsync(replaceUsers);
         }
     }
 }

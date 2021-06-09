@@ -143,9 +143,32 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+        public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
+                var insert = from ou in dbContext.OrganizationUsers
+                             where organizationUserIds.Contains(ou.Id) &&
+                                ou.OrganizationId == orgId &&
+                                !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
+                            select new EfModel.GroupUser() 
+                            {
+                                GroupId = groupId,
+                                OrganizationUserId = ou.Id
+                            };
+               await dbContext.AddRangeAsync(insert);
+
+               var delete = from gu in dbContext.GroupUsers
+                            where gu.GroupId == groupId &&
+                            !organizationUserIds.Contains(gu.OrganizationUserId)
+                            select gu;
+               dbContext.RemoveRange(delete);
+               await dbContext.SaveChangesAsync();
+
+               // User_BumpAccountRevisionDateByOrganizationId
+            }
         }
     }
 }

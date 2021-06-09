@@ -1,13 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
-using EfModel = Bit.Core.Models.EntityFramework;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -17,9 +12,17 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper)
         { }
 
-        public Task DeleteExpiredGrantsAsync()
+        public async Task DeleteExpiredGrantsAsync()
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from g in dbContext.Grants
+                            where g.ExpirationDate < DateTime.UtcNow
+                            select g;
+                dbContext.RemoveRange(query);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         public Task DisableCipherAutoStatsAsync()
