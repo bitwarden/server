@@ -27,6 +27,14 @@ namespace Bit.Core.Test.Services
                     Guid.NewGuid()));
 
             Assert.Contains("Organization not found", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+
+            await sutProvider.GetDependency<IEventService>()
+                .DidNotReceiveWithAnyArgs()
+                .LogPolicyEventAsync(default, default, default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -46,6 +54,14 @@ namespace Bit.Core.Test.Services
                     Guid.NewGuid()));
 
             Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+
+            await sutProvider.GetDependency<IEventService>()
+                .DidNotReceiveWithAnyArgs()
+                .LogPolicyEventAsync(default, default, default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -70,6 +86,14 @@ namespace Bit.Core.Test.Services
                     Guid.NewGuid()));
 
             Assert.Contains("Single Sign-On Authentication policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+
+            await sutProvider.GetDependency<IEventService>()
+                .DidNotReceiveWithAnyArgs()
+                .LogPolicyEventAsync(default, default, default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -94,6 +118,14 @@ namespace Bit.Core.Test.Services
                     Guid.NewGuid()));
 
             Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+
+            await sutProvider.GetDependency<IEventService>()
+                .DidNotReceiveWithAnyArgs()
+                .LogPolicyEventAsync(default, default, default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
