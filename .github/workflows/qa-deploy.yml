@@ -175,10 +175,7 @@ jobs:
         env:
            TEST_VAR: ${{ format('appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
-          echo "**********"
-          printenv $TEST_VAR
-          echo "${{ secrets.appservices_api_webapp_name }}"
-          echo "**********"
+          which az
 
       # - name: Deploy App
       #   uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
