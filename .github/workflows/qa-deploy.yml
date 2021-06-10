@@ -175,8 +175,11 @@ jobs:
         env:
            TEST_VAR: ${{ format('appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
-          echo "WEBAPP_NAME=$(az keyvault secret show --vault-name bitwarden-qa-kv --name appservices-$TEST_VAR-webapp-name --query value)" >> $GITHUB_ENV
+          echo "WEBAPP_NAME=$(az keyvault secret show --vault-name bitwarden-qa-kv --name $TEST_VAR --query value)" >> $GITHUB_ENV
           echo "WEBAPP_NAME_2=$(az keyvault secret show --vault-name bitwarden-qa-kv --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)" >> $GITHUB_ENV
+
+      - name: Test outputs 2
+        run: |
           echo "$WEBAPP_NAME"
           echo "$WEBAPP_NAME_2"
 
