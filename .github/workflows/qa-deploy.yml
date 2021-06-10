@@ -177,7 +177,7 @@ jobs:
         run: |
           echo "**********"
           printenv $TEST_VAR
-          printenv appservices-api-webapp-name
+          echo "${{ secrets.appservices_api_webapp_name }}"
           echo "**********"
 
       # - name: Deploy App
