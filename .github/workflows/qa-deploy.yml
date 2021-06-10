@@ -176,8 +176,8 @@ jobs:
            TEST_VAR: ${{ format('appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
           echo "**********"
-          echo "$TEST_VAR"
-          echo "${!TEST_VAR}"
+          printenv $TEST_VAR
+          printenv appservices-api-webapp-name
           echo "**********"
 
       # - name: Deploy App
