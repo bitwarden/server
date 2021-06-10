@@ -172,11 +172,11 @@ jobs:
                     appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile"
 
       - name: Test outputs
-        env:
-          TEST_VAR: ${{ format('steps.retrieve-secrets.outputs.appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
+        # env:
+        #   TEST_VAR: ${{ format('steps.retrieve-secrets.outputs.appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
           echo "**********"
-          echo "$TEST_VAR"
+          env
           echo "**********"
 
       # - name: Deploy App
