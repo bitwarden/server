@@ -166,7 +166,7 @@ jobs:
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)
+          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 
@@ -191,7 +191,7 @@ jobs:
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          identity_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-identity-webapp-name --query value)
+          identity_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-identity-webapp-name --query value --output tsv)
           echo "::add-mask::$identity_webapp_name"
           echo "::set-output name=identity-webapp-name::$identity_webapp_name"
 
@@ -252,7 +252,7 @@ jobs:
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)
+          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 
@@ -298,7 +298,7 @@ jobs:
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          admin_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-admin-webapp-name --query value)
+          admin_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-admin-webapp-name --query value --output tsv)
           echo "::add-mask::$admin_webapp_name"
           echo "::set-output name=admin-webapp-name::$admin_webapp_name"
 
