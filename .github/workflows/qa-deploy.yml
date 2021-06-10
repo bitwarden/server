@@ -176,7 +176,7 @@ jobs:
         #   TEST_VAR: ${{ format('steps.retrieve-secrets.outputs.appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
           echo "**********"
-          env
+          echo "$appservices-${{ steps.setup.outputs.name_lower }}-webapp-name"
           echo "**********"
 
       # - name: Deploy App
