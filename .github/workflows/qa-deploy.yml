@@ -175,7 +175,10 @@ jobs:
         env:
            TEST_VAR: ${{ format('appservices-{0}-webapp-name', steps.setup.outputs.name_lower) }}
         run: |
-          which az
+          echo "WEBAPP_NAME=$(az keyvault secret show --vault-name bitwarden-qa-kv --name appservices-$TEST_VAR-webapp-name --query value)" >> $GITHUB_ENV
+          echo "WEBAPP_NAME_2=$(az keyvault secret show --vault-name bitwarden-qa-kv --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)" >> $GITHUB_ENV
+          echo "$WEBAPP_NAME"
+          echo "$WEBAPP_NAME_2"
 
       # - name: Deploy App
       #   uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
