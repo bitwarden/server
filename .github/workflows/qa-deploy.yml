@@ -162,16 +162,18 @@ jobs:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
+        id: retrieve-secrets
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          echo "WEBAPP_NAME=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)" >> $GITHUB_ENV
-          echo "WEBAPP_PUBLISH_PROFILE=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile --query value)" >> $GITHUB_ENV
+          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)
+          echo "::add-mask::$webapp_name"
+          echo "::set-output name=webapp-name::$webapp_name"
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ env.WEBAPP_NAME }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
           slot-name: "staging"
           package: ./${{ matrix.name }}.zip
 
@@ -185,20 +187,23 @@ jobs:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
+        id: retrieve-secrets
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          echo "IDENTITY_WEBAPP_NAME=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-identity-webapp-name --query value)" >> $GITHUB_ENV
+          identity_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-identity-webapp-name --query value)
+          echo "::add-mask::$identity_webapp_name"
+          echo "::set-output name=identity-webapp-name::$identity_webapp_name"
 
       - name: Start staging slot
-        run: az webapp start --name $IDENTITY_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.identity-webapp-name }} --resource-group bitwarden-qa --slot staging
 
       - name: Make sure staging endpoint is alive
         run: |
           SUCCESS="no"
           while read OUTPUT
           do
-            STATUS=$( curl -is https://$IDENTITY_WEBAPP_NAME-staging.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
+            STATUS=$( curl -is https://${{ steps.retrieve-secrets.outputs.identity-webapp-name }}-staging.azurewebsites.net/.well-known/openid-configuration/jwks | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               echo "It is live!"
               SUCCESS="yes"
@@ -213,10 +218,10 @@ jobs:
           fi
 
       - name: Swap Identity
-        run: az webapp deployment slot swap -g bitwarden-qa -n $IDENTITY_WEBAPP_NAME --slot staging --target-slot production
+        run: az webapp deployment slot swap -g bitwarden-qa -n ${{ steps.retrieve-secrets.outputs.identity-webapp-name }} --slot staging --target-slot production
 
       - name: Stop staging slot
-        run: az webapp stop --name $IDENTITY_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.identity-webapp-name }} --resource-group bitwarden-qa --slot staging
 
   swap-slots:
     runs-on: ubuntu-latest
@@ -243,20 +248,23 @@ jobs:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
+        id: retrieve-secrets
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          echo "WEBAPP_NAME=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)" >> $GITHUB_ENV
+          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value)
+          echo "::add-mask::$webapp_name"
+          echo "::set-output name=webapp-name::$webapp_name"
 
       - name: Start staging slot
-        run: az webapp start --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }}  --resource-group bitwarden-qa --slot staging
 
       - name: Make sure staging endpoint is alive
         run: |
           SUCCESS="no"
           while read OUTPUT
           do
-            STATUS=$( curl -is https://$WEBAPP_NAME-staging.azurewebsites.net/alive | head -1 )
+            STATUS=$( curl -is https://${{ steps.retrieve-secrets.outputs.webapp-name }}-staging.azurewebsites.net/alive | head -1 )
             if [[ "$STATUS" == *"200 OK"* ]]; then
               echo "It is live!"
               SUCCESS="yes"
@@ -271,10 +279,10 @@ jobs:
           fi
 
       - name: Swap slots
-        run: az webapp deployment slot swap -g bitwarden-qa -n $WEBAPP_NAME --slot staging --target-slot production
+        run: az webapp deployment slot swap -g bitwarden-qa -n ${{ steps.retrieve-secrets.outputs.webapp-name }} --slot staging --target-slot production
 
       - name: Stop staging slot
-        run: az webapp stop --name $WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group bitwarden-qa --slot staging
 
   swap-admin:
     runs-on: ubuntu-latest
@@ -286,20 +294,23 @@ jobs:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
+        id: retrieve-secrets
         env:
            VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          echo "ADMIN_WEBAPP_NAME=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-admin-webapp-name --query value)" >> $GITHUB_ENV
+          admin_webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-admin-webapp-name --query value)
+          echo "::add-mask::$admin_webapp_name"
+          echo "::set-output name=admin-webapp-name::$admin_webapp_name"
 
       - name: Start staging slot
-        run: az webapp start --name $ADMIN_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.admin-webapp-name }} --resource-group bitwarden-qa --slot staging
 
       - name: Make sure staging endpoint is alive
         run: |
           sleep 60  # I don't think the admin portal has an alive endpoint
 
       - name: Swap Admin
-        run: az webapp deployment slot swap -g bitwarden-qa -n $ADMIN_WEBAPP_NAME --slot staging --target-slot production
+        run: az webapp deployment slot swap -g bitwarden-qa -n ${{ steps.retrieve-secrets.outputs.admin-webapp-name }} --slot staging --target-slot production
 
       - name: Stop staging slot
-        run: az webapp stop --name $ADMIN_WEBAPP_NAME --resource-group bitwarden-qa --slot staging
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.admin-webapp-name }} --resource-group bitwarden-qa --slot staging
