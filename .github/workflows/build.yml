@@ -76,43 +76,61 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
           - service_name: Api
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Attachments
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Events
             base_path: ./src
+            docker_repo: bitwarden
+            dotnet: true
+          - service_name: EventProcessor
+            base_path: ./src
+            docker_repo: bitwardenqa.azurecr.io
             dotnet: true
           - service_name: Icons
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Identity
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: K8S-Proxy
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: MsSql
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Nginx
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Notifications
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Portal
             base_path: ./bitwarden_license/src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
           - service_name: Server
             base_path: ./util
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Setup
             base_path: ./util
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Sso
             base_path: ./bitwarden_license/src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
     steps:
@@ -167,6 +185,14 @@ jobs:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
+      - name: Setup service name
+        id: setup
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.name }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "::set-output name=service_name::$SERVICE_NAME"
+
       - name: Set up Gulp
         if: ${{ matrix.gulp }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
@@ -201,26 +227,23 @@ jobs:
           mv ${{ matrix.service_name }}.zip ../../../
 
       - name: Build Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
-            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/Nginx
+          if [ "${{ steps.setup.outputs.service_name }}" = "k8s-proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
           else
-            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/${{ matrix.service_name }}
+            docker build -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
       - name: Tag rc
-        if: github.ref == 'refs/heads/rc'
+        #if: github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:rc
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:dev
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
@@ -229,8 +252,7 @@ jobs:
       - name: Push rc images
         if: github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker push bitwarden/$SERVICE_NAME:rc
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
@@ -238,8 +260,7 @@ jobs:
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker push bitwarden/$SERVICE_NAME:dev
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
