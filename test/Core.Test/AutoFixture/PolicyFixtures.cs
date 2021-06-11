@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.Enums;
@@ -17,6 +18,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.Policy>(composer => composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
                 .With(o => o.Type, Type)
                 .With(o => o.Enabled, true));
         }

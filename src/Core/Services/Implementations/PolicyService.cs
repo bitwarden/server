@@ -82,7 +82,6 @@ namespace Bit.Core.Services
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
                 if (!currentPolicy?.Enabled ?? true)
                 {
-                    Organization organization = null;
                     var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                         policy.OrganizationId);
                     var removableOrgUsers = orgUsers.Where(ou =>
@@ -96,28 +95,26 @@ namespace Bit.Core.Services
                             {
                                 if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                                 {
-                                    organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                                     await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
                                     await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                        organization.Name, orgUser.Email);
+                                        org.Name, orgUser.Email);
                                 }
                             }
                         break;
                         case Enums.PolicyType.SingleOrg:
                             var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                                     removableOrgUsers.Select(ou => ou.UserId.Value));
-                            organization = organization ?? await _organizationRepository.GetByIdAsync(policy.OrganizationId);
                             foreach (var orgUser in removableOrgUsers)
                             {
                                 if (userOrgs.Any(ou => ou.UserId == orgUser.UserId 
-                                            && ou.OrganizationId != organization.Id 
+                                            && ou.OrganizationId != org.Id 
                                             && ou.Status != OrganizationUserStatusType.Invited))
                                 {
                                     await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
                                     await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                                        organization.Name, orgUser.Email);
+                                        org.Name, orgUser.Email);
                                 }
                             }
                         break;
@@ -126,7 +123,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            policy.RevisionDate = DateTime.UtcNow;
+            policy.RevisionDate = now;
             await _policyRepository.UpsertAsync(policy);
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
