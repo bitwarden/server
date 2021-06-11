@@ -42,6 +42,7 @@ namespace Bit.Core.Test.AutoFixture.EventFixtures
     {
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new EventBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<EventRepository>());

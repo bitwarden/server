@@ -6,7 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class SsoConfig : Table.SsoConfig
     {
-        public Organization Organization { get; set; }
+        public virtual Organization Organization { get; set; }
     }
 
     public class SsoConfigMapperProfile : Profile

@@ -6,6 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class Folder : Table.Folder
     {
+        public virtual User User { get; set; }
     }
 
     public class FolderMapperProfile : Profile

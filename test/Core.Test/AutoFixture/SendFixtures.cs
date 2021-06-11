@@ -103,6 +103,7 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
         public bool OrganizationOwned { get; set; }
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new SendBuilder());
             fixture.Customizations.Add(new UserBuilder());

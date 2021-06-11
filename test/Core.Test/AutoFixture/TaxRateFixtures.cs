@@ -42,6 +42,7 @@ namespace Bit.Core.Test.AutoFixture.TaxRateFixtures
     {
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new TaxRateBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<TaxRateRepository>());

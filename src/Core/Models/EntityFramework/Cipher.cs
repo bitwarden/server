@@ -1,12 +1,14 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json;
 using AutoMapper;
 
 namespace Bit.Core.Models.EntityFramework
 {
     public class Cipher : Table.Cipher
     {
-        public User User { get; set; }
-        public Organization Organization { get; set; }
+        public virtual User User { get; set; }
+        public virtual Organization Organization { get; set; }
+        public virtual ICollection<CollectionCipher> CollectionCiphers { get; set; }
     }
 
     public class CipherMapperProfile : Profile

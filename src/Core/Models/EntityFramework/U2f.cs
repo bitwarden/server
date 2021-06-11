@@ -6,6 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class U2f : Table.U2f
     {
+        public virtual User User { get; set; }
     }
 
     public class U2fMapperProfile : Profile

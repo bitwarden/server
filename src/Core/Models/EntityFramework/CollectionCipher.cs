@@ -6,6 +6,8 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class CollectionCipher : Table.CollectionCipher
     {
+        public virtual Cipher Cipher { get; set; }
+        public virtual Collection Collection { get; set; }
     }
 
     public class CollectionCipherMapperProfile : Profile

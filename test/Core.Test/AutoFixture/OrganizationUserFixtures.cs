@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
@@ -100,6 +100,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
    {
       public void Customize(IFixture fixture)
       {
+         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
          fixture.Customizations.Add(new GlobalSettingsBuilder());
          fixture.Customizations.Add(new OrganizationUserBuilder());
          fixture.Customizations.Add(new OrganizationBuilder());

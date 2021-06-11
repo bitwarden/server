@@ -45,6 +45,8 @@ namespace Bit.Core.Test.AutoFixture.EmergencyAccessFixtures
     {
         public void Customize(IFixture fixture)
         {
+            // TODO: Make a base EF Customization with IgnoreVirtualMembers/GlobalSettings/All repos and inherit
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new EmergencyAccessBuilder());
             fixture.Customizations.Add(new UserBuilder());

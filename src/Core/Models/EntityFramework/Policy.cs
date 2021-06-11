@@ -6,6 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class Policy : Table.Policy
     {
+        public virtual Organization Organization { get; set; }
     }
 
     public class PolicyMapperProfile : Profile

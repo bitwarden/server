@@ -4,6 +4,8 @@ using EfModel = Bit.Core.Models.EntityFramework;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
 using System;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
@@ -21,7 +23,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class CollectionUserUpdateUsersInsert : IQuery<EfModel.CollectionUser>
+    public class CollectionUserUpdateUsersInsert : IQuery<EfModel.OrganizationUser>
     {
         private Guid CollectionId { get; set; }
         private IEnumerable<SelectionReadOnly> Users { get; set; }
@@ -32,23 +34,30 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             Users = users;
         }
 
-        public IQueryable<EfModel.CollectionUser> Run(DatabaseContext dbContext)
+        public IQueryable<EfModel.OrganizationUser> Run(DatabaseContext dbContext)
         {
             var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == CollectionId)?.OrganizationId;
-            var insertQuery =   from source in Users 
-                                join ou in dbContext.OrganizationUsers
-                                    on source.Id equals ou.Id
+            var organizationUserIds = Users.Select(u => u.Id);
+            var insertQuery =   from ou in dbContext.OrganizationUsers
                                 where 
+                                    organizationUserIds.Contains(ou.Id) &&
                                     ou.OrganizationId == orgId &&
                                     !dbContext.CollectionUsers.Any(
                                         x => x.CollectionId != CollectionId && x.OrganizationUserId == ou.Id)
-                                select new { source, ou };
-            return insertQuery.Select(x => new EfModel.CollectionUser(){ 
+                                select ou;
+            return insertQuery;
+        }
+
+        public async Task<IEnumerable<EfModel.CollectionUser>> BuildInMemory(DatabaseContext dbContext)
+        {
+            var data = await Run(dbContext).ToListAsync();
+            var collectionUsers = data.Select(x => new EfModel.CollectionUser(){ 
                 CollectionId = CollectionId,
-                OrganizationUserId = x.source.Id,
-                ReadOnly = x.source.ReadOnly,
-                HidePasswords = x.source.HidePasswords
-            }).AsQueryable();
+                OrganizationUserId = x.Id,
+                ReadOnly = Users.FirstOrDefault(u => u.Id.Equals(x.Id)).ReadOnly,
+                HidePasswords = Users.FirstOrDefault(u => u.Id.Equals(x.Id)).HidePasswords
+            });
+            return collectionUsers;
         }
     }
 
@@ -66,20 +75,24 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<EfModel.CollectionUser> Run(DatabaseContext dbContext)
         {
             var orgId = dbContext.Collections.FirstOrDefault(c => c.Id == CollectionId)?.OrganizationId;
-            var userIds = Users.Select(u => u.Id).ToArray();
-            var updateQuery =   (from target in dbContext
-                                    .CollectionUsers
-                                    .Where(cu => userIds.Contains(cu.OrganizationUserId) && cu.CollectionId == CollectionId)
-                                select new { target }).AsEnumerable();
-            updateQuery = updateQuery.Where(cu => 
-                cu.target.ReadOnly == Users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).ReadOnly &&
-                cu.target.HidePasswords == Users.FirstOrDefault(u => u.Id == cu.target.OrganizationUserId).HidePasswords);
-            return updateQuery.Select(x => new EfModel.CollectionUser(){ 
+            var ids = Users.Select(x => x.Id);
+            var updateQuery =   from target in dbContext.CollectionUsers
+                                where target.CollectionId == CollectionId &&
+                                    ids.Contains(target.OrganizationUserId)
+                                select target;
+            return updateQuery;
+        }
+
+        public async Task<IEnumerable<EfModel.CollectionUser>> BuildInMemory(DatabaseContext dbContext)
+        {
+            var data = await Run(dbContext).ToListAsync();
+            var collectionUsers = data.Select(x => new EfModel.CollectionUser(){ 
                 CollectionId = CollectionId,
-                OrganizationUserId = x.target.OrganizationUserId,
-                ReadOnly = x.target.ReadOnly,
-                HidePasswords = x.target.HidePasswords
-            }).AsQueryable();
+                OrganizationUserId = x.OrganizationUserId,
+                ReadOnly = Users.FirstOrDefault(u => u.Id.Equals(x.OrganizationUserId)).ReadOnly,
+                HidePasswords = Users.FirstOrDefault(u => u.Id.Equals(x.OrganizationUserId)).HidePasswords
+            });
+            return collectionUsers;
         }
     }
 

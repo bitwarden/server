@@ -74,6 +74,7 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
     {
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new PolicyBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());

@@ -53,12 +53,13 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
    {
       public void Customize(IFixture fixture)
       {
-         fixture.Customizations.Add(new GlobalSettingsBuilder());
-         fixture.Customizations.Add(new UserBuilder());
-         fixture.Customizations.Add(new OrganizationBuilder());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new OrganizationBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
       }
    }
 

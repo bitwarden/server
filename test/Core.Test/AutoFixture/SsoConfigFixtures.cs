@@ -43,6 +43,7 @@ namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
    {
       public void Customize(IFixture fixture)
       {
+         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
          fixture.Customizations.Add(new GlobalSettingsBuilder());
          fixture.Customizations.Add(new OrganizationBuilder());
          fixture.Customizations.Add(new SsoConfigBuilder());

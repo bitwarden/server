@@ -49,7 +49,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(Organization))
+            if (type == null || type != typeof(TableModel.Organization))
             {
                 return new NoSpecimen();
             }
@@ -124,6 +124,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());

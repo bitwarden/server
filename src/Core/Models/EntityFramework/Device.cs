@@ -6,6 +6,7 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class Device : Table.Device
     {
+        public virtual User User { get; set; }
     }
 
     public class DeviceMapperProfile : Profile

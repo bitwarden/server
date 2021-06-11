@@ -4,8 +4,8 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class CollectionGroup : Table.CollectionGroup
     {
-        public Collection Collection { get; set; }
-        public Group Group { get; set; }
+        public virtual Collection Collection { get; set; }
+        public virtual Group Group { get; set; }
     }
 
     public class CollectionGroupMapperProfile : Profile

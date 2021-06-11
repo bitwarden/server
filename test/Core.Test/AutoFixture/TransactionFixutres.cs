@@ -50,6 +50,7 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
         public bool OrganizationOwned { get; set; }
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new TransactionBuilder());
             fixture.Customizations.Add(new UserBuilder());

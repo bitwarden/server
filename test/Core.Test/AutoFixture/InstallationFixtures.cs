@@ -40,6 +40,7 @@ namespace Bit.Core.Test.AutoFixture.InstallationFixtures
     {
         public void Customize(IFixture fixture)
         {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new InstallationBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<InstallationRepository>());

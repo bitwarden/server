@@ -6,6 +6,8 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class Group : Table.Group
     {
+        public virtual Organization Organization { get; set; }
+        public virtual ICollection<GroupUser> GroupUsers { get; set; }
     }
 
     public class GroupMapperProfile : Profile

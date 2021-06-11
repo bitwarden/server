@@ -6,6 +6,8 @@ namespace Bit.Core.Models.EntityFramework
 {
     public class EmergencyAccess : Table.EmergencyAccess
     {
+        public virtual User Grantee { get; set; }
+        public virtual User Grantor { get; set; }
     }
 
     public class EmergencyAccessMapperProfile : Profile

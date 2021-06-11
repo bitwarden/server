@@ -23,7 +23,14 @@ namespace Bit.Core.Test.AutoFixture.GlobalSettingsFixtures
             }
 
             var pi = request as ParameterInfo;
-            if (pi == null || pi.ParameterType != typeof(GlobalSettings))
+            var fixture = new Fixture();
+            fixture.Customize<Settings.GlobalSettings>(composer => composer
+                .Without(s => s.BaseServiceUri)
+                .Without(s => s.Attachment)
+                .Without(s => s.Send)
+                .Without(s => s.DataProtection));
+
+            if (pi == null || pi.ParameterType != typeof(Settings.GlobalSettings))
                 return new NoSpecimen();
 
             return GlobalSettingsFactory.GlobalSettings;
@@ -34,11 +41,15 @@ namespace Bit.Core.Test.AutoFixture.GlobalSettingsFixtures
     {
         public void Customize(IFixture fixture)
         {
+            var globalSettings = GlobalSettingsFactory.GlobalSettings;
             fixture.Customize<Settings.GlobalSettings>(composer => composer
                 .Without(s => s.BaseServiceUri)
                 .Without(s => s.Attachment)
                 .Without(s => s.Send)
-                .Without(s => s.DataProtection));
+                .Without(s => s.DataProtection)
+                .With(s => s.SqlServer, globalSettings.SqlServer)
+                .With(s => s.PostgreSql, globalSettings.PostgreSql)
+                .With(s => s.MySql, globalSettings.MySql));
         }
     }
 }

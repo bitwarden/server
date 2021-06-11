@@ -65,6 +65,8 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+
             if (!OrganizationOwned)
             {
                 fixture.Customize<Cipher>(composer => composer
@@ -77,7 +79,7 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
                 .Without(e => e.Favorites)
                 .Without(e => e.Folders));
             //
-
+            
             var serializerOptions = new JsonSerializerOptions(){
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };

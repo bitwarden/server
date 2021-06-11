@@ -10,6 +10,7 @@ using System.Reflection;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.Helpers.Factories;
 using Microsoft.EntityFrameworkCore;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 {
@@ -90,6 +91,29 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                 list.Add(repo);
             }
             return list;
+        }
+    }
+
+    public class IgnoreVirtualMembersCustomization : ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException("context");
+            }
+
+            var pi = request as PropertyInfo;
+            if (pi == null)
+            {
+                return new NoSpecimen();
+            }
+
+            if (pi.GetGetMethod().IsVirtual && pi.DeclaringType != typeof(GlobalSettings))
+            {
+                return null;
+            }
+            return new NoSpecimen();
         }
     }
 }

@@ -224,11 +224,11 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 var procedure = new CollectionUserUpdateUsers(id, users);
 
-                var update = procedure.Update.Run(dbContext);
-                dbContext.UpdateRange(await update.ToListAsync());
+                var updateData = await procedure.Update.BuildInMemory(dbContext);
+                dbContext.UpdateRange(updateData);
 
-                var insert = procedure.Insert.Run(dbContext);
-                await dbContext.AddRangeAsync(await insert.ToListAsync());
+                var insertData = await procedure.Insert.BuildInMemory(dbContext);
+                await dbContext.AddRangeAsync(insertData);
 
                 dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
             }
