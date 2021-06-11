@@ -90,7 +90,7 @@ jobs:
             base_path: ./src
             docker_repo: bitwarden
             dotnet: true
-          - service_name: EventProcessor
+          - service_name: EventsProcessor
             base_path: ./src
             docker_repo: bitwardenqa.azurecr.io
             dotnet: true
