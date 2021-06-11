@@ -170,7 +170,12 @@ jobs:
 
       - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        run: |
+          if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
+            az acr login -n bitwardenqa
+          else
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          fi
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
@@ -227,7 +232,7 @@ jobs:
           mv ${{ matrix.service_name }}.zip ../../../
 
       - name: Build Docker images
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           if [ "${{ steps.setup.outputs.service_name }}" = "k8s-proxy" ]; then
             docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
@@ -236,7 +241,7 @@ jobs:
           fi
 
       - name: Tag rc
-        #if: github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/rc'
         run: |
           docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
@@ -249,21 +254,23 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
+      - name: Docker Trust setup
+        run: |
+          if [[ "${{ matrix.docker_repo }}" == "bitwarden" ]]; then
+            echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+            echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
+          fi
+
       - name: Push rc images
         if: github.ref == 'refs/heads/rc'
         run: |
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
         env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
         run: |
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Log out of Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
