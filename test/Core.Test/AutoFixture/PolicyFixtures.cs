@@ -1,3 +1,5 @@
+﻿using System;
+using System.Reflection;
 using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -29,6 +31,7 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.Policy>(composer => composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
                 .With(o => o.Type, Type)
                 .With(o => o.Enabled, true));
         }
