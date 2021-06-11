@@ -11,7 +11,6 @@ BEGIN
     DECLARE @UserId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
 
-    // TODO: Is this select statement doing anything?
     SELECT
         @UserId = [UserId],
         @OrganizationId = [OrganizationId]
