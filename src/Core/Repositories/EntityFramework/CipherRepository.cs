@@ -210,8 +210,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     // TODO:dbo.Organization_UpdateStorage
                     // TODO: dbo.User_BumpAccountRevisionDateByOrganizationId
                 }
-                var userCiphersWithStorageCount = await temp.Where(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)).CountAsync();
-                if (userCiphersWithStorageCount > 0)
+                if (await temp.AnyAsync(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)))
                 {
                     // TODO: dbo.User_UpdateStorage
                 }
@@ -310,7 +309,6 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: this is batched in the proc. How does batching work in EF?
                 var query = dbContext.Ciphers.Where(c => c.DeletedDate < deletedDateBefore);
                 dbContext.RemoveRange(query);
                 await dbContext.SaveChangesAsync();
@@ -589,8 +587,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     // dbo.Organization_UpdateStorage
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
-                var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
-                if (userCiphersWithStorageCount > 0)
+                if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
                 {
                     // dbo.User_UpdateStorage
                 }
@@ -629,8 +626,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     // dbo.Organization_UpdateStorage
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
-                var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
-                if (userCiphersWithStorageCount > 0)
+                if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
                 {
                     // dbo.User_UpdateStorage
                 }

@@ -49,6 +49,7 @@ namespace Bit.Core.Utilities
         {
             var selectedDatabaseProvider = globalSettings.DatabaseProvider;
             var provider = SupportedDatabaseProviders.SqlServer;
+            var connectionString = string.Empty;
             if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
             {
                 switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -56,10 +57,12 @@ namespace Bit.Core.Utilities
                     case "postgres":
                     case "postgresql":
                         provider = SupportedDatabaseProviders.Postgres;
+                        connectionString = globalSettings.PostgreSql.ConnectionString;
                         break;
                     case "mysql":
                     case "mariadb":
                         provider = SupportedDatabaseProviders.MySql;
+                        connectionString = globalSettings.MySql.ConnectionString;
                         break;
                     default:
                         break;
@@ -70,17 +73,21 @@ namespace Bit.Core.Utilities
 
             if (useEf)
             {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new Exception($"Database provider type {provider.ToString()} was selected but no connection string was found.");
+                }
                 LinqToDBForEFTools.Initialize();
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
                 services.AddDbContext<EntityFrameworkRepos.DatabaseContext>(options =>
                 {
                     if (provider == SupportedDatabaseProviders.Postgres)
                     {
-                        options.UseNpgsql(globalSettings.PostgreSql.ConnectionString);
+                        options.UseNpgsql(connectionString);
                     } 
                     else if (provider == SupportedDatabaseProviders.MySql)
                     {
-                        options.UseMySql(globalSettings.MySql.ConnectionString, ServerVersion.AutoDetect(globalSettings.MySql.ConnectionString));
+                        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                     }
                 });
                 services.AddSingleton<ICipherRepository, EntityFrameworkRepos.CipherRepository>();
