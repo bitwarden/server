@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\bitwarden_license\src\CommCore\CommCore.csproj" />
-    <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
+    <ProjectReference Include="..\..\src\CommCore\CommCore.csproj" />
+    <ProjectReference Include="..\..\..\test\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
 </Project>
