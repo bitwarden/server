@@ -24,6 +24,7 @@ jobs:
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
+
   testing:
     name: Testing
     runs-on: windows-latest
@@ -65,6 +66,7 @@ jobs:
       - name: Test solution
         run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
         shell: pwsh
+
 
   build:
     name: Build
@@ -153,7 +155,7 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Login to Azure
+      - name: Login to Azure: Prod Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
@@ -167,6 +169,12 @@ jobs:
                     docker-username,
                     dct-delegate-2-repo-passphrase,
                     dct-delegate-2-key"
+
+      - name: Login to Azure: QA Subscription
+        if: ${{ matrix.service_name }} == "EventsProcessor"
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
@@ -274,6 +282,7 @@ jobs:
       - name: Log out of Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
+
 
   upload:
     name: Upload
