@@ -76,43 +76,61 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
           - service_name: Api
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Attachments
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Events
             base_path: ./src
+            docker_repo: bitwarden
+            dotnet: true
+          - service_name: EventsProcessor
+            base_path: ./src
+            docker_repo: bitwardenqa.azurecr.io
             dotnet: true
           - service_name: Icons
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Identity
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: K8S-Proxy
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: MsSql
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Nginx
             base_path: ./util
+            docker_repo: bitwarden
           - service_name: Notifications
             base_path: ./src
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Portal
             base_path: ./bitwarden_license/src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
           - service_name: Server
             base_path: ./util
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Setup
             base_path: ./util
+            docker_repo: bitwarden
             dotnet: true
           - service_name: Sso
             base_path: ./bitwarden_license/src
+            docker_repo: bitwarden
             dotnet: true
             gulp: true
     steps:
@@ -152,7 +170,12 @@ jobs:
 
       - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        run: |
+          if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
+            az acr login -n bitwardenqa
+          else
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          fi
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
@@ -166,6 +189,14 @@ jobs:
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+
+      - name: Setup service name
+        id: setup
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.service_name }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "::set-output name=service_name::$SERVICE_NAME"
 
       - name: Set up Gulp
         if: ${{ matrix.gulp }}
@@ -203,46 +234,43 @@ jobs:
       - name: Build Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
-            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/Nginx
+          if [ "${{ steps.setup.outputs.service_name }}" = "k8s-proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
           else
-            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/${{ matrix.service_name }}
+            docker build -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
       - name: Tag rc
         if: github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:rc
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:dev
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
+      - name: Docker Trust setup
+        run: |
+          if [[ "${{ matrix.docker_repo }}" == "bitwarden" ]]; then
+            echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+            echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
+          fi
+
       - name: Push rc images
         if: github.ref == 'refs/heads/rc'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker push bitwarden/$SERVICE_NAME:rc
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
         env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
         run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
-          docker push bitwarden/$SERVICE_NAME:dev
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
       - name: Log out of Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
