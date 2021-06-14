@@ -5,7 +5,6 @@ namespace Bit.Core.Enums
         SqlServer,
         MySql,
         Postgres,
-        Sqlite,
     }
 }
 

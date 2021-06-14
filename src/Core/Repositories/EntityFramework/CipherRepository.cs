@@ -137,7 +137,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.AddAsync(entity);
                 await dbContext.SaveChangesAsync();
             }
-            await UpdateAccountRevisionDate(cipher);
+            await UserBumpAccountRevisionDateByCipherId(cipher);
             return cipher;
         }
 
@@ -161,7 +161,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
                 var cipherEntities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-                // User_BumpAccountRevisionDate
+                await UserBumpAccountRevisionDateByCipherId(ciphers);
             }
         }
 
@@ -219,8 +219,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     // dbo.User_UpdateStorage
                 }
-                // dbo.User_BumpAccountRevisionDate
                 await dbContext.SaveChangesAsync();
+                await UserBumpAccountRevisionDate(userId);
             }
         }
 
@@ -233,18 +233,19 @@ namespace Bit.Core.Repositories.EntityFramework
                 var attachmentsJson = JObject.Parse(cipher.Attachments);
                 attachmentsJson.Remove(attachmentId);
                 cipher.Attachments = JsonConvert.SerializeObject(attachmentsJson);
+                await dbContext.SaveChangesAsync();
 
                 if (cipher.OrganizationId.HasValue)
                 {
                     /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
                     /* EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId */
+                    await UserBumpAccountRevisionDateByCipherId(cipher);
                 }
                 else if (cipher.UserId.HasValue)
                 {
                     /* EXEC [dbo].[User_UpdateStorage] @UserId */
-                    /* EXEC [dbo].[User_BumpAccountRevisionDate] @UserId */
+                    await UserBumpAccountRevisionDate(cipher.UserId.Value);
                 }
-                await dbContext.SaveChangesAsync();
             }
         }
 
@@ -261,7 +262,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
             /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
-            /* EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
+            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
 
         public async Task DeleteByOrganizationIdAsync(Guid organizationId)
@@ -285,7 +286,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
             /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
-            /* EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
+            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
 
         public async Task DeleteByUserIdAsync(Guid userId)
@@ -303,7 +304,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.RemoveRange(folders);
                 await dbContext.SaveChangesAsync();
                 // user_updatestorage
-                // user_bumpaccountrevisiondate
+                await UserBumpAccountRevisionDate(userId);
             }
 
         }
@@ -462,13 +463,12 @@ namespace Bit.Core.Repositories.EntityFramework
                                 where ucd.Edit
                                 select new { ucd, c };
                 // TODO: is this enough to save?
-                // TODO: using System.Text like ReplaceAsync?
                 await idsToMove.Select(x => x.c).ForEachAsync(cipher => {
                     var foldersJson = JObject.Parse(cipher.Folders);
                     foldersJson.Remove(userId.ToString());
                     cipher.Folders = JsonConvert.SerializeObject(foldersJson);
                 });          
-                // user_bumpaccountrevisiondate
+                await UserBumpAccountRevisionDate(userId);
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -484,7 +484,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var entity = await dbContext.Ciphers.FindAsync(cipher.Id);
                 if (entity != null)
                 {
-                    // TODO: All this could probably get a cleanup
+                    // TODO: All this could probably get a cleanup. Use Newtonsoft.Json, seems to result in cleaner parsing than System.Text.Json
                     var userIdKey = $"\"{cipher.UserId}\"";
                     if (cipher.Favorite)
                     {
@@ -532,7 +532,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     }
                     var mappedEntity = Mapper.Map<EfModel.Cipher>((TableModel.Cipher)cipher);
                     dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                    await UpdateAccountRevisionDate(cipher);
+                    await UserBumpAccountRevisionDateByCipherId(cipher);
                     await dbContext.SaveChangesAsync();
                 }
             }
@@ -559,7 +559,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     // user_updatestorage
                 }
 
-                // bumpaccountrevisiondatebycipherid
+                await UserBumpAccountRevisionDateByCipherId(cipher);
                 return true;
             }
         }
@@ -584,28 +584,27 @@ namespace Bit.Core.Repositories.EntityFramework
                     cipher.RevisionDate = utcNow;
                 });
 
-                var orgs = temp
+                var orgIds = temp
                     .Where(x => x.c.OrganizationId.HasValue)
                     .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
 
-                // TODO: this is reused code with DeleteAsync, might be worth abstracting
-                foreach (var org in orgs)
+                foreach (var orgId in orgIds)
                 {
                     // dbo.Organization_UpdateStorage
-                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                    await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
                 var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
                 if (userCiphersWithStorageCount > 0)
                 {
                     // dbo.User_UpdateStorage
                 }
-                // dbo.User_BumpAccountRevisionDate
+
                 await dbContext.SaveChangesAsync();
                 return utcNow;
             }
         }
 
-        // this and the above method are almost identical
+        //TODO: this and the above method are almost identical and can probably be abstracted in a useful way
         public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -625,22 +624,21 @@ namespace Bit.Core.Repositories.EntityFramework
                     cipher.RevisionDate = utcNow;
                 });
 
-                var orgs = temp
+                var orgIds = temp
                     .Where(x => x.c.OrganizationId.HasValue)
                     .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
 
-                // TODO: this is reused code with DeleteAsync, might be worth abstracting
-                foreach (var org in orgs)
+                foreach (var orgId in orgIds)
                 {
                     // dbo.Organization_UpdateStorage
-                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                    await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
                 var userCiphersWithStorageCount = await temp.Where(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)).CountAsync();
                 if (userCiphersWithStorageCount > 0)
                 {
                     // dbo.User_UpdateStorage
                 }
-                // dbo.User_BumpAccountRevisionDate
+                await UserBumpAccountRevisionDate(userId);
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -659,7 +657,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 }); 
                 await dbContext.SaveChangesAsync();
                 // ourganization_updatestorage
-                // use_bumpaccountrevisiondatebyorganizationid
+                await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }
         }
 
@@ -678,12 +676,12 @@ namespace Bit.Core.Repositories.EntityFramework
                 if (attachment.OrganizationId.HasValue)
                 {
                     // organization_updatestroage
-                    // user_bumpaccountrevisiondatebycipherid
+                    await UserBumpAccountRevisionDateByCipherId(new List<Cipher> { cipher });
                 }
                 else if (attachment.UserId.HasValue)
                 {
-                    // user_updatestroage
-                    // user_bumpaccountrevisiondate
+                    //TODO: user_updatestroage
+                    await UserBumpAccountRevisionDate(attachment.UserId.Value);
                 }
             }
         }
@@ -697,11 +695,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // Intentionally not including Favorites, Folders, and CreationDate
-                // since those are not meant to be bulk updated at this time
                 var entities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, entities);
-                // $"[{Schema}].[User_BumpAccountRevisionDate]",
+                await UserBumpAccountRevisionDate(userId);
             }
         }
 
@@ -737,7 +733,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 }
 
                 await dbContext.SaveChangesAsync();
-                //user_bumpaccountrevisiondate
+                await UserBumpAccountRevisionDate(userId);
             }
         }
 
@@ -767,13 +763,19 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        private async Task UpdateAccountRevisionDate(Cipher cipher)
+        private async Task UserBumpAccountRevisionDateByCipherId(Cipher cipher)
+        {
+            var list = new List<Cipher> { cipher };
+            await UserBumpAccountRevisionDateByCipherId(list);
+        }
+
+        private async Task UserBumpAccountRevisionDateByCipherId(IEnumerable<Cipher> ciphers)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
-                var dbContext = GetDatabaseContext(scope);
-                if (cipher.OrganizationId.HasValue)
+                foreach (var cipher in ciphers)
                 {
+                    var dbContext = GetDatabaseContext(scope);
                     var query = new UserBumpAccountRevisionDateByCipherId(cipher);
                     var users = query.Run(dbContext);
 
@@ -782,12 +784,31 @@ namespace Bit.Core.Repositories.EntityFramework
                     });
                     await dbContext.SaveChangesAsync();
                 }
-                else
-                {
-                    var user = await dbContext.Users.FindAsync(cipher.UserId);
-                    user.AccountRevisionDate = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync();
-                }
+            }
+        }
+
+        private async Task UserBumpAccountRevisionDateByOrganizationId(Guid organizationId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserBumpAccountRevisionDateByOrganizationId(organizationId);
+                var users = query.Run(dbContext);
+                await users.ForEachAsync(e => {
+                    dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
+                });
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
+        private async Task UserBumpAccountRevisionDate(Guid userId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var user = await dbContext.Users.FindAsync(userId);
+                user.AccountRevisionDate = DateTime.UtcNow;
+                await dbContext.SaveChangesAsync();
             }
         }
     }

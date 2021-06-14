@@ -33,11 +33,6 @@ namespace Bit.Core.Test.Helpers.Factories
                 var mySqlConnectionString = globalSettings.MySql.ConnectionString;
                 Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)).Options);
             }
-            // if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString))
-            // {
-            //     var mySqlConnectionString = GlobalSettingsFactory.GlobalSettings.MySql.ConnectionString;
-            //     Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseSqlite(globalSettings.Sqlite.ConnectionString).Options);
-            // }
         }
     }
 }
