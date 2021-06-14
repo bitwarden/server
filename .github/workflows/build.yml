@@ -265,7 +265,6 @@ jobs:
         if: github.ref == 'refs/heads/rc'
         run: |
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
-        env:
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
