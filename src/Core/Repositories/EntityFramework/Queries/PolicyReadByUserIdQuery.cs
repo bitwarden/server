@@ -6,11 +6,11 @@ using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class PolicyReadByUserId : IQuery<Policy>
+    public class PolicyReadByUserIdQuery : IQuery<Policy>
     {
         private readonly Guid _userId;
 
-        public PolicyReadByUserId(Guid userId)
+        public PolicyReadByUserIdQuery(Guid userId)
         {
             _userId = userId;
         }

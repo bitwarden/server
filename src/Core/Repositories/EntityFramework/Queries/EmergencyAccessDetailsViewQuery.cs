@@ -3,7 +3,7 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class EmergencyAccessDetailsView : IQuery<EmergencyAccessDetails>
+    public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>
     {
         public IQueryable<EmergencyAccessDetails> Run(DatabaseContext dbContext)
         {

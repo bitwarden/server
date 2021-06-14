@@ -87,7 +87,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
                 return query.Run(dbContext);
             }
         }
@@ -104,7 +104,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var cipherEntity = await dbContext.Ciphers.FindAsync(cipher.Id);
-                var query = new CipherUpdateCollections(cipherEntity, collectionIds).Run(dbContext);
+                var query = new CipherUpdateCollectionsQuery(cipherEntity, collectionIds).Run(dbContext);
                 await dbContext.AddRangeAsync(query);
                 await dbContext.SaveChangesAsync();
             }
@@ -768,7 +768,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 foreach (var cipher in ciphers)
                 {
                     var dbContext = GetDatabaseContext(scope);
-                    var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                    var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
                     var users = query.Run(dbContext);
 
                     await users.ForEachAsync(e => {
@@ -784,7 +784,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = new UserBumpAccountRevisionDateByOrganizationId(organizationId);
+                var query = new UserBumpAccountRevisionDateByOrganizationIdQuery(organizationId);
                 var users = query.Run(dbContext);
                 await users.ForEachAsync(e => {
                     dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;

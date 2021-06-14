@@ -125,25 +125,25 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<int> GetCountByFreeOrganizationAdminUserAsync(Guid userId)
         {
-            var query = new OrganizationUserReadCountByFreeOrganizationAdminUser(userId);
+            var query = new OrganizationUserReadCountByFreeOrganizationAdminUserQuery(userId);
             return await GetCountFromQuery(query);
         }
 
         public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
         {
-            var query = new OrganizationUserReadCountByOnlyOwner(userId);
+            var query = new OrganizationUserReadCountByOnlyOwnerQuery(userId);
             return await GetCountFromQuery(query);
         }
 
         public async Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers)
         {
-            var query = new OrganizationUserReadCountByOrganizationIdEmail(organizationId, email, onlyRegisteredUsers);
+            var query = new OrganizationUserReadCountByOrganizationIdEmailQuery(organizationId, email, onlyRegisteredUsers);
             return await GetCountFromQuery(query);
         }
 
         public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
         {
-            var query = new OrganizationUserReadCountByOrganizationId(organizationId);
+            var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
             return await GetCountFromQuery(query);
         }
 
@@ -152,7 +152,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new OrganizationUserUserDetailsView();
+                var view = new OrganizationUserUserDetailsViewQuery();
                 var entity = await view.Run(dbContext).FirstOrDefaultAsync(ou => ou.Id == id);
                 return entity;
             }
@@ -182,7 +182,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new OrganizationUserOrganizationDetailsView();
+                var view = new OrganizationUserOrganizationDetailsViewQuery();
                 var entity = await view.Run(dbContext)
                     .FirstOrDefaultAsync(o => o.UserId == userId && 
                         o.OrganizationId == organizationId && 
@@ -246,7 +246,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new OrganizationUserUserDetailsView();
+                var view = new OrganizationUserUserDetailsViewQuery();
                 var query = from ou in view.Run(dbContext)
                             where ou.OrganizationId == organizationId
                             select ou;
@@ -260,7 +260,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new OrganizationUserOrganizationDetailsView();
+                var view = new OrganizationUserOrganizationDetailsViewQuery();
                 var query = from ou in view.Run(dbContext)
                             where ou.UserId == userId &&
                             (status == null || ou.Status == status)
@@ -298,7 +298,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
 
-                var procedure = new OrganizationUserUpdateWithCollections(obj, collections);
+                var procedure = new OrganizationUserUpdateWithCollectionsQuery(obj, collections);
 
                 var update = procedure.Update.Run(dbContext);
                 dbContext.UpdateRange(await update.ToListAsync());
@@ -351,7 +351,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
 
-                var procedure = new GroupUserUpdateGroups(orgUserId, groupIds);
+                var procedure = new GroupUserUpdateGroupsQuery(orgUserId, groupIds);
 
                 var insert = procedure.Insert.Run(dbContext);
                 var data = await insert.ToListAsync();

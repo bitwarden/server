@@ -107,7 +107,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
         {
-            var query = new CollectionReadCountByOrganizationId(organizationId);
+            var query = new CollectionReadCountByOrganizationIdQuery(organizationId);
             return await GetCountFromQuery(query);
         }
 
@@ -222,7 +222,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
 
-                var procedure = new CollectionUserUpdateUsers(id, users);
+                var procedure = new CollectionUserUpdateUsersQuery(id, users);
 
                 var updateData = await procedure.Update.BuildInMemory(dbContext);
                 dbContext.UpdateRange(updateData);

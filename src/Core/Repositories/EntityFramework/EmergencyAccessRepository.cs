@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<int> GetCountByGrantorIdEmailAsync(Guid grantorId, string email, bool onlyRegisteredUsers)
         {
-            var query = new EmergencyAccessReadCountByGrantorIdEmail(grantorId, email, onlyRegisteredUsers);
+            var query = new EmergencyAccessReadCountByGrantorIdEmailQuery(grantorId, email, onlyRegisteredUsers);
             return await GetCountFromQuery(query);
         }
 
@@ -30,7 +30,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new EmergencyAccessDetailsView();
+                var view = new EmergencyAccessDetailsViewQuery();
                 var query = view.Run(dbContext).Where(ea => 
                     ea.Id == id && 
                     ea.GrantorId == grantorId
@@ -44,7 +44,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new EmergencyAccessDetailsView();
+                var view = new EmergencyAccessDetailsViewQuery();
                 var query = view.Run(dbContext).Where(ea => 
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
@@ -57,7 +57,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new EmergencyAccessDetailsView();
+                var view = new EmergencyAccessDetailsViewQuery();
                 var query = view.Run(dbContext).Where(ea => 
                     ea.GranteeId == granteeId
                 );
@@ -70,7 +70,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new EmergencyAccessDetailsView();
+                var view = new EmergencyAccessDetailsViewQuery();
                 var query = view.Run(dbContext).Where(ea => 
                     ea.GrantorId == grantorId
                 );
@@ -83,7 +83,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var view = new EmergencyAccessDetailsView();
+                var view = new EmergencyAccessDetailsViewQuery();
                 var query = view.Run(dbContext).Where(ea => 
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );

@@ -8,26 +8,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class OrganizationUserUpdateWithCollections
+    public class OrganizationUserUpdateWithCollectionsQuery
     {
-        public OrganizationUserUpdateWithCollectionsInsert Insert { get; set; }
-        public OrganizationUserUpdateWithCollectionsUpdate Update { get; set; }
-        public OrganizationUserUpdateWithCollectionsDelete Delete { get; set; }
+        public OrganizationUserUpdateWithCollectionsInsertQuery Insert { get; set; }
+        public OrganizationUserUpdateWithCollectionsUpdateQuery Update { get; set; }
+        public OrganizationUserUpdateWithCollectionsDeleteQuery Delete { get; set; }
 
-        public OrganizationUserUpdateWithCollections(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
-            Insert  = new OrganizationUserUpdateWithCollectionsInsert(organizationUser, collections);
-            Update = new OrganizationUserUpdateWithCollectionsUpdate(organizationUser, collections);
-            Delete = new OrganizationUserUpdateWithCollectionsDelete(organizationUser, collections);
+            Insert  = new OrganizationUserUpdateWithCollectionsInsertQuery(organizationUser, collections);
+            Update = new OrganizationUserUpdateWithCollectionsUpdateQuery(organizationUser, collections);
+            Delete = new OrganizationUserUpdateWithCollectionsDeleteQuery(organizationUser, collections);
         }
     }
 
-    public class OrganizationUserUpdateWithCollectionsInsert : IQuery<EfModel.CollectionUser>
+    public class OrganizationUserUpdateWithCollectionsInsertQuery : IQuery<EfModel.CollectionUser>
     {
         private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsInsert(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsInsertQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;
@@ -54,12 +54,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class OrganizationUserUpdateWithCollectionsUpdate: IQuery<EfModel.CollectionUser>
+    public class OrganizationUserUpdateWithCollectionsUpdateQuery: IQuery<EfModel.CollectionUser>
     {
         private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsUpdate(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsUpdateQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;
@@ -84,12 +84,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class OrganizationUserUpdateWithCollectionsDelete: IQuery<EfModel.CollectionUser>
+    public class OrganizationUserUpdateWithCollectionsDeleteQuery: IQuery<EfModel.CollectionUser>
     {
         private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsDelete(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsDeleteQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;

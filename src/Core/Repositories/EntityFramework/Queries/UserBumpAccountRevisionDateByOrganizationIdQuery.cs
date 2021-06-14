@@ -6,11 +6,11 @@ using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class UserBumpAccountRevisionDateByOrganizationId : IQuery<TableModel.User>
+    public class UserBumpAccountRevisionDateByOrganizationIdQuery : IQuery<TableModel.User>
     {
         private readonly Guid _organizationId;
 
-        public UserBumpAccountRevisionDateByOrganizationId(Guid organizationId)
+        public UserBumpAccountRevisionDateByOrganizationIdQuery(Guid organizationId)
         {
             _organizationId = organizationId;
         }

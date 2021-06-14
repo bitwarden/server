@@ -53,7 +53,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserId(userId).Run(dbContext).ToListAsync();
+                var data = await new CollectionCipherReadByUserIdQuery(userId).Run(dbContext).ToListAsync();
                 return data;
             }
         }
@@ -63,7 +63,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserIdCipherId(userId, cipherId).Run(dbContext).ToListAsync();
+                var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId).Run(dbContext).ToListAsync();
                 return data;
             }
         }

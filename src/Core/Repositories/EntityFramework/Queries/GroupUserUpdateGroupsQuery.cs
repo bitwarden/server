@@ -8,24 +8,24 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class GroupUserUpdateGroups
+    public class GroupUserUpdateGroupsQuery
     {
-        public readonly GroupUserUpdateGroupsInsert Insert;
-        public readonly GroupUserUpdateGroupsDelete Delete;
+        public readonly GroupUserUpdateGroupsInsertQuery Insert;
+        public readonly GroupUserUpdateGroupsDeleteQuery Delete;
 
-        public GroupUserUpdateGroups(Guid organizationUserId, IEnumerable<Guid> groupIds)
+        public GroupUserUpdateGroupsQuery(Guid organizationUserId, IEnumerable<Guid> groupIds)
         {
-            Insert  = new GroupUserUpdateGroupsInsert(organizationUserId, groupIds);
-            Delete = new GroupUserUpdateGroupsDelete(organizationUserId, groupIds);
+            Insert  = new GroupUserUpdateGroupsInsertQuery(organizationUserId, groupIds);
+            Delete = new GroupUserUpdateGroupsDeleteQuery(organizationUserId, groupIds);
         }
     }
 
-    public class GroupUserUpdateGroupsInsert: IQuery<EfModel.GroupUser>
+    public class GroupUserUpdateGroupsInsertQuery: IQuery<EfModel.GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;
 
-        public GroupUserUpdateGroupsInsert(Guid organizationUserId, IEnumerable<Guid> collections)
+        public GroupUserUpdateGroupsInsertQuery(Guid organizationUserId, IEnumerable<Guid> collections)
         {
             _organizationUserId = organizationUserId;
             _groupIds = collections;
@@ -51,12 +51,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class GroupUserUpdateGroupsDelete: IQuery<EfModel.GroupUser>
+    public class GroupUserUpdateGroupsDeleteQuery: IQuery<EfModel.GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;
 
-        public GroupUserUpdateGroupsDelete(Guid organizationUserId, IEnumerable<Guid> groupIds)
+        public GroupUserUpdateGroupsDeleteQuery(Guid organizationUserId, IEnumerable<Guid> groupIds)
         {
             _organizationUserId = organizationUserId;
             _groupIds = groupIds;
@@ -70,6 +70,5 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                                 select gu;
             return deleteQuery;
         }
-
     }
 }

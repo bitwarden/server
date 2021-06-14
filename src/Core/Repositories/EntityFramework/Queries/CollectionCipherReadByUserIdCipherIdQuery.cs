@@ -5,11 +5,11 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class CollectionCipherReadByUserIdCipherId : CollectionCipherReadByUserId
+    public class CollectionCipherReadByUserIdCipherIdQuery : CollectionCipherReadByUserIdQuery
     {
         private readonly Guid _cipherId;
 
-        public CollectionCipherReadByUserIdCipherId(Guid userId, Guid cipherId) : base(userId)
+        public CollectionCipherReadByUserIdCipherIdQuery(Guid userId, Guid cipherId) : base(userId)
         {
             _cipherId = cipherId;
         }

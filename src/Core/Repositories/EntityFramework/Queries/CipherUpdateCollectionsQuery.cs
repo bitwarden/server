@@ -6,12 +6,12 @@ using System.Collections.Generic;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class CipherUpdateCollections : IQuery<CollectionCipher>
+    public class CipherUpdateCollectionsQuery : IQuery<CollectionCipher>
     {
         private readonly Cipher _cipher;
         private readonly IEnumerable<Guid> _collectionIds;
 
-        public CipherUpdateCollections(Cipher cipher, IEnumerable<Guid> collectionIds)
+        public CipherUpdateCollectionsQuery(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             _cipher = cipher;
             _collectionIds = collectionIds;

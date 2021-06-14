@@ -7,11 +7,11 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class UserBumpAccountRevisionDateByCipherId : IQuery<TableModel.User>
+    public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<TableModel.User>
     {
         private readonly TableModel.Cipher _cipher;
 
-        public UserBumpAccountRevisionDateByCipherId(TableModel.Cipher cipher)
+        public UserBumpAccountRevisionDateByCipherIdQuery(TableModel.Cipher cipher)
         {
             _cipher = cipher;
         }

@@ -6,11 +6,11 @@ using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class OrganizationUserReadCountByOrganizationId : IQuery<OrganizationUser>
+    public class OrganizationUserReadCountByOrganizationIdQuery : IQuery<OrganizationUser>
     {
         private readonly Guid _organizationId;
 
-        public OrganizationUserReadCountByOrganizationId(Guid organizationId)
+        public OrganizationUserReadCountByOrganizationIdQuery(Guid organizationId)
         {
             _organizationId = organizationId;
         }

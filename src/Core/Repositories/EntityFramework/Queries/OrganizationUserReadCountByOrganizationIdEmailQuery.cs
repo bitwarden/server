@@ -6,13 +6,13 @@ using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class OrganizationUserReadCountByOrganizationIdEmail : IQuery<OrganizationUser>
+    public class OrganizationUserReadCountByOrganizationIdEmailQuery : IQuery<OrganizationUser>
     {
         private readonly Guid _organizationId;
         private readonly string _email;
         private readonly bool _onlyUsers;
 
-        public OrganizationUserReadCountByOrganizationIdEmail(Guid organizationId, string email, bool onlyUsers)
+        public OrganizationUserReadCountByOrganizationIdEmailQuery(Guid organizationId, string email, bool onlyUsers)
         {
             _organizationId = organizationId;
             _email = email;

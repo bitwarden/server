@@ -9,26 +9,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class CollectionUserUpdateUsers
+    public class CollectionUserUpdateUsersQuery
     {
-        public readonly CollectionUserUpdateUsersInsert Insert;
-        public readonly CollectionUserUpdateUsersUpdate Update;
-        public readonly CollectionUserUpdateUsersDelete Delete;
+        public readonly CollectionUserUpdateUsersInsertQuery Insert;
+        public readonly CollectionUserUpdateUsersUpdateQuery Update;
+        public readonly CollectionUserUpdateUsersDeleteQuery Delete;
 
-        public CollectionUserUpdateUsers(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+        public CollectionUserUpdateUsersQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
-            Insert  = new CollectionUserUpdateUsersInsert(collectionId, users);
-            Update = new CollectionUserUpdateUsersUpdate(collectionId, users);
-            Delete = new CollectionUserUpdateUsersDelete(collectionId, users);
+            Insert  = new CollectionUserUpdateUsersInsertQuery(collectionId, users);
+            Update = new CollectionUserUpdateUsersUpdateQuery(collectionId, users);
+            Delete = new CollectionUserUpdateUsersDeleteQuery(collectionId, users);
         }
     }
 
-    public class CollectionUserUpdateUsersInsert : IQuery<EfModel.OrganizationUser>
+    public class CollectionUserUpdateUsersInsertQuery : IQuery<EfModel.OrganizationUser>
     {
         private readonly Guid _collectionId;
         private readonly IEnumerable<SelectionReadOnly> _users;
 
-        public CollectionUserUpdateUsersInsert(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+        public CollectionUserUpdateUsersInsertQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
             _collectionId = collectionId;
             _users = users;
@@ -61,12 +61,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class CollectionUserUpdateUsersUpdate: IQuery<EfModel.CollectionUser>
+    public class CollectionUserUpdateUsersUpdateQuery: IQuery<EfModel.CollectionUser>
     {
         private readonly Guid _collectionId;
         private readonly IEnumerable<SelectionReadOnly> _users;
 
-        public CollectionUserUpdateUsersUpdate(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+        public CollectionUserUpdateUsersUpdateQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
             _collectionId = collectionId;
             _users = users;
@@ -96,12 +96,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class CollectionUserUpdateUsersDelete: IQuery<EfModel.CollectionUser>
+    public class CollectionUserUpdateUsersDeleteQuery: IQuery<EfModel.CollectionUser>
     {
         private readonly Guid _collectionId;
         private readonly IEnumerable<SelectionReadOnly> _users;
 
-        public CollectionUserUpdateUsersDelete(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+        public CollectionUserUpdateUsersDeleteQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
         {
             _collectionId = collectionId;
             _users = users;

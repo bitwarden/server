@@ -7,7 +7,7 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class OrganizationUserUserDetailsView : IQuery<OrganizationUserUserDetails>
+    public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserDetails>
     {
         public IQueryable<OrganizationUserUserDetails> Run(DatabaseContext dbContext)
         {

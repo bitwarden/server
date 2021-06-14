@@ -49,7 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
 
-                var query = new PolicyReadByUserId(userId);
+                var query = new PolicyReadByUserIdQuery(userId);
                 var results = await query.Run(dbContext).ToListAsync();
                 return Mapper.Map<List<TableModel.Policy>>(results);
             }

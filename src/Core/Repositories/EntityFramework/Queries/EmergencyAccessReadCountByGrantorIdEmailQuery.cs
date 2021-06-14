@@ -6,13 +6,13 @@ using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class EmergencyAccessReadCountByGrantorIdEmail : IQuery<EmergencyAccess>
+    public class EmergencyAccessReadCountByGrantorIdEmailQuery : IQuery<EmergencyAccess>
     {
         private readonly Guid _grantorId;
         private readonly string _email;
         private readonly bool _onlyRegisteredUsers;
 
-        public EmergencyAccessReadCountByGrantorIdEmail(Guid grantorId, string email, bool onlyRegisteredUsers)
+        public EmergencyAccessReadCountByGrantorIdEmailQuery(Guid grantorId, string email, bool onlyRegisteredUsers)
         {
             _grantorId = grantorId;
             _email = email;

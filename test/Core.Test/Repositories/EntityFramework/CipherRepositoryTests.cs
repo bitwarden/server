@@ -155,7 +155,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 var postEfCipher = await sut.CreateAsync(cipher);
                 sut.ClearChangeTracking();
 
-                var query = new UserBumpAccountRevisionDateByCipherId(cipher);
+                var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
                 var modifiedUsers = await sut.Run(query).ToListAsync();
                 Assert.True(modifiedUsers
                     .All(u => u.AccountRevisionDate.ToShortDateString()  ==
