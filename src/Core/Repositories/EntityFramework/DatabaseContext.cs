@@ -6,7 +6,7 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class DatabaseContext : DbContext
     {
-        public static string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
+        public const string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)

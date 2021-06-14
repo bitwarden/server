@@ -8,15 +8,15 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class EmergencyAccessReadCountByGrantorIdEmail : IQuery<EmergencyAccess>
     {
-        private Guid GrantorId { get; set; }
-        private string Email { get; set; }
-        private bool OnlyRegisteredUsers { get; set; }
+        private readonly Guid _grantorId;
+        private readonly string _email;
+        private readonly bool _onlyRegisteredUsers;
 
         public EmergencyAccessReadCountByGrantorIdEmail(Guid grantorId, string email, bool onlyRegisteredUsers)
         {
-            GrantorId = grantorId;
-            Email = email;
-            OnlyRegisteredUsers = onlyRegisteredUsers;
+            _grantorId = grantorId;
+            _email = email;
+            _onlyRegisteredUsers = onlyRegisteredUsers;
         }
 
         public IQueryable<EmergencyAccess> Run(DatabaseContext dbContext)
@@ -25,9 +25,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 join u in dbContext.Users
                     on ea.GranteeId equals u.Id into u_g
                 from u in u_g.DefaultIfEmpty()
-                where ea.GrantorId == GrantorId &&
-                    ((!OnlyRegisteredUsers && (ea.Email == Email || u.Email == Email))
-                     || (OnlyRegisteredUsers && u.Email == Email))
+                where ea.GrantorId == _grantorId &&
+                    ((!_onlyRegisteredUsers && (ea.Email == _email || u.Email == _email))
+                     || (_onlyRegisteredUsers && u.Email == _email))
                 select new { ea, u };
             return query.Select(x => x.ea);
         }

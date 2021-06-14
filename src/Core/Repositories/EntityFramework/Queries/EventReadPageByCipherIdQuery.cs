@@ -10,43 +10,43 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
     public class EventReadPageByCipherIdQuery : IQuery<Event>
     {
 
-        Cipher Cipher { get; set; }
-        DateTime StartDate { get; set; }
-        DateTime EndDate { get; set; }
-        DateTime? BeforeDate { get; set; }
-        PageOptions PageOptions { get; set; }
+        private readonly Cipher _cipher;
+        private readonly DateTime _startDate;
+        private readonly DateTime _endDate;
+        private readonly DateTime? _beforeDate;
+        private readonly PageOptions _pageOptions;
 
         public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
-            Cipher = cipher;
-            StartDate = startDate;
-            EndDate = endDate;
-            BeforeDate = null;
-            PageOptions = pageOptions;
+            _cipher = cipher;
+            _startDate = startDate;
+            _endDate = endDate;
+            _beforeDate = null;
+            _pageOptions = pageOptions;
         }
 
         public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
         {
-            Cipher = cipher;
-            StartDate = startDate;
-            EndDate = endDate;
-            BeforeDate = beforeDate;
-            PageOptions = pageOptions;
+            _cipher = cipher;
+            _startDate = startDate;
+            _endDate = endDate;
+            _beforeDate = beforeDate;
+            _pageOptions = pageOptions;
         }
 
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                    where e.Date >= StartDate &&
-                    (BeforeDate == null || e.Date < BeforeDate.Value) &&
-                    ((!Cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
-                    (Cipher.OrganizationId.HasValue && Cipher.OrganizationId == e.OrganizationId)) &&
-                    ((!Cipher.UserId.HasValue && !e.UserId.HasValue) ||
-                     (Cipher.UserId.HasValue && Cipher.UserId == e.UserId)) &&
-                    Cipher.Id == e.CipherId
+                    where e.Date >= _startDate &&
+                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                    ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
+                    (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
+                    ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
+                     (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
+                    _cipher.Id == e.CipherId
                     orderby e.Date descending
                     select e;
-            return q.Skip(0).Take(PageOptions.PageSize);
+            return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }
 }

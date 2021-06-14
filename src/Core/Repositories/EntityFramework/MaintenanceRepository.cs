@@ -27,17 +27,17 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public Task DisableCipherAutoStatsAsync()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task RebuildIndexesAsync()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task UpdateStatisticsAsync()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }

@@ -8,17 +8,17 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class OrganizationUserReadCountByOrganizationId : IQuery<OrganizationUser>
     {
-        private Guid OrganizationId { get; set; }
+        private readonly Guid _organizationId;
 
         public OrganizationUserReadCountByOrganizationId(Guid organizationId)
         {
-            OrganizationId = organizationId;
+            _organizationId = organizationId;
         }
 
         public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
         {
             var query = from ou in dbContext.OrganizationUsers
-                where ou.OrganizationId == OrganizationId
+                where ou.OrganizationId == _organizationId
                 select ou;
             return query;
         }

@@ -117,13 +117,15 @@ namespace Bit.Core.Repositories.EntityFramework
                 var union = merge1.Union(merge2).Distinct();
                 var insert = union
                     .Where(x => x.t == null && collectionIds.Contains(x.s.CollectionId))
-                    .Select(x => new EfModel.CollectionCipher(){
+                    .Select(x => new EfModel.CollectionCipher
+                    {
                         CollectionId = x.s.CollectionId,
                         CipherId = x.s.CipherId
                     });
                 var delete = union
                     .Where(x => x.s == null && x.t.CipherId == cipherId && collectionIds.Contains(x.t.CollectionId))
-                    .Select(x => new EfModel.CollectionCipher(){
+                    .Select(x => new EfModel.CollectionCipher
+                    {
                         CollectionId = x.t.CollectionId,
                         CipherId = x.t.CipherId
                     });
@@ -131,7 +133,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.RemoveRange(delete);
                 await dbContext.SaveChangesAsync();
 
-                // User_BumpAccountRevisionDateByOrganizationId
+                // TODO: User_BumpAccountRevisionDateByOrganizationId
             }
         }
 
@@ -176,7 +178,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.RemoveRange(delete);
                 await dbContext.SaveChangesAsync();
 
-                // User_BumpAccountRevisionDateByOrganizationId
+                // TODO: User_BumpAccountRevisionDateByOrganizationId
             }
         }
 

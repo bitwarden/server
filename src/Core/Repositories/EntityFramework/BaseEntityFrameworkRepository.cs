@@ -9,7 +9,8 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public abstract class BaseEntityFrameworkRepository
     {
-        protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions() {
+        protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions
+        {
                     KeepIdentity = true,
                     BulkCopyType = BulkCopyType.ProviderSpecific,
         };

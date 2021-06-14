@@ -8,15 +8,15 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class OrganizationUserReadCountByOrganizationIdEmail : IQuery<OrganizationUser>
     {
-        private Guid OrganizationId { get; set; }
-        private string Email { get; set; }
-        private bool OnlyUsers { get; set; }
+        private readonly Guid _organizationId;
+        private readonly string _email;
+        private readonly bool _onlyUsers;
 
         public OrganizationUserReadCountByOrganizationIdEmail(Guid organizationId, string email, bool onlyUsers)
         {
-            OrganizationId = organizationId;
-            Email = email;
-            OnlyUsers = onlyUsers;
+            _organizationId = organizationId;
+            _email = email;
+            _onlyUsers = onlyUsers;
         }
 
         public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
@@ -25,9 +25,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 join u in dbContext.Users
                     on ou.UserId equals u.Id into u_g
                 from u in u_g.DefaultIfEmpty()
-                where ou.OrganizationId == OrganizationId &&
-                    ((!OnlyUsers && (ou.Email == Email || u.Email == Email))
-                     || (OnlyUsers && u.Email == Email))
+                where ou.OrganizationId == _organizationId &&
+                    ((!_onlyUsers && (ou.Email == _email || u.Email == _email))
+                     || (_onlyUsers && u.Email == _email))
                 select ou;
             return query;
         }

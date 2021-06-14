@@ -144,7 +144,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
-                        e.OrganizationId == organizationId && e.ExternalId == externalId);
+                    e.OrganizationId == organizationId && e.ExternalId == externalId);
                 
                 if (ssoUser == null)
                 {

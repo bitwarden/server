@@ -22,8 +22,8 @@ namespace Bit.Core.Repositories.EntityFramework
         {
            send = await base.CreateAsync(send);
 
-           // User_UpdateStorage
-           // User_BumpAccountRevisionDate
+           // TODO: User_UpdateStorage
+           // TODO: User_BumpAccountRevisionDate
            return send;
         }
 

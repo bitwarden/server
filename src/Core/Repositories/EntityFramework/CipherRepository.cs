@@ -66,12 +66,10 @@ namespace Bit.Core.Repositories.EntityFramework
                                        cg.CollectionId != null ||
                                        ou.AccessAll ||
                                        g.AccessAll)
-                                select new { u, ou, cc, cu, gu, g, cg};
+                                select new { u, ou, cc, cu, gu, g, cg };
                     var users = query.Select(x => x.u);
-                    await users.ForEachAsync(e => {
-                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
-                    });
-                    var t = await users.ToListAsync();
+                    await users.ForEachAsync(e => 
+                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow);
                     await dbContext.SaveChangesAsync();
                 }
                 else
@@ -124,9 +122,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var userIdKey = $"\"{cipher.UserId}\"";
-                cipher.UserId = cipher.OrganizationId.HasValue ? 
-                    null : 
-                    cipher.UserId;
+                cipher.UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId;
                 cipher.Favorites = cipher.Favorite ? 
                     $"{{{userIdKey}:true}}" : 
                     null;
@@ -189,7 +185,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
                     }
                 }
-                // User_BumpAccountRevisionDateByOrganizationId
+                // TODO: User_BumpAccountRevisionDateByOrganizationId
             }
         }
 
@@ -211,13 +207,13 @@ namespace Bit.Core.Repositories.EntityFramework
                     .GroupBy(x => x.OrganizationId).Select(x => x.Key);
                 foreach (var org in orgs)
                 {
-                    // dbo.Organization_UpdateStorage
-                    // dbo.User_BumpAccountRevisionDateByOrganizationId
+                    // TODO:dbo.Organization_UpdateStorage
+                    // TODO: dbo.User_BumpAccountRevisionDateByOrganizationId
                 }
                 var userCiphersWithStorageCount = await temp.Where(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)).CountAsync();
                 if (userCiphersWithStorageCount > 0)
                 {
-                    // dbo.User_UpdateStorage
+                    // TODO: dbo.User_UpdateStorage
                 }
                 await dbContext.SaveChangesAsync();
                 await UserBumpAccountRevisionDate(userId);
@@ -237,13 +233,13 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 if (cipher.OrganizationId.HasValue)
                 {
-                    /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
-                    /* EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId */
+                    /* TODO: EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
+                    /* TODO: EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId */
                     await UserBumpAccountRevisionDateByCipherId(cipher);
                 }
                 else if (cipher.UserId.HasValue)
                 {
-                    /* EXEC [dbo].[User_UpdateStorage] @UserId */
+                    /* TODO: EXEC [dbo].[User_UpdateStorage] @UserId */
                     await UserBumpAccountRevisionDate(cipher.UserId.Value);
                 }
             }
@@ -656,7 +652,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     cipher.RevisionDate = utcNow;
                 }); 
                 await dbContext.SaveChangesAsync();
-                // ourganization_updatestorage
+                // TODO: organization_updatestorage
                 await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }
         }
@@ -668,7 +664,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var cipher = await dbContext.Ciphers.FindAsync(attachment.Id);
                 // TODO: does this throw a null ref if attachments = null in db?
-                JObject attachmentsJson = JObject.Parse(cipher.Attachments);
+                var attachmentsJson = JObject.Parse(cipher.Attachments);
                 attachmentsJson.Add(attachment.AttachmentId, attachment.AttachmentData);
                 cipher.Attachments = JsonConvert.SerializeObject(attachmentsJson);
                 await dbContext.SaveChangesAsync();

@@ -10,10 +10,10 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
     {
-        private Guid? UserId { get; set; }
+        private readonly Guid? _userId; 
         public UserCollectionDetailsQuery(Guid? userId)
         {
-            UserId = userId;
+            _userId = userId;
         }
         public virtual IQueryable<CollectionDetails> Run(DatabaseContext dbContext)
         {
@@ -37,7 +37,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                             on gu.GroupId equals cg.GroupId into cg_g
                         from cg in cg_g.DefaultIfEmpty()
                         where !g.AccessAll && cg.CollectionId == c.Id &&
-                            ou.UserId == UserId &&
+                            ou.UserId == _userId &&
                             ou.Status == OrganizationUserStatusType.Confirmed &&
                             o.Enabled &&
                             (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
@@ -50,7 +50,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 CreationDate = x.c.CreationDate,
                 RevisionDate = x.c.RevisionDate,
                 ReadOnly = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.ReadOnly || x.cg.ReadOnly),
-                HidePasswords = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.HidePasswords || x.cg.HidePasswords)
+                HidePasswords = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.HidePasswords || x.cg.HidePasswords),
             });
         }
     }

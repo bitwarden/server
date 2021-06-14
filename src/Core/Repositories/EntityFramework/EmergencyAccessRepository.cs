@@ -46,7 +46,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsView();
                 var query = view.Run(dbContext).Where(ea => 
-                        ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                    ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
                 return await query.ToListAsync();
             }
@@ -85,9 +85,9 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsView();
                 var query = view.Run(dbContext).Where(ea => 
-                        ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                    ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
-                // todo: find a way to not have to manually build these models so much
+                // TODO: find a way to not have to manually build these models so much
                 var notifies = await query.Select(ea => new EmergencyAccessNotify() {
                     Id = ea.Id,
                     GrantorId = ea.GrantorId,

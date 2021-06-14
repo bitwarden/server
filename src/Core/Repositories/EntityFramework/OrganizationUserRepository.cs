@@ -52,7 +52,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 return;
             }
 
-            foreach(var organizationUser in organizationUsers)
+            foreach (var organizationUser in organizationUsers)
             {
                 organizationUser.SetNewId();
             }
@@ -318,7 +318,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 dbContext.UpdateRange(organizationUsers);
                 await dbContext.SaveChangesAsync();
-                // bumpmanyaccountrevisiondates
+                // TODO: bumpmanyaccountrevisiondates
             }
         }
 
@@ -360,7 +360,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var delete = procedure.Delete.Run(dbContext);
                 var deleteData = await delete.ToListAsync();
                 dbContext.RemoveRange(deleteData); 
-                // bumpaccountrevisiondatebyorganizationuserid
+                // TODO: bumpaccountrevisiondatebyorganizationuserid
                 await dbContext.SaveChangesAsync();
             }
         }

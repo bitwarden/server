@@ -29,5 +29,5 @@ BEGIN
         @CreationDate
     )
 
-    SET @Id = (SELECT scope_identity())
+    SET @Id = (SELECT SCOPE_IDENTITY())
 END

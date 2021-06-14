@@ -9,17 +9,17 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class UserCipherDetailsQuery : IQuery<CipherDetails>
     {
-        private Guid? UserId { get; set; }
+        private readonly Guid? _userId; 
         public UserCipherDetailsQuery(Guid? userId)
         {
-            UserId = userId;
+            _userId = userId;
         }
         public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
         {
-            var query = from cd in new CipherDetailsQuery(UserId, true).Run(dbContext)
+            var query = from cd in new CipherDetailsQuery(_userId, true).Run(dbContext)
                         join ou in dbContext.OrganizationUsers
                             on cd.OrganizationId equals ou.OrganizationId
-                        where ou.UserId == UserId &&
+                        where ou.UserId == _userId &&
                             ou.Status == OrganizationUserStatusType.Confirmed
                         join o in dbContext.Organizations 
                             on cd.OrganizationId equals o.Id
@@ -46,8 +46,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                         ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null
                         select new {cd, ou, o, cc, cu, gu, g, cg}.cd;
 
-            var query2 = from cd in new CipherDetailsQuery(UserId, true).Run(dbContext)
-                     where cd.UserId == UserId
+            var query2 = from cd in new CipherDetailsQuery(_userId, true).Run(dbContext)
+                     where cd.UserId == _userId
                      select cd;
 
             return query.Union(query2);

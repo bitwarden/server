@@ -23,7 +23,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task CreateAsync(IEvent e)
         {
-            if (!(e is Event ev))
+            if (e is not Event ev)
             {
                 ev = new Event(e);
             }
@@ -47,7 +47,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var tableEvents = entities.Select(e => e is Event ? e as Event : new Event(e));
+                var tableEvents = entities.Select(e => e as Event ?? new Event(e));
                 var entityEvents = Mapper.Map<List<EfModel.Event>>(tableEvents);
                 await dbContext.BulkCopyAsync(entityEvents);
             }

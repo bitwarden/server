@@ -6,17 +6,17 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class CollectionReadCountByOrganizationId : IQuery<Collection>
     {
-        private Guid OrganizationId { get; set; }
+        private readonly Guid _organizationId;
 
         public CollectionReadCountByOrganizationId(Guid organizationId)
         {
-            OrganizationId = organizationId;
+            _organizationId = organizationId;
         }
 
         public IQueryable<Collection> Run(DatabaseContext dbContext)
         {
             var query = from c in dbContext.Collections
-                where c.OrganizationId == OrganizationId
+                where c.OrganizationId == _organizationId
                 select c;
             return query;
         }

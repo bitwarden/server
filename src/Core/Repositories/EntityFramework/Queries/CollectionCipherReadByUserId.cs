@@ -7,11 +7,11 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class CollectionCipherReadByUserId : IQuery<CollectionCipher>
     {
-        private Guid UserId { get; set; }
+        private readonly Guid _userId;
 
         public CollectionCipherReadByUserId(Guid userId)
         {
-            UserId = userId;
+            _userId = userId;
         }
 
         public virtual IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on cc.CollectionId equals c.Id
                 join ou in dbContext.OrganizationUsers
                     on c.OrganizationId equals ou.OrganizationId
-                where ou.UserId == UserId
+                where ou.UserId == _userId
                 join cu in dbContext.CollectionUsers
                     on c.Id equals cu.CollectionId into cu_g
                 from cu in cu_g

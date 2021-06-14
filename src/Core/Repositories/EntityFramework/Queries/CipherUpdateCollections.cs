@@ -8,32 +8,32 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class CipherUpdateCollections : IQuery<CollectionCipher>
     {
-        private Cipher Cipher { get; set; }
-        private IEnumerable<Guid> CollectionIds { get; set; }
+        private readonly Cipher _cipher;
+        private readonly IEnumerable<Guid> _collectionIds;
 
         public CipherUpdateCollections(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
-            Cipher = cipher;
-            CollectionIds = collectionIds;
+            _cipher = cipher;
+            _collectionIds = collectionIds;
         }
 
         public virtual IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
         {
-            if (!Cipher.OrganizationId.HasValue || !CollectionIds.Any())
+            if (!_cipher.OrganizationId.HasValue || !_collectionIds.Any())
             {
                 return null;
             }
 
-            var availibleCollections = !Cipher.UserId.HasValue ?
+            var availibleCollections = !_cipher.UserId.HasValue ?
                 from c in dbContext.Collections
-                where c.OrganizationId == Cipher.OrganizationId
+                where c.OrganizationId == _cipher.OrganizationId
                 select c.Id :
                 from c in dbContext.Collections
                 join o in dbContext.Organizations
                     on c.OrganizationId equals o.Id
                 join ou in dbContext.OrganizationUsers
                     on o.Id equals ou.OrganizationId
-                where ou.UserId == Cipher.UserId
+                where ou.UserId == _cipher.UserId
                 join cu in dbContext.CollectionUsers
                     on c.Id equals cu.CollectionId into cu_g
                 from cu in cu_g.DefaultIfEmpty()
@@ -49,7 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on c.Id equals cg.CollectionId into cg_g
                 from cg in cg_g.DefaultIfEmpty()
                 where !g.AccessAll && gu.GroupId == cg.GroupId &&
-                    o.Id == Cipher.OrganizationId &&
+                    o.Id == _cipher.OrganizationId &&
                     o.Enabled &&
                     ou.Status == OrganizationUserStatusType.Confirmed &&
                     (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
@@ -61,7 +61,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             }
 
             var query = from c in availibleCollections
-                        select new CollectionCipher { CollectionId = c, CipherId = Cipher.Id };
+                        select new CollectionCipher { CollectionId = c, CipherId = _cipher.Id };
             return query;
         }
     }

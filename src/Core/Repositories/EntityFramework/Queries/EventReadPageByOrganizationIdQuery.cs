@@ -10,32 +10,32 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
     public class EventReadPageByOrganizationIdQuery: IQuery<Event>
     {
 
-        Guid OrganizationId { get; set; }
-        DateTime StartDate { get; set; }
-        DateTime EndDate { get; set; }
-        DateTime? BeforeDate { get; set; }
-        PageOptions PageOptions { get; set; }
+        private readonly Guid _organizationId;
+        private readonly DateTime _startDate;
+        private readonly DateTime _endDate;
+        private readonly DateTime? _beforeDate;
+        private readonly PageOptions _pageOptions;
 
         public EventReadPageByOrganizationIdQuery(Guid organizationId, DateTime startDate,
                 DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
         {
-            OrganizationId = organizationId;
-            StartDate = startDate;
-            EndDate = endDate;
-            BeforeDate = beforeDate;
-            PageOptions = pageOptions;
+            _organizationId = organizationId;
+            _startDate = startDate;
+            _endDate = endDate;
+            _beforeDate = beforeDate;
+            _pageOptions = pageOptions;
         }
 
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                    where e.Date >= StartDate &&
-                    (BeforeDate != null || e.Date <= EndDate) &&
-                    (BeforeDate == null || e.Date < BeforeDate.Value) &&
-                    e.OrganizationId == OrganizationId
+                    where e.Date >= _startDate &&
+                    (_beforeDate != null || e.Date <= _endDate) &&
+                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                    e.OrganizationId == _organizationId
                     orderby e.Date descending
                     select e;
-            return q.Skip(0).Take(PageOptions.PageSize);
+            return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }
 }

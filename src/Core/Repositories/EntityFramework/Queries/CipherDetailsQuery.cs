@@ -12,12 +12,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class CipherDetailsQuery : IQuery<CipherDetails>
     {
-        private Guid? UserId { get; set; }
-        private bool IgnoreFolders { get; set; } 
+        private readonly Guid? _userId;
+        private readonly bool _ignoreFolders;
         public CipherDetailsQuery(Guid? userId, bool ignoreFolders = false)
         {
-            UserId = userId;
-            IgnoreFolders = ignoreFolders;
+            _userId = userId;
+            _ignoreFolders = ignoreFolders;
         }
         public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
         {
@@ -32,10 +32,10 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                             CreationDate = c.CreationDate,
                             RevisionDate = c.RevisionDate,
                             DeletedDate = c.DeletedDate,
-                            Favorite = UserId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{UserId}\":true"),
-                            FolderId = (IgnoreFolders || !UserId.HasValue || c.Folders == null || !c.Folders.Contains(UserId.Value.ToString())) ? 
+                            Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
+                            FolderId = (_ignoreFolders || !_userId.HasValue || c.Folders == null || !c.Folders.Contains(_userId.Value.ToString())) ? 
                                 null : 
-                                CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(c.Folders)[UserId.Value]
+                                CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(c.Folders)[_userId.Value]
                         };
             return query;
         }

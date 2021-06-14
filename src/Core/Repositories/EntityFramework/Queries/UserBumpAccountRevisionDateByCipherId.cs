@@ -9,7 +9,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class UserBumpAccountRevisionDateByCipherId : IQuery<TableModel.User>
     {
-        private TableModel.Cipher _cipher { get; set; }
+        private readonly TableModel.Cipher _cipher;
 
         public UserBumpAccountRevisionDateByCipherId(TableModel.Cipher cipher)
         {

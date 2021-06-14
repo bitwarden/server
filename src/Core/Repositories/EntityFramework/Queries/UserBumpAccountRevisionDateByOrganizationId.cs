@@ -8,11 +8,11 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class UserBumpAccountRevisionDateByOrganizationId : IQuery<TableModel.User>
     {
-        private Guid OrganizationId { get; set; }
+        private readonly Guid _organizationId;
 
         public UserBumpAccountRevisionDateByOrganizationId(Guid organizationId)
         {
-            OrganizationId = organizationId;
+            _organizationId = organizationId;
         }
 
         public IQueryable<TableModel.User> Run(DatabaseContext dbContext)
@@ -20,7 +20,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             var query = from u in dbContext.Users
                         join ou in dbContext.OrganizationUsers
                             on u.Id equals ou.UserId
-                        where ou.OrganizationId == OrganizationId &&
+                        where ou.OrganizationId == _organizationId &&
                             ou.Status == OrganizationUserStatusType.Confirmed
                         select new { u, ou };
                         

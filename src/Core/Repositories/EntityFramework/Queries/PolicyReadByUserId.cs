@@ -8,11 +8,11 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class PolicyReadByUserId : IQuery<Policy>
     {
-        private Guid UserId { get; set; }
+        private readonly Guid _userId;
 
         public PolicyReadByUserId(Guid userId)
         {
-            UserId = userId;
+            _userId = userId;
         }
 
         public IQueryable<Policy> Run(DatabaseContext dbContext)
@@ -22,7 +22,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                             on p.OrganizationId equals ou.OrganizationId
                         join o in dbContext.Organizations
                             on ou.OrganizationId equals o.Id
-                        where ou.UserId == UserId &&
+                        where ou.UserId == _userId &&
                             ou.Status == OrganizationUserStatusType.Confirmed &&
                             o.Enabled == true
                         select new { p, ou, o };

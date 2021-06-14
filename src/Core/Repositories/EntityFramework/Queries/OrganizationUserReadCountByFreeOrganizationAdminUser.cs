@@ -8,11 +8,11 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class OrganizationUserReadCountByFreeOrganizationAdminUser : IQuery<OrganizationUser>
     {
-        private Guid UserId { get; set; }
+        private readonly Guid _userId;
 
         public OrganizationUserReadCountByFreeOrganizationAdminUser(Guid userId)
         {
-            UserId = userId;
+            _userId = userId;
         }
 
         public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
@@ -20,7 +20,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             var query = from ou in dbContext.OrganizationUsers
                         join o in dbContext.Organizations
                             on ou.OrganizationId equals o.Id
-                        where ou.UserId == UserId &&
+                        where ou.UserId == _userId &&
                             (ou.Type == OrganizationUserType.Owner || ou.Type == OrganizationUserType.Admin) &&
                             o.PlanType == PlanType.Free &&
                             ou.Status == OrganizationUserStatusType.Confirmed
