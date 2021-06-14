@@ -10,11 +10,12 @@ using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.Core.Services
+namespace Bit.CommCore.Services
 {
     public class ProviderService : IProviderService
     {

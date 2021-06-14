@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.CommCore.Test.AutoFixture.ProviderUserFixtures;
+using Bit.CommCore.Services;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -12,14 +14,13 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.ProviderUserFixtures;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 using ProviderUser = Bit.Core.Models.Table.Provider.ProviderUser;
 
-namespace Bit.Core.Test.Services
+namespace Bit.CommCore.Test.Services
 {
     public class ProviderServiceTests
     {

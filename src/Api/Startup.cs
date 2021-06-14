@@ -20,6 +20,10 @@ using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
 using System;
 
+#if !OSS
+using Bit.CommCore.Utilities;
+#endif
+
 namespace Bit.Api
 {
     public class Startup
@@ -123,6 +127,12 @@ namespace Bit.Api
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
+
+            #if OSS
+                services.AddOosServices();
+            #else
+                services.AddCommCoreServices();
+            #endif
 
             // MVC
             services.AddMvc(config =>

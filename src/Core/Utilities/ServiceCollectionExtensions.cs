@@ -126,7 +126,6 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddSingleton<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
-            services.AddScoped<IProviderService, ProviderService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -253,6 +252,11 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
             }
+        }
+
+        public static void AddOosServices(this IServiceCollection services)
+        {
+            services.AddScoped<IProviderService, NoopProviderService>();
         }
 
         public static void AddNoopServices(this IServiceCollection services)
