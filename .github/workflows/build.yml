@@ -10,12 +10,13 @@ on:
 
 jobs:
   cloc:
+    name: CLOC
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
-      - name: Set up cloc
+      - name: Install cloc
         run: |
           sudo apt-get update
           sudo apt-get -y install cloc
@@ -24,12 +25,13 @@ jobs:
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
   testing:
+    name: Testing
     runs-on: windows-latest
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
         with:
-          nuget-version: 'latest'
+          nuget-version: '5'
 
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d
@@ -48,9 +50,6 @@ jobs:
           npm --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-        env:
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_EVENT: ${{ github.event_name }}
 
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -68,16 +67,62 @@ jobs:
         shell: pwsh
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     needs: testing
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+            base_path: ./src
+            dotnet: true
+            gulp: true
+          - service_name: Api
+            base_path: ./src
+            dotnet: true
+          - service_name: Attachments
+            base_path: ./util
+          - service_name: Events
+            base_path: ./src
+            dotnet: true
+          - service_name: Icons
+            base_path: ./src
+            dotnet: true
+          - service_name: Identity
+            base_path: ./src
+            dotnet: true
+          - service_name: K8S-Proxy
+            base_path: ./util
+          - service_name: MsSql
+            base_path: ./util
+          - service_name: Nginx
+            base_path: ./util
+          - service_name: Notifications
+            base_path: ./src
+            dotnet: true
+          - service_name: Portal
+            base_path: ./bitwarden_license/src
+            dotnet: true
+            gulp: true
+          - service_name: Server
+            base_path: ./util
+            dotnet: true
+          - service_name: Setup
+            base_path: ./util
+            dotnet: true
+          - service_name: Sso
+            base_path: ./bitwarden_license/src
+            dotnet: true
+            gulp: true
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
       - name: Set up Node
         uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
         with:
           node-version: '14'
-
-      - name: Set up gulp
-        run: npm i -g gulp
 
       - name: Print environment
         run: |
@@ -89,9 +134,6 @@ jobs:
           docker --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-        env:
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_EVENT: ${{ github.event_name }}
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
@@ -108,7 +150,7 @@ jobs:
                     dct-delegate-2-repo-passphrase,
                     dct-delegate-2-key"
 
-      - name: Log into docker
+      - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
@@ -125,44 +167,99 @@ jobs:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
-      - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-
-      - name: Restore
-        run: dotnet tool restore
-
-      - name: Build
+      - name: Set up Gulp
+        if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
-          chmod +x ./build.sh
-          ./build.sh
+          npm install -g gulp
 
-      - name: Tag rc branch
+      - name: Restore/Clean service
+        if: ${{ matrix.dotnet }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/build-output/publish
+
+      - name: Execute Gulp
+        if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          npm install
+          gulp --gulpfile gulpfile.js build
+
+      - name: Publish service
+        if: ${{ matrix.dotnet }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          cd obj/build-output/publish
+          zip -r ${{ matrix.service_name }}.zip .
+          mv ${{ matrix.service_name }}.zip ../../../
+
+      - name: Build Docker images
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          if [ "$SERVICE_NAME" = "k8s-proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/Nginx
+          else
+            docker build -t bitwarden/$SERVICE_NAME ${{ matrix.base_path }}/${{ matrix.service_name }}
+          fi
+
+      - name: Tag rc
         if: github.ref == 'refs/heads/rc'
-        run: ./build.sh tag rc
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:rc
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
-        run: ./build.sh tag dev
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          docker tag bitwarden/$SERVICE_NAME bitwarden/$SERVICE_NAME:dev
 
-      - name: List docker images
+      - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
       - name: Push rc images
         if: github.ref == 'refs/heads/rc'
-        run: ./build.sh push rc 
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          docker push bitwarden/$SERVICE_NAME:rc
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
-        run: ./build.sh push dev
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | tr '[:upper:]' '[:lower:]')
+          docker push bitwarden/$SERVICE_NAME:dev
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
-      - name: Make docker stub
+      - name: Log out of Docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker logout
+
+  upload:
+    name: Upload
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Restore
+        run: dotnet tool restore
+
+      - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
           docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
@@ -173,29 +270,31 @@ jobs:
           touch $STUB_OUTPUT/env/uid.env
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
-      - name: Upload docker stub artifact
+      - name: Upload Docker stub artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
           path: ./docker-stub.zip
 
-      - name: Build swagger
+      - name: Build Swagger
         run: |
           cd ./src/Api
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
-            ./obj/Docker/publish/Api/Api.dll public
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/build-output/publish
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll public
           cd ../..
-        shell: pwsh
         env:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
 
-      - name: Upload swagger artifact
+      - name: Upload Swagger artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: swagger.json
           path: ./swagger.json
-
-      - name: Log out of docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        run: docker logout

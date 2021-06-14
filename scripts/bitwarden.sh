@@ -35,7 +35,7 @@ GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
 COREVERSION="1.41.3"
-WEBVERSION="2.20.1"
+WEBVERSION="2.20.3"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version

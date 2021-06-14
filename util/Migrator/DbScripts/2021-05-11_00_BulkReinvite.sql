@@ -1,6 +1,6 @@
 ﻿IF OBJECT_ID('[dbo].[OrganizationUser_ReadByIds]') IS NOT NULL
 BEGIN
-    DROP FUNCTION [dbo].[OrganizationUser_ReadByIds]
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadByIds]
 END
 GO
 

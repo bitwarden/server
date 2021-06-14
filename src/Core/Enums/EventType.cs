@@ -46,11 +46,17 @@
         OrganizationUser_UnlinkedSso = 1505,
         OrganizationUser_ResetPassword_Enroll = 1506,
         OrganizationUser_ResetPassword_Withdraw = 1507,
+        OrganizationUser_AdminResetPassword = 1508,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,
         // Organization_ClientExportedVault = 1602,
 
         Policy_Updated = 1700,
+        
+        ProviderUser_Invited = 1800,
+        ProviderUser_Confirmed = 1801,
+        ProviderUser_Updated = 1802,
+        ProviderUser_Removed = 1803,
     }
 }
