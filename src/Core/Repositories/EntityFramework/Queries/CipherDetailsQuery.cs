@@ -1,12 +1,8 @@
 using System.Linq;
-using Bit.Core.Models.Table;
 using System;
-using Bit.Core.Enums;
 using System.Collections.Generic;
 using Core.Models.Data;
-using System.Text.Json;
 using Bit.Core.Utilities;
-using System.Threading.Tasks;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {

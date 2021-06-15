@@ -1,24 +1,21 @@
-using System;
+using AutoMapper;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
+using Bit.Core.Utilities;
+using Core.Models.Data;
+using EfModel = Bit.Core.Models.EntityFramework;
+using LinqToDB.Data;
+using LinqToDB.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
-using Core.Models.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
-using EfModel = Bit.Core.Models.EntityFramework;
+using System;
 using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Repositories.EntityFramework.Queries;
-using LinqToDB.EntityFrameworkCore;
-using LinqToDB.Data;
-using System.Text.Json;
-using Bit.Core.Utilities;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -36,47 +33,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 if (cipher.OrganizationId.HasValue)
                 {
-                    var query = from u in dbContext.Set<EfModel.User>()
-                                join ou in dbContext.Set<EfModel.OrganizationUser>()
-                                    on u.Id equals ou.UserId
-                                join collectionCipher in dbContext.Set<EfModel.CollectionCipher>()
-                                    on cipher.Id equals collectionCipher.CipherId into cc_g
-                                from cc in cc_g.DefaultIfEmpty()
-                                join collectionUser in dbContext.Set<EfModel.CollectionUser>()
-                                    on cc.CollectionId equals collectionUser.CollectionId into cu_g
-                                from cu in cu_g.DefaultIfEmpty()
-                                where ou.AccessAll && 
-                                      cu.OrganizationUserId == ou.Id
-                                join groupUser in dbContext.Set<EfModel.GroupUser>()
-                                    on ou.Id equals groupUser.OrganizationUserId into gu_g
-                                from gu in gu_g.DefaultIfEmpty()
-                                where cu.CollectionId == null &&
-                                      !ou.AccessAll
-                                join grp in dbContext.Set<EfModel.Group>()
-                                    on gu.GroupId equals grp.Id into g_g
-                                from g in g_g.DefaultIfEmpty()
-                                join collectionGroup in dbContext.Set<EfModel.CollectionGroup>()
-                                    on cc.CollectionId equals collectionGroup.CollectionId into cg_g
-                                from cg in cg_g.DefaultIfEmpty()
-                                where !g.AccessAll &&
-                                      cg.GroupId == gu.GroupId
-                                where ou.OrganizationId == cipher.OrganizationId &&
-                                      ou.Status == OrganizationUserStatusType.Confirmed &&
-                                      (cu.CollectionId != null ||
-                                       cg.CollectionId != null ||
-                                       ou.AccessAll ||
-                                       g.AccessAll)
-                                select new { u, ou, cc, cu, gu, g, cg };
-                    var users = query.Select(x => x.u);
-                    await users.ForEachAsync(e => 
-                        dbContext.Entry(e).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow);
-                    await dbContext.SaveChangesAsync();
+                    await UserBumpAccountRevisionDateByCipherId(cipher);
                 }
-                else
+                else if (cipher.UserId.HasValue)
                 {
-                    var user = await dbContext.Users.FindAsync(cipher.UserId);
-                    dbContext.Entry(user).Property(p => p.AccountRevisionDate).CurrentValue = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync();
+                    await UserBumpAccountRevisionDate(cipher.UserId.Value);
                 }
             }
             return cipher;
@@ -207,7 +168,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     .GroupBy(x => x.OrganizationId).Select(x => x.Key);
                 foreach (var org in orgs)
                 {
-                    // TODO:dbo.Organization_UpdateStorage
+                    await OrganizationUpdateStorage(org.Value);
                     // TODO: dbo.User_BumpAccountRevisionDateByOrganizationId
                 }
                 if (await temp.AnyAsync(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)))
@@ -232,8 +193,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 if (cipher.OrganizationId.HasValue)
                 {
-                    /* TODO: EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
-                    /* TODO: EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId */
+                    await OrganizationUpdateStorage(cipher.OrganizationId.Value);
                     await UserBumpAccountRevisionDateByCipherId(cipher);
                 }
                 else if (cipher.UserId.HasValue)
@@ -256,7 +216,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.RemoveRange(ciphers);
                 await dbContext.SaveChangesAsync();
             }
-            /* EXEC [dbo].[Organization_UpdateStorage] @OrganizationId */
+            await OrganizationUpdateStorage(organizationId);
             await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
 
@@ -331,41 +291,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var cte = from c in dbContext.Ciphers
-                          join o in dbContext.Organizations
-                            on c.OrganizationId equals o.Id into o_g
-                          from o in o_g.DefaultIfEmpty()
-                          where !c.UserId.HasValue
-                          join ou in dbContext.OrganizationUsers
-                            on o.Id equals ou.OrganizationId into ou_g
-                          from ou in ou_g.DefaultIfEmpty()
-                          where ou.UserId == userId
-                          join cc in dbContext.CollectionCiphers
-                            on c.Id equals cc.CipherId into cc_g
-                          from cc in cc_g.DefaultIfEmpty()
-                          where !c.UserId.HasValue && !ou.AccessAll
-                          join cu in dbContext.CollectionUsers
-                            on cc.CollectionId equals cu.CollectionId into cu_g
-                          from cu in cu_g.DefaultIfEmpty()
-                          where ou.Id == cu.OrganizationUserId
-                          join gu in dbContext.GroupUsers
-                            on ou.Id equals gu.OrganizationUserId into gu_g
-                          from gu in gu_g.DefaultIfEmpty()
-                          where !c.UserId.HasValue  && cu.CollectionId == null && !ou.AccessAll
-                          join g in dbContext.Groups
-                            on gu.GroupId equals g.Id into g_g
-                          from g in g_g.DefaultIfEmpty()
-                          join cg in dbContext.CollectionGroups
-                            on gu.GroupId equals cg.GroupId into cg_g
-                          from cg in cg_g.DefaultIfEmpty()
-                          where !g.AccessAll && cg.CollectionId == cc.CollectionId &&
-                          (c.Id == cipherId && 
-                          (c.UserId == userId || 
-                          (!c.UserId.HasValue && ou.Status == OrganizationUserStatusType.Confirmed && o.Enabled &&
-                          (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null))))
-                          select new { c, o, ou, cc, cu, gu, g, cg };
-                          
-                var canEdit = await cte.AnyAsync(x => x.c.UserId.HasValue || x.ou.AccessAll || !x.cu.ReadOnly || x.g.AccessAll || !x.cg.ReadOnly);
+                var query = new CipherReadCanEditByIdUserIdQuery(userId, cipherId);
+                var canEdit = await query.Run(dbContext).AnyAsync();
                 return canEdit;
             }
         }
@@ -420,26 +347,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = from c in dbContext.Ciphers
-                            join o in dbContext.Organizations
-                                on c.OrganizationId equals o.Id into o_g
-                            from o in o_g.DefaultIfEmpty()
-                            where c.Id == id
-                            select new CipherOrganizationDetails() {  
-                                Id = c.Id,
-                                UserId = c.UserId,
-                                OrganizationId = c.OrganizationId,
-                                Type = c.Type,
-                                Data = c.Data,
-                                Favorites = c.Favorites,
-                                Folders = c.Folders,
-                                Attachments = c.Attachments,
-                                CreationDate = c.CreationDate,
-                                RevisionDate = c.RevisionDate,
-                                DeletedDate = c.DeletedDate, 
-                                OrganizationUseTotp = o.UseTotp
-                            };
-                var data = await query.FirstOrDefaultAsync();
+                var query = new CipherOrganizationDetailsReadByIdQuery(id);
+                var data = await query.Run(dbContext).FirstOrDefaultAsync();
                 return data;
             }
         }
@@ -549,8 +458,14 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 if (!string.IsNullOrWhiteSpace(cipher.Attachments))
                 {
-                    // organization_updatestorage
-                    // user_updatestorage
+                    if (cipher.OrganizationId.HasValue)
+                    {
+                        await OrganizationUpdateStorage(cipher.OrganizationId.Value);
+                    }
+                    else if (cipher.UserId.HasValue)
+                    {
+                        // user_updatestorage
+                    }
                 }
 
                 await UserBumpAccountRevisionDateByCipherId(cipher);
@@ -584,7 +499,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 foreach (var orgId in orgIds)
                 {
-                    // dbo.Organization_UpdateStorage
+                    await OrganizationUpdateStorage(orgId.Value);
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
                 if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
@@ -623,7 +538,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 foreach (var orgId in orgIds)
                 {
-                    // dbo.Organization_UpdateStorage
+                    await OrganizationUpdateStorage(orgId.Value);
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
                 if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
@@ -648,7 +563,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     cipher.RevisionDate = utcNow;
                 }); 
                 await dbContext.SaveChangesAsync();
-                // TODO: organization_updatestorage
+                await OrganizationUpdateStorage(organizationId);
                 await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }
         }
@@ -667,7 +582,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 if (attachment.OrganizationId.HasValue)
                 {
-                    // organization_updatestroage
+                    await OrganizationUpdateStorage(cipher.OrganizationId.Value);
                     await UserBumpAccountRevisionDateByCipherId(new List<Cipher> { cipher });
                 }
                 else if (attachment.UserId.HasValue)
@@ -700,7 +615,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var cipher = await dbContext.Ciphers.FindAsync(id);
 
-                JObject foldersJson = JObject.Parse(cipher.Folders);
+                var foldersJson = JObject.Parse(cipher.Folders);
                 if (foldersJson == null && folderId.HasValue)
                 {
                     foldersJson.Add(userId.ToString(), folderId.Value);
@@ -714,7 +629,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     foldersJson.Remove(userId.ToString());
                 }
 
-                JObject favoritesJson = JObject.Parse(cipher.Favorites);
+                var favoritesJson = JObject.Parse(cipher.Favorites);
                 if (favorite)
                 {
                     favoritesJson.Add(userId.ToString(), favorite);
@@ -801,6 +716,31 @@ namespace Bit.Core.Repositories.EntityFramework
                 var user = await dbContext.Users.FindAsync(userId);
                 user.AccountRevisionDate = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync();
+            }
+        }
+
+        private async Task OrganizationUpdateStorage(Guid organizationId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgStorageUpdateTemp = from c in dbContext.Ciphers
+                    where !c.UserId.HasValue && c.OrganizationId == organizationId
+                    select c;
+                //TODO: size = attachments json size
+                var cte = from c in orgStorageUpdateTemp
+                    select new { Id = c.Id, Size = 0};
+                var cipherStorageUsed = await cte.SumAsync(x => x.Size);
+
+                //TODO: size = data json size
+                /* var sendCte = from s in dbContext.Sends */
+                /*     where !s.UserId.HasValue && s.OrganizationId.Equals(organizationId) */
+                /*     select new { Id = s.Id, Size = JObject.Parse(s.Data)[]}; */
+
+                /* var org = await dbContext.Organizations.FindAsync(organizationId); */
+                /* org.Storage = cipherStorageUsed + sendStorageUsed; */
+                /* org.RevisionDate = DateTime.UtcNow; */
+                /* await dbContext.SaveChangesAsync(); */
             }
         }
     }
