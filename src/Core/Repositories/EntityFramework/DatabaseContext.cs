@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Models.EntityFramework;
+using Bit.Core.Models.EntityFramework.Provider;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Core.Repositories.EntityFramework
@@ -28,6 +29,10 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
+        public DbSet<Provider> Providers { get; set; }
+        public DbSet<ProviderUser> ProviderUsers { get; set; }
+        public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
+        public DbSet<ProviderOrganizationProviderUser> ProviderOrganizationProviderUsers { get; set; }
         public DbSet<Send> Sends { get; set; }
         public DbSet<SsoConfig> SsoConfigs { get; set; }
         public DbSet<SsoUser> SsoUsers { get; set; }
@@ -54,6 +59,10 @@ namespace Bit.Core.Repositories.EntityFramework
             var eOrganization = builder.Entity<Organization>();
             var eOrganizationUser = builder.Entity<OrganizationUser>();
             var ePolicy = builder.Entity<Policy>();
+            var eProvider = builder.Entity<Provider>();
+            var eProviderUser = builder.Entity<ProviderUser>();
+            var eProviderOrganization = builder.Entity<ProviderOrganization>();
+            var eProviderOrganizationProviderUser = builder.Entity<ProviderOrganizationProviderUser>();
             var eSend = builder.Entity<Send>();
             var eSsoConfig = builder.Entity<SsoConfig>();
             var eSsoUser = builder.Entity<SsoUser>();
@@ -94,6 +103,10 @@ namespace Bit.Core.Repositories.EntityFramework
             eOrganization.ToTable(nameof(Organization));
             eOrganizationUser.ToTable(nameof(OrganizationUser));
             ePolicy.ToTable(nameof(Policy));
+            eProvider.ToTable(nameof(Provider));
+            eProviderUser.ToTable(nameof(ProviderUser));
+            eProviderOrganization.ToTable(nameof(ProviderOrganization));
+            eProviderOrganizationProviderUser.ToTable(nameof(ProviderOrganizationProviderUser));
             eSend.ToTable(nameof(Send));
             eSsoConfig.ToTable(nameof(SsoConfig));
             eSsoUser.ToTable(nameof(SsoUser));
