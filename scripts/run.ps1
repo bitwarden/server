@@ -80,7 +80,7 @@ function Install() {
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -db-name $database
+        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -dbname $database
 }
 
 function Docker-Compose-Up {
