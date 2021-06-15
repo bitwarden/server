@@ -68,11 +68,19 @@ function Install() {
             Invoke-Expression ($certbotExp -f $qFlag)
         }
     }
+
+    Write-Host "(!) " -f cyan -nonewline
+    [string]$database = $( Read-Host "Enter the database name for your Bitwarden instance (ex. vault): "
+    echo ""
+
+    if ($database -eq "") {
+        $database = "vault"
+    }
     
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -db-name $database
 }
 
 function Docker-Compose-Up {

@@ -75,6 +75,10 @@ namespace Bit.Setup
             {
                 _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
             }
+            if (_context.Parameters.ContainsKey("dbname"))
+            {
+                _context.Install.Database = _context.Parameters["dbname"].ToLowerInvariant();
+            }
 
             if (_context.Stub)
             {
