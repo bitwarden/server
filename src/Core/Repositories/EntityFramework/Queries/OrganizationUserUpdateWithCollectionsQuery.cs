@@ -38,14 +38,14 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         {
             var collectionIds = _collections.Select(c => c.Id).ToArray();
             var t = (from cu in dbContext.CollectionUsers
-                    where collectionIds.Contains(cu.CollectionId) &&
-                        cu.OrganizationUserId == _organizationUser.Id
-                    select cu).AsEnumerable();
-            var insertQuery =   (from c in dbContext.Collections
-                                where collectionIds.Contains(c.Id) &&
-                                    c.OrganizationId == _organizationUser.OrganizationId &&
-                                    !t.Any()
-                                select c).AsEnumerable();
+                where collectionIds.Contains(cu.CollectionId) &&
+                    cu.OrganizationUserId == _organizationUser.Id
+                select cu).AsEnumerable();
+            var insertQuery = (from c in dbContext.Collections
+                where collectionIds.Contains(c.Id) &&
+                    c.OrganizationId == _organizationUser.OrganizationId &&
+                    !t.Any()
+                select c).AsEnumerable();
             return insertQuery.Select(x => new CollectionUser(){ 
                 CollectionId = x.Id,
                 OrganizationUserId = _organizationUser.Id,
@@ -70,9 +70,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         {
             var collectionIds = _collections.Select(c => c.Id).ToArray();
             var updateQuery = (from target in dbContext.CollectionUsers
-                              where collectionIds.Contains(target.CollectionId) &&
-                              target.OrganizationUserId == _organizationUser.Id
-                              select new { target }).AsEnumerable();
+                where collectionIds.Contains(target.CollectionId) &&
+                target.OrganizationUserId == _organizationUser.Id
+                select new { target }).AsEnumerable();
             updateQuery = updateQuery.Where(cu => 
                 cu.target.ReadOnly == _collections.FirstOrDefault(u => u.Id == cu.target.CollectionId).ReadOnly &&
                 cu.target.HidePasswords == _collections.FirstOrDefault(u => u.Id == cu.target.CollectionId).HidePasswords);
@@ -98,10 +98,10 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
         public IQueryable<CollectionUser> Run(DatabaseContext dbContext)
         {
-            var deleteQuery =   from cu in dbContext.CollectionUsers
-                                where !_collections.Any(
-                                    c => c.Id == cu.CollectionId)
-                                select new { cu };
+            var deleteQuery = from cu in dbContext.CollectionUsers
+                where !_collections.Any(
+                    c => c.Id == cu.CollectionId)
+                select new { cu };
             return deleteQuery.Select(x => x.cu);
         }
     }

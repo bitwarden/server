@@ -8,14 +8,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class EventReadPageByCipherIdQuery : IQuery<Event>
     {
-
         private readonly Table.Cipher _cipher;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;
         private readonly DateTime? _beforeDate;
         private readonly PageOptions _pageOptions;
 
-        // TODO: do you need both of these constructors?
         public EventReadPageByCipherIdQuery(Table.Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             _cipher = cipher;
@@ -37,15 +35,15 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                    where e.Date >= _startDate &&
-                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                    ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
-                    (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
-                    ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
-                     (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
-                    _cipher.Id == e.CipherId
-                    orderby e.Date descending
-                    select e;
+                where e.Date >= _startDate &&
+                (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
+                (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
+                ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
+                    (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
+                _cipher.Id == e.CipherId
+                orderby e.Date descending
+                select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }

@@ -18,11 +18,11 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<User> Run(DatabaseContext dbContext)
         {
             var query = from u in dbContext.Users
-                        join ou in dbContext.OrganizationUsers
-                            on u.Id equals ou.UserId
-                        where ou.OrganizationId == _organizationId &&
-                            ou.Status == OrganizationUserStatusType.Confirmed
-                        select new { u, ou };
+                join ou in dbContext.OrganizationUsers
+                    on u.Id equals ou.UserId
+                where ou.OrganizationId == _organizationId &&
+                    ou.Status == OrganizationUserStatusType.Confirmed
+                select new { u, ou };
                         
             return query.Select(x => x.u);
         }

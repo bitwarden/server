@@ -93,7 +93,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = new EventReadPageByOrganizationIdActingUserIdQuery(organizationId, actingUserId,
-                        startDate, endDate, beforeDate, pageOptions);
+                    startDate, endDate, beforeDate, pageOptions);
                 var events = await query.Run(dbContext).ToListAsync();
 
                 var result = new PagedResult<IEvent>();

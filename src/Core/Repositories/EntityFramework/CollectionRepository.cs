@@ -37,8 +37,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var availibleGroups = await (from g in dbContext.Groups
-                                      where g.OrganizationId == obj.OrganizationId
-                                      select g.Id).ToListAsync();
+                    where g.OrganizationId == obj.OrganizationId
+                    select g.Id).ToListAsync();
                 var collectionGroups = groups
                     .Where(g => availibleGroups.Contains(g.Id))
                     .Select(g => new EfModel.CollectionGroup(){
@@ -59,9 +59,9 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from cu in dbContext.CollectionUsers
-                            where cu.CollectionId == collectionId &&
-                                cu.OrganizationUserId == organizationUserId
-                            select cu;
+                    where cu.CollectionId == collectionId &&
+                        cu.OrganizationUserId == organizationUserId
+                    select cu;
                 dbContext.RemoveRange(await query.ToListAsync());
                 await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
                 await dbContext.SaveChangesAsync();
@@ -85,8 +85,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var collectionGroups = await (
-                    from cg in dbContext.CollectionGroups
+                var collectionGroups = await (from cg in dbContext.CollectionGroups
                     where cg.CollectionId == id
                     select cg).ToListAsync();
                 var selectionReadOnlys = collectionGroups.Select(cg => new SelectionReadOnly() {
@@ -129,8 +128,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from c in dbContext.Collections
-                            where c.OrganizationId == organizationId
-                            select c;
+                    where c.OrganizationId == organizationId
+                    select c;
                 var collections = await query.ToArrayAsync();
                 return collections;
             }
@@ -153,8 +152,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from cu in dbContext.CollectionUsers
-                            where cu.CollectionId == id
-                            select cu;
+                    where cu.CollectionId == id
+                    select cu;
                 var collectionUsers = await query.ToListAsync();
                 return collectionUsers.Select(cu => new SelectionReadOnly() {
                     Id = cu.OrganizationUserId,
@@ -172,16 +171,16 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
                 var modifiedGroupEntities = dbContext.Groups.Where(x => groups.Select(x => x.Id).Contains(x.Id));
-                var target =    (from cg in dbContext.CollectionGroups
-                                join g in modifiedGroupEntities 
-                                    on cg.CollectionId equals collection.Id into s_g
-                                from g in s_g.DefaultIfEmpty()
-                                where g == null || cg.GroupId == g.Id
-                                select new {cg, g}).AsNoTracking();
-                var source =    (from g in modifiedGroupEntities
-                                from cg in dbContext.CollectionGroups
-                                    .Where(cg => cg.CollectionId == collection.Id && cg.GroupId == g.Id).DefaultIfEmpty()
-                                select new {cg, g}).AsNoTracking();
+                var target = (from cg in dbContext.CollectionGroups
+                    join g in modifiedGroupEntities 
+                        on cg.CollectionId equals collection.Id into s_g
+                    from g in s_g.DefaultIfEmpty()
+                    where g == null || cg.GroupId == g.Id
+                    select new {cg, g}).AsNoTracking();
+                var source = (from g in modifiedGroupEntities
+                    from cg in dbContext.CollectionGroups
+                        .Where(cg => cg.CollectionId == collection.Id && cg.GroupId == g.Id).DefaultIfEmpty()
+                    select new {cg, g}).AsNoTracking();
                 var union = await target
                     .Union(source)
                     .Where(x => 

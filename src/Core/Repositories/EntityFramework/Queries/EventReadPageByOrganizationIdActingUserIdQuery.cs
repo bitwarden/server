@@ -29,13 +29,13 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                    where e.Date >= _startDate &&
-                    (_beforeDate != null || e.Date <= _endDate) &&
-                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                    e.OrganizationId == _organizationId &&
-                    e.ActingUserId == _actingUserId
-                    orderby e.Date descending
-                    select e;
+                where e.Date >= _startDate &&
+                (_beforeDate != null || e.Date <= _endDate) &&
+                (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                e.OrganizationId == _organizationId &&
+                e.ActingUserId == _actingUserId
+                orderby e.Date descending
+                select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }
