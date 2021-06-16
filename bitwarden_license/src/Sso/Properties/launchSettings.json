@@ -17,7 +17,7 @@
     },
     "Sso": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "launchBrowser": false,
       "applicationUrl": "http://localhost:51822",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
