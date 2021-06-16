@@ -40,6 +40,7 @@ namespace Bit.Core.Settings
         public virtual bool DisableEmailNewDevice { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
+        public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
@@ -465,6 +466,12 @@ namespace Bit.Core.Settings
         public class SsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
+        }
+
+        public class CaptchaSettings
+        {
+            public string HCaptchaSecretKey { get; set; }
+            public string HCaptchaSiteKey { get; set; }
         }
     }
 }
