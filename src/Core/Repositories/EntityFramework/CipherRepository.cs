@@ -152,32 +152,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var idEntities = from c in dbContext.Ciphers where ids.Contains(c.Id) select c;
-                var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
-                var temp = from ucd in userCipherDetails 
-                           join ie in idEntities 
-                                on ucd.Id equals ie.Id 
-                           where ucd.Edit
-                           select ucd;
-                dbContext.RemoveRange(temp.Select(ucd => ucd.Id));
-                var orgs = temp
-                    .Where(x => x.OrganizationId.HasValue)
-                    .GroupBy(x => x.OrganizationId).Select(x => x.Key);
-                foreach (var org in orgs)
-                {
-                    await OrganizationUpdateStorage(org.Value);
-                    await UserBumpAccountRevisionDateByOrganizationId(org.Value);
-                }
-                if (await temp.AnyAsync(x => x.UserId.HasValue && !string.IsNullOrWhiteSpace(x.Attachments)))
-                {
-                    await UserUpdateStorage(userId);
-                }
-                await dbContext.SaveChangesAsync();
-                await UserBumpAccountRevisionDate(userId);
-            }
+            await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete);
         }
 
         public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
@@ -474,34 +449,39 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            return await ToggleCipherStates(ids, userId, false);
+            return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
         }
 
         public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
         {
-            await ToggleCipherStates(ids, userId, false);
+            await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
         }
 
-        private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, bool isRestore)
+        private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
                 var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
-                var temp = from ucd in userCipherDetailsQuery.Run(dbContext)
+                var query = from ucd in userCipherDetailsQuery.Run(dbContext)
                            join c in cipherEntities
                             on ucd.Id equals c.Id
                            where ucd.Edit && ucd.DeletedDate == null
                            select new { ucd, c };
 
                 var utcNow = DateTime.UtcNow;
-                await temp.Select(x => x.c).ForEachAsync(cipher => {
-                    cipher.DeletedDate = isRestore ? null : utcNow;
+                var ciphers = query.Select(x => x.c);
+                if (action == CipherStateAction.HardDelete)
+                {
+                    dbContext.RemoveRange(ciphers);
+                }
+                await ciphers.ForEachAsync(cipher => {
+                    cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
                     cipher.RevisionDate = utcNow;
                 });
 
-                var orgIds = temp
+                var orgIds = query
                     .Where(x => x.c.OrganizationId.HasValue)
                     .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
 
@@ -510,7 +490,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     await OrganizationUpdateStorage(orgId.Value);
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
-                if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
+                if (await query.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
                 {
                     await UserUpdateStorage(userId);
                 }
@@ -639,5 +619,10 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        private enum CipherStateAction {
+           Restore,
+           SoftDelete,
+           HardDelete,
+        }
     }
 }
