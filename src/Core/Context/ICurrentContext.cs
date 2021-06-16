@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -21,6 +21,9 @@ namespace Bit.Core.Context
         List<CurrentContentOrganization> Organizations { get; set; }
         Guid? InstallationId { get; set; }
         Guid? OrganizationId { get; set; }
+        bool IsBot { get; set; }
+        bool MaybeBot { get; set; }
+        int? BotScore { get; set; }
 
         Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
         Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);

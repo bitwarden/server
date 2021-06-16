@@ -253,6 +253,16 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
             }
+
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
+            {
+                services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
+            }
+            else
+            {
+                services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
+            }
         }
 
         public static void AddNoopServices(this IServiceCollection services)
