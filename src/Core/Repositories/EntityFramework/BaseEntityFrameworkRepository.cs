@@ -120,8 +120,16 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
                     .Where(e => e.UserId == null && e.OrganizationId == organizationId).ToListAsync();
-                var storage = ciphers.Sum(e => JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
+                var storage = ciphers.Sum(e => 
+                    {
+                        if (string.IsNullOrWhiteSpace(e.Attachments))
+                        {
+                            return 0;
+                        }
+
+                        return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
+                            .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
+                    });
                 var organization = new EfModel.Organization
                 {
                     Id = organizationId,
@@ -143,8 +151,16 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
                     .Where(e => e.UserId.HasValue && e.UserId.Value == userId && e.OrganizationId == null).ToListAsync();
-                var storage = ciphers.Sum(e => JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
+                var storage = ciphers.Sum(e => 
+                    {
+                        if (string.IsNullOrWhiteSpace(e.Attachments))
+                        {
+                            return 0;
+                        }
+
+                        return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
+                            .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
+                    });
                 var user = new EfModel.User
                 {
                     Id = userId,

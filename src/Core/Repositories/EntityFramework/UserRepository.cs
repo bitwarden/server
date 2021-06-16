@@ -100,25 +100,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task UpdateStorageAsync(Guid id)
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var ciphers = await dbContext.Ciphers.Where(e => e.UserId == id).ToListAsync();
-                var storage = ciphers.Sum(e => JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
-                var user = new EFModel.User
-                {
-                    Id = id,
-                    RevisionDate = DateTime.UtcNow,
-                    Storage = storage,
-                };
-                var set = GetDbSet(dbContext);
-                set.Attach(user);
-                var entry = dbContext.Entry(user);
-                entry.Property(e => e.RevisionDate).IsModified = true;
-                entry.Property(e => e.Storage).IsModified = true;
-                await dbContext.SaveChangesAsync();
-            }
+            await base.UserUpdateStorage(id);
         }
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
