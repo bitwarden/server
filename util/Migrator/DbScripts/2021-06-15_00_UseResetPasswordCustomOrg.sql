@@ -2,5 +2,5 @@
 UPDATE
     [dbo].[Organization]
 SET
-    [UseResetPassword] = (CASE WHEN [PlanType] = 10 OR [PlanType] = 11 OR [PlanType] = 6 THEN 1 ELSE 0 END)
+    [UseResetPassword] = (CASE WHEN [PlanType] IN (10, 11, 6) THEN 1 ELSE [UseResetPassword] END)
 GO
