@@ -80,6 +80,7 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+
         public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             DateTime? beforeDate = null;

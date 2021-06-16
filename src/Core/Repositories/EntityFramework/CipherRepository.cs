@@ -365,10 +365,10 @@ namespace Bit.Core.Repositories.EntityFramework
                                     on ucd.Id equals c.Id
                                 where ucd.Edit
                                 select new { ucd, c };
-                // TODO: is this enough to save?
                 await idsToMove.Select(x => x.c).ForEachAsync(cipher => {
                     var foldersJson = JObject.Parse(cipher.Folders);
                     foldersJson.Remove(userId.ToString());
+                    dbContext.Attach(cipher);
                     cipher.Folders = JsonConvert.SerializeObject(foldersJson);
                 });          
                 await UserBumpAccountRevisionDate(userId);
@@ -474,45 +474,15 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
         {
-
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
-                var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
-                var temp = from ucd in userCipherDetailsQuery.Run(dbContext)
-                           join c in cipherEntities
-                            on ucd.Id equals c.Id
-                           where ucd.Edit && ucd.DeletedDate != null
-                           select new { ucd, c };
-                // TODO: Is this enough to save?
-                var utcNow = DateTime.UtcNow;
-                await temp.Select(x => x.c).ForEachAsync(cipher => {
-                    cipher.DeletedDate = null;
-                    cipher.RevisionDate = utcNow;
-                });
-
-                var orgIds = temp
-                    .Where(x => x.c.OrganizationId.HasValue)
-                    .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
-
-                foreach (var orgId in orgIds)
-                {
-                    await OrganizationUpdateStorage(orgId.Value);
-                    await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
-                }
-                if (await temp.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
-                {
-                    await UserUpdateStorage(userId);
-                }
-
-                await dbContext.SaveChangesAsync();
-                return utcNow;
-            }
+            return await ToggleCipherStates(ids, userId, false);
         }
 
-        //TODO: this and the above method are almost identical and can probably be abstracted in a useful way
         public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+        {
+            await ToggleCipherStates(ids, userId, false);
+        }
+
+        private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, bool isRestore)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -527,7 +497,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 var utcNow = DateTime.UtcNow;
                 await temp.Select(x => x.c).ForEachAsync(cipher => {
-                    cipher.DeletedDate = utcNow;
+                    cipher.DeletedDate = isRestore ? null : utcNow;
                     cipher.RevisionDate = utcNow;
                 });
 
@@ -546,6 +516,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 }
                 await UserBumpAccountRevisionDate(userId);
                 await dbContext.SaveChangesAsync();
+                return utcNow;
             }
         }
 
@@ -556,8 +527,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var utcNow = DateTime.UtcNow;
                 var ciphers = dbContext.Ciphers.Where(c => ids.Contains(c.Id) && c.OrganizationId == organizationId);
-                // TODO: is this enough to save?
                 await ciphers.ForEachAsync(cipher => {
+                    dbContext.Attach(cipher);
                     cipher.DeletedDate = utcNow;
                     cipher.RevisionDate = utcNow;
                 }); 

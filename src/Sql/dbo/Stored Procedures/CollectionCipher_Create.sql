@@ -1,4 +1,4 @@
-﻿erREATE PROCEDURE [dbo].[CollectionCipher_Create]
+﻿CREATE PROCEDURE [dbo].[CollectionCipher_Create]
     @CollectionId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER
 AS

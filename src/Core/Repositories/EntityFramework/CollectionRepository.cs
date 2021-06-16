@@ -47,7 +47,6 @@ namespace Bit.Core.Repositories.EntityFramework
                         ReadOnly = g.ReadOnly,
                         HidePasswords = g.HidePasswords
                     });
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(collectionGroups, new System.Text.Json.JsonSerializerOptions(){WriteIndented = true}));
                 await dbContext.AddRangeAsync(collectionGroups);
                 await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
                 await dbContext.SaveChangesAsync();
