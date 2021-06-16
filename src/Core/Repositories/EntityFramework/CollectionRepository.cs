@@ -25,7 +25,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: User_BumpAccountRevisionDateByCollectionId
+                await UserBumpAccountRevisionDateByCollectionId(obj.Id, obj.OrganizationId);
             }
             return obj;
         }
@@ -49,7 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     });
                 Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(collectionGroups, new System.Text.Json.JsonSerializerOptions(){WriteIndented = true}));
                 await dbContext.AddRangeAsync(collectionGroups);
-                // TODO: User_BumpAccountRevisionDateByOrganizationId
+                await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -64,20 +64,20 @@ namespace Bit.Core.Repositories.EntityFramework
                                 cu.OrganizationUserId == organizationUserId
                             select cu;
                 dbContext.RemoveRange(await query.ToListAsync());
-                // TODO: User_BumpAccountRevisionDateByOrganizationUserId
+                await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
                 await dbContext.SaveChangesAsync();
             }
         }
 
-        public Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
+        public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
         {
-            // TODO: UserCollectionDetails function
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = new UserCollectionDetailsQuery(userId);
+                var collection = await query.Run(dbContext).FirstOrDefaultAsync();
+                return collection;
             }
-            throw new NotImplementedException();
         }
 
         public async Task<Tuple<Collection, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
@@ -99,10 +99,23 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId)
+        public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId)
         {
-            // TODO: UserCollectionDetails function
-            throw new NotImplementedException();
+            var collection = await GetByIdAsync(id, userId);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from cg in dbContext.CollectionGroups
+                    where cg.CollectionId.Equals(id)
+                    select new SelectionReadOnly 
+                    { 
+                        Id = cg.GroupId,
+                        ReadOnly = cg.ReadOnly,
+                        HidePasswords = cg.HidePasswords 
+                    };
+                var configurations = await query.ToArrayAsync();
+                return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>>(collection, configurations);
+            }
         }
 
         public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
@@ -212,7 +225,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.UpdateRange(update);
                 dbContext.RemoveRange(delete);
                 await dbContext.SaveChangesAsync();
-                // TODO: User_BumpAccountRevisionDateByCollectionId
+                await UserBumpAccountRevisionDateByCollectionId(collection.Id, collection.OrganizationId);
             }
         }
 

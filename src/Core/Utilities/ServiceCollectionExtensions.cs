@@ -110,6 +110,10 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<ITransactionRepository, EntityFrameworkRepos.TransactionRepository>();
                 services.AddSingleton<IU2fRepository, EntityFrameworkRepos.U2fRepository>();
                 services.AddSingleton<IUserRepository, EntityFrameworkRepos.UserRepository>();
+                services.AddSingleton<IProviderRepository, EntityFrameworkRepos.ProviderRepository>();
+                services.AddSingleton<IProviderUserRepository, EntityFrameworkRepos.ProviderUserRepository>();
+                services.AddSingleton<IProviderOrganizationRepository, EntityFrameworkRepos.ProviderOrganizationRepository>();
+                services.AddSingleton<IProviderOrganizationProviderUserRepository, EntityFrameworkRepos.ProviderOrganizationProviderUserRepository>();
             }
             else
             {

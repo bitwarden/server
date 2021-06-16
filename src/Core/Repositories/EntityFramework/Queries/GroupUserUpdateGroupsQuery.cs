@@ -1,7 +1,5 @@
 using System.Linq;
-using EfModel = Bit.Core.Models.EntityFramework;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.EntityFramework;
 using System;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -20,7 +18,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class GroupUserUpdateGroupsInsertQuery: IQuery<EfModel.GroupUser>
+    public class GroupUserUpdateGroupsInsertQuery: IQuery<GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;
@@ -31,7 +29,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             _groupIds = collections;
         }
 
-        public IQueryable<EfModel.GroupUser> Run(DatabaseContext dbContext)
+        public IQueryable<GroupUser> Run(DatabaseContext dbContext)
         {
             var orgUser = from ou in dbContext.OrganizationUsers
                         where ou.Id == _organizationUserId
@@ -44,14 +42,14 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                             on g.Id equals gie.Id
                         where !dbContext.GroupUsers.Any(gu => _groupIds.Contains(gu.GroupId) && gu.OrganizationUserId == _organizationUserId)
                         select g;
-            return query.Select(x => new EfModel.GroupUser() {
+            return query.Select(x => new GroupUser() {
                 GroupId = x.Id,
                 OrganizationUserId = _organizationUserId
             });
         }
     }
 
-    public class GroupUserUpdateGroupsDeleteQuery: IQuery<EfModel.GroupUser>
+    public class GroupUserUpdateGroupsDeleteQuery: IQuery<GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;
@@ -62,7 +60,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             _groupIds = groupIds;
         }
 
-        public IQueryable<EfModel.GroupUser> Run(DatabaseContext dbContext)
+        public IQueryable<GroupUser> Run(DatabaseContext dbContext)
         {
             var deleteQuery =   from gu in dbContext.GroupUsers
                                 where gu.OrganizationUserId == _organizationUserId &&

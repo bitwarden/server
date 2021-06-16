@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories.EntityFramework
 {
     public class ProviderRepository : Repository<TableModel.Provider.Provider, EfModel.Provider.Provider, Guid>, IProviderRepository
     {

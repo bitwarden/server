@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System;
+using Bit.Core.Models.EntityFramework;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
-    public class UserBumpAccountRevisionDateByOrganizationIdQuery : IQuery<TableModel.User>
+    public class UserBumpAccountRevisionDateByOrganizationIdQuery : IQuery<User>
     {
         private readonly Guid _organizationId;
 
@@ -15,7 +15,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             _organizationId = organizationId;
         }
 
-        public IQueryable<TableModel.User> Run(DatabaseContext dbContext)
+        public IQueryable<User> Run(DatabaseContext dbContext)
         {
             var query = from u in dbContext.Users
                         join ou in dbContext.OrganizationUsers

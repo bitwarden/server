@@ -8,7 +8,7 @@ using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories.EntityFramework
 {
     public class ProviderOrganizationProviderUserRepository : 
         Repository<TableModel.Provider.ProviderOrganizationProviderUser, EfModel.Provider.ProviderOrganizationProviderUser, Guid>, IProviderOrganizationProviderUserRepository

@@ -1,18 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
-using Bit.Core.Utilities;
+using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
-using DataModel = Bit.Core.Models.Data;
-using EfModel = Bit.Core.Models.EntityFramework;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
@@ -318,7 +315,9 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 dbContext.UpdateRange(organizationUsers);
                 await dbContext.SaveChangesAsync();
-                // TODO: bumpmanyaccountrevisiondates
+                await UserBumpManyAccountRevisionDates(organizationUsers
+                    .Where(ou => ou.UserId.HasValue)
+                    .Select(ou => ou.UserId.Value).ToArray());
             }
         }
 
@@ -360,7 +359,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var delete = procedure.Delete.Run(dbContext);
                 var deleteData = await delete.ToListAsync();
                 dbContext.RemoveRange(deleteData); 
-                // TODO: bumpaccountrevisiondatebyorganizationuserid
+                await UserBumpAccountRevisionDateByOrganizationUserId(orgUserId);
                 await dbContext.SaveChangesAsync();
             }
         }

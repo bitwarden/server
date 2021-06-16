@@ -1,22 +1,22 @@
-using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Enums;
-using Bit.Core.Models.Table;
+using Bit.Core.Models.EntityFramework;
 using System;
 using Bit.Core.Models.Data;
+using Table = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class EventReadPageByCipherIdQuery : IQuery<Event>
     {
 
-        private readonly Cipher _cipher;
+        private readonly Table.Cipher _cipher;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;
         private readonly DateTime? _beforeDate;
         private readonly PageOptions _pageOptions;
 
-        public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        // TODO: do you need both of these constructors?
+        public EventReadPageByCipherIdQuery(Table.Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             _cipher = cipher;
             _startDate = startDate;
@@ -25,7 +25,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             _pageOptions = pageOptions;
         }
 
-        public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
+        public EventReadPageByCipherIdQuery(Table.Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
         {
             _cipher = cipher;
             _startDate = startDate;

@@ -1,5 +1,5 @@
 using System.Linq;
-using Bit.Core.Models.Table;
+using Bit.Core.Models.EntityFramework;
 using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries

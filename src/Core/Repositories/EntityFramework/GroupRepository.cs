@@ -138,7 +138,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                /* TODO: EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId */
+                await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
             }
         }
 
@@ -165,8 +165,7 @@ namespace Bit.Core.Repositories.EntityFramework
                             select gu;
                dbContext.RemoveRange(delete);
                await dbContext.SaveChangesAsync();
-
-               // TODO: User_BumpAccountRevisionDateByOrganizationId
+               await UserBumpAccountRevisionDateByOrganizationId(orgId);
             }
         }
     }

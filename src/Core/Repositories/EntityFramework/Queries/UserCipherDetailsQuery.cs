@@ -1,5 +1,4 @@
 using System.Linq;
-using Bit.Core.Models.Table;
 using System;
 using Bit.Core.Enums;
 using System.Collections.Generic;

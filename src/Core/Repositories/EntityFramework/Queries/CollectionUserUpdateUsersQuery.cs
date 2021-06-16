@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using EfModel = Bit.Core.Models.EntityFramework;
-using Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
 using System;
 using System.Threading.Tasks;

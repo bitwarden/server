@@ -1,7 +1,5 @@
-using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Enums;
-using Bit.Core.Models.Table;
+using Bit.Core.Models.EntityFramework;
 using System;
 using Bit.Core.Models.Data;
 

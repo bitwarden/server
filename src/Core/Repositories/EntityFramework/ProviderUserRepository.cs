@@ -11,7 +11,7 @@ using AutoMapper;
 using Bit.Core.Enums.Provider;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories.EntityFramework
 {
     public class ProviderUserRepository : 
         Repository<TableModel.Provider.ProviderUser, EfModel.Provider.ProviderUser, Guid>, IProviderUserRepository
@@ -63,7 +63,7 @@ namespace Bit.Core.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // TODO: User_BumpAccountRevisionDatebyProviderUserIds
+                await UserBumpAccountRevisionDateByProviderUserIds(providerUserIds.ToArray());
                 var entities = dbContext.ProviderUsers.Where(pu => providerUserIds.Contains(pu.Id));
                 dbContext.ProviderUsers.RemoveRange(entities);
                 await dbContext.SaveChangesAsync();

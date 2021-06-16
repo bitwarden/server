@@ -1,16 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
+using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
-using EfModel = Bit.Core.Models.EntityFramework;
-using TableModel = Bit.Core.Models.Table;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -28,7 +26,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 var entity = Mapper.Map<EfModel.CollectionCipher>(obj);
                 dbContext.Add(entity);
                 await dbContext.SaveChangesAsync();
-                // TODO: bump account revision date by collectionid
+                var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId))).OrganizationId;
+                if (organizationId.HasValue)
+                {
+                    await UserBumpAccountRevisionDateByCollectionId(obj.CollectionId, organizationId.Value);
+                }
                 return obj;
             }
         }
@@ -53,7 +55,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserIdQuery(userId).Run(dbContext).ToListAsync();
+                var data = await new CollectionCipherReadByUserIdQuery(userId).Run(dbContext).ToArrayAsync();
                 return data;
             }
         }
@@ -63,7 +65,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId).Run(dbContext).ToListAsync();
+                var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId).Run(dbContext).ToArrayAsync();
                 return data;
             }
         }
@@ -133,7 +135,10 @@ namespace Bit.Core.Repositories.EntityFramework
                 dbContext.RemoveRange(delete);
                 await dbContext.SaveChangesAsync();
 
-                // TODO: User_BumpAccountRevisionDateByOrganizationId
+                if (organizationId.HasValue)
+                {
+                    await UserBumpAccountRevisionDateByOrganizationId(organizationId.Value);
+                }
             }
         }
 
@@ -177,8 +182,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.AddRangeAsync(insert);
                 dbContext.RemoveRange(delete);
                 await dbContext.SaveChangesAsync();
-
-                // TODO: User_BumpAccountRevisionDateByOrganizationId
+                await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }
         }
 
@@ -226,7 +230,7 @@ namespace Bit.Core.Repositories.EntityFramework
                                         CipherId = cipherId
                                     };
                 await dbContext.AddRangeAsync(insertData);
-                // TODO: User_BumpAccountRevisionDateByOrganizationId
+                await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }
         }
     }

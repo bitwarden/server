@@ -21,9 +21,11 @@ namespace Bit.Core.Repositories.EntityFramework
         public override async Task<Send> CreateAsync(Send send)
         {
            send = await base.CreateAsync(send);
-
-           // TODO: User_UpdateStorage
-           // TODO: User_BumpAccountRevisionDate
+           if (send.UserId.HasValue)
+           {
+                await UserUpdateStorage(send.UserId.Value);
+                await UserBumpAccountRevisionDate(send.UserId.Value);
+           }
            return send;
         }
 
