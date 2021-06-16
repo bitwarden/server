@@ -1,6 +1,7 @@
 param(
-    [string][Alias('c')]$configuration = "Release",
-    [string][Alias('o')]$output = "CoverageOutput"
+    [string][Alias('c')]$Configuration = "Release",
+    [string][Alias('o')]$Output = "CoverageOutput",
+    [string][Alias('rt')]$ReportType = "lcov"
 )
 
 function Install-Tools {
@@ -9,24 +10,18 @@ function Install-Tools {
 
 function Print-Environment {
     dotnet --version
-    dotnet tool run coverlet --version
 }
 
 function Prepare-Output {
-    if (Test-Path -Path $output) {
-        Remove-Item $output -Recurse
+    if (Test-Path -Path $Output) {
+        Remove-Item $Output -Recurse
     }
 }
 
 function Run-Tests {
-    $testProjects = Get-ChildItem -Filter "*.Test.csproj" -Recurse
+    dotnet test $PSScriptRoot/bitwarden.tests.sln /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage" --results-directory:"$Output" -c $Configuration
 
-    foreach ($testProject in $testProjects)
-    {
-        dotnet test $testProject.FullName /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage" --results-directory:"$output" -c $configuration
-    }
-
-    dotnet tool run reportgenerator -reports:$output/**/*.cobertura.xml -targetdir:$output -reporttypes:"Html;Cobertura"
+    dotnet tool run reportgenerator -reports:$Output/**/*.cobertura.xml -targetdir:$Output -reporttypes:"$ReportType"
 }
 
 Write-Host "Collecting Code Coverage"
