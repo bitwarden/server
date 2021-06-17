@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Models.EntityFramework;
+﻿using Bit.Core.Models.EntityFramework;
 using Bit.Core.Models.EntityFramework.Provider;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,6 +69,24 @@ namespace Bit.Core.Repositories.EntityFramework
             var eTransaction = builder.Entity<Transaction>();
             var eU2f = builder.Entity<U2f>();
             var eUser = builder.Entity<User>();
+
+            eCipher.Property(c => c.Id).ValueGeneratedNever();
+            eCollection.Property(c => c.Id).ValueGeneratedNever();
+            eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
+            eEvent.Property(c => c.Id).ValueGeneratedNever();
+            eFolder.Property(c => c.Id).ValueGeneratedNever();
+            eGroup.Property(c => c.Id).ValueGeneratedNever();
+            eInstallation.Property(c => c.Id).ValueGeneratedNever();
+            eOrganization.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
+            ePolicy.Property(c => c.Id).ValueGeneratedNever();
+            eProvider.Property(c => c.Id).ValueGeneratedNever();
+            eProviderUser.Property(c => c.Id).ValueGeneratedNever();
+            eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
+            eProviderOrganizationProviderUser.Property(c => c.Id).ValueGeneratedNever();
+            eSend.Property(c => c.Id).ValueGeneratedNever();
+            eTransaction.Property(c => c.Id).ValueGeneratedNever();
+            eUser.Property(c => c.Id).ValueGeneratedNever();
 
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
