@@ -1,18 +1,26 @@
-using System;
-using System.Configuration;
-using System.Linq;
-using Bit.Core.Models.EntityFramework;
-using Bit.Core.Models.EntityFramework.Provider;
+using System.Collections.Generic;
+using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Enums;
+using Microsoft.EntityFrameworkCore.Design;
+using System;
 
-namespace EntityFrameworkMigrations
+namespace MySqlMigrations
 {
-    public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+    public static class GlobalSettingsFactory
+    {
+        public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
+        static GlobalSettingsFactory()
+        {
+            var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
+            var Configuration = configBuilder.Build();
+            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
+        }
+    }
+
+     public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
     {
         public DatabaseContext CreateDbContext(string[] args)
         {
@@ -45,14 +53,14 @@ namespace EntityFrameworkMigrations
             {
                 optionsBuilder.UseNpgsql(
                     connectionString,  
-                    b => b.MigrationsAssembly("EntityFrameworkMigrations"));
+                    b => b.MigrationsAssembly("PostgresMigrations"));
             }
             else if (provider.Equals(SupportedDatabaseProviders.MySql))
             {
                 optionsBuilder.UseMySql(
                     connectionString, 
                     ServerVersion.AutoDetect(connectionString),
-                    b => b.MigrationsAssembly("EntityFrameworkMigrations"));
+                    b => b.MigrationsAssembly("MySqlMigrations"));
             }
             return new DatabaseContext(optionsBuilder.Options);
         }
