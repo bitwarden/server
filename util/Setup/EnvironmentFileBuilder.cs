@@ -30,7 +30,6 @@ namespace Bit.Setup
                 ["ACCEPT_EULA"] = "Y",
                 ["MSSQL_PID"] = "Express",
                 ["SA_PASSWORD"] = "SECRET",
-                ["DATABASE"] = "vault",
             };
         }
 
@@ -46,15 +45,6 @@ namespace Bit.Setup
             Init();
             LoadExistingValues(_globalOverrideValues, "/bitwarden/env/global.override.env");
             LoadExistingValues(_mssqlOverrideValues, "/bitwarden/env/mssql.override.env");
-
-            if (_mssqlOverrideValues.ContainsKey("DATABASE"))
-            {
-                var dbConnectionString = new SqlConnectionStringBuilder(_globalOverrideValues["globalSettings__sqlServer__connectionString"].Trim('"'))
-                {
-                    InitialCatalog = _mssqlOverrideValues["DATABASE"]
-                };
-                _globalOverrideValues["globalSettings__sqlServer__connectionString"] = dbConnectionString.ConnectionString;
-            }
 
             if (_context.Config.PushNotifications &&
                 _globalOverrideValues.ContainsKey("globalSettings__pushRelayBaseUri") &&
@@ -72,7 +62,7 @@ namespace Bit.Setup
             var dbConnectionString = new SqlConnectionStringBuilder
             {
                 DataSource = "tcp:mssql,1433",
-                InitialCatalog = _mssqlValues["DATABASE"],
+                InitialCatalog = _context.Install?.Database ? ,
                 UserID = "sa",
                 Password = dbPassword,
                 MultipleActiveResultSets = false,
@@ -116,7 +106,6 @@ namespace Bit.Setup
             _mssqlOverrideValues = new Dictionary<string, string>
             {
                 ["SA_PASSWORD"] = dbPassword,
-                ["DATABASE"] = _context.Install?.Database,
             };
         }
 

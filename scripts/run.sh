@@ -89,7 +89,7 @@ function install() {
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
-        -corev $COREVERSION -webv $WEBVERSION -dbname $DATABASE
+        -corev $COREVERSION -webv $WEBVERSION -dbname "$DATABASE"
 }
 
 function dockerComposeUp() {

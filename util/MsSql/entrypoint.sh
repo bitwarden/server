@@ -40,6 +40,13 @@ then
     export SA_PASSWORD=$(cat $SA_PASSWORD_FILE)
 fi
 
+# Replace database name in backup-db.sql
+if [ ! -z "$DATABASE" ]
+then
+  sed -i -e "/@DatabaseName /s/vault/$DATABASE/" backup-db.sql
+  sed -i -e "/@DatabaseNameSafe /s/vault/${DATABASE// /-}/" backup-db.sql
+fi
+
 # The rest...
 
 mkdir -p /etc/bitwarden/mssql/backups
@@ -48,12 +55,6 @@ mkdir -p /var/opt/mssql/data
 chown -R $USERNAME:$GROUPNAME /var/opt/mssql
 chown $USERNAME:$GROUPNAME /backup-db.sh
 chown $USERNAME:$GROUPNAME /backup-db.sql
-
-# Replace database name in backup-db.sql
-if [ ! -z "$DATABASE" ]
-then
-  sed -i "s/vault/$DATABASE/g" backup-db.sql
-fi
 
 # Launch a loop to backup database on a daily basis
 if [ "$BACKUP_DB" != "0" ]
