@@ -22,11 +22,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public override async Task<TableModel.Collection> CreateAsync(Collection obj)
         {
             await base.CreateAsync(obj);
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                await UserBumpAccountRevisionDateByCollectionId(obj.Id, obj.OrganizationId);
-            }
+            await UserBumpAccountRevisionDateByCollectionId(obj.Id, obj.OrganizationId);
             return obj;
         }
 
@@ -48,8 +44,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         HidePasswords = g.HidePasswords
                     });
                 await dbContext.AddRangeAsync(collectionGroups);
-                await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
                 await dbContext.SaveChangesAsync();
+                await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
             }
         }
 
@@ -63,8 +59,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         cu.OrganizationUserId == organizationUserId
                     select cu;
                 dbContext.RemoveRange(await query.ToListAsync());
-                await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
                 await dbContext.SaveChangesAsync();
+                await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
             }
         }
 
@@ -232,15 +228,11 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-
                 var procedure = new CollectionUserUpdateUsersQuery(id, users);
-
                 var updateData = await procedure.Update.BuildInMemory(dbContext);
                 dbContext.UpdateRange(updateData);
-
                 var insertData = await procedure.Insert.BuildInMemory(dbContext);
                 await dbContext.AddRangeAsync(insertData);
-
                 dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
             }
         }

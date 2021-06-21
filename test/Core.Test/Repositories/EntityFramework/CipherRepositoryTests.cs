@@ -19,7 +19,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class CipherRepositoryTests
     {
-        // TODO: delete this
         [Theory (Skip = "Run ad-hoc"), EfUserCipherAutoData]
         public async void RefreshDb(List<EfRepo.CipherRepository> suts)
         {
@@ -118,7 +117,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
                 cipher.OrganizationId = efOrg.Id;
 
-                // TODO: seed more specific data to test each condition in the query?
                 collection.OrganizationId = efOrg.Id;
                 var efCollection = await efCollectionRepos[i].CreateAsync(collection);
                 efCollectionRepos[i].ClearChangeTracking();
@@ -196,11 +194,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
                 var savedCipher = await sut.GetByIdAsync(cipher.Id);
                 Assert.True(savedCipher == null);
-
-                var savedOrg = await efOrgRepos[i].GetByIdAsync(postEfOrg.Id);
-                
-                // TODO: Assert org and user storage is updated appropriatly
-                // TODO: Assert org and user account revision dates are updated appropriatly 
             }
         }
     }

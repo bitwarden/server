@@ -55,9 +55,6 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
-            // TODO: some of this logic is reused in other event methods. 
-            // The Dapper repos have a shared private method that gets called, but the same setup won't work here 1:1.
-            // Something with IQuery<Event>?
             DateTime? beforeDate = null;
             if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
                 long.TryParse(pageOptions.ContinuationToken, out var binaryDate))

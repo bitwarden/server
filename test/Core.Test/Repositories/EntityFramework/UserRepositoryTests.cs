@@ -221,14 +221,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfUserAutoData]
-        public void UpdateStorageAsync_Works_DataMatches(User user, List<Cipher> ciphers,
-            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
-        {
-            // TODO: Cipher repo needed
-            Assert.True(true);
-        }
-
-        [CiSkippedTheory, EfUserAutoData]
         public async void UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
             DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
             SqlRepo.UserRepository sqlUserRepo)

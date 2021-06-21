@@ -7,7 +7,6 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 {
     public class EventReadPageByOrganizationIdQuery: IQuery<Event>
     {
-
         private readonly Guid _organizationId;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;

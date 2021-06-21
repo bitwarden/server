@@ -44,7 +44,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     join c in dbContext.Collections 
                         on cc.CollectionId equals c.Id
                     where c.OrganizationId == organizationId
-                    select new { cc, c }).ToListAsync();
+                    select new { cc, c }).ToArrayAsync();
                 return data.Select(x => x.cc).ToArray();
             }
         }
@@ -54,7 +54,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserIdQuery(userId).Run(dbContext).ToArrayAsync();
+                var data = await new CollectionCipherReadByUserIdQuery(userId)
+                    .Run(dbContext)
+                    .ToArrayAsync();
                 return data;
             }
         }
@@ -64,7 +66,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId).Run(dbContext).ToArrayAsync();
+                var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId)
+                    .Run(dbContext)
+                    .ToArrayAsync();
                 return data;
             }
         }

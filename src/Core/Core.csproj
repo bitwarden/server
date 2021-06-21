@@ -29,7 +29,7 @@
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
     <PackageReference Include="linq2db.EntityFrameworkCore" Version="5.2.1" />
     <PackageReference Include="MailKit" Version="2.8.0" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="3.1.13" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="3.1.16" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.2" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="3.3.0" />
@@ -41,7 +41,6 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="5.0.2" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="5.0.2" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.5" />
     <PackageReference Include="Quartz" Version="3.1.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />

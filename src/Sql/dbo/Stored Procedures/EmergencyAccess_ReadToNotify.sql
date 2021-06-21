@@ -1,5 +1,4 @@
-﻿-- TODO: refactor this to use the emergency access details view
-CREATE PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
+﻿CREATE PROCEDURE [dbo].[EmergencyAccess_ReadToNotify]
 AS
 BEGIN
     SET NOCOUNT ON

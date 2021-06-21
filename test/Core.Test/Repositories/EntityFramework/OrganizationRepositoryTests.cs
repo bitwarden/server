@@ -139,33 +139,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(returnedOrgs.All(o => o.Enabled));
         }
 
-        [CiSkippedTheory, EfOrganizationAutoData]
-        public async void GetManyByUserIdAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-            List<EfRepo.OrganizationRepository> suts)
-        {
-            // TODO: OrgUser repo needed
-            Assert.True(true);
-        }
-
-        [CiSkippedTheory, EfOrganizationAutoData]
-        public async void SearchAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
-            List<EfRepo.OrganizationRepository> suts)
-        {
-            // TODO: OrgUser repo needed
-            Assert.True(true);
-        }
-
-        [CiSkippedTheory, EfOrganizationAutoData]
-        public async void UpdateStorageAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
-            List<EfRepo.OrganizationRepository> suts)
-        {
-            // TODO: Cipher repo needed
-            Assert.True(true);
-        }
-
         // testing data matches here would require manipulating all organization abilities in the db
         [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetManyAbilitiesAsync_Works(TableModel.Organization organization,

@@ -87,7 +87,6 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = view.Run(dbContext).Where(ea => 
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
-                // TODO: find a way to not have to manually build these models so much
                 var notifies = await query.Select(ea => new EmergencyAccessNotify() {
                     Id = ea.Id,
                     GrantorId = ea.GrantorId,

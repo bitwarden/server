@@ -16,6 +16,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using TableModel = Bit.Core.Models.Table;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -131,8 +132,6 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                // Intentionally not including Favorites, Folders, and CreationDate */
-                // since those are not meant to be bulk updated at this time */
                 var cipherEntities = Mapper.Map<List<EfModel.Cipher>>(ciphers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
                 if (collections.Any())
@@ -340,7 +339,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         on ucd.Id equals c.Id
                     where ucd.Edit
                     select new { ucd, c };
-                await idsToMove.Select(x => x.c).ForEachAsync(cipher => {
+                await idsToMove.Select(x => x.c).ForEachAsync(cipher => 
+                {
                     var foldersJson = JObject.Parse(cipher.Folders);
                     foldersJson.Remove(userId.ToString());
                     dbContext.Attach(cipher);
@@ -476,7 +476,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     dbContext.RemoveRange(ciphers);
                 }
-                await ciphers.ForEachAsync(cipher => {
+                await ciphers.ForEachAsync(cipher => 
+                {
                     cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
                     cipher.RevisionDate = utcNow;
                 });
@@ -507,7 +508,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var utcNow = DateTime.UtcNow;
                 var ciphers = dbContext.Ciphers.Where(c => ids.Contains(c.Id) && c.OrganizationId == organizationId);
-                await ciphers.ForEachAsync(cipher => {
+                await ciphers.ForEachAsync(cipher => 
+                {
                     dbContext.Attach(cipher);
                     cipher.DeletedDate = utcNow;
                     cipher.RevisionDate = utcNow;
@@ -619,10 +621,5 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        private enum CipherStateAction {
-           Restore,
-           SoftDelete,
-           HardDelete,
-        }
     }
 }

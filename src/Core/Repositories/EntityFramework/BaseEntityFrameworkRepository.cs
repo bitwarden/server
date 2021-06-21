@@ -19,8 +19,8 @@ namespace Bit.Core.Repositories.EntityFramework
     {
         protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions
         {
-                    KeepIdentity = true,
-                    BulkCopyType = BulkCopyType.ProviderSpecific,
+            KeepIdentity = true,
+            BulkCopyType = BulkCopyType.ProviderSpecific,
         };
 
         public BaseEntityFrameworkRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
@@ -70,7 +70,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
                     var users = query.Run(dbContext);
 
-                    await users.ForEachAsync(e => {
+                    await users.ForEachAsync(e => 
+                    {
                         dbContext.Attach(e);
                         e.RevisionDate = DateTime.UtcNow;
                     });
@@ -86,7 +87,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var query = new UserBumpAccountRevisionDateByOrganizationIdQuery(organizationId);
                 var users = query.Run(dbContext);
-                await users.ForEachAsync(e => {
+                await users.ForEachAsync(e => 
+                {
                     dbContext.Attach(e);
                     e.RevisionDate = DateTime.UtcNow;
                 });
@@ -105,7 +107,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var users = dbContext.Users.Where(u => userIds.Contains(u.Id));
-                await users.ForEachAsync(u => {
+                await users.ForEachAsync(u => 
+                {
                     dbContext.Attach(u);
                     u.RevisionDate = DateTime.UtcNow;
                 });
@@ -119,17 +122,18 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
-                    .Where(e => e.UserId == null && e.OrganizationId == organizationId).ToListAsync();
+                    .Where(e => e.UserId == null && e.OrganizationId == organizationId)
+                    .ToListAsync();
                 var storage = ciphers.Sum(e => 
+                {
+                    if (string.IsNullOrWhiteSpace(e.Attachments))
                     {
-                        if (string.IsNullOrWhiteSpace(e.Attachments))
-                        {
-                            return 0;
-                        }
+                        return 0;
+                    }
 
-                        return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                            .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
-                    });
+                    return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
+                        .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
+                });
                 var organization = new EfModel.Organization
                 {
                     Id = organizationId,
@@ -150,17 +154,18 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = await dbContext.Ciphers
-                    .Where(e => e.UserId.HasValue && e.UserId.Value == userId && e.OrganizationId == null).ToListAsync();
+                    .Where(e => e.UserId.HasValue && e.UserId.Value == userId && e.OrganizationId == null)
+                    .ToListAsync();
                 var storage = ciphers.Sum(e => 
+                {
+                    if (string.IsNullOrWhiteSpace(e.Attachments))
                     {
-                        if (string.IsNullOrWhiteSpace(e.Attachments))
-                        {
-                            return 0;
-                        }
+                        return 0;
+                    }
 
-                        return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                            .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
-                    });
+                    return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
+                        .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
+                });
                 var user = new EfModel.User
                 {
                     Id = userId,
@@ -216,7 +221,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         (cu.CollectionId != default(Guid) || cg.CollectionId != default(Guid) || ou.AccessAll || g.AccessAll))
                     select new { u, ou, cu, gu, g, cg };
                 var users = query.Select(x => x.u);
-                await users.ForEachAsync(u => {
+                await users.ForEachAsync(u => 
+                {
                     dbContext.Attach(u);
                     u.RevisionDate = DateTime.UtcNow; 
                 });
@@ -235,7 +241,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     where ou.Id.Equals(organizationUserId) && ou.Status.Equals(OrganizationUserStatusType.Confirmed)
                     select new { u, ou };
                 var users = query.Select(x => x.u);
-                await users.ForEachAsync(u => {
+                await users.ForEachAsync(u => 
+                {
                     dbContext.Attach(u);
                     u.AccountRevisionDate = DateTime.UtcNow;
                 });
