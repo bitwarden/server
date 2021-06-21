@@ -29,6 +29,10 @@ namespace Bit.Core.Context
         public virtual List<CurrentContentProvider> Providers { get; set; }
         public virtual Guid? InstallationId { get; set; }
         public virtual Guid? OrganizationId { get; set; }
+        public virtual bool CloudflareWorkerProxied { get; set; }
+        public virtual bool IsBot { get; set; }
+        public virtual bool MaybeBot { get; set; }
+        public virtual int? BotScore { get; set; }
 
         public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
         {
@@ -50,6 +54,27 @@ namespace Bit.Core.Context
                 Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
             {
                 DeviceType = dType;
+            }
+
+            if (!BotScore.HasValue && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score") &&
+                int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore))
+            {
+                BotScore = parsedBotScore;
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Worked-Proxied"))
+            {
+                CloudflareWorkerProxied = httpContext.Request.Headers["X-Cf-Worked-Proxied"] == "1";
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Is-Bot"))
+            {
+                IsBot = httpContext.Request.Headers["X-Cf-Is-Bot"] == "1";
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Maybe-Bot"))
+            {
+                MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
             }
         }
 
@@ -229,70 +254,70 @@ namespace Bit.Core.Context
         {
             return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false;
         }
-        
+
         public bool AccessBusinessPortal(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
         }
 
         public bool AccessEventLogs(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessEventLogs ?? false)) ?? false);
         }
 
         public bool AccessImportExport(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessImportExport ?? false)) ?? false);
         }
 
         public bool AccessReports(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessReports ?? false)) ?? false);
         }
 
         public bool ManageAllCollections(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAllCollections ?? false)) ?? false);
         }
 
         public bool ManageAssignedCollections(Guid orgId)
         {
-            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAssignedCollections ?? false)) ?? false);
         }
 
         public bool ManageGroups(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageGroups ?? false)) ?? false);
         }
 
         public bool ManagePolicies(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManagePolicies ?? false)) ?? false);
         }
 
         public bool ManageSso(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageSso ?? false)) ?? false);
         }
 
         public bool ManageUsers(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageUsers ?? false)) ?? false);
         }
-        
+
         public bool ManageResetPassword(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
         }
         
@@ -347,9 +372,9 @@ namespace Bit.Core.Context
 
         private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
         {
-            bool hasClaim(string claimKey) 
+            bool hasClaim(string claimKey)
             {
-                return claimsDict.ContainsKey(claimKey) ? 
+                return claimsDict.ContainsKey(claimKey) ?
                     claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
             }
 

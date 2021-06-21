@@ -168,7 +168,7 @@ namespace Bit.Core.Utilities
                 (nameof(OrganizationUser.CreationDate), typeof(DateTime), ou => ou.CreationDate),
                 (nameof(OrganizationUser.RevisionDate), typeof(DateTime), ou => ou.RevisionDate),
                 (nameof(OrganizationUser.Permissions), typeof(string), ou => ou.Permissions),
-                (nameof(OrganizationUser.ResetPasswordKey), typeof(Guid), ou => ou.UserId),
+                (nameof(OrganizationUser.ResetPasswordKey), typeof(string), ou => ou.ResetPasswordKey),
             };
 
             foreach (var (name, type, getter) in columnData)
