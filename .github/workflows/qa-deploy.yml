@@ -106,7 +106,7 @@ jobs:
 
   reset-db:
     name: Reset Database
-    if: ${{ github.event.inputs.resetDb == "true" }}
+    if: ${{ github.event.inputs.resetDb == 'true' }}
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -118,7 +118,7 @@ jobs:
 
   update-db:
     name: Update Database
-    if: ${{ github.event.inputs.migrateDb == "true" }}
+    if: ${{ github.event.inputs.migrateDb == 'true' }}
     runs-on: ubuntu-latest
     needs: build
     steps:
