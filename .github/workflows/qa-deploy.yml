@@ -5,10 +5,10 @@ on:
     inputs: 
       migrateDb:
         required: true
-        default: "true"
+        default: true
       resetDb:
         required: true
-        default: "false"
+        default: false
 
 jobs:
   build:
