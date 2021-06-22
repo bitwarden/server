@@ -52,7 +52,7 @@ jobs:
           npm --version
           gulp --version
 
-      - name: load env vars
+      - name: Load env vars
         run: |
           echo "Base Path: ${BASE_PATH}"
           echo "Name: ${NAME}"
@@ -105,29 +105,56 @@ jobs:
 
 
   reset-db:
+    name: Reset Database
+    if: ${{ github.event.inputs.resetDb == 'true' }}
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Reset Test Data - Stub
-        if: ${{ github.events.inputs.resetDb }} == "true"
         run: |
           echo "placeholder for cleaning DB"
           echo "placeholder for loading test dataset"
 
 
   update-db:
-    if: ${{ github.events.inputs.migrateDb }} == "true"
+    name: Update Database
+    if: ${{ github.event.inputs.migrateDb == 'true' }}
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: migrate db
-        if: ${{ github.events.inputs.resetDb }} == "true"
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "mssql-server-host,
+                    mssql-admin-login,
+                    mssql-admin-login-password"
+
+      - name: Migrate database
+        env:
+          MSSQL_HOST: ${{ steps.retrieve-secrets.outputs.mssql-server-host }}
+          MSSQL_USER: ${{ steps.retrieve-secrets.outputs.mssql-admin-login }}
+          MSSQL_PASS: ${{ steps.retrieve-secrets.outputs.mssql-admin-login-password }}
+        working-directory: ./util/Migrator/DbScripts
         run: |
-          echo "placeholder for updateing DB"
+          echo "Running database migrations..."
+          for f in `ls -v ./*.sql`; do
+            sqlcmd -S $MSSQL_HOST -d vault -U $MSSQL_USER -P $MSSQL_PASS -I -i $f
+          done;        
 
 
   deploy:
     runs-on: ubuntu-latest
+    if: always()
     needs: 
       - reset-db
       - update-db
