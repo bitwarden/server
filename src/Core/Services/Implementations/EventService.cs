@@ -228,7 +228,6 @@ namespace Bit.Core.Services
             await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
         }
 
-        // TODO: Implement this
         public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
         {
             var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
