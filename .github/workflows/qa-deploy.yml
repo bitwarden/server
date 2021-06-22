@@ -154,6 +154,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    if: always()
     needs: 
       - reset-db
       - update-db
