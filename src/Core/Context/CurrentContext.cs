@@ -320,7 +320,7 @@ namespace Bit.Core.Context
             return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
         }
-        
+
         public bool ProviderProviderAdmin(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
@@ -330,7 +330,17 @@ namespace Bit.Core.Context
         {
             return ProviderProviderAdmin(providerId);
         }
-        
+
+        public bool AccessProviderOrganizations(Guid providerId)
+        {
+            return ProviderUser(providerId);
+        }
+
+        public bool ManageProviderOrganizations(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
         public bool ProviderUser(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId) ?? false;

@@ -223,16 +223,46 @@ namespace Bit.Core.Services
             await _eventWriteService.CreateAsync(e);
         }
 
-        // TODO: Implement this
-        public Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null) => throw new NotImplementedException();
+        public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
+        {
+            await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
+        }
 
         // TODO: Implement this
-        public Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events) => throw new NotImplementedException();
+        public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
+        {
+            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+            var eventMessages = new List<IEvent>();
+            foreach (var (providerUser, type, date) in events)
+            {
+                if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
+                {
+                    continue;
+                }
+                eventMessages.Add(new EventMessage
+                {
+                    ProviderId = providerUser.ProviderId,
+                    UserId = providerUser.UserId,
+                    ProviderUserId = providerUser.Id,
+                    Type = type,
+                    ActingUserId = _currentContext?.UserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                });
+            }
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
 
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                 orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+        }
+        
+        private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
+        {
+            return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
+                   providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
         }
     }
 }

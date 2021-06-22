@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -25,15 +24,18 @@ namespace Bit.CommCore.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-            IUserRepository userRepository, IUserService userService, IMailService mailService,
-            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
+            IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
+            IUserService userService, IMailService mailService, IDataProtectionProvider dataProtectionProvider,
+            IEventService eventService, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
             _userRepository = userRepository;
             _userService = userService;
             _mailService = mailService;
@@ -89,7 +91,7 @@ namespace Bit.CommCore.Services
             }
 
             var providerUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, ownerUserId);
-            if (providerUser == null || providerUser.Type != ProviderUserType.ProviderAdmin)
+            if (!(providerUser is {Type: ProviderUserType.ProviderAdmin}))
             {
                 throw new BadRequestException("Invalid owner.");
             }
@@ -144,14 +146,6 @@ namespace Bit.CommCore.Services
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow,
                 };
-
-                if (invite.Permissions != null)
-                {
-                    providerUser.Permissions = JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    });
-                }
 
                 await _providerUserRepository.CreateAsync(providerUser);
 
@@ -338,8 +332,17 @@ namespace Bit.CommCore.Services
             return result;
         }
 
-        // TODO: Implement this
-        public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
+        public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
+        {
+            var providerOrganization = new ProviderOrganization
+            {
+                ProviderId = providerId,
+                OrganizationId = organizationId,
+                Key = key,
+            };
+            
+            await _providerOrganizationRepository.CreateAsync(providerOrganization);
+        }
 
         // TODO: Implement this
         public Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();

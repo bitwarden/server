@@ -100,13 +100,41 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
+        public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId,
+            ProviderUserStatusType? status = null)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserProviderDetails>(
+                    "[dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]",
+                    new { UserId = userId, Status = status },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task DeleteManyAsync(IEnumerable<Guid> providerUserIds)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync("[dbo].[ProviderUser_DeleteByIds]",
                     new { Ids = providerUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(
+            Guid providerId, IEnumerable<Guid> Ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserPublicKey>(
+                    "[dbo].[User_ReadPublicKeysByProviderUserIds]",
+                    new { ProviderId = providerId, ProviderUserIds = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
             }
         }
     }

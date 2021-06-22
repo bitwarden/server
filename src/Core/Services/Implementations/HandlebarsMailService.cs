@@ -675,6 +675,7 @@ namespace Bit.Core.Services
                 ProviderId = providerUser.ProviderId.ToString(),
                 ProviderUserId = providerUser.Id.ToString(),
                 ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
+                Token = token,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
             };
