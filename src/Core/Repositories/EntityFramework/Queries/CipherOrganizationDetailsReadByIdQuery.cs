@@ -20,7 +20,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on c.OrganizationId equals o.Id into o_g
                 from o in o_g.DefaultIfEmpty()
                 where c.Id == _cipherId
-                select new CipherOrganizationDetails {  
+                select new CipherOrganizationDetails 
+                {  
                     Id = c.Id,
                     UserId = c.UserId,
                     OrganizationId = c.OrganizationId,

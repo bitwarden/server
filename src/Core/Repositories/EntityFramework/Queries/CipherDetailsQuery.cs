@@ -18,7 +18,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
         {
             var query = from c in dbContext.Ciphers
-                select new CipherDetails { 
+                select new CipherDetails 
+                { 
                     Id = c.Id,
                     UserId = c.UserId,
                     OrganizationId = c.OrganizationId,

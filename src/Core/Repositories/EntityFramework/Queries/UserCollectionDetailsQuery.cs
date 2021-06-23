@@ -40,7 +40,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     o.Enabled &&
                     (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
                 select new { c, ou, o, cu, gu, g, cg };
-            return query.Select(x => new CollectionDetails {
+            return query.Select(x => new CollectionDetails 
+            {
                 Id = x.c.Id,
                 OrganizationId = x.c.OrganizationId,
                 Name = x.c.Name,
