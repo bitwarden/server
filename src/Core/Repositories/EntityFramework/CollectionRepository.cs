@@ -37,7 +37,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     select g.Id).ToListAsync();
                 var collectionGroups = groups
                     .Where(g => availibleGroups.Contains(g.Id))
-                    .Select(g => new EfModel.CollectionGroup(){
+                    .Select(g => new EfModel.CollectionGroup
+                    {
                         CollectionId = obj.Id,
                         GroupId = g.Id,
                         ReadOnly = g.ReadOnly,
@@ -84,7 +85,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var collectionGroups = await (from cg in dbContext.CollectionGroups
                     where cg.CollectionId == id
                     select cg).ToListAsync();
-                var selectionReadOnlys = collectionGroups.Select(cg => new SelectionReadOnly() {
+                var selectionReadOnlys = collectionGroups.Select(cg => new SelectionReadOnly 
+                {
                     Id = cg.GroupId,
                     ReadOnly = cg.ReadOnly,
                     HidePasswords = cg.HidePasswords
@@ -151,7 +153,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     where cu.CollectionId == id
                     select cu;
                 var collectionUsers = await query.ToListAsync();
-                return collectionUsers.Select(cu => new SelectionReadOnly() {
+                return collectionUsers.Select(cu => new SelectionReadOnly 
+                {
                     Id = cu.OrganizationUserId,
                     ReadOnly = cu.ReadOnly,
                     HidePasswords = cu.HidePasswords
@@ -186,7 +189,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     .AsNoTracking()
                     .ToListAsync();
                 var insert = union.Where(x => x.cg == null && groupsInOrg.Any(c => x.g.Id == c.Id))
-                    .Select(x => new EfModel.CollectionGroup() {
+                    .Select(x => new EfModel.CollectionGroup {
                         CollectionId = collection.Id,
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
@@ -199,7 +202,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         (x.cg.ReadOnly != groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly || 
                         x.cg.HidePasswords != groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords)
                     )
-                    .Select(x => new EfModel.CollectionGroup() {
+                    .Select(x => new EfModel.CollectionGroup {
                         CollectionId = collection.Id, 
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
@@ -210,7 +213,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         x => x.g == null && 
                         x.cg.CollectionId == collection.Id
                     )
-                    .Select(x => new EfModel.CollectionGroup() { 
+                    .Select(x => new EfModel.CollectionGroup { 
                         CollectionId = collection.Id, GroupId = x.cg.GroupId
                     })
                     .ToList();

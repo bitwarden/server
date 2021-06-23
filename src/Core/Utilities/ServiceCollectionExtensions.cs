@@ -148,7 +148,7 @@ namespace Bit.Core.Utilities
             {
                 if (useEf)
                 {
-                    // TODO
+                    services.AddSingleton<IEventRepository, EntityFrameworkRepos.EventRepository>();
                 }
                 else
                 {

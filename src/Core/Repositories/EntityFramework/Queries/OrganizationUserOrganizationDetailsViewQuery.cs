@@ -14,7 +14,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 from su in su_g.DefaultIfEmpty()
                 where ((su == null || !su.OrganizationId.HasValue) || su.OrganizationId == ou.OrganizationId)
                 select new { ou, o, su };
-            return query.Select(x => new OrganizationUserOrganizationDetails() {
+            return query.Select(x => new OrganizationUserOrganizationDetails {
                 OrganizationId = x.ou.OrganizationId,
                 UserId = x.ou.UserId,
                 Name = x.o.Name,
@@ -38,7 +38,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Status = x.ou.Status,
                 Type = x.ou.Type,
                 SsoExternalId = x.su.ExternalId,
-                Permissions = x.ou.Permissions
+                Permissions = x.ou.Permissions,
+                PublicKey = x.o.PublicKey,
+                PrivateKey = x.o.PrivateKey
             });
         }
     }

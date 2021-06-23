@@ -229,7 +229,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var insertData = from collectionId in collectionIds
                     from cipherId in cipherIds
                     where availibleCollections.Select(x => x.c.Id).Contains(collectionId)
-                    select new EfModel.CollectionCipher()
+                    select new EfModel.CollectionCipher
                     {
                         CollectionId = collectionId,
                         CipherId = cipherId

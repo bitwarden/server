@@ -30,7 +30,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     where c.OrganizationId == grp.OrganizationId
                     select c).ToListAsync();
                 var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
-                var collectionGroups = filteredCollections.Select(y => new EfModel.CollectionGroup(){
+                var collectionGroups = filteredCollections.Select(y => new EfModel.CollectionGroup
+                {
                     CollectionId = y.Id,
                     GroupId = grp.Id,
                     ReadOnly = y.ReadOnly,
@@ -65,7 +66,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     from cg in dbContext.CollectionGroups
                     where cg.GroupId == id
                     select cg).ToListAsync();
-                var collections = query.Select(c => new SelectionReadOnly(){
+                var collections = query.Select(c => new SelectionReadOnly
+                {
                     Id = c.CollectionId,
                     ReadOnly = c.ReadOnly,
                     HidePasswords = c.HidePasswords
@@ -152,7 +154,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     where organizationUserIds.Contains(ou.Id) &&
                         ou.OrganizationId == orgId &&
                         !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
-                    select new EfModel.GroupUser() 
+                    select new EfModel.GroupUser
                     {
                         GroupId = groupId,
                         OrganizationUserId = ou.Id

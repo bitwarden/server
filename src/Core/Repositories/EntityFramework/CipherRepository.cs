@@ -294,7 +294,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     cipherDetailsView = from c in cipherDetailsView
                         where c.UserId == userId
-                        select new CipherDetails() {
+                        select new CipherDetails {
                             Id = c.Id,
                             UserId = c.UserId,
                             OrganizationId = c.OrganizationId,
@@ -341,13 +341,24 @@ namespace Bit.Core.Repositories.EntityFramework
                     select new { ucd, c };
                 await idsToMove.Select(x => x.c).ForEachAsync(cipher => 
                 {
-                    var foldersJson = JObject.Parse(cipher.Folders);
-                    foldersJson.Remove(userId.ToString());
+                    var foldersJson = string.IsNullOrWhiteSpace(cipher.Folders) ? 
+                        new JObject() :
+                        JObject.Parse(cipher.Folders);
+
+                    if (folderId.HasValue)
+                    {
+                        foldersJson.Remove(userId.ToString());
+                        foldersJson.Add(userId.ToString(), folderId.Value.ToString());
+                    }
+                    else if (!string.IsNullOrWhiteSpace(cipher.Folders))
+                    {
+                        foldersJson.Remove(userId.ToString());
+                    }
                     dbContext.Attach(cipher);
                     cipher.Folders = JsonConvert.SerializeObject(foldersJson);
                 });          
-                await UserBumpAccountRevisionDate(userId);
                 await dbContext.SaveChangesAsync();
+                await UserBumpAccountRevisionDate(userId);
             }
         }
 
@@ -463,24 +474,29 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
-                var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
-                var query = from ucd in userCipherDetailsQuery.Run(dbContext)
-                    join c in cipherEntities
+                var cipherEntitiesToCheck = await (dbContext.Ciphers.Where(c => ids.Contains(c.Id))).ToListAsync();
+                var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
+                    join c in cipherEntitiesToCheck
                         on ucd.Id equals c.Id
                     where ucd.Edit && ucd.DeletedDate == null
                     select new { ucd, c };
 
                 var utcNow = DateTime.UtcNow;
-                var ciphers = query.Select(x => x.c);
+                var cipherIdsToModify = query.Select(x => x.c.Id);
+                var cipherEntitiesToModify = dbContext.Ciphers.Where(x => cipherIdsToModify.Contains(x.Id));
                 if (action == CipherStateAction.HardDelete)
                 {
-                    dbContext.RemoveRange(ciphers);
+                    dbContext.RemoveRange(cipherEntitiesToModify);
                 }
-                await ciphers.ForEachAsync(cipher => 
+                else 
                 {
-                    cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
-                    cipher.RevisionDate = utcNow;
-                });
+                    await cipherEntitiesToModify.ForEachAsync(cipher => 
+                    {
+                        dbContext.Attach(cipher);
+                        cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
+                        cipher.RevisionDate = utcNow;
+                    });
+                }
 
                 var orgIds = query
                     .Where(x => x.c.OrganizationId.HasValue)
@@ -491,7 +507,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     await OrganizationUpdateStorage(orgId.Value);
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
-                if (await query.AnyAsync(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
+                if (query.Any(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
                 {
                     await UserUpdateStorage(userId);
                 }

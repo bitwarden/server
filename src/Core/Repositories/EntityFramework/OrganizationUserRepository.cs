@@ -31,7 +31,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     where c.OrganizationId == organizationUser.OrganizationId
                     select c).ToListAsync();
                 var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
-                var collectionUsers = filteredCollections.Select(y => new EfModel.CollectionUser(){
+                var collectionUsers = filteredCollections.Select(y => new EfModel.CollectionUser
+                {
                     CollectionId = y.Id,
                     OrganizationUserId = organizationUser.Id,
                     ReadOnly = y.ReadOnly,
@@ -86,7 +87,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     where !ou.AccessAll && 
                         ou.Id == id
                     select new { ou, cu }).ToListAsync();
-                var collections = query.Select(c => new SelectionReadOnly(){
+                var collections = query.Select(c => new SelectionReadOnly
+                {
                     Id = c.cu.CollectionId,
                     ReadOnly = c.cu.ReadOnly,
                     HidePasswords = c.cu.HidePasswords
@@ -165,7 +167,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                     where !ou.AccessAll && ou.Id == id
                     select new {ou, cu};
-                var collections = await query.Select(x => new SelectionReadOnly(){
+                var collections = await query.Select(x => new SelectionReadOnly
+                {
                    Id = x.cu.CollectionId,
                    ReadOnly = x.cu.ReadOnly,
                    HidePasswords = x.cu.HidePasswords
@@ -180,10 +183,11 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new OrganizationUserOrganizationDetailsViewQuery();
+                var t = await (view.Run(dbContext)).ToArrayAsync();
                 var entity = await view.Run(dbContext)
                     .FirstOrDefaultAsync(o => o.UserId == userId && 
                         o.OrganizationId == organizationId && 
-                        o.Status == status);
+                        (status == null || o.Status == status));
                 return entity;
             }
         }

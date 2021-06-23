@@ -13,7 +13,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 join su in dbContext.SsoUsers on u.Id equals su.UserId into su_g
                 from su in su_g.DefaultIfEmpty()
                 select new { ou, u, su };
-            return query.Select(x => new OrganizationUserUserDetails() {
+            return query.Select(x => new OrganizationUserUserDetails {
                 Id = x.ou.Id,
                 OrganizationId = x.ou.OrganizationId,
                 UserId = x.ou.UserId,

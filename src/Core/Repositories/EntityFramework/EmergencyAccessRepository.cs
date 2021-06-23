@@ -87,7 +87,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = view.Run(dbContext).Where(ea => 
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
-                var notifies = await query.Select(ea => new EmergencyAccessNotify() {
+                var notifies = await query.Select(ea => new EmergencyAccessNotify 
+                {
                     Id = ea.Id,
                     GrantorId = ea.GrantorId,
                     GranteeId = ea.GranteeId,

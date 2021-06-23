@@ -3,6 +3,8 @@ using System;
 using Bit.Core.Enums;
 using System.Collections.Generic;
 using Core.Models.Data;
+using Bit.Core.Utilities;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
@@ -15,16 +17,16 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
         public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
         {
-            var query = from cd in new CipherDetailsQuery(_userId, true).Run(dbContext)
+            var query = from c in dbContext.Ciphers
                 join ou in dbContext.OrganizationUsers
-                    on cd.OrganizationId equals ou.OrganizationId
+                    on c.OrganizationId equals ou.OrganizationId
                 where ou.UserId == _userId &&
                     ou.Status == OrganizationUserStatusType.Confirmed
                 join o in dbContext.Organizations 
-                    on cd.OrganizationId equals o.Id
+                    on c.OrganizationId equals o.Id
                 where o.Id == ou.OrganizationId && o.Enabled
                 join cc in dbContext.CollectionCiphers
-                    on cd.Id equals cc.CipherId into cc_g
+                    on c.Id equals cc.CipherId into cc_g
                 from cc in cc_g.DefaultIfEmpty()
                 where ou.AccessAll
                 join cu in dbContext.CollectionUsers
@@ -43,13 +45,32 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 from cg in cg_g.DefaultIfEmpty()
                 where !g.AccessAll && cg.GroupId == gu.GroupId &&
                 ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null
-                select new {cd, ou, o, cc, cu, gu, g, cg}.cd;
+                select new {c, ou, o, cc, cu, gu, g, cg}.c;
 
-            var query2 = from cd in new CipherDetailsQuery(_userId, true).Run(dbContext)
-                where cd.UserId == _userId
-                select cd;
+            var query2 = from c in dbContext.Ciphers
+                where c.UserId == _userId
+                select c;
 
-            return query.Union(query2);
+            var union = query.Union(query2).Select(c => new CipherDetails
+            {
+                Id = c.Id,
+                UserId = c.UserId,
+                OrganizationId = c.OrganizationId,
+                Type= c.Type,
+                Data = c.Data,
+                Attachments = c.Attachments,
+                CreationDate = c.CreationDate,
+                RevisionDate = c.RevisionDate,
+                DeletedDate = c.DeletedDate,
+                Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
+                FolderId = _userId.HasValue && !string.IsNullOrWhiteSpace(c.Folders) ? 
+                    Guid.Parse(JObject.Parse(c.Folders)[_userId.Value.ToString()].Value<string>()) : 
+                    null,
+                Edit = true,
+                ViewPassword = true,
+                OrganizationUseTotp = false
+            });
+            return union;
         }
     }
 }
