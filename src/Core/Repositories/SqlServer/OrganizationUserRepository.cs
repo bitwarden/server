@@ -86,7 +86,8 @@ namespace Bit.Core.Repositories.SqlServer
                     new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 
-                return result;
+                // Return as a list to avoid timing out the sql connection
+                return result.ToList();
             }
         }
 
