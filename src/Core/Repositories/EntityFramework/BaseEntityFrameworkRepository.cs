@@ -20,7 +20,7 @@ namespace Bit.Core.Repositories.EntityFramework
         protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions
         {
             KeepIdentity = true,
-            BulkCopyType = BulkCopyType.ProviderSpecific,
+            BulkCopyType = BulkCopyType.MultipleRows,
         };
 
         public BaseEntityFrameworkRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
