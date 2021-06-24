@@ -79,11 +79,12 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
             bool onlyRegisteredUsers)
         {
+            var emailsTvp = emails.ToArrayTVP("Email");
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var result = await connection.QueryAsync<string>(
                     "[dbo].[OrganizationUser_SelectKnownEmails]",
-                    new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
+                    new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 
                 // Return as a list to avoid timing out the sql connection
@@ -342,11 +343,12 @@ namespace Bit.Core.Repositories.SqlServer
                 organizationUser.SetNewId();
             }
 
+            var orgUsersTVP = organizationUsers.ToTvp();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_CreateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -358,11 +360,12 @@ namespace Bit.Core.Repositories.SqlServer
                 return;
             }
 
+            var orgUsersTVP = organizationUsers.ToTvp();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
         }
