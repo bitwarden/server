@@ -76,7 +76,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+        public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
             bool onlyRegisteredUsers)
         {
             using (var connection = new SqlConnection(ConnectionString))
