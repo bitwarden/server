@@ -249,6 +249,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/file/{fileId}")]
+        [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingSend(string id, string fileId)
         {

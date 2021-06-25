@@ -622,12 +622,18 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
+        [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
         {
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
+            }
+
+            if (!_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException("Invalid endpoint for non self-hosted servers.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
