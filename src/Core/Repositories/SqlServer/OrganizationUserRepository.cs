@@ -16,9 +16,22 @@ namespace Bit.Core.Repositories.SqlServer
 {
     public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
     {
+        /// <summary>
+        /// For use with methods with TDS stream issues.
+        /// This has been observed in Linux-hosted SqlServers with large table-valued-parameters
+        /// https://github.com/dotnet/SqlClient/issues/54
+        /// </summary>
+        private string _marsConnectionString;
+
         public OrganizationUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+        {
+            var builder = new SqlConnectionStringBuilder(ConnectionString)
+            {
+                MultipleActiveResultSets = true,
+            };
+            _marsConnectionString = builder.ToString();
+        }
 
         public OrganizationUserRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
@@ -80,7 +93,7 @@ namespace Bit.Core.Repositories.SqlServer
             bool onlyRegisteredUsers)
         {
             var emailsTvp = emails.ToArrayTVP("Email");
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var result = await connection.QueryAsync<string>(
                     "[dbo].[OrganizationUser_SelectKnownEmails]",
@@ -344,7 +357,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             var orgUsersTVP = organizationUsers.ToTvp();
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_CreateMany]",
@@ -361,7 +374,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
 
             var orgUsersTVP = organizationUsers.ToTvp();
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateMany]",
