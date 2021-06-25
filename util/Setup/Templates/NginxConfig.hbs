@@ -122,6 +122,13 @@ server {
     proxy_pass http://api:5000/;
   }
 
+  location /api/public/organization/import {
+    proxy_pass http://api:5000/public/organization/import;
+    proxy_read_timeout 1h;
+    proxy_connect_timeout 1h;
+    proxy_send_timeout 1h;
+  }
+
   location /icons/ {
     proxy_pass http://icons:5000/;
   }
