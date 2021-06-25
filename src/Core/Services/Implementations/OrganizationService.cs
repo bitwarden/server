@@ -16,6 +16,7 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
 using Bit.Core.Models.Api;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Services
 {
@@ -1688,6 +1689,17 @@ namespace Bit.Core.Services
             if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
             {
                 throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
+            // Block the user from withdrawal if auto enrollment is enabled
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+            {
+                var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+
+                if (data?.AutoEnrollEnabled ?? false)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                }
             }
             
             orgUser.ResetPasswordKey = resetPasswordKey;
