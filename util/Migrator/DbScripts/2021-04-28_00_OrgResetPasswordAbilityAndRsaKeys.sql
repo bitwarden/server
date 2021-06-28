@@ -12,6 +12,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UseResetPassword] = (CASE WHEN [PlanType] = 10 OR [PlanType] = 11 THEN 1 ELSE 0 END)
+WHERE
+    [UseResetPassword] IS NULL
 GO
 
 ALTER TABLE
