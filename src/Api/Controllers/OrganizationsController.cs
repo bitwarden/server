@@ -161,7 +161,7 @@ namespace Bit.Api.Controllers
             }
 
             var organizationSignup = model.ToOrganizationSignup(user);
-            var result = await _organizationService.SignUpAsync(organizationSignup, user);
+            var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
         }
 

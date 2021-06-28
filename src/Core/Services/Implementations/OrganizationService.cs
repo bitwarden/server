@@ -549,7 +549,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup, User owner)
+        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
             if (plan == null)
@@ -557,7 +557,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
-            await ValidateSignUpPoliciesAsync(owner.Id);
+            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
             ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
