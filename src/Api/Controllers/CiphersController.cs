@@ -175,7 +175,7 @@ namespace Bit.Api.Controllers
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
             {
-                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this item, " +
+                throw new BadRequestException("Organization mismatch. Re-sync if you recently moved this item, " +
                     "then try again.");
             }
 
@@ -528,7 +528,7 @@ namespace Bit.Api.Controllers
             {
                 if (!ciphersDict.ContainsKey(cipher.Id.Value))
                 {
-                    throw new BadRequestException("Trying to share ciphers that you do not own.");
+                    throw new BadRequestException("Trying to move ciphers that you do not own.");
                 }
 
                 shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
@@ -622,12 +622,18 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
+        [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
         {
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
+            }
+
+            if (!_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException("Invalid endpoint for non self-hosted servers.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
