@@ -33,6 +33,8 @@ namespace Bit.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+        private readonly ISendRepository _sendRepository;
+        private readonly ISendService _sendService;
 
         public AccountsController(
             GlobalSettings globalSettings,
@@ -43,7 +45,9 @@ namespace Bit.Api.Controllers
             IPaymentService paymentService,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
-            IUserService userService)
+            IUserService userService,
+            ISendRepository sendRepository,
+            ISendService sendService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -53,6 +57,8 @@ namespace Bit.Api.Controllers
             _paymentService = paymentService;
             _userRepository = userRepository;
             _userService = userService;
+            _sendRepository = sendRepository;
+            _sendService = sendService;
         }
 
         [HttpPost("prelogin")]
@@ -301,13 +307,28 @@ namespace Bit.Api.Controllers
                 }
             }
 
+            var sends = new List<Send>();
+            if (model.Sends?.Count() > 0)
+            {
+                var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+                var sendsDict = model.Sends?.ToDictionary(s => s.Id);
+                if (existingSends.Any() && sendsDict != null)
+                {
+                    foreach (var send in existingSends.Where(s => sendsDict.ContainsKey(s.Id)))
+                    {
+                        sends.Add(sendsDict[send.Id].ToSend(send, _sendService));
+                    }
+                }
+            }
+
             var result = await _userService.UpdateKeyAsync(
                 user,
                 model.MasterPasswordHash,
                 model.Key,
                 model.PrivateKey,
                 ciphers,
-                folders);
+                folders,
+                sends);
 
             if (result.Succeeded)
             {
