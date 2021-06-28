@@ -16,13 +16,10 @@ WHERE
     [UseResetPassword] IS NULL
 GO
 
-IF COL_LENGTH('[dbo].[Organization]', 'UseResetPassword') IS NOT NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[Organization]
-    ALTER COLUMN
-        [UseResetPassword] BIT NOT NULL
-END
+ALTER TABLE
+    [dbo].[Organization]
+ALTER COLUMN
+    [UseResetPassword] BIT NOT NULL
 GO
 
 -- Table: Organization (PublicKey)
