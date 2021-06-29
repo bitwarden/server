@@ -869,7 +869,7 @@ namespace Bit.Core.Repositories.SqlServer
             var s = sends.FirstOrDefault();
             if (s == null)
             {
-                throw new ApplicationException("Must have some ciphers to bulk import.");
+                throw new ApplicationException("Must have some Sends to bulk import.");
             }
 
             var sendsTable = new DataTable("SendsDataTable");

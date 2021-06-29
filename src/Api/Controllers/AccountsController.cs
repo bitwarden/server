@@ -285,40 +285,31 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-            var ciphersDict = model.Ciphers?.ToDictionary(c => c.Id.Value);
             var ciphers = new List<Cipher>();
-            if (existingCiphers.Any() && ciphersDict != null)
+            if (model.Ciphers.Any())
             {
-                foreach (var cipher in existingCiphers.Where(c => ciphersDict.ContainsKey(c.Id)))
-                {
-                    ciphers.Add(ciphersDict[cipher.Id].ToCipher(cipher));
-                }
+                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+                ciphers = existingCiphers
+                    .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing))
+                    .ToList();
             }
 
-            var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-            var foldersDict = model.Folders?.ToDictionary(f => f.Id);
             var folders = new List<Folder>();
-            if (existingFolders.Any() && foldersDict != null)
+            if (model.Folders.Any())
             {
-                foreach (var folder in existingFolders.Where(f => foldersDict.ContainsKey(f.Id)))
-                {
-                    folders.Add(foldersDict[folder.Id].ToFolder(folder));
-                }
+                var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
+                folders = existingFolders
+                    .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing))
+                    .ToList();
             }
 
             var sends = new List<Send>();
-            if (model.Sends?.Count() > 0)
+            if (model.Sends?.Any() == true)
             {
                 var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-                var sendsDict = model.Sends?.ToDictionary(s => s.Id);
-                if (existingSends.Any() && sendsDict != null)
-                {
-                    foreach (var send in existingSends.Where(s => sendsDict.ContainsKey(s.Id)))
-                    {
-                        sends.Add(sendsDict[send.Id].ToSend(send, _sendService));
-                    }
-                }
+                sends = existingSends
+                    .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService))
+                    .ToList();
             }
 
             var result = await _userService.UpdateKeyAsync(
