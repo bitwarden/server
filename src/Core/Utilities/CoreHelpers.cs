@@ -852,7 +852,8 @@ namespace Bit.Core.Utilities
                 }
             }
             
-            if (providers.Any()) {
+            if (providers.Any())
+            {
                 foreach (var group in providers.GroupBy(o => o.Type))
                 {
                     switch (group.Key)
