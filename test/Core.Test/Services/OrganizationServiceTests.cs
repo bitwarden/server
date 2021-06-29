@@ -240,7 +240,7 @@ namespace Bit.Core.Test.Services
 
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
-            
+
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
             currentContext.OrganizationCustom(organization.Id).Returns(true);
             currentContext.ManageUsers(organization.Id).Returns(false);

@@ -2059,10 +2059,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var isOwner = oldType == OrganizationUserType.Owner;
-            var nowOwner = newType == OrganizationUserType.Owner;
-            var ownerUserConfigurationAttempt = (isOwner && nowOwner) || !isOwner.Equals(nowOwner);
-            if (ownerUserConfigurationAttempt)
+            if (oldType == OrganizationUserType.Owner || newType == OrganizationUserType.Owner)
             {
                 throw new BadRequestException("Only an Owner can configure another Owner's account.");
             }
@@ -2072,10 +2069,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var isCustom = oldType == OrganizationUserType.Custom;
-            var nowCustom = newType == OrganizationUserType.Custom;
-            var customUserConfigurationAttempt = (isCustom && nowCustom) || !isCustom.Equals(nowCustom);
-            if (customUserConfigurationAttempt)
+            if (oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom)
             {
                 throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
             }
@@ -2090,10 +2084,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Your account does not have permission to manage users.");
             }
 
-            var isAdmin = oldType == OrganizationUserType.Admin;
-            var nowAdmin = newType == OrganizationUserType.Admin;
-            var adminUserConfigurationAttempt = (isAdmin && nowAdmin) || !isAdmin.Equals(nowAdmin);
-            if (adminUserConfigurationAttempt)
+            if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
             {
                 throw new BadRequestException("Custom users can not manage Admins or Owners.");
             }
