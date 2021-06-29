@@ -2074,11 +2074,6 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
             }
 
-            if (!_currentContext.OrganizationCustom(organizationId))
-            {
-                return;
-            }
-
             if (!_currentContext.ManageUsers(organizationId))
             {
                 throw new BadRequestException("Your account does not have permission to manage users.");
