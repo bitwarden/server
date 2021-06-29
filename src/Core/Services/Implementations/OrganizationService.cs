@@ -636,7 +636,7 @@ namespace Bit.Core.Services
                                                               orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
             if (blockedBySingleOrgPolicy)
             {
-                throw new BadRequestException("You may not create an organization. You belong to an organization" +
+                throw new BadRequestException("You may not create an organization. You belong to an organization " +
                     "which has a policy that prohibits you from being a member of any other organization.");
             }
         }
