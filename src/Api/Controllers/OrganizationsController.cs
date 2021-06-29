@@ -578,7 +578,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var org = await _organizationService.UpdateOrganizationKeysAsync(user.Id, new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
+            var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
             return new OrganizationKeysResponseModel(org);
         }
     }
