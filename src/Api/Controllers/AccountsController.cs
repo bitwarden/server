@@ -289,27 +289,24 @@ namespace Bit.Api.Controllers
             if (model.Ciphers.Any())
             {
                 var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-                ciphers = existingCiphers
-                    .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing))
-                    .ToList();
+                ciphers.AddRange(existingCiphers
+                    .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
             }
 
             var folders = new List<Folder>();
             if (model.Folders.Any())
             {
                 var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-                folders = existingFolders
-                    .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing))
-                    .ToList();
+                folders.AddRange(existingFolders
+                    .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing)));
             }
 
             var sends = new List<Send>();
             if (model.Sends?.Any() == true)
             {
                 var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-                sends = existingSends
-                    .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService))
-                    .ToList();
+                sends.AddRange(existingSends
+                    .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService)));
             }
 
             var result = await _userService.UpdateKeyAsync(
