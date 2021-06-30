@@ -47,8 +47,16 @@ namespace Bit.Core.Context
         bool ManageSso(Guid orgId);
         bool ManageUsers(Guid orgId);
         bool ManageResetPassword(Guid orgId);
+        bool ProviderProviderAdmin(Guid providerId);
+        bool ProviderUser(Guid providerId);
+        bool ManageProviderUsers(Guid providerId);
+        bool AccessProviderOrganizations(Guid providerId);
+        bool ManageProviderOrganizations(Guid providerId);
 
         Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId);
+
+        Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+            IProviderUserRepository providerUserRepository, Guid userId);
     }
 }

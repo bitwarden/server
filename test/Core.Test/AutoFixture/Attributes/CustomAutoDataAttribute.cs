@@ -5,7 +5,7 @@ using AutoFixture.Xunit2;
 
 namespace Bit.Core.Test.AutoFixture.Attributes
 {
-    internal class CustomAutoDataAttribute : AutoDataAttribute
+    public class CustomAutoDataAttribute : AutoDataAttribute
     {
         public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : this(iCustomizationTypes
             .Select(t => (ICustomization)Activator.CreateInstance(t)).ToArray())
