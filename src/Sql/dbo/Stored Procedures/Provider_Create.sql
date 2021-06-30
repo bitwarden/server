@@ -9,6 +9,7 @@
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
     @Status TINYINT,
+    @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -28,6 +29,7 @@ BEGIN
         [BusinessTaxNumber],
         [BillingEmail],
         [Status],
+        [UseEvents],
         [Enabled],
         [CreationDate],
         [RevisionDate]
@@ -44,6 +46,7 @@ BEGIN
         @BusinessTaxNumber,
         @BillingEmail,
         @Status,
+        @UseEvents,
         @Enabled,
         @CreationDate,
         @RevisionDate

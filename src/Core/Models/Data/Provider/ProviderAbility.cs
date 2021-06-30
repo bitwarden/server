@@ -1,0 +1,22 @@
+﻿using System;
+using Bit.Core.Models.Table;
+using Bit.Core.Models.Table.Provider;
+
+namespace Bit.Core.Models.Data
+{
+    public class ProviderAbility
+    {
+        public ProviderAbility() { }
+
+        public ProviderAbility(Provider provider)
+        {
+            Id = provider.Id;
+            UseEvents = provider.UseEvents;
+            Enabled = provider.Enabled;
+        }
+
+        public Guid Id { get; set; }
+        public bool UseEvents { get; set; }
+        public bool Enabled { get; set; }
+    }
+}

@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Admin.Models
 {
     public class ProviderViewModel
     {
-        public ProviderViewModel(Provider provider, IEnumerable<ProviderUser> providerUsers)
+        public ProviderViewModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers)
         {
             Provider = provider;
             UserCount = providerUsers.Count();

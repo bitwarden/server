@@ -9,6 +9,14 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
+  <Choose>
+    <When Condition="!$(DefineConstants.Contains('OSS'))">
+      <ItemGroup>
+        <ProjectReference Include="..\..\bitwarden_license\src\CommCore\CommCore.csproj" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.3" />
   </ItemGroup>

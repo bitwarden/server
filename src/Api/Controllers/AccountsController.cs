@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bit.Core.Enums.Provider;
 
 namespace Bit.Api.Controllers
 {
@@ -30,6 +31,7 @@ namespace Bit.Api.Controllers
         private readonly IFolderRepository _folderRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private readonly IPaymentService _paymentService;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
@@ -40,6 +42,7 @@ namespace Bit.Api.Controllers
             IFolderRepository folderRepository,
             IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
             IPaymentService paymentService,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
@@ -50,6 +53,7 @@ namespace Bit.Api.Controllers
             _globalSettings = globalSettings;
             _organizationService = organizationService;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
             _paymentService = paymentService;
             _userRepository = userRepository;
             _userService = userService;
@@ -358,7 +362,9 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
-            var response = new ProfileResponseModel(user, organizationUserDetails,
+            var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
+                ProviderUserStatusType.Confirmed);
+            var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
                 await _userService.TwoFactorIsEnabledAsync(user));
             return response;
         }
@@ -384,7 +390,7 @@ namespace Bit.Api.Controllers
             }
 
             await _userService.SaveUserAsync(model.ToUser(user));
-            var response = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var response = new ProfileResponseModel(user, null, null, await _userService.TwoFactorIsEnabledAsync(user));
             return response;
         }
 
@@ -535,7 +541,7 @@ namespace Bit.Api.Controllers
                     BillingAddressCountry = model.Country,
                     BillingAddressPostalCode = model.PostalCode,
                 });
-            var profile = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var profile = new ProfileResponseModel(user, null, null, await _userService.TwoFactorIsEnabledAsync(user));
             return new PaymentResponseModel
             {
                 UserProfile = profile,

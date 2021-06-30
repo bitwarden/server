@@ -85,7 +85,7 @@ namespace Bit.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            var users = await _providerUserRepository.GetManyByProviderAsync(id);
+            var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
             return View(new ProviderViewModel(provider, users));
         }
         
@@ -98,7 +98,7 @@ namespace Bit.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            var users = await _providerUserRepository.GetManyByProviderAsync(id);
+            var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
             return View(new ProviderEditModel(provider, users));
         }
         

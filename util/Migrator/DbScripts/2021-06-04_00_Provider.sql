@@ -87,6 +87,7 @@ BEGIN
         [BusinessTaxNumber] NVARCHAR (30)    NULL,
         [BillingEmail]      NVARCHAR (256)   NOT NULL,
         [Status]            TINYINT          NOT NULL,
+        [UseEvents]         BIT              NOT NULL,
         [Enabled]           BIT              NOT NULL,
         [CreationDate]      DATETIME2 (7)    NOT NULL,
         [RevisionDate]      DATETIME2 (7)    NOT NULL,
@@ -99,6 +100,29 @@ ALTER TABLE [dbo].[Provider] ALTER COLUMN [Name] NVARCHAR (50) NULL;
 GO
 
 ALTER TABLE [dbo].[Provider] ALTER COLUMN [BillingEmail] NVARCHAR (256) NULL;
+GO
+
+IF COL_LENGTH('[dbo].[Provider]', 'UseEvents') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Provider]
+        ADD
+            [UseEvents] BIT NULL
+    END
+GO
+
+UPDATE
+    [dbo].[Provider]
+SET
+    [UseEvents] = 0
+WHERE
+    [UseEvents] IS NULL
+GO
+
+ALTER TABLE
+    [dbo].[Provider]
+ALTER COLUMN
+    [UseEvents] BIT NOT NULL
 GO
 
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderView')
@@ -132,6 +156,7 @@ CREATE PROCEDURE [dbo].[Provider_Create]
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
     @Status TINYINT,
+    @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -151,6 +176,7 @@ BEGIN
         [BusinessTaxNumber],
         [BillingEmail],
         [Status],
+        [UseEvents],
         [Enabled],
         [CreationDate],
         [RevisionDate]
@@ -167,6 +193,7 @@ BEGIN
         @BusinessTaxNumber,
         @BillingEmail,
         @Status,
+        @UseEvents,
         @Enabled,
         @CreationDate,
         @RevisionDate
@@ -191,6 +218,7 @@ CREATE PROCEDURE [dbo].[Provider_Update]
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
     @Status TINYINT,
+    @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -210,6 +238,7 @@ BEGIN
         [BusinessTaxNumber] = @BusinessTaxNumber,
         [BillingEmail] = @BillingEmail,
         [Status] = @Status,
+        [UseEvents] = @UseEvents,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
@@ -923,7 +952,7 @@ BEGIN
         BEGIN
             BEGIN TRANSACTION ProviderUser_DeleteMany_PUs
 
-                DELETE TOP(@BatchSize) OU
+                DELETE TOP(@BatchSize) PU
                 FROM
                     [dbo].[ProviderUser] PU
                         INNER JOIN
@@ -984,3 +1013,256 @@ BEGIN
         END
 END
 GO
+
+IF OBJECT_ID('[dbo].[ProviderUser_ReadByProviderIdUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserView]
+    WHERE
+            [ProviderId] = @ProviderId
+      AND [UserId] = @UserId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserUserDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserUserDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserUserDetailsView]
+AS
+SELECT
+    PU.[Id],
+    PU.[UserId],
+    PU.[ProviderId],
+    U.[Name],
+    ISNULL(U.[Email], PU.[Email]) Email,
+    PU.[Status],
+    PU.[Type],
+    PU.[Permissions]
+FROM
+    [dbo].[ProviderUser] PU
+LEFT JOIN
+    [dbo].[User] U ON U.[Id] = PU.[UserId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserUserDetails_ReadByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+@ProviderId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserUserDetailsView]
+    WHERE
+        [ProviderId] = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserProviderDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserProviderDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PU.[ProviderId],
+    P.[Name],
+    PU.[Key],
+    PU.[Status],
+    PU.[Type],
+    P.[Enabled],
+    PU.[Permissions]
+FROM
+    [dbo].[ProviderUser] PU
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]
+    @UserId UNIQUEIDENTIFIER,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserProviderDetailsView]
+    WHERE
+            [UserId] = @UserId
+      AND (@Status IS NULL OR [Status] = @Status)
+END
+GO
+
+IF OBJECT_ID('[dbo].[Provider_ReadAbilities]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Provider_ReadAbilities]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Provider_ReadAbilities]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [Id],
+        [UseEvents],
+        [Enabled]
+    FROM
+        [dbo].[Provider]
+END
+GO
+
+IF OBJECT_ID('[dbo].[User_ReadPublicKeysByProviderUserIds]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[User_ReadPublicKeysByProviderUserIds]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[User_ReadPublicKeysByProviderUserIds]
+    @ProviderId UNIQUEIDENTIFIER,
+    @ProviderUserIds [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        PU.[Id],
+        U.[PublicKey]
+    FROM
+        @ProviderUserIds PUIDs
+            INNER JOIN
+        [dbo].[ProviderUser] PU ON PUIDs.Id = PU.Id AND PU.[Status] = 1 -- Accepted
+            INNER JOIN
+        [dbo].[User] U ON PU.UserId = U.Id
+    WHERE
+            PU.ProviderId = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderOrganizationOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderOrganizationOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
+AS
+SELECT
+    PO.[Id],
+    PO.[ProviderId],
+    PO.[OrganizationId],
+    O.[Name] OrganizationName,
+    PO.[Key],
+    PO.[Settings],
+    PO.[CreationDate],
+    PO.[RevisionDate]
+FROM
+    [dbo].[ProviderOrganization] PO
+LEFT JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]
+    @ProviderId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderOrganizationOrganizationDetailsView]
+    WHERE
+        [ProviderId] = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName
+FROM
+    [dbo].[OrganizationUser] OU
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]

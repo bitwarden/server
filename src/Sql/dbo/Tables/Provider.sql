@@ -9,6 +9,7 @@
     [BusinessTaxNumber] NVARCHAR (30)    NULL,
     [BillingEmail]      NVARCHAR (256)   NULL,
     [Status]            TINYINT          NOT NULL,
+    [UseEvents]         BIT              NOT NULL,
     [Enabled]           BIT              NOT NULL,
     [CreationDate]      DATETIME2 (7)    NOT NULL,
     [RevisionDate]      DATETIME2 (7)    NOT NULL,
