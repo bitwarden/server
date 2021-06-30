@@ -3,7 +3,7 @@ using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.Enums.Provider;
 
-namespace Bit.Core.Test.AutoFixture.ProviderUserFixtures
+namespace Bit.CommCore.Test.AutoFixture.ProviderUserFixtures
 {
     internal class ProviderUser : ICustomization
     {

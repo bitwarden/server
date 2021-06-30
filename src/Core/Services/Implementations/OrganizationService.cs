@@ -557,6 +557,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
+            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
             ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
@@ -622,6 +623,24 @@ namespace Bit.Core.Services
             return returnValue;
         }
 
+        private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
+        {
+            var policies = await _policyRepository.GetManyByUserIdAsync(ownerId);
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(ownerId);
+
+            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
+                .Select(p => p.OrganizationId);
+            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou is {Type: OrganizationUserType.Owner} &&
+                                                              ou.Type != OrganizationUserType.Admin &&
+                                                              ou.Status != OrganizationUserStatusType.Invited &&
+                                                              orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
+            if (blockedBySingleOrgPolicy)
+            {
+                throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                    "which has a policy that prohibits you from being a member of any other organization.");
+            }
+        }
+
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
             OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
             string privateKey)
@@ -648,6 +667,8 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("License is already in use by another organization.");
             }
+
+            await ValidateSignUpPoliciesAsync(owner.Id);
 
             var organization = new Organization
             {

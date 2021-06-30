@@ -34,6 +34,8 @@ namespace Bit.Core.Models.Api
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
             ResetPasswordEnrolled = organization.ResetPasswordKey != null;
             UserId = organization.UserId?.ToString();
+            ProviderId = organization.ProviderId?.ToString();
+            ProviderName = organization.ProviderName;
         }
 
         public string Id { get; set; }
@@ -63,5 +65,7 @@ namespace Bit.Core.Models.Api
         public bool ResetPasswordEnrolled { get; set; }
         public string UserId { get; set; }
         public bool HasPublicAndPrivateKeys { get; set; }
+        public string ProviderId { get; set; }
+        public string ProviderName { get; set; }
     }
 }

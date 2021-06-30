@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Admin.Models
 {
     public class ProviderEditModel : ProviderViewModel
     {
-        public ProviderEditModel(Provider provider, IEnumerable<ProviderUser> providerUsers)
+        public ProviderEditModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers)
             : base(provider, providerUsers)
         {
             Name = provider.Name;
