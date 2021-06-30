@@ -28,7 +28,6 @@ namespace Bit.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
-        private readonly IPolicyRepository _policyRepository;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -37,8 +36,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IPaymentService paymentService,
             ICurrentContext currentContext,
-            GlobalSettings globalSettings,
-            IPolicyRepository policyRepository)
+            GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -47,7 +45,6 @@ namespace Bit.Api.Controllers
             _paymentService = paymentService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
-            _policyRepository = policyRepository;
         }
 
         [HttpGet("{id}")]
@@ -163,22 +160,6 @@ namespace Bit.Api.Controllers
                 throw new Exception("Invalid plan selected.");
             }
 
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou.Type != OrganizationUserType.Owner &&
-                                                        ou.Type != OrganizationUserType.Admin &&
-                                                        ou.Status != OrganizationUserStatusType.Invited &&
-                                                        orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
-
-            if (blockedBySingleOrgPolicy)
-            {
-                throw new Exception("You may not create an organization. You belong to an organization " +
-                    "which has a policy that prohibits you from being a member of any other organization.");
-            }
-
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
@@ -198,13 +179,6 @@ namespace Bit.Api.Controllers
             if (license == null)
             {
                 throw new BadRequestException("Invalid license");
-            }
-
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            if (policies.Any(policy => policy.Enabled && policy.Type == PolicyType.SingleOrg))
-            {
-                throw new Exception("You may not create an organization. You belong to an organization " +
-                     "which has a policy that prohibits you from being a member of any other organization.");
             }
 
             var result = await _organizationService.SignUpAsync(license, user, model.Key,
