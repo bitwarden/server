@@ -160,7 +160,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Identity.zip
 
@@ -191,7 +191,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Api.zip
 
@@ -222,7 +222,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Billing.zip
 
@@ -253,7 +253,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Events.zip
 
@@ -284,7 +284,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Sso.zip
 
@@ -315,7 +315,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Portal.zip
 
@@ -346,7 +346,7 @@ jobs:
     needs: build
     steps:
       - name: Download aritifacts
-        uses: actions/download-artifact@v158ca71f7c614ae705e79f25522ef4658df18253
+        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
         with:
           name: Admin.zip
 
