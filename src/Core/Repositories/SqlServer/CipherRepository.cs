@@ -336,7 +336,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                         // 3. Bulk copy into temp tables.
 
-                        if (ciphers.Any())
+                        if (ciphers?.Any() == true)
                         {
                             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
@@ -346,7 +346,7 @@ namespace Bit.Core.Repositories.SqlServer
                             }
                         }
 
-                        if (folders.Any())
+                        if (folders?.Any() == true)
                         {
                             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
@@ -356,7 +356,7 @@ namespace Bit.Core.Repositories.SqlServer
                             }
                         }
 
-                        if (sends.Any())
+                        if (sends?.Any() == true)
                         {
                             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                             {
@@ -370,7 +370,7 @@ namespace Bit.Core.Repositories.SqlServer
 
                         var sql = string.Empty;
 
-                        if (ciphers.Any())
+                        if (ciphers?.Any() == true)
                         {
                             sql += @"
                                 UPDATE
@@ -387,7 +387,7 @@ namespace Bit.Core.Repositories.SqlServer
                                     C.[UserId] = @UserId";
                         }
 
-                        if (folders.Any())
+                        if (folders?.Any() == true)
                         {
                             sql += @"
                                 UPDATE
@@ -403,7 +403,7 @@ namespace Bit.Core.Repositories.SqlServer
                                     F.[UserId] = @UserId";
                         }
 
-                        if (sends.Any())
+                        if (sends?.Any() == true)
                         {
                             sql += @"
                                 UPDATE

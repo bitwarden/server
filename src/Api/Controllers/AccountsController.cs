@@ -285,7 +285,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var ciphers = new List<Cipher>();
+            List<Cipher> ciphers = null;
             if (model.Ciphers.Any())
             {
                 var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
@@ -294,7 +294,7 @@ namespace Bit.Api.Controllers
                     .ToList();
             }
 
-            var folders = new List<Folder>();
+            List<Folder> folders = null;
             if (model.Folders.Any())
             {
                 var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
@@ -303,7 +303,7 @@ namespace Bit.Api.Controllers
                     .ToList();
             }
 
-            var sends = new List<Send>();
+            List<Send> sends = null;
             if (model.Sends?.Any() == true)
             {
                 var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);

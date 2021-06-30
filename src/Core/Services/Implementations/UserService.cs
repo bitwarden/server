@@ -742,7 +742,7 @@ namespace Bit.Core.Services
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
                 user.PrivateKey = privateKey;
-                if (ciphers.Any() || folders.Any() || sends.Any())
+                if (ciphers?.Any() == true || folders?.Any() == true || sends?.Any() == true)
                 {
                     await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
                 }
