@@ -35,6 +35,8 @@ namespace Bit.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+        private readonly ISendRepository _sendRepository;
+        private readonly ISendService _sendService;
 
         public AccountsController(
             GlobalSettings globalSettings,
@@ -46,7 +48,9 @@ namespace Bit.Api.Controllers
             IPaymentService paymentService,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
-            IUserService userService)
+            IUserService userService,
+            ISendRepository sendRepository,
+            ISendService sendService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -57,6 +61,8 @@ namespace Bit.Api.Controllers
             _paymentService = paymentService;
             _userRepository = userRepository;
             _userService = userService;
+            _sendRepository = sendRepository;
+            _sendService = sendService;
         }
 
         [HttpPost("prelogin")]
@@ -283,26 +289,28 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-            var ciphersDict = model.Ciphers?.ToDictionary(c => c.Id.Value);
             var ciphers = new List<Cipher>();
-            if (existingCiphers.Any() && ciphersDict != null)
+            if (model.Ciphers.Any())
             {
-                foreach (var cipher in existingCiphers.Where(c => ciphersDict.ContainsKey(c.Id)))
-                {
-                    ciphers.Add(ciphersDict[cipher.Id].ToCipher(cipher));
-                }
+                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+                ciphers.AddRange(existingCiphers
+                    .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
             }
 
-            var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-            var foldersDict = model.Folders?.ToDictionary(f => f.Id);
             var folders = new List<Folder>();
-            if (existingFolders.Any() && foldersDict != null)
+            if (model.Folders.Any())
             {
-                foreach (var folder in existingFolders.Where(f => foldersDict.ContainsKey(f.Id)))
-                {
-                    folders.Add(foldersDict[folder.Id].ToFolder(folder));
-                }
+                var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
+                folders.AddRange(existingFolders
+                    .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing)));
+            }
+
+            var sends = new List<Send>();
+            if (model.Sends?.Any() == true)
+            {
+                var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+                sends.AddRange(existingSends
+                    .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService)));
             }
 
             var result = await _userService.UpdateKeyAsync(
@@ -311,7 +319,8 @@ namespace Bit.Api.Controllers
                 model.Key,
                 model.PrivateKey,
                 ciphers,
-                folders);
+                folders,
+                sends);
 
             if (result.Succeeded)
             {
