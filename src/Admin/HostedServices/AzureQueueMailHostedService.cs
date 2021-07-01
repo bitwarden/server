@@ -12,6 +12,7 @@ using Azure.Storage.Queues.Models;
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices
 {
@@ -67,9 +68,20 @@ namespace Bit.Admin.HostedServices
 
                 foreach (var message in mailMessages)
                 {
+                    // Jul 1 2021: Catch needed for now until all messages are guaranteed to be B64 strings
+                    string messageText;
                     try
                     {
-                        var token = JToken.Parse(message.MessageText);
+                        messageText = CoreHelpers.Base64DecodeString(message.MessageText);
+                    }
+                    catch (FormatException)
+                    {
+                        messageText = message.MessageText;
+                    }
+
+                    try
+                    {
+                        var token = JToken.Parse(messageText);
                         if (token is JArray)
                         {
                             foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())

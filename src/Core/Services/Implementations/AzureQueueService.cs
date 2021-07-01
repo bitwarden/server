@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
-using IdentityServer4.Extensions;
+using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 
@@ -23,7 +24,7 @@ namespace Bit.Core.Services
         public async Task CreateAsync(T message)
         {
             var json = JsonConvert.SerializeObject(message, _jsonSettings);
-            await _queueClient.SendMessageAsync(json);
+            await _queueClient.SendMessageAsync(CoreHelpers.Base64EncodeString(json));
         }
 
         public async Task CreateManyAsync(IEnumerable<T> messages)
@@ -39,34 +40,35 @@ namespace Bit.Core.Services
                 return;
             }
 
-            foreach (var json in SerializeMany(messages, _jsonSettings))
+            foreach (var b64Json in SerializeManyToB64(messages, _jsonSettings))
             {
-                await _queueClient.SendMessageAsync(json);
+                await _queueClient.SendMessageAsync(b64Json);
             }
         }
 
-
-        protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerSettings jsonSettings)
+        protected IEnumerable<string> SerializeManyToB64(IEnumerable<T> messages, JsonSerializerSettings jsonSettings)
         {
             var messagesLists = new List<List<T>> { new List<T>() };
             var strings = new List<string>();
-            var ListMessageLength = 2; // to account for json array brackets "[]"
+            var ListMessageByteLength = 2; // to account for json array brackets "[]"
             foreach (var (message, jsonEvent) in messages.Select(e => (e, JsonConvert.SerializeObject(e, jsonSettings))))
             {
-
-                var messageLength = jsonEvent.Length + 1; // To account for json array comma
-                if (ListMessageLength + messageLength > _queueClient.MessageMaxBytes)
+                var messageByteLength = ByteLength(jsonEvent) + 1; // To account for json array comma
+                if (B64EncodedLength(ListMessageByteLength + messageByteLength) > _queueClient.MessageMaxBytes)
                 {
                     messagesLists.Add(new List<T> { message });
-                    ListMessageLength = 2 + messageLength;
+                    ListMessageByteLength = 2 + messageByteLength;
                 }
                 else
                 {
                     messagesLists.Last().Add(message);
-                    ListMessageLength += messageLength;
+                    ListMessageByteLength += messageByteLength;
                 }
             }
-            return messagesLists.Select(l => JsonConvert.SerializeObject(l, jsonSettings));
+            return messagesLists.Select(l => CoreHelpers.Base64EncodeString(JsonConvert.SerializeObject(l, jsonSettings)));
         }
+
+        private int ByteLength(string s) => Encoding.UTF8.GetByteCount(s);
+        private int B64EncodedLength(int byteLength) => 4 * (int)Math.Ceiling((double)byteLength / 3);
     }
 }
